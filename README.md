@@ -14,8 +14,11 @@ You can install this from https://conda.io/docs/user-guide/install/index.html
 3. Once you have anaconda installed, you can open a terminal window and install the dependencies in one of the following ways:
 
    1. Use the requirements.txt file
-      * navigate to the directory where you downloaded/cloned the scripts to, by doing eg. `cd c:\temp\cropclassification`
-      * run the following command: 
+      1. navigate to the directory where you downloaded/cloned the scripts to, by doing eg. 
+	  ```
+	  cd c:\temp\cropclassification
+	  ```
+      2. run the following command: 
 	  ```
 	  conda env create -n cropclassification --file cropclassification.yml
 	  ```
