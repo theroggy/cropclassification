@@ -14,21 +14,34 @@ You can install this from https://conda.io/docs/user-guide/install/index.html
 3. Once you have anaconda installed, you can open a terminal window and install the dependencies in one of the following ways:
 
    1. Use the requirements.txt file
-      * navigate to the directory where you downloaded/cloned the scripts to, by doing eg. cd c:\temp\cropclassification
-      * run the following command: conda env create -n cropclassification --file cropclassification.yml
+      * navigate to the directory where you downloaded/cloned the scripts to, by doing eg. `cd c:\temp\cropclassification`
+      * run the following command: 
+	  ```
+	  conda env create -n cropclassification --file cropclassification.yml
+	  ```
 
    2. Install the dependencies manually
       1. Create a new conda environment
-      `conda create --name cropclassification python=3.6 anaconda`
-      `conda activate cropclassification`
+      ```
+	  conda create --name cropclassification python=3.6 anaconda`
+      conda activate cropclassification
+	  ```
       2. Install the dependencies for the crop classification scripts:
-      `conda install geopandas`
+	  ```
+      conda install geopandas
+	  ```
       3. I use spyder to edit my scripts. Recently after I installed geopandas, Spyder from the root environment doesn't work anymore and I need to install it here as well. If you use another editor, you can use that of course.
-      `conda install spyder`
+      ```
+	  conda install spyder
+	  ```
       4. Install the python earth engine API
-      `conda install -c conda-forge earthengine-api`
+      ```
+	  conda install -c conda-forge earthengine-api
+	  ```
       5. Install scikit-learn
-      `conda install scikit-learn`
+      ```
+	  conda install scikit-learn
+	  ```
 
 4. When you want to download data from google earth engine, this data is placed on your google drive. For the scripts 
 to be able to download this data they scripts need (read-only) access to your google drive. Follow the steps explained 
@@ -39,7 +52,7 @@ https://developers.google.com/drive/api/v3/quickstart/python.
 5. You can now open the scripts in eg. spyder, and check out especially main_run.py and global_settings.py. You need to
 update those to match your environment, eg. set the paths as you want them,...
 
-6. Now run main_run.py to start a crop classification...
+6. Now run `main_run.py` to start a crop classification...
 
 ##Sample data
 
