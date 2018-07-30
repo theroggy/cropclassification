@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Create the timeseries input file for the classification.
+Module with helper functions to preprocess the data to use for the classification.
 
 @author: Pieter Roggemans
 """
@@ -32,7 +32,7 @@ def prepare_input(input_parcel_filepath: str
                  ,output_parcel_filepath: str
                  ,output_classes_type: str
                  ,force: bool = False):
-
+    """ Prepare a raw input file by eg. adding the classification classes to use for the classification,... """
 
     # If force == False Check and the output file exists already, stop.
     if force == False and os.path.exists(output_parcel_filepath):
@@ -44,8 +44,8 @@ def prepare_input(input_parcel_filepath: str
                           ,output_parcel_filepath = output_parcel_filepath
                           ,output_classes_type = output_classes_type)
     else:
-        message = f"FATAL: unknown value for parameter input_filetype: {input_filetype}"
-        logger.fatal(message)
+        message = f"Unknown value for parameter input_filetype: {input_filetype}"
+        logger.critical(message)
         raise Exception(message)
 
 def collect_and_prepare_timeseries_data(imagedata_dir: str
@@ -54,6 +54,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
                                        ,end_date_str: str
                                        ,output_csv: str
                                        ,force: bool = False):
+    """ Collect all timeseries data to use for the classification and prepare it by applying scaling,... as needed. """
 
     # If force == False Check and the output file exists already, stop.
     if force == False and os.path.exists(output_csv):
@@ -120,6 +121,7 @@ def create_train_test_sample(input_parcel_classes_csv: str
                             ,output_parcel_classes_test_csv: str
                             ,balancing_strategy: str
                             ,force: bool = False):
+    """ Create a seperate train and test sample from the general input file. """
 
     # If force == False Check and the output files exist already, stop.
     if force == False and os.path.exists(output_parcel_classes_train_csv) and os.path.exists(output_parcel_classes_test_csv):
@@ -148,9 +150,8 @@ def create_train_test_sample(input_parcel_classes_csv: str
     # without any additional checks...
     # Remark: group_keys=False evades that apply creates an extra index-level of the groups above the data
     #         and evades having to do an extra .reset_index(level=CLASS_COLUMN_NAME, drop=True) to get rid of the group level
-#    df_test = df_in.groupby(CLASS_COLUMN_NAME, group_keys=False).apply(pd.DataFrame.sample, frac=0.20)
-    df_test = df_in.sample(frac=0.20)
-    logger.debug(f"df_test after sampling 20%, shape: {df_test.shape}")
+    df_test = df_in.groupby(gs.class_column, group_keys=False).apply(pd.DataFrame.sample, frac=0.20)
+    logger.debug(f"df_test after sampling 20% of data per class, shape: {df_test.shape}")
 
     # The candidate parcel for training are all non-test parcel
     df_train_base = df_in[~df_in.index.isin(df_test.index)]
@@ -161,7 +162,7 @@ def create_train_test_sample(input_parcel_classes_csv: str
     logger.debug(f'Number of parcel in df_train_base after filter on pixcount >= 20: {len(df_train_base)}')
 
     # The 'UNKNOWN' and 'IGNORE_' classes arent' meant for training... so remove them!
-    logger.info("Remove the 'UNKNOWN' class from training sample")
+    logger.info("Remove the 'UNKNOWN' class from training ☻sample")
     df_train_base = df_train_base[df_train_base[gs.class_column] != 'UNKNOWN']
 
     # The 'IGNORE_' classes aren't meant for training either...
