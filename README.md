@@ -1,7 +1,7 @@
 # cropclassification
-Crop classification scripts
+This is a collection of scripts that can help to classify crops using Sentinel data.
 
-##Installation manual
+## Installation manual
 
 1. As google earth engine is used to get the Sentinel data for the classification, you will need a google account 
 that has google earth engine access enabled. So go to https://earthengine.google.com/ and click "Sign up" at the 
@@ -54,7 +54,7 @@ update those to match your environment, eg. set the paths as you want them,...
 
 6. Now run `main_run.py` to start a crop classification...
 
-##Sample data
+## Sample data
 
 Sample data can be downloaded from the following location. If you don't change the default paths in the scripts in needs to be put in the directory C:\temp\CropClassification\InputData
 https://drive.google.com/open?id=1eN9cBcWyvM0msNMCD6nivcGuZfYyqV5q
