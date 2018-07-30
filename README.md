@@ -11,17 +11,25 @@ top right if you haven't used google earth engine yet.
 scripts depend on. The rest of the installation manual assumes you use anaconda. 
 You can install this from https://conda.io/docs/user-guide/install/index.html
 
-3) Once you have anaconda installed, you can open a terminal window and do the following steps:
-:: Create a new conda environment for this task
+3) Once you have anaconda installed, you can open a terminal window and install the dependencies in one of the following ways:
+
+Option 1: use the requirements.txt file
+---------------------
+* navigate to the directory where you downloaded/cloned the scripts to, by doing eg. cd c:\temp\cropclassification
+* run the following command: conda env create -n cropclassification --file cropclassification.yml
+
+Option 2: install the dependencies manually
+---------------------
+# Create a new conda environment
 conda create --name cropclassification python=3.6 anaconda
 conda activate cropclassification
-:: Install the dependencies for the crop classification scripts:
+# Install the dependencies for the crop classification scripts:
 conda install geopandas
-:: I use spyder to edit my scripts. Recently after I installed geopandas, Spyder from the root environment doesn't work anymore and I need to install it here as well. If you use another editor, you can use that of course.
+# I use spyder to edit my scripts. Recently after I installed geopandas, Spyder from the root environment doesn't work anymore and I need to install it here as well. If you use another editor, you can use that of course.
 conda install spyder
-:: Install the python earth engine API
+# Install the python earth engine API
 conda install -c conda-forge earthengine-api
-:: Install scikit-learn
+# Install scikit-learn
 conda install scikit-learn
 
 4) When you want to download data from google earth engine, this data is placed on your google drive. For the scripts 
