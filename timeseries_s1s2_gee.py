@@ -68,14 +68,19 @@ def get_timeseries_data(input_parcel_filepath: str
                 logger.info('Not all data was available yet on google drive... try again in a few minutes...')
 
                 # Retry only 36 times, or +- 6 hours
-                if number_retries >= 36:
+                if number_retries >= 70:
                     return_status = 'STOP'
                     message = "Retried a lot of times, but data still isn't available"
                     logger.error(message)
                     raise Exception(message)
 
-                # Wait for 10 minutes before retrying again...
-                time.sleep(60*10)
+                # Wait for 10 minutes before retrying again... but only sleep 10 seconds at
+                # a time so it can be cancelled.
+                nb_sleeps = 0
+                while nb_sleeps < 30:
+                    time.sleep(10)
+                    nb_sleeps += 1
+
                 number_retries += 1
 
         except:
