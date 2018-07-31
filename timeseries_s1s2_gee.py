@@ -275,12 +275,12 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 #    bevl2017 = bevl2017.map(add_feature_info)
 
     # Export non-polygons..
-    #bevl2017_nopoly = bevl2017.filterMetadata('type', 'not_equals', 'Polygon')
-    #ee.batch.Export.table.toDrive(collection = bevl2017_nopoly, folder = 'Monitoring', description = 'BEVL2017_no_polygon', fileFormat = 'KMZ')
+#    bevl2017_nopoly = bevl2017.filterMetadata('type', 'not_equals', 'Polygon')
+#    ee.batch.Export.table.toDrive(collection = bevl2017_nopoly, folder = 'Monitoring', description = 'BEVL2017_no_polygon', fileFormat = 'KMZ')
 
     # Filter the S1 data we want to have (VV and VH pol.)
     s1 = ee.ImageCollection('COPERNICUS/S1_GRD'
-                            ).filterMetadata('instrumentMode', 'equals', 'IW'
+                            ).filter(ee.Filter.eq('instrumentMode', 'IW')
                             ).filter(ee.Filter.eq('transmitterReceiverPolarisation', ['VV', 'VH'])
                             ).filterBounds(bevl_geom
                             ).filterDate(start_date_str, end_date_str).sort('system:time_start')
@@ -289,7 +289,6 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
     def maskEdge(img):
         mask = img.select(0).unitScale(-25, 5).multiply(255).toByte().connectedComponents(ee.Kernel.rectangle(1,1), 100);
         return img.updateMask(mask.select(0))
-
     s1 = s1.map(maskEdge)
 
     # Functions to convert from/to dB
@@ -298,7 +297,6 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
     def toDB(img):
         return ee.Image(img).log10().multiply(10.0)
-
     s1 = s1.map(toNatural)
 
     # Load interesting S2 images
@@ -316,7 +314,6 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         # Both flags should be set to zero, indicating clear conditions.
         mask = qa.bitwiseAnd(cloudBitMask).eq(0).And(qa.bitwiseAnd(cirrusBitMask).eq(0));
         return image.updateMask(mask);
-
     s2 = s2.map(maskS2clouds);
 
     # Olha's idea to create weekly mean images
@@ -340,7 +337,6 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
     def get_s1_forperiod(period):
         period_str = get_period_str(period)
         return s1.filterDate(ee.List(period).get(0), ee.List(period).get(1)).mean().select(['VV', 'VH'], [ee.String('VV_').cat(period_str), ee.String('VH_').cat(period_str)])
-    s1_perperiod = periods.map(get_s1_forperiod)
 
     # Get the S2's for a period...
     # Remark: median on an imagecollection apparently has a result that
@@ -414,7 +410,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
     # Loop over all periods and export data per period to drive
     nb_periods = periods.length().getInfo()
-    logger.info(f'Loop through all <{nb_periods}> periods')
+    logger.info(f"Loop through all <{nb_periods}> periods")
     for i in range(0, nb_periods):
 
         # Calculate the start and end dates of this period...
@@ -423,7 +419,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         logger.debug(f"Process period: {period_start_str} till {period_end_str}")
 
         # Format relevant local filenames
-        export_description = f'{base_filename}_{period_start_str}'
+        export_description = f"{base_filename}_{period_start_str}"
         export_filename = export_description + '.csv'
         dest_fullpath = os.path.join(dest_data_dir, export_filename)
         dest_fullpath_todownload = os.path.join(dest_data_dir_todownload, export_filename)
@@ -468,10 +464,10 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
         # Export data to google drive
         logger.info(f"For period: {period_start_str}, start export of file: {export_filename}")
-        exportTask = ee.batch.Export.table.toDrive(collection=imagedata_forperiod_perparcel
-                                , folder='Monitoring'
-                                , description=export_description
-                                , fileFormat='CSV')
+        exportTask = ee.batch.Export.table.toDrive(collection = imagedata_forperiod_perparcel
+                                                  ,folder = 'Monitoring'
+                                                  ,description = export_description
+                                                  ,fileFormat = 'CSV')
         ee.batch.Task.start(exportTask)
 
         # Create file in todownload folder to indicate this file should be downloaded
