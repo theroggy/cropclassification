@@ -90,7 +90,7 @@ def prepare_input(input_parcel_filepath: str
     parceldata_buf_poly.to_file(output_imagedata_parcel_input_filepath)
 
     # If the needed to be created... it didn't exist yet and so it needs to be uploaded manually to gee as an asset...
-    raise Exception(f"The parcel file needs to be uploaded to GEE manually as an asset: {imagedata_input_parcel_filepath}")
+    raise Exception(f"The parcel file needs to be uploaded to GEE manually as an asset: {output_imagedata_parcel_input_filepath}")
 
 # If the script is run directly...
 if __name__ == "__main__":
