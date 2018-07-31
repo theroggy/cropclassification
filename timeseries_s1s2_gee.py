@@ -155,7 +155,7 @@ def download_sentinel_timeseries(dest_data_dir: str
                 with open(dest_filepath, "wb") as dest_file:
                     downloader = googleapiclient.http.MediaIoBaseDownload(dest_file, request)
                     while download_done is False:
-                        status, done = downloader.next_chunk()
+                        status, download_done = downloader.next_chunk()
                         progress = status.progress()*100
                         logger.info(f"Download now at {progress:.2f} %")
 
