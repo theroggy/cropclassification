@@ -214,10 +214,21 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                                  ,dest_data_dir: str):
     '''
     Credits: partly based on a gee S1 extraction script written by Guido Lemoine.
+
+    TODO: when both asc and desc inmages and S2 images are available for a period, the calculation ends with an error:
+        Error: Image.reduceRegions: Computed value is too large.
+        -> maybe put S1 and S2 in seperate output files?
     '''
+
+    # Init some variables
     dest_data_dir_todownload = os.path.join(dest_data_dir, 'TODOWNLOAD')
     if not os.path.exists(dest_data_dir_todownload):
         os.mkdir(dest_data_dir_todownload)
+
+    getS1_ascDesc_combined = False
+    getS1_ascDesc_seperate = True
+    getS2 = False
+    include_stddev = False
 
     # Initialize connection to server
     ee.Initialize()
@@ -293,7 +304,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
     # Functions to convert from/to dB
     def toNatural(img):
-        return ee.Image(10.0).pow(img.select('..').divide(10.0)).copyProperties(img, ['system:time_start'])
+        return ee.Image(10.0).pow(img.select('..').divide(10.0)).copyProperties(img, ['system:time_start', 'orbitProperties_pass'])
 
     def toDB(img):
         return ee.Image(img).log10().multiply(10.0)
@@ -338,16 +349,23 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         period_str = get_period_str(period)
         return s1.filterDate(ee.List(period).get(0), ee.List(period).get(1)).mean().select(['VV', 'VH'], [ee.String('VV_').cat(period_str), ee.String('VH_').cat(period_str)])
 
+    # Get the S1's for a period...
+    def get_s1Asc_forperiod(period):
+        period_str = get_period_str(period)
+        s1Asc = s1.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'));
+        return s1Asc.filterDate(ee.List(period).get(0), ee.List(period).get(1)).mean().select(['VV', 'VH'], [ee.String('VV_ASC_').cat(period_str), ee.String('VH_ASC_').cat(period_str)])
+
+    # Get the S1's for a period...
+    def get_s1Desc_forperiod(period):
+        period_str = get_period_str(period)
+        s1Desc = s1.filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'));
+        return s1Desc.filterDate(ee.List(period).get(0), ee.List(period).get(1)).mean().select(['VV', 'VH'], [ee.String('VV_DESC_').cat(period_str), ee.String('VH_DESC_').cat(period_str)])
+
     # Get the S2's for a period...
     # Remark: median on an imagecollection apparently has a result that
     # the geometry of the image is not correct anymore... so median only is done afterwards.
     def get_s2s_forperiod(period):
         return s2.filterDate(ee.List(period).get(0), ee.List(period).get(1))
-
-    # Stack all S1 bands for all periods in one image...
-    def stack_bands(i1, i2):
-        return ee.Image(i1).addBands(ee.Image(i2))
-    s1_stack_allperiods = s1_perperiod.slice(1).iterate(stack_bands, s1_perperiod.get(0))
 
     # Get a list of all tasks in gee
     # These are the different states that exist:
@@ -424,9 +442,6 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         dest_fullpath = os.path.join(dest_data_dir, export_filename)
         dest_fullpath_todownload = os.path.join(dest_data_dir_todownload, export_filename)
 
-        # Get mean s1 image of the s1 images that are available in this period
-        s1_forperiod = get_s1_forperiod([period_start_str, period_end_str])
-
         # If the data is already available locally... go to next period
         if (os.path.isfile(dest_fullpath)):
             logger.info(f"For period: {period_start_str}, file already available locally: SKIP: {export_filename}")
@@ -438,24 +453,52 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
             logger.info(f"For period: {period_start_str}, file still busy processing or is ready on gee: SKIP: {export_filename}")
             continue
 
-        # Get s2 images that are available in this period
-        s2s_forperiod = get_s2s_forperiod([period_start_str, period_end_str])
+        # Init the results
+        def mergeBands(image1, image2):
+            """ Merges the bands of the two images, without getting errors if one of the images is None. If both images are None, None will be returned. """
 
-        # Determine export columns: the ID column of the parcel + the s1 bands for this period
-        export_columns = ee.List([gs.id_column]).cat(ee.Image(s1_forperiod).bandNames())
+            if image1 is not None:
+                if image2 is not None:
+                    return image1.addBands(image2)
+                else:
+                    return image1
+            else:
+                return image2
 
-        # If S2 available for entire flanders... add those bands as well
-        s2_pct_bevl = bevl_geom.intersection(s2s_forperiod.geometry()).area().divide(bevl_geom.area())
-        s2_forperiod = ee.Algorithms.If(s2_pct_bevl.gt(0.95), s2s_forperiod.median().select(['B2', 'B3', 'B4', 'B8'], [ee.String('S2B2_').cat(period_start_str), ee.String('S2B3_').cat(period_start_str), ee.String('S2B4_').cat(period_start_str), ee.String('S2B8_').cat(period_start_str)]), ee.Image())
-        export_columns = ee.Algorithms.If(s2_pct_bevl.gt(0.95), export_columns.cat(ee.Image(s2_forperiod).bandNames()), export_columns);
+        # Get mean s1 image of the s1 images that are available in this period
+        imagedata_forperiod = None
+        if getS1_ascDesc_combined == True:
+            s1_forperiod = get_s1_forperiod([period_start_str, period_end_str])
+            imagedata_forperiod = mergeBands(imagedata_forperiod, s1_forperiod)
+
+        # Get mean s1 asc and desc image of the s1 images that are available in this period
+        if getS1_ascDesc_seperate == True:
+            s1Asc_forperiod = get_s1Asc_forperiod([period_start_str, period_end_str])
+            s1Desc_forperiod = get_s1Desc_forperiod([period_start_str, period_end_str])
+#            export_columns = export_columns.cat(ee.Image(s1Asc_forperiod).bandNames()).cat(ee.Image(s1Desc_forperiod).bandNames())
+            imagedata_forperiod = mergeBands(mergeBands(imagedata_forperiod, s1Asc_forperiod), s1Desc_forperiod)
+#            imagedata_forperiod = imagedata_forperiod.addBands(ee.Image(s1Asc_forperiod)).addBands(ee.Image(s1Desc_forperiod))
+
+        # Get mean s2 image of the s2 images that have (almost)cloud free images available in this period
+        if getS2 == True:
+            # Get s2 images that are available in this period
+            s2s_forperiod = get_s2s_forperiod([period_start_str, period_end_str])
+
+            # If S2 available for entire flanders... add those bands as well
+            s2_pct_bevl = bevl_geom.intersection(s2s_forperiod.geometry()).area().divide(bevl_geom.area())
+            s2_forperiod = ee.Algorithms.If(s2_pct_bevl.gt(0.95), s2s_forperiod.median().select(['B2', 'B3', 'B4', 'B8'], [ee.String('S2B2_').cat(period_start_str), ee.String('S2B3_').cat(period_start_str), ee.String('S2B4_').cat(period_start_str), ee.String('S2B8_').cat(period_start_str)]), ee.Image())
+#            export_columns = ee.Algorithms.If(s2_pct_bevl.gt(0.95), export_columns.cat(ee.Image(s2_forperiod).bandNames()), export_columns);
+#            imagedata_forperiod = imagedata_forperiod.addBands(ee.Image(s2_forperiod))
+            imagedata_forperiod = mergeBands(imagedata_forperiod, s2_forperiod)
 
         # Combine the mean and standard deviation reducers.
-        reducers = ee.Reducer.mean().combine(reducer2 = ee.Reducer.stdDev(), sharedInputs = True)
+        if include_stddev == True:
+            reducer = ee.Reducer.mean().combine(reducer2 = ee.Reducer.stdDev(), sharedInputs = True)
+        else:
+            reducer = ee.Reducer.mean()
 
         # Get the sentinel data for each parcel
-        imagedata_forperiod_perparcel = ee.Image(s1_forperiod
-                ).addBands(s2_forperiod
-                ).reduceRegions(collection=bevl2017, reducer=reducers, scale=10)
+        imagedata_forperiod_perparcel = imagedata_forperiod.reduceRegions(collection=bevl2017, reducer=reducer, scale=10)
 
         # Set the geometries to none, as we don't want to export them...
         def geom_to_none(f):
@@ -463,8 +506,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         imagedata_forperiod_perparcel = imagedata_forperiod_perparcel.map(geom_to_none)
 
         # Export data to google drive
+        export_columns = ee.List([gs.id_column]).cat(imagedata_forperiod.bandNames())
         logger.info(f"For period: {period_start_str}, start export of file: {export_filename}")
-        exportTask = ee.batch.Export.table.toDrive(collection = imagedata_forperiod_perparcel
+        exportTask = ee.batch.Export.table.toDrive(collection = imagedata_forperiod_perparcel.select(export_columns)
                                                   ,folder = 'Monitoring'
                                                   ,description = export_description
                                                   ,fileFormat = 'CSV')
