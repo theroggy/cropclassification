@@ -5,6 +5,7 @@ Script to create timeseries data per parcel of
   - S2: the 4 bands for periods when there is good coverage of cloudfree images of the area of interest
 
 @author: Pieter Roggemans
+
 """
 
 from __future__ import print_function
@@ -16,6 +17,7 @@ from datetime import datetime
 from datetime import timedelta
 import pandas as pd
 import pathlib
+from typing import List
 
 # Imports for google earth engine
 import ee
@@ -25,11 +27,14 @@ from apiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
 import googleapiclient
+import global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-import global_settings as gs
+SENSORDATA_S1              = 'S1'        # Get Sentinel 1 data
+SENSORDATA_S1_ASCDESC      = 'S1AscDesc' # Get Sentinel 1 data, divided in the Ascending and Descending passes
+SENSORDATA_S2gt95          = 'S2gt95'    # Get Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -40,18 +45,54 @@ global_gee_tasks_cache = None
 #-------------------------------------------------------------
 
 def get_timeseries_data(input_parcel_filepath: str
+                       ,input_country_code: str
                        ,start_date_str: str
                        ,end_date_str: str
+                       ,sensordata_to_get: List[str]
                        ,base_filename: str
                        ,dest_data_dir: str):
+    """ Get timeseries data for the input parcels
+
+    args
+    ------------
+        data_to_get: an array with data you want to be calculated: check out the constants starting with DATA_TO_GET... for the options.
+    """
+    # Check some variables...
+    if sensordata_to_get == None:
+        raise Exception("sensordata_to_get cannot be None")
 
     # Start calculation of the timeseries on gee
     logger.info("Start create_sentinel_timeseries_info")
-    calculate_sentinel_timeseries(input_parcel_filepath = input_parcel_filepath
-                                 ,start_date_str = start_date_str
-                                 ,end_date_str = end_date_str
-                                 ,base_filename = base_filename
-                                 ,dest_data_dir = dest_data_dir)
+    # On windows machines there seems to be an issue with gee. The following error is very common, probably because there are too many
+    # sockets created in a short time... and the cleanup procedure in windows can't follow:
+    #     "OSError: [WinError 10048] Elk socketadres (protocol/netwerkadres/poort) kan normaal slechts één keer worden gebruikt"
+    # So execute in a loop and retry every 10 seconds... this seems to be a working workaround.
+    nb_retries = 0
+    done_success = False
+    while done_success == False and nb_retries < 10:
+        try:
+            calculate_sentinel_timeseries(input_parcel_filepath = input_parcel_filepath
+                                         ,input_country_code = input_country_code
+                                         ,start_date_str = start_date_str
+                                         ,end_date_str = end_date_str
+                                         ,sensordata_to_get = sensordata_to_get
+                                         ,base_filename = base_filename
+                                         ,dest_data_dir = dest_data_dir)
+            done_success = True
+
+        except OSError as e:
+            nb_retries += 1
+            if e.winerror == 10048:
+                logger.warning(f"Exception [WinError {e.winerror}] while trying calculate_sentinel_timeseries, retry! (Full exception message {e})")
+                time.sleep(10)
+            else:
+                raise
+
+    # If it wasn't successful, log and stop.
+    if done_success == False:
+        message = "STOP: calculate_sentinel_timeseries couldn't be completed even after many retries..."
+        logger.critical(message)
+        raise Exception(message)
 
     # Download the data from GEE
     return_status = 'UNDEFINED'
@@ -166,7 +207,7 @@ def download_sentinel_timeseries(dest_data_dir: str
 
                 # Check if download was completed succesfully, and cleanup temp files...
                 if download_done == True:
-                    remove_gee_columns_from_csv(dest_filepath)
+                    clean_gee_downloaded_csv(dest_filepath)
                     os.remove(curr_csv_to_download_path)
                 elif os.path.isfile(dest_filepath):
                     logger.error("Download wasn't completed succesfully, remove partially downloaded csv: {dest_filepath}!")
@@ -182,42 +223,48 @@ def download_sentinel_timeseries(dest_data_dir: str
     # Return true if all files were downloaded
     return return_status
 
-def remove_gee_columns_from_csv_in_dir(dir_path: str):
+def clean_gee_downloaded_csvs_in_dir(dir_path: str):
     # Loop through all csv files in dir and remove the gee columns...
     csv_files = glob.glob(os.path.join(dir_path, '*.csv'))
     for curr_csv in sorted(csv_files):
-        remove_gee_columns_from_csv(curr_csv)
+        clean_gee_downloaded_csv(curr_csv)
 
-def remove_gee_columns_from_csv(csv_file: str):
+def clean_gee_downloaded_csv(csv_file: str):
     logger.debug(f"Remove gee specifice columns from {csv_file}")
     # Read the file
     df_in = pd.read_csv(csv_file)
 
     # Drop unnecessary gee specific columns...
-    column_dropped = False
-    for column in df_in.columns :
+    csv_changed = False
+    for column in df_in.columns:
         if column in ['system:index', '.geo']:
             df_in.drop(column, axis=1, inplace=True)
-            column_dropped = True
+            csv_changed = True
+        elif column == 'count':
+            logger.info(f"Rename count column to {gs.pixcount_s1s2_column}")
+            df_in.rename(columns = {'count': gs.pixcount_s1s2_column}, inplace=True)
+            csv_changed = True
 
     # If a column, was dropped... replace the original file by the cleaned one
-    if column_dropped == True:
+    if csv_changed == True:
         logger.info(f"Replace the csv file with the gee specific columns removed: {csv_file}")
         csv_file_tmp = f"{csv_file}_cleaned.tmp"
         df_in.to_csv(csv_file_tmp, index=False)
         os.replace(csv_file_tmp, csv_file)
 
 def calculate_sentinel_timeseries(input_parcel_filepath: str
+                                 ,input_country_code: str
                                  ,start_date_str: str
                                  ,end_date_str: str
+                                 ,sensordata_to_get: List[str]
                                  ,base_filename: str
                                  ,dest_data_dir: str):
     '''
     Credits: partly based on a gee S1 extraction script written by Guido Lemoine.
 
-    TODO: when both asc and desc inmages and S2 images are available for a period, the calculation ends with an error:
-        Error: Image.reduceRegions: Computed value is too large.
-        -> maybe put S1 and S2 in seperate output files?
+    TODO: it would be cleaner if feature of interest didn't have to be passed explicitly... but could be calculated from input_parcels... but too slow??
+    TODO: some code is still old code from the original js version that could be cleaner by just writing it in python.
+          this would also result in using less sockets, and less error that sockets can't be reused on windows ;-).
     '''
 
     # Init some variables
@@ -225,37 +272,32 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
     if not os.path.exists(dest_data_dir_todownload):
         os.mkdir(dest_data_dir_todownload)
 
-    getS1_ascDesc_combined = False
-    getS1_ascDesc_seperate = True
-    getS2 = False
-    include_stddev = False
-
     # Initialize connection to server
     ee.Initialize()
 
-    # Define the bounds of flanders
-    bevl_geom = ee.Geometry.Polygon(
-        [[[3.219141559645095, 51.382839056214074],
-          [2.395251749811223, 51.08622074707946],
-          [2.6479083799461023, 50.75729132119862],
-          [2.8071930702097916, 50.67382488209542],
-          [4.05950498184086, 50.639001278789706],
-          [5.460117113586875, 50.67382291700078],
-          [5.927674232135132, 50.70514081680863],
-          [5.8355122769162335, 50.95084747021692],
-          [5.852391042458976, 51.06851086546833],
-          [5.86840409339311, 51.13983411545178],
-          [5.852835448995961, 51.18272203541686],
-          [5.460115101564611, 51.327099242895095],
-          [5.28459662023829, 51.413048026378355],
-          [5.045432234403279, 51.494974825956845],
-          [4.759572600621368, 51.50915727919978],
-          [4.2627231304370525, 51.47616009334954],
-          [4.17759696889857, 51.314226452568576]]]);
-
-    # Define the bounds of Belgium -> not needed, we use flanders above...
-    #countries = ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017");
-    #be_geom = ee.Feature(countries.filterMetadata('country_na', 'equals', 'Belgium').union().first()).buffer(1000).geometry()
+    if input_country_code == 'BEFL':
+        # Define the bounds of flanders as region of interest
+        region_of_interest = ee.Geometry.Polygon(
+            [[[3.219141559645095, 51.382839056214074],
+              [2.395251749811223, 51.08622074707946],
+              [2.6479083799461023, 50.75729132119862],
+              [2.8071930702097916, 50.67382488209542],
+              [4.05950498184086, 50.639001278789706],
+              [5.460117113586875, 50.67382291700078],
+              [5.927674232135132, 50.70514081680863],
+              [5.8355122769162335, 50.95084747021692],
+              [5.852391042458976, 51.06851086546833],
+              [5.86840409339311, 51.13983411545178],
+              [5.852835448995961, 51.18272203541686],
+              [5.460115101564611, 51.327099242895095],
+              [5.28459662023829, 51.413048026378355],
+              [5.045432234403279, 51.494974825956845],
+              [4.759572600621368, 51.50915727919978],
+              [4.2627231304370525, 51.47616009334954],
+              [4.17759696889857, 51.314226452568576]]]);
+    else:
+        countries = ee.FeatureCollection("USDOS/LSIB_SIMPLE/2017");
+        region_of_interest = ee.Feature(countries.filterMetadata('country_co', 'equals', input_country_code).union().first()).buffer(1000).geometry()
 
     # First adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
     logger.info('Adapt start_date and end_date so they are mondays')
@@ -276,7 +318,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 #    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
     # Prepare the input vector data we want to add timeseries info to...
-    bevl2017 = ee.FeatureCollection(input_parcel_filepath)
+    input_parcels = ee.FeatureCollection(input_parcel_filepath)
 
     logging.info(f'Create sentinel timeseries from {start_date} till {end_date} for parcel in file {input_parcel_filepath}')
 
@@ -293,7 +335,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
     s1 = ee.ImageCollection('COPERNICUS/S1_GRD'
                             ).filter(ee.Filter.eq('instrumentMode', 'IW')
                             ).filter(ee.Filter.eq('transmitterReceiverPolarisation', ['VV', 'VH'])
-                            ).filterBounds(bevl_geom
+                            ).filterBounds(region_of_interest
                             ).filterDate(start_date_str, end_date_str).sort('system:time_start')
 
     # Remove ugly edges from S1
@@ -312,7 +354,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
     # Load interesting S2 images
     s2 = ee.ImageCollection('COPERNICUS/S2'
-        ).filterBounds(bevl_geom
+        ).filterBounds(region_of_interest
         ).filterDate(start_date_str, end_date_str
         ).filter(ee.Filter.lessThan('CLOUDY_PIXEL_PERCENTAGE', 10));
 
@@ -375,11 +417,11 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
     #     - FAILED   : an error occured while processing the task and the tas stopped without result
     def get_gee_tasklist():
         tasklist = ee.batch.data.getTaskList()
-        logger.info('Number of tasks: ' + str(len(tasklist)))
+        logger.info("Number of tasks: " + str(len(tasklist)))
         return tasklist
 
-    # TODO: on locations where there is now a check if the task exists, it is not yet possible to ignore the completed
-    # ones, which is probably needed as an option, definitely to make it easier to debug...
+    # Remark: In some cases (eg. while debugging/testing) it would be easier that there would be an option to ignore completed ones.
+    #         But there is an easy workaround: just change the basefilename in any way to ignore the completed ones.
     def check_if_task_exists(task_description: str, task_state_list) -> str:
         """ Checks if a task exists already on gee """
 
@@ -398,35 +440,58 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         logger.debug(f"<check_if_task_exists> Task {task_description} doesn't exist with any of the states in {task_state_list}")
         return False
 
-    # If the file doesn't exist yet... export the parcel with all interesting columns to csv...
-    export_description = f'{base_filename}_pixcount'
-    export_filename = export_description + '.csv'
-    dest_fullpath = os.path.join(dest_data_dir, export_filename)
-    dest_fullpath_todownload = os.path.join(dest_data_dir_todownload, export_filename)
-    if ((not os.path.isfile(dest_fullpath))
-            and (not os.path.isfile(dest_fullpath_todownload))
-            and (not check_if_task_exists(export_description, ['RUNNING', 'READY' ''', 'COMPLETED' ''']))):
-        logger.info(f"Prcinfo file doesn't exist yet... so create it: {dest_fullpath}")
+    def reduce_and_export(imagedata, reducer, export_descr: str):
+        """ Reduces the imagedata over the features and export to drive. """
 
-        s1_for_count = s1.filterDate(ee.List(periods.get(0)).get(0), ee.List(periods.get(0)).get(1)).mean().select(['VV'], ['pixcount'])
+        # First check if the file exists already locally...
+        # Format relevant local filename
+        export_filename = export_descr + '.csv'
+        dest_fullpath = os.path.join(dest_data_dir, export_filename)
+        dest_fullpath_todownload = os.path.join(dest_data_dir_todownload, export_filename)
 
-        # Reduceregion uses the crs of the image to do the reduceregion, but
-        # because there are images of two projections, it is WGS84
-        bevl2017_pixcount = ee.Image(s1_for_count
-            ).reduceRegions(collection = bevl2017
-                           ,reducer = ee.Reducer.count()
-                           ,scale=10)
-        bevl2017_pixcount = bevl2017_pixcount.select([gs.id_column, 'count'], newProperties=[gs.id_column, 'pixcount'], retainGeometry=False)
+        # If the data is already available locally... go to next period
+        if (os.path.isfile(dest_fullpath)):
+            logger.info(f"For task {export_descr}, file already available locally: SKIP")
+            return
 
-        exportTask = ee.batch.Export.table.toDrive(
-                collection = bevl2017_pixcount
-                , folder = 'Monitoring'
-                , description = export_description
-                , fileFormat = 'CSV')
+        # If the data is already "ordered" in a previous run and is still busy processing, don't start processing again
+        if (os.path.isfile(dest_fullpath_todownload)
+                and(check_if_task_exists(export_description, ['RUNNING', 'READY', 'COMPLETED']))):
+            logger.info(f"For task {export_descr}, file still busy processing or is ready on gee: SKIP")
+            return
+
+        # Get the sentinel data for each parcel
+        # Remark: from the input parcels, only keep the ID column...
+        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([gs.id_column]), reducer=reducer, scale=10)
+
+        # Set the geometries to none, as we don't want to export them... and parameter retainGeometry=False in select doesn't seem to work.
+        def geom_to_none(f):
+            return f.setGeometry(None)
+        imagedata_perparcel = imagedata_perparcel.map(geom_to_none)
+
+        # Export to google drive
+        exportTask = ee.batch.Export.table.toDrive(collection=imagedata_perparcel
+                                                   , folder='Monitoring'
+                                                   , description=export_descr
+                                                   , fileFormat='CSV')
         ee.batch.Task.start(exportTask)
+
+        # Create file in todownload folder to indicate this file should be downloaded
         pathlib.Path(dest_fullpath_todownload).touch()
 
+    # If the file doesn't exist yet... export the parcel with all interesting columns to csv...
+    s1_for_count = s1.filterDate(ee.List(periods.get(0)).get(0), ee.List(periods.get(0)).get(1)).mean().select(['VV'], ['pixcount'])
+    export_description = f"{base_filename}_pixcount"
+    reduce_and_export(imagedata=s1_for_count
+                      , reducer=ee.Reducer.count()
+                      , export_descr=export_description)
+
     # Loop over all periods and export data per period to drive
+    # Create the reducer we want to user...
+    # Remark: always use both the mean and stdDev reducer, the stdDev is useful for detecting if the parcel isn't one crop in any case,
+    #         and that way the name of the columns always end with the aggregation/reduce type used, otherwise it doesn't and other code will break
+    reducer = ee.Reducer.mean().combine(reducer2=ee.Reducer.stdDev(), sharedInputs=True)
+#    reducer = ee.Reducer.mean()
     nb_periods = periods.length().getInfo()
     logger.info(f"Loop through all <{nb_periods}> periods")
     for i in range(0, nb_periods):
@@ -436,24 +501,6 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         period_end_str = (start_date + timedelta(days=(i+1)*7)).strftime('%Y-%m-%d')
         logger.debug(f"Process period: {period_start_str} till {period_end_str}")
 
-        # Format relevant local filenames
-        export_description = f"{base_filename}_{period_start_str}"
-        export_filename = export_description + '.csv'
-        dest_fullpath = os.path.join(dest_data_dir, export_filename)
-        dest_fullpath_todownload = os.path.join(dest_data_dir_todownload, export_filename)
-
-        # If the data is already available locally... go to next period
-        if (os.path.isfile(dest_fullpath)):
-            logger.info(f"For period: {period_start_str}, file already available locally: SKIP: {export_filename}")
-            continue
-
-        # If the data is already "ordered" in a previous run and is still busy processing, don't start processing again
-        if (os.path.isfile(dest_fullpath_todownload)
-                and(check_if_task_exists(export_description, ['RUNNING', 'READY', 'COMPLETED']))):
-            logger.info(f"For period: {period_start_str}, file still busy processing or is ready on gee: SKIP: {export_filename}")
-            continue
-
-        # Init the results
         def mergeBands(image1, image2):
             """ Merges the bands of the two images, without getting errors if one of the images is None. If both images are None, None will be returned. """
 
@@ -466,56 +513,54 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                 return image2
 
         # Get mean s1 image of the s1 images that are available in this period
-        imagedata_forperiod = None
-        if getS1_ascDesc_combined == True:
-            s1_forperiod = get_s1_forperiod([period_start_str, period_end_str])
-            imagedata_forperiod = mergeBands(imagedata_forperiod, s1_forperiod)
+        if SENSORDATA_S1 in sensordata_to_get:
+            # If the data is already available locally... skip
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1}"
+            if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
+                logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
+                return
+            else:
+                # Now the real work
+                s1_forperiod = get_s1_forperiod([period_start_str, period_end_str])
+                reduce_and_export(imagedata=s1_forperiod, reducer=reducer, export_descr=sensordata_descr)
 
         # Get mean s1 asc and desc image of the s1 images that are available in this period
-        if getS1_ascDesc_seperate == True:
-            s1Asc_forperiod = get_s1Asc_forperiod([period_start_str, period_end_str])
-            s1Desc_forperiod = get_s1Desc_forperiod([period_start_str, period_end_str])
-#            export_columns = export_columns.cat(ee.Image(s1Asc_forperiod).bandNames()).cat(ee.Image(s1Desc_forperiod).bandNames())
-            imagedata_forperiod = mergeBands(mergeBands(imagedata_forperiod, s1Asc_forperiod), s1Desc_forperiod)
-#            imagedata_forperiod = imagedata_forperiod.addBands(ee.Image(s1Asc_forperiod)).addBands(ee.Image(s1Desc_forperiod))
+        if SENSORDATA_S1_ASCDESC in sensordata_to_get:
+            # If the data is already available locally... skip
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1_ASCDESC}"
+            if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
+                logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
+            else:
+                # Now the real work
+                s1Asc_forperiod = get_s1Asc_forperiod([period_start_str, period_end_str])
+                s1Desc_forperiod = get_s1Desc_forperiod([period_start_str, period_end_str])
+                imagedata_forperiod = mergeBands(s1Asc_forperiod, s1Desc_forperiod)
+                reduce_and_export(imagedata=imagedata_forperiod, reducer=reducer, export_descr=sensordata_descr)
 
         # Get mean s2 image of the s2 images that have (almost)cloud free images available in this period
-        if getS2 == True:
-            # Get s2 images that are available in this period
-            s2s_forperiod = get_s2s_forperiod([period_start_str, period_end_str])
+        if SENSORDATA_S2gt95 in sensordata_to_get:
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S2gt95}"
 
-            # If S2 available for entire flanders... add those bands as well
-            s2_pct_bevl = bevl_geom.intersection(s2s_forperiod.geometry()).area().divide(bevl_geom.area())
-            s2_forperiod = ee.Algorithms.If(s2_pct_bevl.gt(0.95), s2s_forperiod.median().select(['B2', 'B3', 'B4', 'B8'], [ee.String('S2B2_').cat(period_start_str), ee.String('S2B3_').cat(period_start_str), ee.String('S2B4_').cat(period_start_str), ee.String('S2B8_').cat(period_start_str)]), ee.Image())
-#            export_columns = ee.Algorithms.If(s2_pct_bevl.gt(0.95), export_columns.cat(ee.Image(s2_forperiod).bandNames()), export_columns);
-#            imagedata_forperiod = imagedata_forperiod.addBands(ee.Image(s2_forperiod))
-            imagedata_forperiod = mergeBands(imagedata_forperiod, s2_forperiod)
+            # If the data is already available locally... skip
+            # Remark: this logic is puth here additionaly to evade having to calculate the 95% rule even if data is available.
+            dest_fullpath = os.path.join(dest_data_dir, f"{sensordata_descr}.csv")
+            if os.path.isfile(dest_fullpath):
+                logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
+            else:
+                # Get s2 images that are available in this period
+                s2s_forperiod = get_s2s_forperiod([period_start_str, period_end_str])
 
-        # Combine the mean and standard deviation reducers.
-        if include_stddev == True:
-            reducer = ee.Reducer.mean().combine(reducer2 = ee.Reducer.stdDev(), sharedInputs = True)
-        else:
-            reducer = ee.Reducer.mean()
+                # If S2 available for entire flanders... export S2 as well
+                s2_pct_bevl = region_of_interest.intersection(s2s_forperiod.geometry()).area().divide(region_of_interest.area())
+                if s2_pct_bevl.getInfo() > 0.95:
+                    s2_forperiod = s2s_forperiod.median().select(['B2', 'B3', 'B4', 'B8'], [ee.String('S2B2_').cat(period_start_str), ee.String('S2B3_').cat(period_start_str), ee.String('S2B4_').cat(period_start_str), ee.String('S2B8_').cat(period_start_str)])
+                else:
+                    # Create an empty destination file so we'll know that we tested the 95% already and don't need to do it again...
+                    pathlib.Path(dest_fullpath).touch()
+                    s2_forperiod = None
 
-        # Get the sentinel data for each parcel
-        imagedata_forperiod_perparcel = imagedata_forperiod.reduceRegions(collection=bevl2017, reducer=reducer, scale=10)
-
-        # Set the geometries to none, as we don't want to export them...
-        def geom_to_none(f):
-            return f.setGeometry(None)
-        imagedata_forperiod_perparcel = imagedata_forperiod_perparcel.map(geom_to_none)
-
-        # Export data to google drive
-        export_columns = ee.List([gs.id_column]).cat(imagedata_forperiod.bandNames())
-        logger.info(f"For period: {period_start_str}, start export of file: {export_filename}")
-        exportTask = ee.batch.Export.table.toDrive(collection = imagedata_forperiod_perparcel.select(export_columns)
-                                                  ,folder = 'Monitoring'
-                                                  ,description = export_description
-                                                  ,fileFormat = 'CSV')
-        ee.batch.Task.start(exportTask)
-
-        # Create file in todownload folder to indicate this file should be downloaded
-        pathlib.Path(dest_fullpath_todownload).touch()
+#                logger.debug(f"S2 Bands: {ee.Image(s2_forperiod).bandNames().getInfo()}")
+                reduce_and_export(imagedata=s2_forperiod, reducer=reducer, export_descr=sensordata_descr)
 
 # If the script is run directly...
 if __name__ == "__main__":

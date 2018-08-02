@@ -10,15 +10,21 @@ import os
 import glob
 import pandas as pd
 import classification_preprocessing_BEFL as befl
+import global_settings as gs
+from typing import List
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-import global_settings as gs
-
+# Some constants to choose the balancing strategy to use to crete the training set
 BALANCING_STRATEGY_NONE = 'BALANCE_NONE'
 BALANCING_STRATEGY_MEDIUM = 'BALANCE_MEDIUM'
 BALANCING_STRATEGY_EQUAL = 'BALANCE_EQUAL'
+
+# Some constantsto choose which type of data to use in the marker.
+# Remark: the string needs to be the same as the end of the name of the columns in the csv files!
+PARCELDATA_AGGRAGATION_MEAN       = 'mean'      # Mean value of the pixels values in a parcel.
+PARCELDATA_AGGRAGATION_STDDEV     = 'stdDev'    # Standard Deviation of the values of the pixels in a parcel
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -52,14 +58,19 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
                                        ,base_filename: str
                                        ,start_date_str: str
                                        ,end_date_str: str
+                                       ,parceldata_aggregations_to_use: List[str]
                                        ,output_csv: str
                                        ,force: bool = False):
     """ Collect all timeseries data to use for the classification and prepare it by applying scaling,... as needed. """
+    # TODO: If we use S2 data, it is necessary to fill missing values in whatever way, otherwise there won't be a classification
+    #       at all for that parcel!!!
 
     # If force == False Check and the output file exists already, stop.
     if force == False and os.path.exists(output_csv):
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_csv}")
         return
+
+    logger.info(f"Parceldata aggregations that need to be used: {parceldata_aggregations_to_use}")
 
     logger.setLevel(logging.DEBUG)
     logger.info("Create the input file for the classification")
@@ -70,7 +81,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
     logger.debug(f'filepath_start_date: {filepath_start}')
     logger.debug(f'filepath_end_date: {filepath_end}')
 
-    csv_files = glob.glob(os.path.join(imagedata_dir, f'{base_filename}_*.csv'))
+    csv_files = glob.glob(os.path.join(imagedata_dir, f"{base_filename}_*.csv"))
     result = None
     for curr_csv in sorted(csv_files):
         # The only data we want to process is the data in the range of dates or ending with prcinfo.csv
@@ -79,16 +90,36 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
             continue
 
         logger.info(f'Process file: {curr_csv}')
-        df_in = pd.read_csv(curr_csv, low_memory=False)
 
-        # Preprocess data
+        # An empty file signifies that there wasn't any valable data for that period/sensor/...
+        if os.path.getsize(curr_csv) == 0:
+            logger.info(f"File is empty, so SKIP: {curr_csv}")
+            continue
+
+        # Read data, and loop over columns to check if there are columns that need to be dropped.
+        df_in = pd.read_csv(curr_csv, low_memory=False)
         for column in df_in.columns:
-            if ((df_in[column].isnull().sum()/len(df_in[column])) > 0.1):
+            if column == gs.id_column:
+                continue
+            elif ((df_in[column].isnull().sum()/len(df_in[column])) > 0.1):
                 # If the number of nan values for the column > x %, drop column
-                logger.warn(f'Drop column as it contains > 10% nan values!: {column}')
+                logger.warn(f"Drop column as it contains > 10% nan values!: {column}")
                 df_in.drop(column, axis=1, inplace=True)
+            else:
+                column_ok = False
+                for parceldata_aggregation in parceldata_aggregations_to_use:
+                    if column.endswith('_' + parceldata_aggregation):
+                        column_ok = True
+
+                # If the column aggregation of the column wasn't found in the parcel_data_aggregations_to_use, drop it.
+                if column_ok == False:
+                    logger.info(f"Drop column as it's column aggregation isn't to be used: {column}")
+                    df_in.drop(column, axis=1, inplace=True)
+
+        # Loop over columns to check if there are columns that need to be rescaled.
+        for column in df_in.columns:
             if column.startswith('S2'):
-                logger.info(f'Column contains S2 data, so scale it by dividing by 10.000: {column}')
+                logger.info(f"Column contains S2 data, so scale it by dividing by 10.000: {column}")
                 df_in[column] = df_in[column]/10000
 
         # Set the index to the id_columnname, and join the data to the result...
@@ -162,7 +193,7 @@ def create_train_test_sample(input_parcel_classes_csv: str
     logger.debug(f'Number of parcel in df_train_base after filter on pixcount >= 20: {len(df_train_base)}')
 
     # The 'UNKNOWN' and 'IGNORE_' classes arent' meant for training... so remove them!
-    logger.info("Remove the 'UNKNOWN' class from training ☻sample")
+    logger.info("Remove the 'UNKNOWN' class from training sample")
     df_train_base = df_train_base[df_train_base[gs.class_column] != 'UNKNOWN']
 
     # The 'IGNORE_' classes aren't meant for training either...

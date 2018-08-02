@@ -27,26 +27,28 @@ input_groundtruth_noext = 'Prc_flanders_2017_groundtruth'
 input_groundtruth_csv = os.path.join(input_dir, f"{input_groundtruth_noext}.csv")       # The ground truth
 input_parcel_filetype = 'BEFL'
 imagedata_dir = os.path.join(base_dir, 'Timeseries_data')               # General data download dir
-start_date_str = '2017-04-01'
+start_date_str = '2017-03-27'
 end_date_str = '2017-09-15'                                             # End date is NOT inclusive for gee processing
 
-# REMARK: the column names that are used/expected can be found in global_constants.py!
-
+# REMARK: the column names that are used/expected can be found/changed in global_constants.py!
+'''
 # Settings for 7 main crops
 output_classes_type = 'MOST_POPULAR_CROPS'
 class_base_dir = os.path.join(base_dir, 'class_maincrops7')             # Specific dir for this classification
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
-
 '''
+
 # Settings for monitoring crop groups
 output_classes_type = 'MONITORING_CROPGROUPS'
 class_base_dir = os.path.join(base_dir, 'class_maincrops_mon')          # Specific dir for this classification
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
-'''
 
-class_dir = os.path.join(class_base_dir, '2018-07-30_Run3_bufm10_groupedTestSample')
+class_dir = os.path.join(class_base_dir, '2018-08-01_Run1_test_new_download_per_sensor')
 log_dir = os.path.join(class_dir, 'log')
-base_filename = 'BEVL2017_weekly_bufm10_stddev'
+base_filename = 'BEFL2017_bufm10_weekly_4'
+sensordata_to_use = [timeseries.SENSORDATA_S1_ASCDESC, timeseries.SENSORDATA_S2gt95]
+parceldata_aggregations_to_use = [class_pre.PARCELDATA_AGGRAGATION_MEAN]
+country_code = 'BEFL'        # The region of the classification: typically the name of the country in english.
 
 # Check if the necessary input files and directories exist...
 if not os.path.exists(input_parcel_filepath):
@@ -116,6 +118,7 @@ timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
 # TODO: probably the period of aggregation of the data should be a parameter to increase reusability?
 input_parcel_filepath_gee = f"users/pieter_roggemans/{imagedata_input_parcel_filename_noext}"
 timeseries.get_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
+                               , input_country_code=country_code
                                , start_date_str=start_date_str
                                , end_date_str=end_date_str
                                , sensordata_to_get=sensordata_to_use
@@ -144,6 +147,7 @@ class_pre.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
                                               , base_filename=base_filename
                                               , start_date_str=start_date_str
                                               , end_date_str=end_date_str
+                                              , parceldata_aggregations_to_use=parceldata_aggregations_to_use
                                               , output_csv=parcel_classification_data_csv)
 
 # STEP 4: Train and test the classification
