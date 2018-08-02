@@ -48,9 +48,10 @@ class_dir = os.path.join(class_base_dir, '2018-07-30_Run3_bufm10_groupedTestSamp
 log_dir = os.path.join(class_dir, 'log')
 base_filename = 'BEVL2017_weekly_bufm10_stddev'
 
+# Check if the necessary input files and directories exist...
 if not os.path.exists(input_parcel_filepath):
     message = f"The parcel input file doesn't exist, so STOP: {input_parcel_filepath}"
-    print (message)
+    print(message)
     raise Exception(message)
 if not os.path.exists(imagedata_dir):
     os.mkdir(imagedata_dir)
@@ -81,8 +82,8 @@ ch.setLevel(logging.DEBUG)
 ch.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s'))
 logger.addHandler(ch)
 
-log_filename = os.path.join(log_dir, f'{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}_class_maincrop.log')
-fh = logging.FileHandler(filename=log_filename)
+log_filepath = os.path.join(log_dir, f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}_class_maincrop.log")
+fh = logging.FileHandler(filename=log_filepath)
 fh.setLevel(logging.INFO)
 fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s'))
 logger.addHandler(fh)
@@ -102,8 +103,8 @@ logger.addHandler(fh)
 #    3) remove features that became null because of buffer
 imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm10"
 imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
-timeseries_pre.prepare_input(input_parcel_filepath = input_parcel_filepath
-                            ,output_imagedata_parcel_input_filepath = imagedata_input_parcel_filepath)
+timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
+                             , output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath)
 
 # STEP 2: Get the timeseries data needed for the classification
 #-------------------------------------------------------------
@@ -114,11 +115,12 @@ timeseries_pre.prepare_input(input_parcel_filepath = input_parcel_filepath
 #    - the upload to gee as an asset is not implemented, because it need a google cloud account... so upload needs to be done manually
 # TODO: probably the period of aggregation of the data should be a parameter to increase reusability?
 input_parcel_filepath_gee = f"users/pieter_roggemans/{imagedata_input_parcel_filename_noext}"
-timeseries.get_timeseries_data(input_parcel_filepath = input_parcel_filepath_gee
-                              ,start_date_str = start_date_str
-                              ,end_date_str = end_date_str
-                              ,base_filename = base_filename
-                              ,dest_data_dir = imagedata_dir)
+timeseries.get_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
+                               , start_date_str=start_date_str
+                               , end_date_str=end_date_str
+                               , sensordata_to_get=sensordata_to_use
+                               , base_filename=base_filename
+                               , dest_data_dir=imagedata_dir)
 
 # STEP 3: Preprocess all data needed for the classification
 #-------------------------------------------------------------
@@ -131,18 +133,18 @@ timeseries.get_timeseries_data(input_parcel_filepath = input_parcel_filepath_gee
 #             Remarks: - if the classname is 'UNKNOWN', the parcel won't be used for training
 #                      - if the classname starts with 'IGNORE_', the parcel will be ignored in general
 parcel_classes_csv = os.path.join(class_dir, f"{input_parcel_filename_noext}_classes.csv")
-class_pre.prepare_input(input_parcel_filepath = input_parcel_filepath
-                       ,input_filetype = input_parcel_filetype
-                       ,output_parcel_filepath = parcel_classes_csv
-                       ,output_classes_type = output_classes_type)
+class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
+                        , input_filetype=input_parcel_filetype
+                        , output_parcel_filepath=parcel_classes_csv
+                        , output_classes_type=output_classes_type)
 
 # Combine all data needed to do the classification in one input file
 parcel_classification_data_csv = os.path.join(class_dir, f"{base_filename}_classdata.csv")
-class_pre.collect_and_prepare_timeseries_data(imagedata_dir = imagedata_dir
-                     ,base_filename = base_filename
-                     ,start_date_str = start_date_str
-                     ,end_date_str = end_date_str
-                     ,output_csv = parcel_classification_data_csv)
+class_pre.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
+                                              , base_filename=base_filename
+                                              , start_date_str=start_date_str
+                                              , end_date_str=end_date_str
+                                              , output_csv=parcel_classification_data_csv)
 
 # STEP 4: Train and test the classification
 #-------------------------------------------------------------
@@ -151,66 +153,65 @@ class_pre.collect_and_prepare_timeseries_data(imagedata_dir = imagedata_dir
 parcel_classes_train_csv = os.path.join(class_dir, f"{base_filename}_parcel_classes_train.csv")
 parcel_classes_test_csv = os.path.join(class_dir, f"{base_filename}_parcel_classes_test.csv")
 parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")
-class_pre.create_train_test_sample(input_parcel_classes_csv = parcel_classes_csv
-                                  ,input_parcel_pixcount_csv = parcel_pixcount_csv
-                                  ,output_parcel_classes_train_csv = parcel_classes_train_csv
-                                  ,output_parcel_classes_test_csv = parcel_classes_test_csv
-                                  ,balancing_strategy = balancing_strategy)
+class_pre.create_train_test_sample(input_parcel_classes_csv=parcel_classes_csv
+                                   , input_parcel_pixcount_csv=parcel_pixcount_csv
+                                   , output_parcel_classes_train_csv=parcel_classes_train_csv
+                                   , output_parcel_classes_test_csv=parcel_classes_test_csv
+                                   , balancing_strategy=balancing_strategy)
 
 # Train the classifier and output test predictions
 classifier_filepath = os.path.splitext(parcel_classes_train_csv)[0] + "_classifier.pkl"
 parcel_test_predictions_csv = os.path.join(class_dir, f"{base_filename}_predict_test.csv")
-classification.train_and_test(input_parcel_classes_train_csv = parcel_classes_train_csv
-                    ,input_parcel_classes_test_csv = parcel_classes_test_csv
-                    ,input_parcel_classification_data_csv = parcel_classification_data_csv
-                    ,output_classifier_filepath = classifier_filepath
-                    ,output_test_predictions_csv = parcel_test_predictions_csv)
+classification.train_and_test(input_parcel_classes_train_csv=parcel_classes_train_csv
+                              , input_parcel_classes_test_csv=parcel_classes_test_csv
+                              , input_parcel_classification_data_csv=parcel_classification_data_csv
+                              , output_classifier_filepath=classifier_filepath
+                              , output_test_predictions_csv=parcel_test_predictions_csv)
 
 # STEP 5: Report on the test accuracy
 #-------------------------------------------------------------
 # Preprocess the ground truth data
 groundtruth_classes_csv = os.path.join(class_dir, f"{input_groundtruth_noext}_classes.csv")
-class_pre.prepare_input(input_parcel_filepath = input_groundtruth_csv
-                       ,input_filetype = input_parcel_filetype
-                       ,output_parcel_filepath = groundtruth_classes_csv
-                       ,output_classes_type = f"{output_classes_type}_GROUNDTRUTH")
+class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv
+                        , input_filetype=input_parcel_filetype
+                        , output_parcel_filepath=groundtruth_classes_csv
+                        , output_classes_type=f"{output_classes_type}_GROUNDTRUTH")
 
 # Print full reporting on the accuracy
 report_txt = f"{parcel_test_predictions_csv}_accuracy_report.txt"
-class_report.write_full_report(parcel_predictions_csv = parcel_test_predictions_csv
-                              ,parcel_classes_test_csv = parcel_classes_test_csv
-                              ,parcel_ground_truth_csv = groundtruth_classes_csv
-                              ,output_report_txt = report_txt)
+class_report.write_full_report(parcel_predictions_csv=parcel_test_predictions_csv
+                               , parcel_classes_test_csv=parcel_classes_test_csv
+                               , parcel_ground_truth_csv=groundtruth_classes_csv
+                               , output_report_txt=report_txt)
 
 # Print a confusion matrix to asses the accuracy per pixcount, using consolidated prediction
 report_txt = f"{parcel_test_predictions_csv}_accuracy_report_pixcount.txt"
-class_report.write_OA_per_pixcount(parcel_predictions_csv = parcel_test_predictions_csv
-                                  ,parcel_pixcount_csv = parcel_pixcount_csv
-                                  ,output_report_txt = report_txt)
+class_report.write_OA_per_pixcount(parcel_predictions_csv=parcel_test_predictions_csv
+                                   , parcel_pixcount_csv=parcel_pixcount_csv
+                                   , output_report_txt=report_txt)
 
 # STEP 6: Do the actual classification
 #-------------------------------------------------------------
 # Predict for all parcels
 parcel_all_predictions_csv = os.path.join(class_dir, f"{base_filename}_predict_all.csv")
-classification.predict(input_parcel_classes_csv = parcel_classes_csv
-                    ,input_parcel_classification_data_csv = parcel_classification_data_csv
-                    ,input_classifier_filepath = classifier_filepath
-                    ,output_predictions_csv = parcel_all_predictions_csv)
+classification.predict(input_parcel_classes_csv=parcel_classes_csv
+                       , input_parcel_classification_data_csv=parcel_classification_data_csv
+                       , input_classifier_filepath=classifier_filepath
+                       , output_predictions_csv=parcel_all_predictions_csv)
 
 # STEP 7: Report on the full accuracy
 #-------------------------------------------------------------
 # Print full reporting on the accuracy
 report_txt = f"{parcel_all_predictions_csv}_accuracy_report.txt"
-class_report.write_full_report(parcel_predictions_csv = parcel_all_predictions_csv
-                              ,parcel_classes_test_csv = parcel_classes_csv
-                              ,parcel_ground_truth_csv = groundtruth_classes_csv
-                              ,output_report_txt = report_txt)
+class_report.write_full_report(parcel_predictions_csv=parcel_all_predictions_csv
+                               , parcel_classes_test_csv=parcel_classes_csv
+                               , parcel_ground_truth_csv=groundtruth_classes_csv
+                               , output_report_txt=report_txt)
 
 # Print a confusion matrix to asses the accuracy per pixcount, using consolidated prediction
 report_txt = f"{parcel_all_predictions_csv}_accuracy_report_pixcount.txt"
-class_report.write_OA_per_pixcount(parcel_predictions_csv = parcel_all_predictions_csv
-                                  ,parcel_pixcount_csv = parcel_pixcount_csv
-                                  ,output_report_txt = report_txt)
-
+class_report.write_OA_per_pixcount(parcel_predictions_csv=parcel_all_predictions_csv
+                                   , parcel_pixcount_csv=parcel_pixcount_csv
+                                   , output_report_txt=report_txt)
 
 logging.shutdown()
