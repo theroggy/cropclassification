@@ -183,6 +183,12 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # MON_BOOM includes now also the growing new plants/trees, which is too differenct from grown trees -> put growing new trees is seperate group
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['9602', '9603', '9604', '9560']), gs.class_column] = 'MON_BOOMKWEEK'
 
+    # 'MON_FRUIT': has a good accuracy (91%), but also has as much false positives (115% -> mainly 'MON_GRASSEN' that are (mis)classified as 'MON_FRUIT')
+    # 'MON_BOOM': has very bad accuracy (28%) and also very much false positives (450% -> mainly 'MON_GRASSEN' that are misclassified as 'MON_BOOM')
+    # MON_FRUIT and MON_BOOM are permanent anyway, so not mandatory that they are checked in monitoring process.
+    # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
+    df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BOOM', 'MON_FRUIT']), gs.class_column] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
+
     # Set classes with very few elements to UNKNOWN!
     for index, row in df_parceldata.groupby(gs.class_column).size().reset_index(name='count').iterrows():
         if row['count'] <= 100:
