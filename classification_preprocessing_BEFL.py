@@ -26,30 +26,38 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def prepare_input(input_parcel_filepath: str
-                 ,output_parcel_filepath: str
-                 ,output_classes_type: str):
+                  , output_parcel_filepath: str
+                  , output_classes_type: str):
+    """
+    This function creates a file that is compliant with the rest of the classification functionality.
+
+        It should be a csv file with the following columns:
+            - object_id: column with a unique identifier
+            - classname: a string column with a readable name of the classes that will be classified to
+    """
+
     if output_classes_type == 'MONITORING_CROPGROUPS':
-        return prepare_input_cropgroups(input_parcel_filepath = input_parcel_filepath
-                                       ,output_parcel_filepath = output_parcel_filepath)
+        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
+                                        , output_parcel_filepath=output_parcel_filepath)
     elif output_classes_type == 'MOST_POPULAR_CROPS':
-        return prepare_input_most_popular_crops(input_parcel_filepath = input_parcel_filepath
-                                       ,output_parcel_filepath = output_parcel_filepath)
+        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
+                                                , output_parcel_filepath=output_parcel_filepath)
     if output_classes_type == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
-        return prepare_input_cropgroups(input_parcel_filepath = input_parcel_filepath
-                                       ,output_parcel_filepath = output_parcel_filepath
-                                       ,crop_columnname = 'HOOFDTEELT_CTRL_COD')
+        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
+                                        , output_parcel_filepath=output_parcel_filepath
+                                        , crop_columnname='HOOFDTEELT_CTRL_COD')
     elif output_classes_type == 'MOST_POPULAR_CROPS_GROUNDTRUTH':
-        return prepare_input_most_popular_crops(input_parcel_filepath = input_parcel_filepath
-                                       ,output_parcel_filepath = output_parcel_filepath
-                                       ,crop_columnname = 'HOOFDTEELT_CTRL_COD')
+        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
+                                                , output_parcel_filepath=output_parcel_filepath
+                                                , crop_columnname='HOOFDTEELT_CTRL_COD')
     else:
         message = f"FATAL: unknown value for parameter output_classes_type: {output_classes_type}"
         logger.fatal(message)
         raise Exception(message)
 
 def prepare_input_cropgroups(input_parcel_filepath: str
-                            ,output_parcel_filepath: str
-                            ,crop_columnname:str = 'GWSCOD_H'):
+                             , output_parcel_filepath: str
+                             , crop_columnname: str = 'GWSCOD_H'):
     ''' This function creates a file that is compliant with the rest of the classification functionality.
 
         It should be a csv file with the following columns:
@@ -77,9 +85,9 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # Read and cleanup the mapping table from crop codes to classes
     #--------------------------------------------------------------------------
     # REM: needs to be read as ANSI, as excel apperently saves as ANSI
-    logger.info(f'Read classes conversion table from {input_classes_filepath}')
-    df_classes = pd.read_csv(input_classes_filepath, low_memory=False, sep=';',encoding='ANSI')
-    logger.info(f'Read classes conversion table ready, info(): {df_classes.info()}')
+    logger.info(f"Read classes conversion table from {input_classes_filepath}")
+    df_classes = pd.read_csv(input_classes_filepath, low_memory=False, sep=';', encoding='ANSI')
+    logger.info(f"Read classes conversion table ready, info(): {df_classes.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be converted to unicode to be able to do comparisons with the other data
     df_classes[crop_columnname] = df_classes['Gewas'].astype('unicode')
@@ -97,12 +105,12 @@ def prepare_input_cropgroups(input_parcel_filepath: str
 
     # Read the parcel data and do the necessary conversions
     #--------------------------------------------------------------------------
-    logger.info(f'Read parceldata from {input_parcel_filepath}')
+    logger.info(f"Read parceldata from {input_parcel_filepath}")
     if os.path.splitext(input_parcel_filepath)[1] == '.csv':
         df_parceldata = pd.read_csv(input_parcel_filepath)
     else:
         df_parceldata = gpd.read_file(input_parcel_filepath)
-    logger.info(f'Read Parceldata ready, info(): {df_parceldata.info()}')
+    logger.info(f"Read Parceldata ready, info(): {df_parceldata.info()}")
 
     # Check if the id column is present...
     if gs.id_column not in df_parceldata.columns:
@@ -126,8 +134,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if 'GESP_PM' in df_parceldata.columns:
         # Serres, tijdelijke overkappingen en loodsen
-        df_parceldata.loc[df_parceldata['GESP_PM'].isin(['SER','SGM']), gs.class_column] = 'SERRES'
-        df_parceldata.loc[df_parceldata['GESP_PM'].isin(['PLA','PLO','NPO']), gs.class_column] = 'TIJDELIJKE_OVERK'
+        df_parceldata.loc[df_parceldata['GESP_PM'].isin(['SER', 'SGM']), gs.class_column] = 'SERRES'
+        df_parceldata.loc[df_parceldata['GESP_PM'].isin(['PLA', 'PLO', 'NPO']), gs.class_column] = 'TIJDELIJKE_OVERK'
         df_parceldata.loc[df_parceldata['GESP_PM'] == 'LOO', gs.class_column] = 'MON_STAL'                     # Een loods is hetzelfde als een stal...
         df_parceldata.loc[df_parceldata['GESP_PM'] == 'CON', gs.class_column] = 'MON_CONTAINERS'               # Containers, niet op volle grond...
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
@@ -148,14 +156,15 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # 'MON_RAAPACHTIGEN': 25% correct classifications: rest spread over many other classes
     # 'MON_STRUIK': 10%
     #    TODO: nakijken, wss opsplitsen of toevoegen aan MON_BOOMKWEEK???
-    classes_badresults = ['MON_ANDERE_SUBSID_GEWASSEN', 'MON_AARDBEIEN', 'MON_BRAAK', 'MON_KLAVER','MON_MENGSEL', 'MON_POEL','MON_RAAPACHTIGEN','MON_STRUIK']
+    classes_badresults = ['MON_ANDERE_SUBSID_GEWASSEN', 'MON_AARDBEIEN', 'MON_BRAAK', 'MON_KLAVER'
+                          , 'MON_MENGSEL', 'MON_POEL', 'MON_RAAPACHTIGEN', 'MON_STRUIK']
     df_parceldata.loc[df_parceldata[gs.class_column].isin(classes_badresults), gs.class_column] = 'UNKNOWN'
 
     # MON_BONEN en MON_WIKKEN have omongst each other a very large percentage of false positives/negatives, so they seem very similar
     # Lets create a class that combines both
     df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BONEN', 'MON_WIKKEN']), gs.class_column] = 'MON_BONEN_WIKKEN'
 
-    # MON_BOOM includes now alse the growing new plants/trees, which is too differenct from grown trees -> put growing new trees is seperate group
+    # MON_BOOM includes now also the growing new plants/trees, which is too differenct from grown trees -> put growing new trees is seperate group
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['9602', '9603', '9604', '9560']), gs.class_column] = 'MON_BOOMKWEEK'
 
     # Set classes with very few elements to UNKNOWN!
@@ -170,7 +179,7 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     output_ext = os.path.splitext(output_parcel_filepath)[1]
     for column in df_parceldata.columns:
         if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
-            df_parceldata.rename(columns = {column:'m#' + column}, inplace = True)
+            df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
         elif column == 'geometry':
             # if the output asked is a csv... we don't need the geometry...
             if output_ext == '.csv':
@@ -187,8 +196,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str
         df_parceldata.to_file(output_parcel_filepath)
 
 def prepare_input_most_popular_crops(input_parcel_filepath: str
-                                    ,output_parcel_filepath: str
-                                    ,crop_columnname:str = 'GWSCOD_H'):
+                                     , output_parcel_filepath: str
+                                     , crop_columnname: str = 'GWSCOD_H'):
     ''' This function creates a file that is compliant with the rest of the classification functionality.
 
         It should be a csv file with the following columns:
@@ -225,10 +234,10 @@ def prepare_input_most_popular_crops(input_parcel_filepath: str
     # Add columns for the class to use...
     df_parceldata.insert(0, gs.class_column, None)
 
-    df_parceldata.loc[df_parceldata[crop_columnname].isin(['60','700','3432']), gs.class_column] = 'Grassland'  # Grassland
-    df_parceldata.loc[df_parceldata[crop_columnname].isin(['201','202']), gs.class_column] = 'Maize'            # Maize
-    df_parceldata.loc[df_parceldata[crop_columnname].isin(['901','904']), gs.class_column] = 'Potatoes'         # Potatoes
-    df_parceldata.loc[df_parceldata[crop_columnname].isin(['311','36']), gs.class_column] = 'WinterWheat'       # Winter wheat of spelt
+    df_parceldata.loc[df_parceldata[crop_columnname].isin(['60', '700', '3432']), gs.class_column] = 'Grassland'  # Grassland
+    df_parceldata.loc[df_parceldata[crop_columnname].isin(['201', '202']), gs.class_column] = 'Maize'            # Maize
+    df_parceldata.loc[df_parceldata[crop_columnname].isin(['901', '904']), gs.class_column] = 'Potatoes'         # Potatoes
+    df_parceldata.loc[df_parceldata[crop_columnname].isin(['311', '36']), gs.class_column] = 'WinterWheat'       # Winter wheat of spelt
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['91']), gs.class_column] = 'SugarBeat'               # Sugar beat
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['321']), gs.class_column] = 'WinterBarley'           # Winter barley
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['71']), gs.class_column] = 'FodderBeat'              # Fodder beat
@@ -246,7 +255,7 @@ def prepare_input_most_popular_crops(input_parcel_filepath: str
     #    - Drop the columns that aren't useful at all
     for column in df_parceldata.columns:
         if column in ['GRAF_OPP']:
-            df_parceldata.rename(columns = {column:'m#' + column}, inplace = True)
+            df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
         elif (column not in [gs.id_column, gs.class_column]):
 #                and (not column.startswith('m#'))):
             df_parceldata.drop(column, axis=1, inplace=True)
