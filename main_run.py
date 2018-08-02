@@ -26,21 +26,21 @@ input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.
 input_groundtruth_noext = 'Prc_flanders_2017_groundtruth'
 input_groundtruth_csv = os.path.join(input_dir, f"{input_groundtruth_noext}.csv")       # The ground truth
 input_parcel_filetype = 'BEFL'
-imagedata_dir = os.path.join(base_dir, 'Timeseries_data')               # General data download dir
+imagedata_dir = os.path.join(base_dir, 'Timeseries_data')      # General data download dir
 start_date_str = '2017-03-27'
-end_date_str = '2017-09-15'                                             # End date is NOT inclusive for gee processing
+end_date_str = '2017-09-15'                                    # End date is NOT inclusive for gee processing
 
 # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
 '''
 # Settings for 7 main crops
 output_classes_type = 'MOST_POPULAR_CROPS'
-class_base_dir = os.path.join(base_dir, 'class_maincrops7')             # Specific dir for this classification
+class_base_dir = os.path.join(base_dir, 'class_maincrops7')    # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 '''
 
 # Settings for monitoring crop groups
 output_classes_type = 'MONITORING_CROPGROUPS'
-class_base_dir = os.path.join(base_dir, 'class_maincrops_mon')          # Specific dir for this classification
+class_base_dir = os.path.join(base_dir, 'class_maincrops_mon') # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 
 class_dir = os.path.join(class_base_dir, '2018-08-01_Run1_test_new_download_per_sensor')
@@ -48,7 +48,7 @@ log_dir = os.path.join(class_dir, 'log')
 base_filename = 'BEFL2017_bufm10_weekly_4'
 sensordata_to_use = [timeseries.SENSORDATA_S1_ASCDESC, timeseries.SENSORDATA_S2gt95]
 parceldata_aggregations_to_use = [class_pre.PARCELDATA_AGGRAGATION_MEAN]
-country_code = 'BEFL'        # The region of the classification: typically the name of the country in english.
+country_code = 'BEFL'        # The region of the classification: typically country code
 
 # Check if the necessary input files and directories exist...
 if not os.path.exists(input_parcel_filepath):
@@ -93,8 +93,9 @@ logger.addHandler(fh)
 #-------------------------------------------------------------
 # The real work
 #-------------------------------------------------------------
-# TODO: performance could be optimized by providing the option that the intermediate csv files aren't always written to disk and
-#       read again by returning the result as DataSet... (or at least only written, not read again).
+# TODO: performance could be optimized by providing the option that the intermediate csv files
+#       aren't always written to disk and read again by returning the result as DataSet...
+#       (or at least only written, not read again).
 
 # STEP 1: prepare parcel data for classification and image data extraction
 #-------------------------------------------------------------
@@ -113,9 +114,10 @@ timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
 # Get the time series data (S1 and S2) to be used for the classification later on...
 # Result: data is put in csv files in imagedata_dir, in one csv file per date/period
 # Remarks:
-#    - the path to the imput data is specific for gee... so will need to be changed if another implementation is used
-#    - the upload to gee as an asset is not implemented, because it need a google cloud account... so upload needs to be done manually
-# TODO: probably the period of aggregation of the data should be a parameter to increase reusability?
+#    - the path to the imput data is specific for gee... so will need to be changed if another
+#      implementation is used
+#    - the upload to gee as an asset is not implemented, because it need a google cloud account...
+#      so upload needs to be done manually
 input_parcel_filepath_gee = f"users/pieter_roggemans/{imagedata_input_parcel_filename_noext}"
 timeseries.get_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
                                , input_country_code=country_code
@@ -134,7 +136,7 @@ timeseries.get_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
 #           - id        (=gs.id_column)   : unique ID for the parcel
 #           - classname (=gs.class_column): the class that must be classified to.
 #             Remarks: - if the classname is 'UNKNOWN', the parcel won't be used for training
-#                      - if the classname starts with 'IGNORE_', the parcel will be ignored in general
+#                      - if the classname starts with 'IGNORE_', the parcel will be ignored
 parcel_classes_csv = os.path.join(class_dir, f"{input_parcel_filename_noext}_classes.csv")
 class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
                         , input_filetype=input_parcel_filetype
@@ -153,7 +155,7 @@ class_pre.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
 # STEP 4: Train and test the classification
 #-------------------------------------------------------------
 # Create the training sample...
-# Remark: this creates a list of representative test parcel + a list of (candidate) training parcel.
+# Remark: this creates a list of representative test parcel + a list of (candidate) training parcel
 parcel_classes_train_csv = os.path.join(class_dir, f"{base_filename}_parcel_classes_train.csv")
 parcel_classes_test_csv = os.path.join(class_dir, f"{base_filename}_parcel_classes_test.csv")
 parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")

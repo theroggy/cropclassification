@@ -29,11 +29,12 @@ def prepare_input(input_parcel_filepath: str
                   , output_parcel_filepath: str
                   , output_classes_type: str):
     """
-    This function creates a file that is compliant with the rest of the classification functionality.
+    This function creates a file that is compliant with the assumptions used by the rest of the
+    classification functionality.
 
-        It should be a csv file with the following columns:
-            - object_id: column with a unique identifier
-            - classname: a string column with a readable name of the classes that will be classified to
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be classified to
     """
 
     if output_classes_type == 'MONITORING_CROPGROUPS':
@@ -58,14 +59,17 @@ def prepare_input(input_parcel_filepath: str
 def prepare_input_cropgroups(input_parcel_filepath: str
                              , output_parcel_filepath: str
                              , crop_columnname: str = 'GWSCOD_H'):
-    ''' This function creates a file that is compliant with the rest of the classification functionality.
+    """
+    This function creates a file that is compliant with the assumptions used by the rest of the
+    classification functionality.
 
-        It should be a csv file with the following columns:
-            - object_id: column with a unique identifier
-            - classname: a string column with a readable name of the classes that will be classified to
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be classified to
 
-        This specific implementation converts the typiscal export format used in BE-Flanders to this format.
-    '''
+    This specific implementation converts the typiscal export format used in BE-Flanders to
+    this format.
+    """
     logger.info('Start of create_classes_cropgroups')
 
     # Check if parameters are OK and init some extra params
@@ -89,7 +93,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     df_classes = pd.read_csv(input_classes_filepath, low_memory=False, sep=';', encoding='ANSI')
     logger.info(f"Read classes conversion table ready, info(): {df_classes.info()}")
 
-    # Because the file was read as ansi, and gewas is int, so the data needs to be converted to unicode to be able to do comparisons with the other data
+    # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
+    # unicode to be able to do comparisons with the other data
     df_classes[crop_columnname] = df_classes['Gewas'].astype('unicode')
 
     # Map column MON_group to orig classname
@@ -126,17 +131,22 @@ def prepare_input_cropgroups(input_parcel_filepath: str
 
     # Join/merge the classname
     logger.info('Add the classes to the parceldata')
-    df_parceldata = df_parceldata.merge(df_classes, how='left', left_on=crop_columnname, right_index=True, validate='many_to_one')
+    df_parceldata = df_parceldata.merge(df_classes, how='left'
+                                        , left_on=crop_columnname
+                                        , right_index=True
+                                        , validate='many_to_one')
 
     # Data verwijderen
 #    df = df[df[classname] != 'Andere subsidiabele gewassen']  # geen boomkweek
 
-    # Add column to signify that the parcel is eligible and set ineligible crop types (important for reporting afterwards)
+    # Add column to signify that the parcel is eligible and set ineligible crop types (important
+    # for reporting afterwards)
     # TODO: would be cleaner if this is based on refe as well instead of hardcoded
     df_parceldata.insert(loc=0, column=gs.is_eligible_column, value=1)
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['1', '2']), gs.is_eligible_column] = 1
 
-    # Add column to signify if the crop/class is permanent, so can/should be followed up in the LPIS upkeep
+    # Add column to signify if the crop/class is permanent, so can/should be followed up in the
+    # LPIS upkeep
     # TODO: would be cleaner if this is based on refe as well instead of hardcoded
     df_parceldata.insert(loc=0, column=gs.is_permanent_column, value=1)
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['1', '2', '3']), gs.is_permanent_column] = 1
@@ -152,10 +162,10 @@ def prepare_input_cropgroups(input_parcel_filepath: str
         # Serres, tijdelijke overkappingen en loodsen
         df_parceldata.loc[df_parceldata['GESP_PM'].isin(['SER', 'SGM']), gs.class_column] = 'SERRES'
         df_parceldata.loc[df_parceldata['GESP_PM'].isin(['PLA', 'PLO', 'NPO']), gs.class_column] = 'TIJDELIJKE_OVERK'
-        df_parceldata.loc[df_parceldata['GESP_PM'] == 'LOO', gs.class_column] = 'MON_STAL'                     # Een loods is hetzelfde als een stal...
-        df_parceldata.loc[df_parceldata['GESP_PM'] == 'CON', gs.class_column] = 'MON_CONTAINERS'               # Containers, niet op volle grond...
+        df_parceldata.loc[df_parceldata['GESP_PM'] == 'LOO', gs.class_column] = 'MON_STAL'           # Een loods is hetzelfde als een stal...
+        df_parceldata.loc[df_parceldata['GESP_PM'] == 'CON', gs.class_column] = 'MON_CONTAINERS'     # Containers, niet op volle grond...
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
-        #df_parceldata.loc[df_parceldata['GESP_PM'] == 'CIV', class_columnname] = 'MON_CONTAINERS'               # Containers, niet op volle grond...
+        #df_parceldata.loc[df_parceldata['GESP_PM'] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
     else:
         logger.warning("The column 'GESP_PM' doesn't exist, so this part of the code was skipped!")
 
@@ -176,16 +186,20 @@ def prepare_input_cropgroups(input_parcel_filepath: str
                           , 'MON_MENGSEL', 'MON_POEL', 'MON_RAAPACHTIGEN', 'MON_STRUIK']
     df_parceldata.loc[df_parceldata[gs.class_column].isin(classes_badresults), gs.class_column] = 'UNKNOWN'
 
-    # MON_BONEN en MON_WIKKEN have omongst each other a very large percentage of false positives/negatives, so they seem very similar
-    # Lets create a class that combines both
+    # MON_BONEN en MON_WIKKEN have omongst each other a very large percentage of false
+    # positives/negatives, so they seem very similar... lets create a class that combines both
     df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BONEN', 'MON_WIKKEN']), gs.class_column] = 'MON_BONEN_WIKKEN'
 
-    # MON_BOOM includes now also the growing new plants/trees, which is too differenct from grown trees -> put growing new trees is seperate group
+    # MON_BOOM includes now also the growing new plants/trees, which is too differenct from grown
+    # trees -> put growing new trees is seperate group
     df_parceldata.loc[df_parceldata[crop_columnname].isin(['9602', '9603', '9604', '9560']), gs.class_column] = 'MON_BOOMKWEEK'
 
-    # 'MON_FRUIT': has a good accuracy (91%), but also has as much false positives (115% -> mainly 'MON_GRASSEN' that are (mis)classified as 'MON_FRUIT')
-    # 'MON_BOOM': has very bad accuracy (28%) and also very much false positives (450% -> mainly 'MON_GRASSEN' that are misclassified as 'MON_BOOM')
-    # MON_FRUIT and MON_BOOM are permanent anyway, so not mandatory that they are checked in monitoring process.
+    # 'MON_FRUIT': has a good accuracy (91%), but also has as much false positives (115% -> mainly
+    #              'MON_GRASSEN' that are (mis)classified as 'MON_FRUIT')
+    # 'MON_BOOM': has very bad accuracy (28%) and also very much false positives (450% -> mainly
+    #              'MON_GRASSEN' that are misclassified as 'MON_BOOM')
+    # MON_FRUIT and MON_BOOM are permanent anyway, so not mandatory that they are checked in
+    # monitoring process.
     # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
     df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BOOM', 'MON_FRUIT']), gs.class_column] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
@@ -220,14 +234,17 @@ def prepare_input_cropgroups(input_parcel_filepath: str
 def prepare_input_most_popular_crops(input_parcel_filepath: str
                                      , output_parcel_filepath: str
                                      , crop_columnname: str = 'GWSCOD_H'):
-    ''' This function creates a file that is compliant with the rest of the classification functionality.
+    """
+    This function creates a file that is compliant with the assumptions used by the rest of the
+    classification functionality.
 
-        It should be a csv file with the following columns:
-            - object_id: column with a unique identifier
-            - classname: a string column with a readable name of the classes that will be classified to
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be classified to
 
-        This specific implementation converts the typiscal export format used in BE-Flanders to this format.
-    '''
+    This specific implementation converts the typiscal export format used in BE-Flanders to this
+    format.
+    """
 
     logger.info('Start of create_classes_most_popular_crops')
 
@@ -294,21 +311,3 @@ if __name__ == "__main__":
 
     logger.critical('Not implemented exception!')
     raise Exception('Not implemented')
-
-    '''
-    # Init logging
-    logging.basicConfig(level=logging.INFO)
-
-    local_base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie' # Local base dir
-    local_input_dir = os.path.join(local_base_dir, 'InputData')                                 # Local input file dir
-    input_filename = 'Prc_flanders_2017_2018-01-09.shp'                                         # Local input file name
-    id_columnname = 'CODE_OBJ'
-    local_input_filepath = os.path.join(local_input_dir, input_filename)                        # Local input file path
-
-    output_filename = 'Prc_flanders_2017_2018-01-09_buf.shp'                                    # Local input file name
-    local_output_filepath = os.path.join(local_input_dir, output_filename)                      # Local input file path
-
-    prepare(input_parcel_filepath=local_input_filepath
-           ,output_filepath=local_output_filepath
-           ,id_columnname='CODE_OBJ')
-    '''
