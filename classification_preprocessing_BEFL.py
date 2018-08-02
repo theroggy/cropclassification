@@ -92,12 +92,12 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # Because the file was read as ansi, and gewas is int, so the data needs to be converted to unicode to be able to do comparisons with the other data
     df_classes[crop_columnname] = df_classes['Gewas'].astype('unicode')
 
-    # Map column MON_group to classname
-    df_classes[gs.class_column] = df_classes['MON_groep']
+    # Map column MON_group to orig classname
+    df_classes[gs.class_orig_column] = df_classes['MON_groep']
 
     # Remove unneeded columns
     for column in df_classes.columns:
-        if (column not in [gs.class_column, crop_columnname]):
+        if (column not in [gs.class_orig_column, crop_columnname]):
             df_classes.drop(column, axis=1, inplace=True)
 
     # Set the index
@@ -130,6 +130,22 @@ def prepare_input_cropgroups(input_parcel_filepath: str
 
     # Data verwijderen
 #    df = df[df[classname] != 'Andere subsidiabele gewassen']  # geen boomkweek
+
+    # Add column to signify that the parcel is eligible and set ineligible crop types (important for reporting afterwards)
+    # TODO: would be cleaner if this is based on refe as well instead of hardcoded
+    df_parceldata.insert(loc=0, column=gs.is_eligible_column, value=1)
+    df_parceldata.loc[df_parceldata[crop_columnname].isin(['1', '2']), gs.is_eligible_column] = 1
+
+    # Add column to signify if the crop/class is permanent, so can/should be followed up in the LPIS upkeep
+    # TODO: would be cleaner if this is based on refe as well instead of hardcoded
+    df_parceldata.insert(loc=0, column=gs.is_permanent_column, value=1)
+    df_parceldata.loc[df_parceldata[crop_columnname].isin(['1', '2', '3']), gs.is_permanent_column] = 1
+    if 'GESP_PM' in df_parceldata.columns:
+        # Serres, tijdelijke overkappingen en loodsen
+        df_parceldata.loc[df_parceldata['GESP_PM'].isin(['SER', 'SGM', 'LOO']), gs.is_permanent_column] = 1
+
+    # Copy orig classname to classification classname
+    df_parceldata.insert(loc=0, column=gs.class_column, value=df_parceldata[gs.class_orig_column])
 
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if 'GESP_PM' in df_parceldata.columns:
