@@ -10,12 +10,11 @@ import os
 import pandas as pd
 import numpy as np
 import sklearn
+import global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-import global_settings as gs
-
 # Get a logger...
 logger = logging.getLogger(__name__)
 
@@ -23,16 +22,16 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-# TODO: report on alfa and beta error using test data
-# TODO: report on alfa and beta error using ground truth data
 # TODO: improve reporting to devide between eligible versus ineligible classes?
-# TODO: report based on area instead of number parcel?
-
+# TODO: report based on area instead of number parcel
+#     -> seems like being a bit "detached from reality", as for RFV the most important parameter is the number of parcels
+# TODO: UNKNOWN class, and definitely IGNORE_ classes now also contain classes that are difficult to distinguish to "ignore" them, to be able to compare them
+#       to ground truth they should somehow keep their original class (as well?)...
 def write_OA_per_pixcount(parcel_predictions_csv: str
-                         ,parcel_pixcount_csv: str
-                         ,output_report_txt: str
-                         ,force: bool = False):
-
+                          , parcel_pixcount_csv: str
+                          , output_report_txt: str
+                          , force: bool = False):
+    """ Write a report of the overall accuracy that parcels per pixcount get. """
     # If force == False Check and the output file exists already, stop.
     if force == False and os.path.exists(output_report_txt):
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
@@ -63,10 +62,10 @@ def write_OA_per_pixcount(parcel_predictions_csv: str
             outputfile.write(f"{message}\n")
 
 def write_full_report(parcel_predictions_csv: str
-                     ,output_report_txt: str
-                     ,parcel_classes_test_csv: str = None
-                     ,parcel_ground_truth_csv: str = None
-                     ,force: bool = None):
+                      , output_report_txt: str
+                      , parcel_classes_test_csv: str = None
+                      , parcel_ground_truth_csv: str = None
+                      , force: bool = None):
     """Writes a report about the accuracy of the predictions to a file.
 
     Args:
@@ -80,7 +79,7 @@ def write_full_report(parcel_predictions_csv: str
             beta errors. If None, the part of the report that is based on this data is skipped
     """
     # If force == False Check and the output file exists already, stop.
-    if force == False and os.path.exists(output_report_txt):
+    if force is False and os.path.exists(output_report_txt):
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
         return
 
@@ -149,6 +148,7 @@ def write_full_report(parcel_predictions_csv: str
                 logger.debug('Number of ground truth parcels that also have a prediction: {len(df)}')
 
                 # Add the alfa error
+                # TODO: this needs to be reviewed, maybe need to compare with original classname instead of _IGNORE, UNKNOWN,...
                 def get_error(row, prediction_column_to_use):
                     # For some reason the row['pred2_prob'] is sometimes seen as string, and so 2* gives a repetition of the string value instead
                     # of a mathematic multiplication... so cast to float!
@@ -179,7 +179,7 @@ def write_full_report(parcel_predictions_csv: str
                         elif (row[gs.class_column] == 'UNKNOWN'
                                       or row[gs.class_column].startswith('IGNORE_')):
                             # Input classname was special
-                            return f"ERROR_BETA_BENEFIT_OF_DOUBT_CLASSNAME={row[gs.class_column]}"
+                            return f"ERROR_BETA_FARMER_WRONG_CLASSNAME={row[gs.class_column]}"
                         elif (row[prediction_column_to_use] in ['DOUBT', 'NODATA']):
                             # Prediction resulted in doubt or there was no/not enough data
                             return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
@@ -255,16 +255,3 @@ if __name__ == "__main__":
 
     logger.critical('Not implemented exception!')
     raise Exception('Not implemented')
-
-    '''
-    local_base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie' # Local base dir
-    local_class_dir = os.path.join(local_base_dir, 'class_maincrops_mon')                       # Specific dir for this classification
-    local_class_dir = os.path.join(local_class_dir, '2018-07-20_Run3_newsampling_S2')
-    base_filename = 'BEVL2017_weekly_bufm5'
-
-    class_predictions_filepath = os.path.join(local_class_dir, "{base_fn}_predict.csv".format(base_fn=base_filename))
-
-    print(predictions_csv = class_predictions_filepath
-         ,class_columnname = 'classname'
-         ,prediction_columnname = 'pred1')
-    '''

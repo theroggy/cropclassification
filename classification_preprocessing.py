@@ -8,10 +8,10 @@ Module with helper functions to preprocess the data to use for the classificatio
 import logging
 import os
 import glob
+from typing import List
 import pandas as pd
 import classification_preprocessing_BEFL as befl
 import global_settings as gs
-from typing import List
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -23,8 +23,8 @@ BALANCING_STRATEGY_EQUAL = 'BALANCE_EQUAL'
 
 # Some constantsto choose which type of data to use in the marker.
 # Remark: the string needs to be the same as the end of the name of the columns in the csv files!
-PARCELDATA_AGGRAGATION_MEAN       = 'mean'      # Mean value of the pixels values in a parcel.
-PARCELDATA_AGGRAGATION_STDDEV     = 'stdDev'    # std dev of the values of the pixels in a parcel
+PARCELDATA_AGGRAGATION_MEAN = 'mean'      # Mean value of the pixels values in a parcel.
+PARCELDATA_AGGRAGATION_STDDEV = 'stdDev'  # std dev of the values of the pixels in a parcel
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -34,36 +34,36 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def prepare_input(input_parcel_filepath: str
-                 ,input_filetype: str
-                 ,output_parcel_filepath: str
-                 ,output_classes_type: str
-                 ,force: bool = False):
+                  , input_filetype: str
+                  , output_parcel_filepath: str
+                  , output_classes_type: str
+                  , force: bool = False):
     """
     Prepare a raw input file by eg. adding the classification classes to use for the
     classification,...
     """
 
     # If force == False Check and the output file exists already, stop.
-    if force == False and os.path.exists(output_parcel_filepath):
+    if force is False and os.path.exists(output_parcel_filepath) is True:
         logger.warning(f"prepare_input: output file already exists and force == False, so stop: {output_parcel_filepath}")
         return
 
     if input_filetype == 'BEFL':
-        befl.prepare_input(input_parcel_filepath = input_parcel_filepath
-                          ,output_parcel_filepath = output_parcel_filepath
-                          ,output_classes_type = output_classes_type)
+        befl.prepare_input(input_parcel_filepath=input_parcel_filepath
+                           , output_parcel_filepath=output_parcel_filepath
+                           , output_classes_type=output_classes_type)
     else:
         message = f"Unknown value for parameter input_filetype: {input_filetype}"
         logger.critical(message)
         raise Exception(message)
 
 def collect_and_prepare_timeseries_data(imagedata_dir: str
-                                       ,base_filename: str
-                                       ,start_date_str: str
-                                       ,end_date_str: str
-                                       ,parceldata_aggregations_to_use: List[str]
-                                       ,output_csv: str
-                                       ,force: bool = False):
+                                        , base_filename: str
+                                        , start_date_str: str
+                                        , end_date_str: str
+                                        , parceldata_aggregations_to_use: List[str]
+                                        , output_csv: str
+                                        , force: bool = False):
     """
     Collect all timeseries data to use for the classification and prepare it by applying
     scaling,... as needed.
@@ -72,7 +72,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
     #       there won't be a classification at all for that parcel!!!
 
     # If force == False Check and the output file exists already, stop.
-    if force == False and os.path.exists(output_csv):
+    if force is False and os.path.exists(output_csv) is True:
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_csv}")
         return
 
@@ -107,7 +107,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
         for column in df_in.columns:
             if column == gs.id_column:
                 continue
-            elif ((df_in[column].isnull().sum()/len(df_in[column])) > 0.1):
+            elif (df_in[column].isnull().sum()/len(df_in[column])) > 0.1:
                 # If the number of nan values for the column > x %, drop column
                 logger.warn(f"Drop column as it contains > 10% nan values!: {column}")
                 df_in.drop(column, axis=1, inplace=True)
@@ -118,8 +118,8 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
                     if column.endswith('_' + parceldata_aggregation):
                         column_ok = True
 
-                if column_ok == False:
-                    logger.info(f"Drop column as it's column aggregation isn't to be used: {column}")
+                if column_ok is False:
+                    logger.debug(f"Drop column as it's column aggregation isn't to be used: {column}")
                     df_in.drop(column, axis=1, inplace=True)
 
         # Loop over columns to check if there are columns that need to be rescaled.
@@ -133,7 +133,11 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
         if result is None:
             result = df_in
         else:
+            nb_rows_before_join = len(result)
             result = result.join(df_in, how='inner')
+            nb_rows_after_join = len(result)
+            if nb_rows_after_join != nb_rows_before_join:
+                logger.warning(f"Number of rows in result decreased in join from {nb_rows_before_join} to {nb_rows_after_join}")
 
     # Write all rows that (still) have empty data to a file
     df_parcel_with_empty_data = result[result.isnull().any(1)]
@@ -153,17 +157,17 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
     logger.info(f"Output (with shape: {result.shape}) written to : {output_csv}")
 
 def create_train_test_sample(input_parcel_classes_csv: str
-                            ,input_parcel_pixcount_csv: str
-                            ,output_parcel_classes_train_csv: str
-                            ,output_parcel_classes_test_csv: str
-                            ,balancing_strategy: str
-                            ,force: bool = False):
+                             , input_parcel_pixcount_csv: str
+                             , output_parcel_classes_train_csv: str
+                             , output_parcel_classes_test_csv: str
+                             , balancing_strategy: str
+                             , force: bool = False):
     """ Create a seperate train and test sample from the general input file. """
 
     # If force == False Check and the output files exist already, stop.
-    if(force == False
-            and os.path.exists(output_parcel_classes_train_csv)
-            and os.path.exists(output_parcel_classes_test_csv)):
+    if(force is False
+            and os.path.exists(output_parcel_classes_train_csv) is True
+            and os.path.exists(output_parcel_classes_test_csv) is True):
         logger.warning(f"create_train_test_sample: output files already exist and force == False, so stop: {output_parcel_classes_train_csv}, {output_parcel_classes_test_csv}")
         return
 
@@ -222,7 +226,9 @@ def create_train_test_sample(input_parcel_classes_csv: str
         #           classes
         #         - this results in a relatively high accuracy in overall numbers, but the small
         #           classes are not detected at all
-        df_train = df_train_base.groupby(gs.class_column, group_keys=False).apply(pd.DataFrame.sample, frac=0.15)
+        df_train = (df_train_base
+                    .groupby(gs.class_column, group_keys=False)
+                    .apply(pd.DataFrame.sample, frac=0.15))
 
     elif balancing_strategy == BALANCING_STRATEGY_MEDIUM:
         # Balance the train data, but still use some larger samples for the classes that have a lot
@@ -235,23 +241,24 @@ def create_train_test_sample(input_parcel_classes_csv: str
         upper_limit = 10000
         lower_limit = 1000
         logger.info(f"Cap over {upper_limit}, keep the full number of training sample till {lower_limit}, samples smaller than that are oversampled")
-        df_train = (df_train_base.groupby(gs.class_column).filter(lambda x: len(x) >= upper_limit).
-                groupby(gs.class_column, group_keys=False).apply(pd.DataFrame.sample, upper_limit))
+        df_train = (df_train_base.groupby(gs.class_column).filter(lambda x: len(x) >= upper_limit)
+                    .groupby(gs.class_column, group_keys=False)
+                    .apply(pd.DataFrame.sample, upper_limit))
         # Middle classes use the number as they are
-        df_train = df_train.append(df_train_base.
-                groupby(gs.class_column).filter(lambda x: len(x) < upper_limit).
-                groupby(gs.class_column).filter(lambda x: len(x) >= lower_limit))
+        df_train = df_train.append(df_train_base
+                                   .groupby(gs.class_column).filter(lambda x: len(x) < upper_limit)
+                                   .groupby(gs.class_column).filter(lambda x: len(x) >= lower_limit))
         # For smaller classes, oversample...
-        df_train = df_train.append(df_train_base.
-                groupby(gs.class_column).filter(lambda x: len(x) < lower_limit).
-                groupby(gs.class_column, group_keys=False).
-                apply(pd.DataFrame.sample, lower_limit, replace=True))
+        df_train = df_train.append(df_train_base
+                                   .groupby(gs.class_column).filter(lambda x: len(x) < lower_limit)
+                                   .groupby(gs.class_column, group_keys=False)
+                                   .apply(pd.DataFrame.sample, lower_limit, replace=True))
 
     elif balancing_strategy == BALANCING_STRATEGY_EQUAL:
         # In theory the most logical way to balance: make sure all classes have the same amount of
         # training data by undersampling the largest classes and oversampling the small classes.
-        df_train = df_train_base.groupby(
-                gs.class_column, group_keys=False).apply(pd.DataFrame.sample, 2000, replace=True)
+        df_train = (df_train_base.groupby(gs.class_column, group_keys=False)
+                    .apply(pd.DataFrame.sample, 2000, replace=True))
 
     else:
         logger.fatal(f"Unknown balancing strategy, STOP!: {balancing_strategy}")
