@@ -11,12 +11,11 @@ import logging
 import os
 import pandas as pd
 import numpy as np
+import global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-import global_settings as gs
-
 # Get a logger...
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def show(input_parcel_csv: str
-        ,filter_id: str):
+         , filter_id: str):
 
     # Load input data...
     df = pd.read_csv(input_parcel_csv)
@@ -35,9 +34,9 @@ def show(input_parcel_csv: str
 
     # Remove all unnecessary columns
     for column in df:
-        if (not column.startswith('VV_')
-              and not column.startswith('VH_')
-              and not column == gs.id_column):
+        if(not column.startswith('VV_')
+           and not column.startswith('VH_')
+           and not column == gs.id_column):
             df = df.drop(columns=column)
 
     # Set index for trnaspose
