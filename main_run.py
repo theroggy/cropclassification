@@ -186,9 +186,10 @@ class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv
 # Print full reporting on the accuracy
 report_txt = f"{parcel_test_predictions_csv}_accuracy_report.txt"
 class_report.write_full_report(parcel_predictions_csv=parcel_test_predictions_csv
-                               , parcel_classes_test_csv=parcel_classes_test_csv
+                               , output_report_txt=report_txt
+                               , parcel_classes_to_report_on_csv=parcel_classes_test_csv
                                , parcel_ground_truth_csv=groundtruth_classes_csv
-                               , output_report_txt=report_txt)
+                               , parcel_pixcount_csv=parcel_pixcount_csv)
 
 # Print a confusion matrix to asses the accuracy per pixcount, using consolidated prediction
 report_txt = f"{parcel_test_predictions_csv}_accuracy_report_pixcount.txt"
@@ -210,9 +211,10 @@ classification.predict(input_parcel_classes_csv=parcel_classes_csv
 # Print full reporting on the accuracy
 report_txt = f"{parcel_all_predictions_csv}_accuracy_report.txt"
 class_report.write_full_report(parcel_predictions_csv=parcel_all_predictions_csv
-                               , parcel_classes_test_csv=parcel_classes_csv
+                               , output_report_txt=report_txt
+                               , parcel_classes_to_report_on_csv=parcel_classes_csv
                                , parcel_ground_truth_csv=groundtruth_classes_csv
-                               , output_report_txt=report_txt)
+                               , parcel_pixcount_csv=parcel_pixcount_csv)
 
 # Print a confusion matrix to asses the accuracy per pixcount, using consolidated prediction
 report_txt = f"{parcel_all_predictions_csv}_accuracy_report_pixcount.txt"
