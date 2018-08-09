@@ -30,45 +30,11 @@ logger = logging.getLogger(__name__)
 #     -> seems like being a bit "detached from reality", as for RFV the most important parameter is the number of parcels
 # TODO: UNKNOWN class, and definitely IGNORE_ classes now also contain classes that are difficult to distinguish to "ignore" them, to be able to compare them
 #       to ground truth they should somehow keep their original class (as well?)...
-def write_OA_per_pixcount(parcel_predictions_csv: str
-                          , parcel_pixcount_csv: str
-                          , output_report_txt: str
-                          , force: bool = False):
-    """ Write a report of the overall accuracy that parcels per pixcount get. """
-    # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_report_txt):
-        logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
-        return
-
-    logger.info('Start write_OA_per_pixcount')
-    df_predict = pd.read_csv(parcel_predictions_csv, low_memory=False)
-    df_pixcount = pd.read_csv(parcel_pixcount_csv, low_memory=False)
-
-    # Set the index to the id_columnname, and join the data to the result...
-    df_predict.set_index(gs.id_column, inplace=True)
-    df_pixcount.set_index(gs.id_column, inplace=True)
-    df_result = df_predict.join(df_pixcount, how='inner')
-    nb_predictions_total = len(df_result.index)
-
-    # Write output...
-    with open(output_report_txt, 'w') as outputfile:
-        for i in range(40):
-
-            df_result_cur_pixcount = df_result[df_result[gs.pixcount_s1s2_column] == i]
-            nb_predictions_pixcount = len(df_result_cur_pixcount.index)
-            if nb_predictions_pixcount == 0:
-                continue
-
-            overall_accuracy = 100.0*sklearn.metrics.accuracy_score(df_result_cur_pixcount[gs.class_column], df_result_cur_pixcount[gs.prediction_column], normalize=True, sample_weight=None)
-            message = f"OA for pixcount {i:2}: {overall_accuracy:3.2f} %, with {nb_predictions_pixcount} elements ({100*(nb_predictions_pixcount/nb_predictions_total):.4f} % of {nb_predictions_total})"
-            logger.info(message)
-            outputfile.write(f"{message}\n")
 
 def write_full_report(parcel_predictions_csv: str
                       , output_report_txt: str
-                      , parcel_classes_to_report_on_csv: str = None
+                      , parcel_to_report_on_csv: str = None
                       , parcel_ground_truth_csv: str = None
-                      , parcel_pixcount_csv: str = None
                       , force: bool = None):
     """Writes a report about the accuracy of the predictions to a file.
 
@@ -96,9 +62,9 @@ def write_full_report(parcel_predictions_csv: str
     df_predict.set_index(gs.id_column, inplace=True)
 
     df_parcel_to_report = None
-    if parcel_classes_to_report_on_csv is not None:
+    if parcel_to_report_on_csv is not None:
         logger.info('Read csv with all test parcel (with their classes)')
-        df_parcel_to_report = pd.read_csv(parcel_classes_to_report_on_csv, low_memory=False)
+        df_parcel_to_report = pd.read_csv(parcel_to_report_on_csv, low_memory=False)
         df_parcel_to_report.set_index(gs.id_column, inplace=True)
 
     # Build and write report...
@@ -174,7 +140,8 @@ def write_full_report(parcel_predictions_csv: str
         logger.info(message)
         outputfile.write(f"{message}\n\n")
 
-        if parcel_classes_to_report_on_csv is not None:
+        df_pixcount = None
+        if parcel_to_report_on_csv is not None:
             outputfile.write("************************************************************\n")
             outputfile.write("************* PARCELS WITHOUT PREDICTION (no data?) ********\n")
             outputfile.write("************************************************************\n")
@@ -226,7 +193,7 @@ def write_full_report(parcel_predictions_csv: str
             outputfile.write("************************************************************\n")
 
             # First check if the mandatory parcel_classes_sample_csv is provided as well...
-            if parcel_classes_to_report_on_csv is None:
+            if parcel_to_report_on_csv is None:
                 message = "If parcel_ground_truth_csv is not None, parcel_classes_to_report_on_csv should be provided as well! STOP!"
                 logger.critical(message)
                 raise Exception(message)
@@ -243,19 +210,10 @@ def write_full_report(parcel_predictions_csv: str
 
             # Join with the classes_sample, as we only want to report on the ground truth that
             # is also in the sample
-            if parcel_classes_to_report_on_csv is not None:
+            if parcel_to_report_on_csv is not None:
                 # Only add columns that aren't in the ground truth yet...
                 cols_to_join = df_parcel_to_report.columns.difference(df_parcel_gt.columns)
                 df_parcel_gt = df_parcel_gt.join(df_parcel_to_report[cols_to_join], how='inner')
-
-            # If there is a pixcount file specified, add the pixcount column as well
-            if(parcel_pixcount_csv is not None
-               and gs.pixcount_s1s2_column not in df_parcel_gt.columns):
-                logger.info(f"Read csv with pixcount: {parcel_pixcount_csv}")
-                df_pixcount = pd.read_csv(parcel_pixcount_csv, low_memory=False)
-                df_pixcount.set_index(gs.id_column, inplace=True)
-                df_parcel_gt = (df_parcel_gt
-                                .join(df_pixcount[gs.pixcount_s1s2_column], how='left'))
 
             # Join the prediction data and fill up missing predictions
             cols_to_join = df_predict.columns.difference(df_parcel_gt.columns)
@@ -344,6 +302,13 @@ def write_full_report(parcel_predictions_csv: str
                     logger.info(message)
                     outputfile.write(f"{message}\n")
 
+    if df_pixcount is not None:
+        pixcount_output_report_txt = output_report_txt + '_pixcount.txt'
+        _write_OA_per_pixcount(df_parcel_predictions=df_predict
+                              , df_parcel_pixcount=df_pixcount
+                              , output_report_txt=pixcount_output_report_txt
+                              , force=force)
+
 def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     """ Returns a dataset with an extended confusion matrix. """
 
@@ -425,6 +390,36 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
                                 , column='pct_error_alfa_of_all_cumulative', value=values)
 
     return df_alfa_per_pixcount
+
+def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame
+                          , df_parcel_pixcount: pd.DataFrame
+                          , output_report_txt: str
+                          , force: bool = False):
+    """ Write a report of the overall accuracy that parcels per pixcount get. """
+    # If force == False Check and the output file exists already, stop.
+    if force is False and os.path.exists(output_report_txt):
+        logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
+        return
+
+    # Set the index to the id_columnname, and join the data to the result...
+    df_parcel_predictions.set_index(gs.id_column, inplace=True)
+    df_parcel_pixcount.set_index(gs.id_column, inplace=True)
+    df_result = df_parcel_predictions.join(df_parcel_pixcount, how='inner')
+    nb_predictions_total = len(df_result.index)
+
+    # Write output...
+    with open(output_report_txt, 'w') as outputfile:
+        for i in range(40):
+
+            df_result_cur_pixcount = df_result[df_result[gs.pixcount_s1s2_column] == i]
+            nb_predictions_pixcount = len(df_result_cur_pixcount.index)
+            if nb_predictions_pixcount == 0:
+                continue
+
+            overall_accuracy = 100.0*sklearn.metrics.accuracy_score(df_result_cur_pixcount[gs.class_column], df_result_cur_pixcount[gs.prediction_column], normalize=True, sample_weight=None)
+            message = f"OA for pixcount {i:2}: {overall_accuracy:3.2f} %, with {nb_predictions_pixcount} elements ({100*(nb_predictions_pixcount/nb_predictions_total):.4f} % of {nb_predictions_total})"
+            logger.info(message)
+            outputfile.write(f"{message}\n")
 
 # If the script is run directly...
 if __name__ == "__main__":

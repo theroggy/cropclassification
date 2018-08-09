@@ -20,4 +20,4 @@ dedicated_data_columns = [id_column, class_column, class_orig_column, is_eligibl
 
 prediction_column = 'pred1'                  # Column name of the standard prediction (probability can be same as other classes)
 prediction_cons_column = 'pred_consolidated' # Column name of the the consolidated prediction (has a minimum probability)
-
+prediction_status = 'pred_status'            # The status/result of the prediction

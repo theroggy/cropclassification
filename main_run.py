@@ -33,19 +33,19 @@ end_date_str = '2017-09-15'                                    # End date is NOT
 # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
 '''
 # Settings for 7 main crops
-output_classes_type = 'MOST_POPULAR_CROPS'
+classtype_to_prepare = 'MOST_POPULAR_CROPS'
 class_base_dir = os.path.join(base_dir, 'class_maincrops7')    # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 '''
 
 # Settings for monitoring crop groups
-output_classes_type = 'MONITORING_CROPGROUPS'
+classtype_to_prepare = 'MONITORING_CROPGROUPS'
 class_base_dir = os.path.join(base_dir, 'class_maincrops_mon') # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 
-class_dir = os.path.join(class_base_dir, '2018-08-01_Run1_test_new_download_per_sensor')
+class_dir = os.path.join(class_base_dir, '2018-08-09_Run1_testje')
 log_dir = os.path.join(class_dir, 'log')
-base_filename = 'BEFL2017_bufm10_weekly_4'
+base_filename = 'BEFL2017_bufm10_weekly_tmp'
 sensordata_to_use = [timeseries.SENSORDATA_S1_ASCDESC, timeseries.SENSORDATA_S2gt95]
 parceldata_aggregations_to_use = [class_pre.PARCELDATA_AGGRAGATION_MEAN]
 country_code = 'BEFL'        # The region of the classification: typically country code
@@ -133,18 +133,22 @@ timeseries.get_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
 # Remarks:
 #    - this is typically specific for the input dataset and result wanted!!!
 #    - the result is/should be a csv file with the following columns
-#           - id        (=gs.id_column)   : unique ID for the parcel
-#           - classname (=gs.class_column): the class that must be classified to.
+#           - id (=global_settings.id_column): unique ID for each parcel
+#           - classname (=global_settings.class_column): the class that must be classified to.
 #             Remarks: - if the classname is 'UNKNOWN', the parcel won't be used for training
 #                      - if the classname starts with 'IGNORE_', the parcel will be ignored
-parcel_classes_csv = os.path.join(class_dir, f"{input_parcel_filename_noext}_classes.csv")
+#           - pixcount (=global_settings.pixcount_s1s2_column): the number of S1/S2 pixels in the
+#             parcel. Is -1 if the parcel doesn't have any S1/S2 data.
+parcel_csv = os.path.join(class_dir, f"{input_parcel_filename_noext}_parcel.csv")
+parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")
 class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
                         , input_filetype=input_parcel_filetype
-                        , output_parcel_filepath=parcel_classes_csv
-                        , output_classes_type=output_classes_type)
+                        , input_parcel_pixcount_csv=parcel_pixcount_csv
+                        , output_parcel_filepath=parcel_csv
+                        , input_classtype_to_prepare=classtype_to_prepare)
 
 # Combine all data needed to do the classification in one input file
-parcel_classification_data_csv = os.path.join(class_dir, f"{base_filename}_classdata.csv")
+parcel_classification_data_csv = os.path.join(class_dir, f"{base_filename}_parcel_classdata.csv")
 class_pre.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
                                               , base_filename=base_filename
                                               , start_date_str=start_date_str
@@ -152,74 +156,53 @@ class_pre.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
                                               , parceldata_aggregations_to_use=parceldata_aggregations_to_use
                                               , output_csv=parcel_classification_data_csv)
 
-# STEP 4: Train and test the classification
+# STEP 4: Train, test and classify
 #-------------------------------------------------------------
 # Create the training sample...
 # Remark: this creates a list of representative test parcel + a list of (candidate) training parcel
-parcel_classes_train_csv = os.path.join(class_dir, f"{base_filename}_parcel_classes_train.csv")
-parcel_classes_test_csv = os.path.join(class_dir, f"{base_filename}_parcel_classes_test.csv")
-parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")
-class_pre.create_train_test_sample(input_parcel_classes_csv=parcel_classes_csv
-                                   , input_parcel_pixcount_csv=parcel_pixcount_csv
-                                   , output_parcel_classes_train_csv=parcel_classes_train_csv
-                                   , output_parcel_classes_test_csv=parcel_classes_test_csv
+parcel_train_csv = os.path.join(class_dir, f"{base_filename}_parcel_train.csv")
+parcel_test_csv = os.path.join(class_dir, f"{base_filename}_parcel_test.csv")
+class_pre.create_train_test_sample(input_parcel_csv=parcel_csv
+                                   , output_parcel_train_csv=parcel_train_csv
+                                   , output_parcel_test_csv=parcel_test_csv
                                    , balancing_strategy=balancing_strategy)
 
 # Train the classifier and output test predictions
-classifier_filepath = os.path.splitext(parcel_classes_train_csv)[0] + "_classifier.pkl"
-parcel_test_predictions_csv = os.path.join(class_dir, f"{base_filename}_predict_test.csv")
-classification.train_and_test(input_parcel_classes_train_csv=parcel_classes_train_csv
-                              , input_parcel_classes_test_csv=parcel_classes_test_csv
-                              , input_parcel_classification_data_csv=parcel_classification_data_csv
-                              , output_classifier_filepath=classifier_filepath
-                              , output_test_predictions_csv=parcel_test_predictions_csv)
+classifier_filepath = os.path.splitext(parcel_train_csv)[0] + "_classifier.pkl"
+parcel_predictions_test_csv = os.path.join(class_dir, f"{base_filename}_predict_test.csv")
+parcel_predictions_all_csv = os.path.join(class_dir, f"{base_filename}_predict_all.csv")
+classification.train_test_predict(input_parcel_train_csv=parcel_train_csv
+                                  , input_parcel_test_csv=parcel_test_csv
+                                  , input_parcel_all_csv=parcel_csv
+                                  , input_parcel_classification_data_csv=parcel_classification_data_csv
+                                  , output_classifier_filepath=classifier_filepath
+                                  , output_predictions_test_csv=parcel_predictions_test_csv
+                                  , output_predictions_all_csv=parcel_predictions_all_csv)
 
-# STEP 5: Report on the test accuracy
+# STEP 5: Report on the test accuracy, incl. ground truth
 #-------------------------------------------------------------
 # Preprocess the ground truth data
-groundtruth_classes_csv = os.path.join(class_dir, f"{input_groundtruth_noext}_classes.csv")
+groundtruth_csv = os.path.join(class_dir, f"{input_groundtruth_noext}_classes.csv")
 class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv
                         , input_filetype=input_parcel_filetype
-                        , output_parcel_filepath=groundtruth_classes_csv
-                        , output_classes_type=f"{output_classes_type}_GROUNDTRUTH")
+                        , input_parcel_pixcount_csv=parcel_pixcount_csv
+                        , output_parcel_filepath=groundtruth_csv
+                        , input_classtype_to_prepare=f"{classtype_to_prepare}_GROUNDTRUTH")
 
 # Print full reporting on the accuracy
-report_txt = f"{parcel_test_predictions_csv}_accuracy_report.txt"
-class_report.write_full_report(parcel_predictions_csv=parcel_test_predictions_csv
+report_txt = f"{parcel_predictions_test_csv}_accuracy_report.txt"
+class_report.write_full_report(parcel_predictions_csv=parcel_predictions_test_csv
                                , output_report_txt=report_txt
-                               , parcel_classes_to_report_on_csv=parcel_classes_test_csv
-                               , parcel_ground_truth_csv=groundtruth_classes_csv
-                               , parcel_pixcount_csv=parcel_pixcount_csv)
+                               , parcel_to_report_on_csv=parcel_test_csv
+                               , parcel_ground_truth_csv=groundtruth_csv)
 
-# Print a confusion matrix to asses the accuracy per pixcount, using consolidated prediction
-report_txt = f"{parcel_test_predictions_csv}_accuracy_report_pixcount.txt"
-class_report.write_OA_per_pixcount(parcel_predictions_csv=parcel_test_predictions_csv
-                                   , parcel_pixcount_csv=parcel_pixcount_csv
-                                   , output_report_txt=report_txt)
-
-# STEP 6: Do the actual classification
-#-------------------------------------------------------------
-# Predict for all parcels
-parcel_all_predictions_csv = os.path.join(class_dir, f"{base_filename}_predict_all.csv")
-classification.predict(input_parcel_classes_csv=parcel_classes_csv
-                       , input_parcel_classification_data_csv=parcel_classification_data_csv
-                       , input_classifier_filepath=classifier_filepath
-                       , output_predictions_csv=parcel_all_predictions_csv)
-
-# STEP 7: Report on the full accuracy
+# STEP 7: Report on the full accuracy, incl. ground truth
 #-------------------------------------------------------------
 # Print full reporting on the accuracy
-report_txt = f"{parcel_all_predictions_csv}_accuracy_report.txt"
-class_report.write_full_report(parcel_predictions_csv=parcel_all_predictions_csv
+report_txt = f"{parcel_predictions_all_csv}_accuracy_report.txt"
+class_report.write_full_report(parcel_predictions_csv=parcel_predictions_all_csv
                                , output_report_txt=report_txt
-                               , parcel_classes_to_report_on_csv=parcel_classes_csv
-                               , parcel_ground_truth_csv=groundtruth_classes_csv
-                               , parcel_pixcount_csv=parcel_pixcount_csv)
-
-# Print a confusion matrix to asses the accuracy per pixcount, using consolidated prediction
-report_txt = f"{parcel_all_predictions_csv}_accuracy_report_pixcount.txt"
-class_report.write_OA_per_pixcount(parcel_predictions_csv=parcel_all_predictions_csv
-                                   , parcel_pixcount_csv=parcel_pixcount_csv
-                                   , output_report_txt=report_txt)
+                               , parcel_to_report_on_csv=parcel_csv
+                               , parcel_ground_truth_csv=groundtruth_csv)
 
 logging.shutdown()

@@ -26,8 +26,7 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def prepare_input(input_parcel_filepath: str
-                  , output_parcel_filepath: str
-                  , output_classes_type: str):
+                  , input_classtype_to_prepare: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -37,27 +36,22 @@ def prepare_input(input_parcel_filepath: str
         - classname: a string column with a readable name of the classes that will be classified to
     """
 
-    if output_classes_type == 'MONITORING_CROPGROUPS':
+    if input_classtype_to_prepare == 'MONITORING_CROPGROUPS':
+        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath)
+    elif input_classtype_to_prepare == 'MOST_POPULAR_CROPS':
+        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath)
+    if input_classtype_to_prepare == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
-                                        , output_parcel_filepath=output_parcel_filepath)
-    elif output_classes_type == 'MOST_POPULAR_CROPS':
-        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
-                                                , output_parcel_filepath=output_parcel_filepath)
-    if output_classes_type == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
-        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
-                                        , output_parcel_filepath=output_parcel_filepath
                                         , crop_columnname='HOOFDTEELT_CTRL_COD')
-    elif output_classes_type == 'MOST_POPULAR_CROPS_GROUNDTRUTH':
+    elif input_classtype_to_prepare == 'MOST_POPULAR_CROPS_GROUNDTRUTH':
         return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
-                                                , output_parcel_filepath=output_parcel_filepath
                                                 , crop_columnname='HOOFDTEELT_CTRL_COD')
     else:
-        message = f"FATAL: unknown value for parameter output_classes_type: {output_classes_type}"
+        message = f"Unknown value for parameter input_classtype_to_prepare: {input_classtype_to_prepare}"
         logger.fatal(message)
         raise Exception(message)
 
 def prepare_input_cropgroups(input_parcel_filepath: str
-                             , output_parcel_filepath: str
                              , crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
@@ -203,6 +197,15 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
     df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BOOM', 'MON_FRUIT']), gs.class_column] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
+    # 'MON_FRUIT': has a good accuracy (91%), but also has as much false positives (115% -> mainly
+    #              'MON_GRASSEN' that are (mis)classified as 'MON_FRUIT')
+    # 'MON_BOOM': has very bad accuracy (28%) and also very much false positives (450% -> mainly
+    #              'MON_GRASSEN' that are misclassified as 'MON_BOOM')
+    # MON_FRUIT and MON_BOOM are permanent anyway, so not mandatory that they are checked in
+    # monitoring process.
+    # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
+    df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BOOM', 'MON_FRUIT']), gs.class_column] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
+
     # Set classes with very few elements to UNKNOWN!
     for index, row in df_parceldata.groupby(gs.class_column).size().reset_index(name='count').iterrows():
         if row['count'] <= 100:
@@ -212,27 +215,17 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # For columns that aren't needed for the classification:
     #    - Rename the ones interesting for interpretation
     #    - Drop the columns that aren't useful at all
-    output_ext = os.path.splitext(output_parcel_filepath)[1]
     for column in df_parceldata.columns:
         if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
             df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
-        elif column == 'geometry':
-            # if the output asked is a csv... we don't need the geometry...
-            if output_ext == '.csv':
-                df_parceldata.drop(column, axis=1, inplace=True)
-        elif (column not in [gs.id_column, gs.class_column]):
-#                and (not column.startswith('m#'))):
+
+        elif(column not in [gs.id_column, gs.class_column]
+             and (not column.startswith('m#'))):
             df_parceldata.drop(column, axis=1, inplace=True)
 
-    # Export result
-    logger.info(f'Write output to {output_parcel_filepath}')
-    if output_ext == '.csv':         # If extension is csv, write csv (=a lot faster!)
-        df_parceldata.to_csv(output_parcel_filepath, index=False)
-    else:
-        df_parceldata.to_file(output_parcel_filepath)
+    return df_parceldata
 
 def prepare_input_most_popular_crops(input_parcel_filepath: str
-                                     , output_parcel_filepath: str
                                      , crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
@@ -295,16 +288,12 @@ def prepare_input_most_popular_crops(input_parcel_filepath: str
     for column in df_parceldata.columns:
         if column in ['GRAF_OPP']:
             df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
-        elif (column not in [gs.id_column, gs.class_column]):
-#                and (not column.startswith('m#'))):
+        elif (column not in [gs.id_column, gs.class_column]
+              and (not column.startswith('m#'))):
             df_parceldata.drop(column, axis=1, inplace=True)
 
-    # Export result
-    logger.info(f'Write output to {output_parcel_filepath}')
-    if os.path.splitext(output_parcel_filepath)[1] == '.csv':         # If extension is csv, write csv (=a lot faster!)
-        df_parceldata.to_csv(output_parcel_filepath, index=False)
-    else:
-        df_parceldata.to_file(output_parcel_filepath)
+    # Return result
+    return df_parceldata
 
 # If the script is run directly...
 if __name__ == "__main__":

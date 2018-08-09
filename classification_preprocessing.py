@@ -35,8 +35,9 @@ logger = logging.getLogger(__name__)
 
 def prepare_input(input_parcel_filepath: str
                   , input_filetype: str
+                  , input_parcel_pixcount_csv: str
+                  , input_classtype_to_prepare: str
                   , output_parcel_filepath: str
-                  , output_classes_type: str
                   , force: bool = False):
     """
     Prepare a raw input file by eg. adding the classification classes to use for the
@@ -49,13 +50,34 @@ def prepare_input(input_parcel_filepath: str
         return
 
     if input_filetype == 'BEFL':
-        befl.prepare_input(input_parcel_filepath=input_parcel_filepath
-                           , output_parcel_filepath=output_parcel_filepath
-                           , output_classes_type=output_classes_type)
+        df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath
+                                           , input_classtype_to_prepare=input_classtype_to_prepare)
     else:
         message = f"Unknown value for parameter input_filetype: {input_filetype}"
         logger.critical(message)
         raise Exception(message)
+
+    # Load pixcount data and join it
+    logger.info(f'Read pixcount file {input_parcel_pixcount_csv}')
+    df_pixcount = pd.read_csv(input_parcel_pixcount_csv)
+    logger.debug(f'Read pixcount file ready, shape: {df_pixcount.shape}')
+    df_pixcount.set_index(gs.id_column, inplace=True)
+
+    df_parceldata.set_index(gs.id_column, inplace=True)
+    df_parceldata = df_parceldata.join(df_pixcount[gs.pixcount_s1s2_column], how='left')
+
+    # Export result to file
+    output_ext = os.path.splitext(output_parcel_filepath)[1]
+    for column in df_parceldata.columns:
+        # if the output asked is a csv... we don't need the geometry...
+        if column == 'geometry' and output_ext == '.csv':
+            df_parceldata.drop(column, axis=1, inplace=True)
+
+    logger.info(f'Write output to {output_parcel_filepath}')
+    if output_ext == '.csv':         # If extension is csv, write csv (=a lot faster!)
+        df_parceldata.to_csv(output_parcel_filepath)
+    else:
+        df_parceldata.to_file(output_parcel_filepath, index=False)
 
 def collect_and_prepare_timeseries_data(imagedata_dir: str
                                         , base_filename: str
@@ -156,38 +178,29 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
     result.to_csv(output_csv)
     logger.info(f"Output (with shape: {result.shape}) written to : {output_csv}")
 
-def create_train_test_sample(input_parcel_classes_csv: str
-                             , input_parcel_pixcount_csv: str
-                             , output_parcel_classes_train_csv: str
-                             , output_parcel_classes_test_csv: str
+def create_train_test_sample(input_parcel_csv: str
+                             , output_parcel_train_csv: str
+                             , output_parcel_test_csv: str
                              , balancing_strategy: str
                              , force: bool = False):
     """ Create a seperate train and test sample from the general input file. """
 
     # If force == False Check and the output files exist already, stop.
     if(force is False
-            and os.path.exists(output_parcel_classes_train_csv) is True
-            and os.path.exists(output_parcel_classes_test_csv) is True):
-        logger.warning(f"create_train_test_sample: output files already exist and force == False, so stop: {output_parcel_classes_train_csv}, {output_parcel_classes_test_csv}")
+            and os.path.exists(output_parcel_train_csv) is True
+            and os.path.exists(output_parcel_test_csv) is True):
+        logger.warning(f"create_train_test_sample: output files already exist and force == False, so stop: {output_parcel_train_csv}, {output_parcel_test_csv}")
         return
 
     # Load input data...
     logger.info(f'Start create_train_test_sample with balancing_strategy {balancing_strategy}')
-    logger.info(f'Read input file {input_parcel_classes_csv}')
-    df_in = pd.read_csv(input_parcel_classes_csv)
+    logger.info(f'Read input file {input_parcel_csv}')
+    df_in = pd.read_csv(input_parcel_csv)
     logger.debug(f'Read input file ready, shape: {df_in.shape}')
 
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         count_per_class = df_in.groupby(gs.class_column, as_index=False).size()
         logger.info(f'Number of elements per classname in input dataset:\n{count_per_class}')
-
-    # Load pixcount data and join it
-    logger.info(f'Read pixcount file {input_parcel_pixcount_csv}')
-    df_pixcount = pd.read_csv(input_parcel_pixcount_csv)
-    logger.debug(f'Read pixcount file ready, shape: {df_pixcount.shape}')
-    df_pixcount.set_index(gs.id_column, inplace=True)
-    df_in.set_index(gs.id_column, inplace=True)
-    df_in = df_in.join(df_pixcount[gs.pixcount_s1s2_column], how='left')
 
     # The test dataset should be as representative as possible for the entire dataset, so create
     # this first as a 20% sample of each class without any additional checks...
@@ -216,7 +229,7 @@ def create_train_test_sample(input_parcel_classes_csv: str
     # Print the train base result before applying any balancing
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         count_per_class = df_train_base.groupby(gs.class_column, as_index=False).size()
-        logger.info(f'Number of elements per classname for train dataset, before balancing:\n{count_per_class}')
+        logger.info(f"Number of elements per classname for train dataset, before balancing:\n{count_per_class}")
 
     # Depending on the balancing_strategy, use different way to get a training sample
     if balancing_strategy == BALANCING_STRATEGY_NONE:
@@ -275,8 +288,8 @@ def create_train_test_sample(input_parcel_classes_csv: str
 
     # Write to output files
     logger.info('Write the output files')
-    df_train.to_csv(output_parcel_classes_train_csv)    # The ID column is the index...
-    df_test.to_csv(output_parcel_classes_test_csv)      # The ID column is the index...
+    df_train.to_csv(output_parcel_train_csv, index=False)    # The ID column is the index...
+    df_test.to_csv(output_parcel_test_csv, index=False)      # The ID column is the index...
 
 # If the script is run directly...
 if __name__ == "__main__":

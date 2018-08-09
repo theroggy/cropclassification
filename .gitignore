@@ -3,3 +3,4 @@ client_secret.json
 credentials.json
 *.pyc
 Old/
+.spyproject/
