@@ -140,27 +140,40 @@ def predict(input_parcel_csv: str
         df_input_parcel_classification_data.set_index(gs.id_column, inplace=True)
         logger.debug('Read classification data file ready')
 
-    # Join the columns of df_classification_data that aren't yet in df_train
+    # Prepare the data to send to prediction logic...
     logger.info("Join train sample with the classification data")
-    df_input_parcel = (df_input_parcel[[gs.id_column, gs.class_column]]
-                       .join(df_input_parcel_classification_data, how='inner', on=gs.id_column))
+    df_input_parcel_for_predict = (df_input_parcel[[gs.id_column, gs.class_column]]
+                                   .join(df_input_parcel_classification_data
+                                         , how='inner', on=gs.id_column))
 
-    df_proba = class_core.predict_proba(df_input_parcel=df_input_parcel
+    df_proba = class_core.predict_proba(df_input_parcel=df_input_parcel_for_predict
                                         , input_classifier_filepath=input_classifier_filepath
                                         , output_parcel_predictions_csv=output_predictions_csv)
 
-    # Calculate the top 3 and consolidated prediction
-    df_top3 = get_top_3_and_cons_prediction(df_proba)
+    # Calculate the top 3 predictions
+    df_top3 = _get_top_3_prediction(df_proba)
+
+    # Add the consolidated prediction
+    def calculate_consolidated_prediction(row):
+        # For some reason the row['pred2_prob'] is sometimes seen as string, and so 2* gives a
+        # repetition of the string value instead of a mathematic multiplication... so cast to float!
+        if float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']):
+            return row[gs.prediction_column]
+        else:
+            return 'DOUBT'
+
+    values = df_top3.apply(calculate_consolidated_prediction, axis=1)
+    df_top3.insert(loc=2, column=gs.prediction_cons_column, value=values)
 
     # Make sure all input parcels are in the output. If there was no prediction, it means that there
     # was no data available for a classification, so set prediction to NODATA
     df_top3.set_index(gs.id_column, inplace=True)
     df_input_parcel.set_index(gs.id_column, inplace=True)
 
-    # Add a column with the prediction status
-    df_top3[gs.prediction_status] = 'NONE'
-    df_top3[df_top3[gs.prediction_column] == 'DOUBT'][gs.prediction_status] = 'DOUBT'
-    df_top3[gs.prediction_status].fillna('OK', inplace=True)
+    # Add a column with the prediction status... and all parcels in df_top3 got a prediction
+    df_top3[gs.prediction_status] = 'OK'
+    df_top3.loc[(df_top3[gs.prediction_cons_column] == 'DOUBT')
+                , gs.prediction_status] = 'DOUBT'
 
     cols_to_join = df_top3.columns.difference(df_input_parcel.columns)
     df_pred = df_input_parcel.join(df_top3[cols_to_join], how='left')
@@ -168,10 +181,20 @@ def predict(input_parcel_csv: str
     df_pred[gs.prediction_cons_column].fillna('NODATA', inplace=True)
     df_pred[gs.prediction_status].fillna('NODATA', inplace=True)
 
+    logger.info(f"Columns of df_pred: {df_pred.columns}")
+    # Parcels with too few pixels don't have a good accuracy and give many alfa errors...
+    df_pred.loc[(df_pred[gs.pixcount_s1s2_column] <= 10)
+                 & (df_pred[gs.prediction_status] != 'NODATA')
+                 & (df_pred[gs.prediction_status] != 'DOUBT')
+                , [gs.prediction_cons_column, gs.prediction_status]] = 'NOT_ENOUGH_PIXELS'
+
+    df_pred.loc[df_pred[gs.class_column] == 'UNKNOWN', [gs.prediction_status]] = 'UNKNOWN'
+    df_pred.loc[df_pred[gs.class_column].str.startswith('IGNORE_'), [gs.prediction_status]] = df_pred[gs.class_column]
+
     logger.info("Write final prediction data to file")
     df_pred.to_csv(output_predictions_csv, float_format='%.10f', encoding='utf-8')
 
-def get_top_3_and_cons_prediction(df_probabilities):
+def _get_top_3_prediction(df_probabilities):
     """ Returns the top 3 predictions for each parcel.
 
     The return value will be a dataset with the following columns:
@@ -215,18 +238,6 @@ def get_top_3_and_cons_prediction(df_probabilities):
                            , columns=[gs.id_column, gs.class_column
                                       , gs.prediction_column, 'pred2', 'pred3'
                                       , 'pred1_prob', 'pred2_prob', 'pred3_prob'])
-
-    # Add the consolidated prediction
-    def calculate_consolidated_prediction(row):
-        # For some reason the row['pred2_prob'] is sometimes seen as string, and so 2* gives a
-        # repetition of the string value instead of a mathematic multiplication... so cast to float!
-        if float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']):
-            return row[gs.prediction_column]
-        else:
-            return 'DOUBT'
-
-    values = df_top3.apply(calculate_consolidated_prediction, axis=1)
-    df_top3.insert(loc=2, column=gs.prediction_cons_column, value=values)
 
     return df_top3
 
