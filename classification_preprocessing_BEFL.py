@@ -197,14 +197,9 @@ def prepare_input_cropgroups(input_parcel_filepath: str
     # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
     df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BOOM', 'MON_FRUIT']), gs.class_column] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
-    # 'MON_FRUIT': has a good accuracy (91%), but also has as much false positives (115% -> mainly
-    #              'MON_GRASSEN' that are (mis)classified as 'MON_FRUIT')
-    # 'MON_BOOM': has very bad accuracy (28%) and also very much false positives (450% -> mainly
-    #              'MON_GRASSEN' that are misclassified as 'MON_BOOM')
-    # MON_FRUIT and MON_BOOM are permanent anyway, so not mandatory that they are checked in
-    # monitoring process.
-    # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
-    df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_BOOM', 'MON_FRUIT']), gs.class_column] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
+    # Put MON_STAL, SERRES en TIJDELIJKE OVERK together, too many misclassifiactions amongst
+    # each other
+    df_parceldata.loc[df_parceldata[gs.class_column].isin(['MON_STAL', 'SERRES', 'TIJDELIJKE_OVERK']), gs.class_column] = 'MON_STAL_SER'
 
     # Set classes with very few elements to UNKNOWN!
     for index, row in df_parceldata.groupby(gs.class_column).size().reset_index(name='count').iterrows():
