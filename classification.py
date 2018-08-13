@@ -50,7 +50,7 @@ def train_test_predict(input_parcel_train_csv: str
        and os.path.exists(output_classifier_filepath)
        and os.path.exists(output_predictions_test_csv)
        and os.path.exists(output_predictions_all_csv)):
-        logger.warning(f"predict: output files exist and force == False, so stop: {output_classifier_filepath}, {output_predictions_test_csv}, {output_predictions_all_csv}")
+        logger.warning(f"predict: output files exist and force is False, so stop: {output_classifier_filepath}, {output_predictions_test_csv}, {output_predictions_all_csv}")
         return
 
     # Read the classification data from the csv so we can pass it on to the other functione to improve performance...
@@ -123,9 +123,10 @@ def predict(input_parcel_csv: str
             , df_input_parcel_classification_data: pd.DataFrame = None):
     """ Predict the classes for the input data. """
 
-    # If force is False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_predictions_csv):
-        logger.warning(f"predict: output file already exists and force is False, so stop: {output_predictions_csv}")
+    # If force is False, and the output file doesn't exist yet, stop
+    if(force is False
+       and os.path.exists(output_predictions_csv)):
+        logger.warning(f"predict: predictions output file already exists and force is false, so stop: {output_predictions_csv}")
         return
 
     logger.info(f"Read input file: {input_parcel_csv}")
@@ -211,7 +212,8 @@ def get_top_3_and_cons_prediction(df_probabilities):
 
     # Convert to dataframe, combine with input data and write to file
     df_top3 = pd.DataFrame(id_class_top3
-                           , columns=[gs.id_column, gs.class_column, gs.prediction_column, 'pred2', 'pred3'
+                           , columns=[gs.id_column, gs.class_column
+                                      , gs.prediction_column, 'pred2', 'pred3'
                                       , 'pred1_prob', 'pred2_prob', 'pred3_prob'])
 
     # Add the consolidated prediction
