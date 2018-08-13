@@ -26,14 +26,11 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 # TODO: improve reporting to devide between eligible versus ineligible classes?
-# TODO: report based on area instead of number parcel
+# TODO?: report based on area instead of number parcel
 #     -> seems like being a bit "detached from reality", as for RFV the most important parameter is the number of parcels
-# TODO: UNKNOWN class, and definitely IGNORE_ classes now also contain classes that are difficult to distinguish to "ignore" them, to be able to compare them
-#       to ground truth they should somehow keep their original class (as well?)...
 
 def write_full_report(parcel_predictions_csv: str
                       , output_report_txt: str
-                      , parcel_to_report_on_csv: str = None
                       , parcel_ground_truth_csv: str = None
                       , force: bool = None):
     """Writes a report about the accuracy of the predictions to a file.
@@ -42,9 +39,6 @@ def write_full_report(parcel_predictions_csv: str
         parcel_predictions_csv: File name of csv file with the parcel with their predictions.
         prediction_columnname: Column name of the column that contains the predictions.
         output_report_txt: File name of txt file the report will be written to.
-        parcel_classes_test_csv: The original full list of test parcel, including parcel that
-            couldn't get a prediction due to eg. missing classification data. If None, the
-            part of the report that is based on this data is skipped.
         parcel_ground_truth_csv: List of parcels with ground truth to calculate eg. alfa and
             beta errors. If None, the part of the report that is based on this data is skipped
 
@@ -55,56 +49,39 @@ def write_full_report(parcel_predictions_csv: str
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
         return
 
-    logger.info('Start write_full_report')
+    logger.info("Start write_full_report")
 
-    logger.info('Read csv with probabilities')
+    logger.info(f"Read csv with predictions: {parcel_predictions_csv}")
     df_predict = pd.read_csv(parcel_predictions_csv, low_memory=False)
     df_predict.set_index(gs.id_column, inplace=True)
 
-    df_parcel_to_report = None
-    if parcel_to_report_on_csv is not None:
-        logger.info('Read csv with all test parcel (with their classes)')
-        df_parcel_to_report = pd.read_csv(parcel_to_report_on_csv, low_memory=False)
-        df_parcel_to_report.set_index(gs.id_column, inplace=True)
-
     # Build and write report...
     with open(output_report_txt, 'w') as outputfile:
-        # Output general accuracies
         # Remark: the titles are 60 karakters wide...
+        # Output general classification status
+        outputfile.write("************************************************************\n")
+        outputfile.write("***************** GENERAL ACCURACIES ***********************\n")
+        outputfile.write("************************************************************\n")
+        count_per_pred_status = (df_predict
+                                 .groupby(gs.prediction_status, as_index=False)
+                                 .size().to_frame('count'))
+        values = 100 * count_per_pred_status['count'] / count_per_pred_status['count'].sum()
+        count_per_pred_status.insert(loc=1, column='pct', value=values)
+
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            outputfile.write(f"Number of parcels per prediction status:\n{count_per_pred_status}\n\n")
+
+        # Output general accuracies
         outputfile.write("************************************************************\n")
         outputfile.write("***************** GENERAL ACCURACIES ***********************\n")
         outputfile.write("************************************************************\n")
 
         # First report the general accuracies for the entire list to report on...
-        if df_parcel_to_report is not None:
-            # Join parcel classes_to_report_on with predictions
-            df_parcel_to_report_pred = (df_parcel_to_report
-                                        .join(df_predict[[gs.prediction_column
-                                                         , gs.prediction_cons_column]], how='left'))
-            df_parcel_to_report_pred[gs.prediction_column].fillna('NODATA', inplace=True)
-            df_parcel_to_report_pred[gs.prediction_cons_column].fillna('NODATA', inplace=True)
-            oa = sklearn.metrics.accuracy_score(df_parcel_to_report_pred[gs.class_column]
-                                                , df_parcel_to_report_pred[gs.prediction_column]
-                                                , normalize=True
-                                                , sample_weight=None) * 100
-            message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
-            logger.info(message)
-            outputfile.write(f"{message}\n")
-
-            oa = sklearn.metrics.accuracy_score(df_parcel_to_report_pred[gs.class_column]
-                                                , df_parcel_to_report_pred[gs.prediction_cons_column]
-                                                , normalize=True
-                                                , sample_weight=None) * 100
-            message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
-            logger.info(message)
-            outputfile.write(f"{message}\n")
-
-        # Now report on parcels that actually had a prediction
         oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column]
                                             , df_predict[gs.prediction_column]
                                             , normalize=True
                                             , sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA parcels), for standard prediction"
+        message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
 
@@ -112,14 +89,33 @@ def write_full_report(parcel_predictions_csv: str
                                             , df_predict[gs.prediction_cons_column]
                                             , normalize=True
                                             , sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA parcels), for consolidated prediction"
+        message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
+        logger.info(message)
+        outputfile.write(f"{message}\n")
+
+        # Now report on parcels that actually had a prediction
+        df_predict_has_prediction = df_predict.loc[(df_predict[gs.prediction_status] != 'NODATA')
+                                                   & (df_predict[gs.prediction_status] != 'NOT_ENOUGH_PIXELS')]
+        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column]
+                                            , df_predict_has_prediction[gs.prediction_column]
+                                            , normalize=True
+                                            , sample_weight=None) * 100
+        message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for standard prediction"
+        logger.info(message)
+        outputfile.write(f"{message}\n")
+
+        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column]
+                                            , df_predict_has_prediction[gs.prediction_cons_column]
+                                            , normalize=True
+                                            , sample_weight=None) * 100
+        message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
 
         # Output best-case accuracy
         # Ignore the 'UNKNOWN' and 'IGNORE_' classes...
         logger.info("For best-case accuracy, remove the 'UNKNOWN' class and the classes that start with 'IGNORE_'")
-        df_predict_accuracy_best_case = df_predict[df_predict[gs.class_column] != 'UNKNOWN']
+        df_predict_accuracy_best_case = df_predict_has_prediction[df_predict_has_prediction[gs.class_column] != 'UNKNOWN']
         df_predict_accuracy_best_case = \
                 df_predict_accuracy_best_case[~df_predict_accuracy_best_case[gs.class_column]
                                               .str.startswith('IGNORE_', na=True)]
@@ -141,27 +137,6 @@ def write_full_report(parcel_predictions_csv: str
         outputfile.write(f"{message}\n\n")
 
         df_pixcount = None
-        if parcel_to_report_on_csv is not None:
-            outputfile.write("************************************************************\n")
-            outputfile.write("************* PARCELS WITHOUT PREDICTION (no data?) ********\n")
-            outputfile.write("************************************************************\n")
-
-            # Output info about parcel with no prediction
-            # Get all test percels that are in the full list, but don't have a prediction
-            df_parcel_to_report_no_predict = \
-                    df_parcel_to_report[~df_parcel_to_report.index.isin(df_predict.index)]
-
-            nb_parcel_test_no_predict = len(df_parcel_to_report_no_predict)
-            message = f"Number of parcels that don't have a prediction: {nb_parcel_test_no_predict}"
-            logger.info(message)
-            outputfile.write(f"{message}\n")
-            # If there are parcel that don't have a prediction, write the number of items per class
-            # to reporting file
-            if nb_parcel_test_no_predict > 0:
-                count_per_class = (df_parcel_to_report_no_predict
-                                   .groupby(gs.class_column, as_index=False).size())
-                with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                    outputfile.write(f"Number of parcels the don't have prediction per classname:\n{count_per_class}\n\n")
 
         # Write the recall, F1 score,... per class
 #        message = sklearn.metrics.classification_report(df_predict[gs.class_column]
@@ -192,12 +167,6 @@ def write_full_report(parcel_predictions_csv: str
             outputfile.write("*** REPORTING ON PREDICTION QUALITY BASED ON GROUND TRUTH **\n")
             outputfile.write("************************************************************\n")
 
-            # First check if the mandatory parcel_classes_sample_csv is provided as well...
-            if parcel_to_report_on_csv is None:
-                message = "If parcel_ground_truth_csv is not None, parcel_classes_to_report_on_csv should be provided as well! STOP!"
-                logger.critical(message)
-                raise Exception(message)
-
             # Read ground truth
             logger.info(f"Read csv with ground truth (with their classes): {parcel_ground_truth_csv}")
             df_parcel_gt = pd.read_csv(parcel_ground_truth_csv, low_memory=False)
@@ -208,25 +177,20 @@ def write_full_report(parcel_predictions_csv: str
             df_parcel_gt.rename(columns={gs.class_column: gs.class_column + '_GT'}
                                 , inplace=True)
 
-            # Join with the classes_sample, as we only want to report on the ground truth that
-            # is also in the sample
-            if parcel_to_report_on_csv is not None:
-                # Only add columns that aren't in the ground truth yet...
-                cols_to_join = df_parcel_to_report.columns.difference(df_parcel_gt.columns)
-                df_parcel_gt = df_parcel_gt.join(df_parcel_to_report[cols_to_join], how='inner')
-
-            # Join the prediction data and fill up missing predictions
+            # Join the prediction data
             cols_to_join = df_predict.columns.difference(df_parcel_gt.columns)
-            df_parcel_gt = df_parcel_gt.join(df_predict[cols_to_join], how='left')
-            df_parcel_gt[gs.prediction_column].fillna('NODATA', inplace=True)
-            df_parcel_gt[gs.prediction_cons_column].fillna('NODATA', inplace=True)
+            df_parcel_gt = df_parcel_gt.join(df_predict[cols_to_join], how='inner')
+            logger.info(f"After join of ground truth with predictions, shape: {df_parcel_gt.shape}")
 
-            logger.debug('Number of ground truth parcels that also have a prediction: {len(df_parcel_gt)}')
+            if len(df_parcel_gt) == 0:
+                message = "After join of ground truth with predictions the result was empty, so probably a wrong ground truth file was used!"
+                logger.critical(message)
+                raise Exception(message)
 
             # Add the alfa error
             # TODO: this needs to be reviewed, maybe need to compare with original classname
             #       instead of _IGNORE, UNKNOWN,...
-            def get_prediction_quality(row, prediction_column_to_use):
+            def get_prediction_quality(row, prediction_column_to_use) -> str:
                 """ Get a string that gives a quality indicator of the prediction. """
                 # For some reason the row['pred2_prob'] is sometimes seen as string, and
                 # so 2* gives a repetition of the string value instead
@@ -241,7 +205,7 @@ def write_full_report(parcel_predictions_csv: str
                           or row[gs.class_column].startswith('IGNORE_')):
                         # Input classname was special
                         return f"OK_BENEFIT_OF_DOUBT_CLASSNAME={row[gs.class_column]}"
-                    elif row[prediction_column_to_use] in ['DOUBT', 'NODATA']:
+                    elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
                         # Prediction resulted in doubt or there was no/not enough data
                         return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
                     else:
@@ -259,13 +223,16 @@ def write_full_report(parcel_predictions_csv: str
                           or row[gs.class_column].startswith('IGNORE_')):
                         # Input classname was special
                         return f"ERROR_BETA_FARMER_WRONG_CLASSNAME={row[gs.class_column]}"
-                    elif row[prediction_column_to_use] in ['DOUBT', 'NODATA']:
+                    elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
                         # Prediction resulted in doubt or there was no/not enough data
                         return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
                     else:
                         # Prediction was wrong, but same as the farmer!
                         return 'OK_FARMER_WRONG_PREDICTION_DIFFERENT'
 
+#            df_parcel_gt[PRED_QUALITY_COLUMN] = df_parcel_gt.apply(get_prediction_quality
+#                                                                   , args=[gs.prediction_cons_column]
+#                                                                   , axis=1).tolist()
             values = df_parcel_gt.apply(get_prediction_quality, args=[gs.prediction_column], axis=1)
             df_parcel_gt.insert(loc=2, column=PRED_QUALITY_COLUMN, value=values)
             values = df_parcel_gt.apply(get_prediction_quality, args=[gs.prediction_cons_column], axis=1)
@@ -299,7 +266,6 @@ def write_full_report(parcel_predictions_csv: str
                 df_per_pixcount.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
                     message = f"Number of ERROR_ALFA parcels for the consolidated prediction per pixcount for the ground truth parcels:\n{df_per_pixcount}"
-                    logger.info(message)
                     outputfile.write(f"{message}\n")
 
     if df_pixcount is not None:
