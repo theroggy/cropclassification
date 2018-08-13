@@ -18,37 +18,46 @@ import classification_reporting as class_report
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
+year = 2018
+country_code = 'BEFL'        # The region of the classification: typically country code
+
 base_dir = 'C:\\temp\\CropClassification'                                               # Base dir
 input_dir = os.path.join(base_dir, 'InputData')                                         # Input dir
 input_preprocessed_dir = os.path.join(input_dir, 'Preprocessed')
-input_parcel_filename_noext = 'Prc_flanders_2017_2018-01-09'                            # Input filename
+
+# Input file depends on the year
+if year == 2017:
+    input_parcel_filename_noext = 'Prc_flanders_2017_2018-01-09'                        # Input filename
+elif year == 2018:
+    input_parcel_filename_noext = 'Prc_BEFL_2018_2018-08-02'                            # Input filename
 input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.shp")   # Input filepath of the parcel
-input_groundtruth_noext = 'Prc_flanders_2017_groundtruth'
-input_groundtruth_csv = os.path.join(input_dir, f"{input_groundtruth_noext}.csv")       # The ground truth
-input_parcel_filetype = 'BEFL'
+if year == 2017:
+    input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2017_groundtruth.csv")    # The ground truth
+else:
+    input_groundtruth_csv = None
+
+input_parcel_filetype = country_code
 imagedata_dir = os.path.join(base_dir, 'Timeseries_data')      # General data download dir
-start_date_str = '2017-03-27'
-end_date_str = '2017-09-15'                                    # End date is NOT inclusive for gee processing
+start_date_str = f"{year}-03-27"
+end_date_str = f"{year}-08-10"                                 # End date is NOT inclusive for gee processing
 
 # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
 '''
 # Settings for 7 main crops
 classtype_to_prepare = 'MOST_POPULAR_CROPS'
-class_base_dir = os.path.join(base_dir, 'class_maincrops7')    # Dir for the classification type
+class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops7")    # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 '''
-
 # Settings for monitoring crop groups
 classtype_to_prepare = 'MONITORING_CROPGROUPS'
-class_base_dir = os.path.join(base_dir, 'class_maincrops_mon') # Dir for the classification type
+class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 
-class_dir = os.path.join(class_base_dir, '2018-08-09_Run1_testje')
+class_dir = os.path.join(class_base_dir, '2018-08-10_Run1')
 log_dir = os.path.join(class_dir, 'log')
-base_filename = 'BEFL2017_bufm10_weekly_tmp'
+base_filename = f"{country_code}{year}_bufm10_weekly"
 sensordata_to_use = [timeseries.SENSORDATA_S1_ASCDESC, timeseries.SENSORDATA_S2gt95]
 parceldata_aggregations_to_use = [class_pre.PARCELDATA_AGGRAGATION_MEAN]
-country_code = 'BEFL'        # The region of the classification: typically country code
 
 # Check if the necessary input files and directories exist...
 if not os.path.exists(input_parcel_filepath):
@@ -57,6 +66,8 @@ if not os.path.exists(input_parcel_filepath):
     raise Exception(message)
 if not os.path.exists(imagedata_dir):
     os.mkdir(imagedata_dir)
+if not os.path.exists(class_base_dir):
+    os.mkdir(class_base_dir)
 if not os.path.exists(class_dir):
     os.mkdir(class_dir)
 if not os.path.exists(log_dir):
@@ -93,15 +104,11 @@ logger.addHandler(fh)
 #-------------------------------------------------------------
 # The real work
 #-------------------------------------------------------------
-# TODO: performance could be optimized by providing the option that the intermediate csv files
-#       aren't always written to disk and read again by returning the result as DataSet...
-#       (or at least only written, not read again).
-
 # STEP 1: prepare parcel data for classification and image data extraction
 #-------------------------------------------------------------
 
 # Prepare the input data for optimal image data extraction:
-#   ( 1) reproject to projection used for Sentinel, for BEFL: epsg:32631)
+#    TODO: 1) reproject to projection used in GEE: EPSG:4326
 #    2) apply a negative buffer on the parcel to evade mixels
 #    3) remove features that became null because of buffer
 imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm10"
@@ -182,18 +189,20 @@ classification.train_test_predict(input_parcel_train_csv=parcel_train_csv
 # STEP 5: Report on the test accuracy, incl. ground truth
 #-------------------------------------------------------------
 # Preprocess the ground truth data
-groundtruth_csv = os.path.join(class_dir, f"{input_groundtruth_noext}_classes.csv")
-class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv
-                        , input_filetype=input_parcel_filetype
-                        , input_parcel_pixcount_csv=parcel_pixcount_csv
-                        , output_parcel_filepath=groundtruth_csv
-                        , input_classtype_to_prepare=f"{classtype_to_prepare}_GROUNDTRUTH")
+groundtruth_csv = None
+if input_groundtruth_csv is not None:
+    input_gt_noext, input_gt_ext = os.path.splitext(input_groundtruth_csv)
+    groundtruth_csv = os.path.join(class_dir, f"{input_gt_noext}_classes{input_gt_ext}")
+    class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv
+                            , input_filetype=input_parcel_filetype
+                            , input_parcel_pixcount_csv=parcel_pixcount_csv
+                            , output_parcel_filepath=groundtruth_csv
+                            , input_classtype_to_prepare=f"{classtype_to_prepare}_GROUNDTRUTH")
 
 # Print full reporting on the accuracy
 report_txt = f"{parcel_predictions_test_csv}_accuracy_report.txt"
 class_report.write_full_report(parcel_predictions_csv=parcel_predictions_test_csv
                                , output_report_txt=report_txt
-                               , parcel_to_report_on_csv=parcel_test_csv
                                , parcel_ground_truth_csv=groundtruth_csv)
 
 # STEP 7: Report on the full accuracy, incl. ground truth
@@ -202,7 +211,6 @@ class_report.write_full_report(parcel_predictions_csv=parcel_predictions_test_cs
 report_txt = f"{parcel_predictions_all_csv}_accuracy_report.txt"
 class_report.write_full_report(parcel_predictions_csv=parcel_predictions_all_csv
                                , output_report_txt=report_txt
-                               , parcel_to_report_on_csv=parcel_csv
                                , parcel_ground_truth_csv=groundtruth_csv)
 
 logging.shutdown()
