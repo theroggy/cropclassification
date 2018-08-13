@@ -26,7 +26,11 @@ def prepare_input(input_parcel_filepath: str
     """
     This function creates a file that is preprocessed to be a good input file for
     timeseries extraction of sentinel images.
+
     """
+
+    # TODO: recently, the assets uploaded to GEE that aren't in EPSG:4326 are very bad quality,
+    #       so reprojection should be added here...
 
     # If force == False Check and the output file exists already, stop.
     if force is False and os.path.exists(output_imagedata_parcel_input_filepath):
@@ -68,12 +72,12 @@ def prepare_input(input_parcel_filepath: str
 
     # Export buffered geometries that result in empty geometries
     logger.info('Export parcel that are empty after buffer')
-    parceldata_buf_empty = parceldata_buf[parceldata_buf['geometry'].is_empty is True]
+    parceldata_buf_empty = parceldata_buf[parceldata_buf['geometry'].is_empty == True]
     parceldata_buf_empty.to_csv(temp_empty_filepath, index=False)
 
     # Export buffered geometries that don't result in polygons
     logger.info('Export parcel that are no (multi)polygons after buffer')
-    parceldata_buf_notempty = parceldata_buf[parceldata_buf['geometry'].is_empty is False]
+    parceldata_buf_notempty = parceldata_buf[parceldata_buf['geometry'].is_empty == False]
     parceldata_buf_nopoly = parceldata_buf_notempty[-parceldata_buf_notempty['geometry']
                                                     .geom_type.isin(['Polygon', 'MultiPolygon'])]
     parceldata_buf_nopoly.to_csv(temp_nopoly_filepath, index=False)
