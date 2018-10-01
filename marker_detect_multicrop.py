@@ -11,9 +11,9 @@ REMARK: is still experimental, not operational yet!
 import logging
 import os
 import datetime
-import timeseries_s1s2_preprocessing as ts_pre
-import timeseries_s1s2_gee as ts_calc
-import classification_preprocessing as class_pre
+import timeseries_calc_preprocess as ts_pre
+import timeseries_calc_gee as ts_calc
+import classification_preprocess as class_pre
 import timeseries as ts
 import multicrop
 
@@ -45,7 +45,7 @@ end_date_str = f"{year}-07-15"                                 # End date is NOT
 classtype_to_prepare = 'MONITORING_CROPGROUPS'
 class_base_dir = os.path.join(base_dir, f"{year}_multicrop") # Dir for the classification type
 
-class_dir = os.path.join(class_base_dir, '2018-09-28_Run2')
+class_dir = os.path.join(class_base_dir, '2018-10-01_Run1')
 log_dir = os.path.join(class_dir, 'log')
 base_filename = f"{country_code}{year}_bufm20_weekly"
 sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC]

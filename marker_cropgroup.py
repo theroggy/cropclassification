@@ -9,10 +9,10 @@ Main script to do a classification.
 import logging
 import os
 import datetime
-import timeseries_s1s2_preprocessing as ts_pre
-import timeseries_s1s2_gee as ts_calc_gee
+import timeseries_calc_preprocess as ts_pre
+import timeseries_calc_gee as ts_calc_gee
 import timeseries as ts
-import classification_preprocessing as class_pre
+import classification_preprocess as class_pre
 import classification
 import classification_reporting as class_report
 

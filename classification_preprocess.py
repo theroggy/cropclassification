@@ -8,7 +8,7 @@ Module with helper functions to preprocess the data to use for the classificatio
 import logging
 import os
 import pandas as pd
-import classification_preprocessing_BEFL as befl
+import classification_preprocess_BEFL as befl
 import global_settings as gs
 
 #-------------------------------------------------------------
