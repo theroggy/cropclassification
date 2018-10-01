@@ -45,13 +45,13 @@ global_gee_tasks_cache = None
 # The real work
 #-------------------------------------------------------------
 
-def calc_timeseries_data(input_parcel_filepath: str
-                        , input_country_code: str
-                        , start_date_str: str
-                        , end_date_str: str
-                        , sensordata_to_get: List[str]
-                        , base_filename: str
-                        , dest_data_dir: str):
+def calc_timeseries_data(input_parcel_filepath: str,
+                         input_country_code: str,
+                         start_date_str: str,
+                         end_date_str: str,
+                         sensordata_to_get: List[str],
+                         base_filename: str,
+                         dest_data_dir: str):
     """ Calculate timeseries data for the input parcels
 
     args
@@ -75,13 +75,13 @@ def calc_timeseries_data(input_parcel_filepath: str
     done_success = False
     while done_success is False and nb_retries < 10:
         try:
-            calculate_sentinel_timeseries(input_parcel_filepath=input_parcel_filepath
-                                          , input_country_code=input_country_code
-                                          , start_date_str=start_date_str
-                                          , end_date_str=end_date_str
-                                          , sensordata_to_get=sensordata_to_get
-                                          , base_filename=base_filename
-                                          , dest_data_dir=dest_data_dir)
+            calculate_sentinel_timeseries(input_parcel_filepath=input_parcel_filepath,
+                                          input_country_code=input_country_code,
+                                          start_date_str=start_date_str,
+                                          end_date_str=end_date_str,
+                                          sensordata_to_get=sensordata_to_get,
+                                          base_filename=base_filename,
+                                          dest_data_dir=dest_data_dir)
             done_success = True
 
         except OSError as ex:
@@ -105,8 +105,8 @@ def calc_timeseries_data(input_parcel_filepath: str
         # Download the results
         try:
             logger.info('Now download needed timeseries files')
-            return_status = download_sentinel_timeseries(dest_data_dir=dest_data_dir
-                                                         , base_filename=base_filename)
+            return_status = download_sentinel_timeseries(dest_data_dir=dest_data_dir,
+                                                         base_filename=base_filename)
 
             # Retry every 10 minutes
             if return_status == 'RETRY_NEEDED':
@@ -132,8 +132,8 @@ def calc_timeseries_data(input_parcel_filepath: str
             logger.error('ERROR downloading from google drive!')
             raise
 
-def download_sentinel_timeseries(dest_data_dir: str
-                                 , base_filename: str):
+def download_sentinel_timeseries(dest_data_dir: str,
+                                 base_filename: str):
     """ Download the timeseries data from gee and clean it up. """
 
     logger.info("Start download_sentinel_timeseries")
@@ -187,9 +187,9 @@ def download_sentinel_timeseries(dest_data_dir: str
             drive_service = connect_to_googledrive()
 
         # Search the file on google drive...
-        results = drive_service.files().list(q=f"name = '{curr_csv_to_download_basename}' and trashed != true"
-                                             , pageSize=100
-                                             , fields="nextPageToken, files(id, name)").execute()
+        results = drive_service.files().list(q=f"name = '{curr_csv_to_download_basename}' and trashed != true",
+                                             pageSize=100,
+                                             fields="nextPageToken, files(id, name)").execute()
         items = results.get('files', [])
 
         # Check the result of the search
@@ -264,13 +264,13 @@ def clean_gee_downloaded_csv(csv_file: str):
         df_in.to_csv(csv_file_tmp, index=False)
         os.replace(csv_file_tmp, csv_file)
 
-def calculate_sentinel_timeseries(input_parcel_filepath: str
-                                  , input_country_code: str
-                                  , start_date_str: str
-                                  , end_date_str: str
-                                  , sensordata_to_get: List[str]
-                                  , base_filename: str
-                                  , dest_data_dir: str):
+def calculate_sentinel_timeseries(input_parcel_filepath: str,
+                                  input_country_code: str,
+                                  start_date_str: str,
+                                  end_date_str: str,
+                                  sensordata_to_get: List[str],
+                                  base_filename: str,
+                                  dest_data_dir: str):
     '''
     Credits: partly based on a gee S1 extraction script written by Guido Lemoine.
 
@@ -404,9 +404,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         """ Returns the next day. """
         return ee.Date(start_date_str).advance(date, "day")
 
-    days = ee.List.sequence(0
-                            , ee.Date(end_date_str).difference(ee.Date(start_date_str), 'day')
-                            , step).map(nextday)
+    days = ee.List.sequence(0,
+                            ee.Date(end_date_str).difference(ee.Date(start_date_str), 'day'),
+                            step).map(nextday)
     periods = days.slice(0, -1).zip(days.slice(1))
 
     # Function to get a string representation for a period
@@ -423,8 +423,8 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         period_str = get_period_str(period)
         return (s1.filterDate(ee.List(period).get(0), ee.List(period).get(1))
                 .mean()
-                .select(['VV', 'VH']
-                        , [ee.String('VV_').cat(period_str), ee.String('VH_').cat(period_str)]))
+                .select(['VV', 'VH'], [ee.String('VV_').cat(period_str),
+                                       ee.String('VH_').cat(period_str)]))
 
     # Get the S1's for a period...
     def get_s1_asc_forperiod(period):
@@ -432,9 +432,8 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         s1_asc = s1.filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
         return (s1_asc.filterDate(ee.List(period).get(0), ee.List(period).get(1))
                 .mean()
-                .select(['VV', 'VH']
-                        , [ee.String('VV_ASC_').cat(period_str)
-                           , ee.String('VH_ASC_').cat(period_str)]))
+                .select(['VV', 'VH'], [ee.String('VV_ASC_').cat(period_str),
+                                       ee.String('VH_ASC_').cat(period_str)]))
 
     # Get the S1's for a period...
     def get_s1_desc_forperiod(period):
@@ -442,9 +441,8 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         s1_desc = s1.filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING'))
         return (s1_desc.filterDate(ee.List(period).get(0), ee.List(period).get(1))
                 .mean()
-                .select(['VV', 'VH']
-                        , [ee.String('VV_DESC_').cat(period_str)
-                           , ee.String('VH_DESC_').cat(period_str)]))
+                .select(['VV', 'VH'], [ee.String('VV_DESC_').cat(period_str),
+                                       ee.String('VH_DESC_').cat(period_str)]))
 
     # Get the S2's for a period...
     # Remark: median on an imagecollection apparently has a result that
@@ -477,9 +475,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         # Check if there is a task with this name and this state (there can be multiple tasks with
         # this name!)
         for task in global_gee_tasks_cache:
-            if (task['description'] == task_description
-                    and task['task_type'] == 'EXPORT_FEATURES'
-                    and task['state'] in task_state_list):
+            if(task['description'] == task_description
+               and task['task_type'] == 'EXPORT_FEATURES'
+               and task['state'] in task_state_list):
                 logger.debug(f"<check_if_task_exists> Task {task_description} found with state {task['state']}")
                 return True
         logger.debug(f"<check_if_task_exists> Task {task_description} doesn't exist with any of the states in {task_state_list}")
@@ -508,9 +506,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
         # Get the sentinel data for each parcel
         # Remark: from the input parcels, only keep the ID column...
-        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([gs.id_column])
-                                                      , reducer=reducer
-                                                      , scale=10)
+        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([gs.id_column]),
+                                                      reducer=reducer,
+                                                      scale=10)
 
         # Set the geometries to none, as we don't want to export them... and parameter
         # retainGeometry=False in select doesn't seem to work.
@@ -520,10 +518,10 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
         imagedata_perparcel = imagedata_perparcel.map(geom_to_none)
 
         # Export to google drive
-        export_task = ee.batch.Export.table.toDrive(collection=imagedata_perparcel
-                                                   , folder='Monitoring'
-                                                   , description=export_descr
-                                                   , fileFormat='CSV')
+        export_task = ee.batch.Export.table.toDrive(collection=imagedata_perparcel,
+                                                    folder='Monitoring',
+                                                    description=export_descr,
+                                                    fileFormat='CSV')
         ee.batch.Task.start(export_task)
 
         # Create file in todownload folder to indicate this file should be downloaded
@@ -533,9 +531,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
     s1_for_count = (s1.filterDate(ee.List(periods.get(0)).get(0), ee.List(periods.get(0)).get(1))
                     .mean().select(['VV'], ['pixcount']))
     export_description = f"{base_filename}_pixcount"
-    reduce_and_export(imagedata=s1_for_count
-                      , reducer=ee.Reducer.count()
-                      , export_descr=export_description)
+    reduce_and_export(imagedata=s1_for_count,
+                      reducer=ee.Reducer.count(),
+                      export_descr=export_description)
 
     # Loop over all periods and export data per period to drive
     # Create the reducer we want to user...
@@ -578,9 +576,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
             else:
                 # Now the real work
                 s1_forperiod = get_s1_forperiod([period_start_str, period_end_str])
-                reduce_and_export(imagedata=s1_forperiod
-                                  , reducer=reducer
-                                  , export_descr=sensordata_descr)
+                reduce_and_export(imagedata=s1_forperiod,
+                                  reducer=reducer,
+                                  export_descr=sensordata_descr)
 
         # Get mean s1 asc and desc image of the s1 images that are available in this period
         if ts.SENSORDATA_S1_ASCDESC in sensordata_to_get:
@@ -593,9 +591,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                 s1_asc_forperiod = get_s1_asc_forperiod([period_start_str, period_end_str])
                 s1_desc_forperiod = get_s1_desc_forperiod([period_start_str, period_end_str])
                 imagedata_forperiod = merge_bands(s1_asc_forperiod, s1_desc_forperiod)
-                reduce_and_export(imagedata=imagedata_forperiod
-                                  , reducer=reducer
-                                  , export_descr=sensordata_descr)
+                reduce_and_export(imagedata=imagedata_forperiod,
+                                  reducer=reducer,
+                                  export_descr=sensordata_descr)
 
         # Get mean s2 image of the s2 images that have (almost)cloud free images available in this
         # period
@@ -617,11 +615,12 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                                .area().divide(region_of_interest.area()))
                 if s2_pct_bevl.getInfo() > 0.95:
                     s2_forperiod = (s2s_forperiod.median()
-                                    .select(['B2', 'B3', 'B4', 'B8']
-                                            , [ee.String('S2B2_').cat(period_start_str)
-                                               , ee.String('S2B3_').cat(period_start_str)
-                                               , ee.String('S2B4_').cat(period_start_str)
-                                               , ee.String('S2B8_').cat(period_start_str)]))
+                                    .select(['B2', 'B3', 'B4', 'B8'],
+                                            [ee.String('S2B2_').cat(period_start_str),
+                                             ee.String('S2B3_').cat(period_start_str),
+                                             ee.String('S2B4_').cat(period_start_str),
+                                             ee.String('S2B8_').cat(period_start_str)
+                                            ]))
                 else:
                     # Create an empty destination file so we'll know that we tested the 95% already
                     # and don't need to do it again...
@@ -629,9 +628,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                     continue
 
 #                logger.debug(f"S2 Bands: {ee.Image(s2_forperiod).bandNames().getInfo()}")
-                reduce_and_export(imagedata=s2_forperiod
-                                  , reducer=reducer
-                                  , export_descr=sensordata_descr)
+                reduce_and_export(imagedata=s2_forperiod,
+                                  reducer=reducer,
+                                  export_descr=sensordata_descr)
 
 # If the script is run directly...
 if __name__ == "__main__":

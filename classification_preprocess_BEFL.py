@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def prepare_input(input_parcel_filepath: str
-                  , input_classtype_to_prepare: str):
+def prepare_input(input_parcel_filepath: str,
+                  input_classtype_to_prepare: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -51,8 +51,8 @@ def prepare_input(input_parcel_filepath: str
         logger.fatal(message)
         raise Exception(message)
 
-def prepare_input_cropgroups(input_parcel_filepath: str
-                             , crop_columnname: str = 'GWSCOD_H'):
+def prepare_input_cropgroups(input_parcel_filepath: str,
+                             crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -125,10 +125,10 @@ def prepare_input_cropgroups(input_parcel_filepath: str
 
     # Join/merge the classname
     logger.info('Add the classes to the parceldata')
-    df_parceldata = df_parceldata.merge(df_classes, how='left'
-                                        , left_on=crop_columnname
-                                        , right_index=True
-                                        , validate='many_to_one')
+    df_parceldata = df_parceldata.merge(df_classes, how='left',
+                                        left_on=crop_columnname,
+                                        right_index=True,
+                                        validate='many_to_one')
 
     # Data verwijderen
 #    df = df[df[classname] != 'Andere subsidiabele gewassen']  # geen boomkweek
@@ -220,8 +220,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str
 
     return df_parceldata
 
-def prepare_input_most_popular_crops(input_parcel_filepath: str
-                                     , crop_columnname: str = 'GWSCOD_H'):
+def prepare_input_most_popular_crops(input_parcel_filepath: str,
+                                     crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.

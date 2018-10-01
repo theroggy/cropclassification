@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 28 12:24:25 2018
+This module contains general functions that apply to timeseries data...
 
-@author: pierog
+@author: Pieter Roggemans
 """
 
 import logging
@@ -33,15 +33,15 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def collect_and_prepare_timeseries_data(imagedata_dir: str
-                                        , base_filename: str
-                                        , output_csv: str
-                                        , start_date_str: str
-                                        , end_date_str: str
-                                        , sensordata_to_use: List[str]
-                                        , parceldata_aggregations_to_use: List[str]
-                                        , min_fraction_data_in_column: float = 0.0
-                                        , force: bool = False):
+def collect_and_prepare_timeseries_data(imagedata_dir: str,
+                                        base_filename: str,
+                                        output_csv: str,
+                                        start_date_str: str,
+                                        end_date_str: str,
+                                        sensordata_to_use: List[str],
+                                        parceldata_aggregations_to_use: List[str],
+                                        min_fraction_data_in_column: float = 0.0,
+                                        force: bool = False):
     """
     Collect all timeseries data to use for the classification and prepare it by applying
     scaling,... as needed.
@@ -50,7 +50,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str
     #       there won't be a classification at all for that parcel!!!
 
     # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_csv) is True:
+    if(force is False and os.path.exists(output_csv) is True):
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_csv}")
         return
 

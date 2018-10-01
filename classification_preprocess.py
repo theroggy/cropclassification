@@ -26,12 +26,12 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def prepare_input(input_parcel_filepath: str
-                  , input_filetype: str
-                  , input_parcel_pixcount_csv: str
-                  , input_classtype_to_prepare: str
-                  , output_parcel_filepath: str
-                  , force: bool = False):
+def prepare_input(input_parcel_filepath: str,
+                  input_filetype: str,
+                  input_parcel_pixcount_csv: str,
+                  input_classtype_to_prepare: str,
+                  output_parcel_filepath: str,
+                  force: bool = False):
     """
     Prepare a raw input file by eg. adding the classification classes to use for the
     classification,...
@@ -43,8 +43,8 @@ def prepare_input(input_parcel_filepath: str
         return
 
     if input_filetype == 'BEFL':
-        df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath
-                                           , input_classtype_to_prepare=input_classtype_to_prepare)
+        df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath,
+                                           input_classtype_to_prepare=input_classtype_to_prepare)
     else:
         message = f"Unknown value for parameter input_filetype: {input_filetype}"
         logger.critical(message)
@@ -72,11 +72,11 @@ def prepare_input(input_parcel_filepath: str
     else:
         df_parceldata.to_file(output_parcel_filepath, index=False)
 
-def create_train_test_sample(input_parcel_csv: str
-                             , output_parcel_train_csv: str
-                             , output_parcel_test_csv: str
-                             , balancing_strategy: str
-                             , force: bool = False):
+def create_train_test_sample(input_parcel_csv: str,
+                             output_parcel_train_csv: str,
+                             output_parcel_test_csv: str,
+                             balancing_strategy: str,
+                             force: bool = False):
     """ Create a seperate train and test sample from the general input file. """
 
     # If force == False Check and the output files exist already, stop.

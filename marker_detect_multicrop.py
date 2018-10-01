@@ -120,13 +120,13 @@ timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
 #    - the upload to gee as an asset is not implemented, because it need a google cloud account...
 #      so upload needs to be done manually
 input_parcel_filepath_gee = f"users/pieter_roggemans/{imagedata_input_parcel_filename_noext}"
-ts_calc.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
-                               , input_country_code=country_code
-                               , start_date_str=start_date_str
-                               , end_date_str=end_date_str
-                               , sensordata_to_get=sensordata_to_use
-                               , base_filename=base_filename
-                               , dest_data_dir=imagedata_dir)
+ts_calc.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee,
+                             input_country_code=country_code,
+                             start_date_str=start_date_str,
+                             end_date_str=end_date_str,
+                             sensordata_to_get=sensordata_to_use,
+                             base_filename=base_filename,
+                             dest_data_dir=imagedata_dir)
 
 # STEP 3: Preprocess all data needed for the classification
 #-------------------------------------------------------------
@@ -144,22 +144,22 @@ ts_calc.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
 # TODO: this isn't a proper prepare function yet for this marker!!!
 parcel_csv = os.path.join(class_dir, f"{input_parcel_filename_noext}_parcel.csv")
 parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")
-class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
-                        , input_filetype=input_parcel_filetype
-                        , input_parcel_pixcount_csv=parcel_pixcount_csv
-                        , output_parcel_filepath=parcel_csv
-                        , input_classtype_to_prepare=classtype_to_prepare)
+class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
+                        input_filetype=input_parcel_filetype,
+                        input_parcel_pixcount_csv=parcel_pixcount_csv,
+                        output_parcel_filepath=parcel_csv,
+                        input_classtype_to_prepare=classtype_to_prepare)
 
 # Combine all data needed to do the classification in one input file
 parcel_classification_data_csv = os.path.join(class_dir, f"{base_filename}_parcel_classdata.csv")
-ts.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
-                                              , base_filename=base_filename
-                                              , output_csv=parcel_classification_data_csv
-                                              , start_date_str=start_date_str
-                                              , end_date_str=end_date_str
-                                              , min_fraction_data_in_column=0.0
-                                              , sensordata_to_use=sensordata_to_use
-                                              , parceldata_aggregations_to_use=parceldata_aggregations_to_use)
+ts.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir,
+                                       base_filename=base_filename,
+                                       output_csv=parcel_classification_data_csv,
+                                       start_date_str=start_date_str,
+                                       end_date_str=end_date_str,
+                                       min_fraction_data_in_column=0.0,
+                                       sensordata_to_use=sensordata_to_use,
+                                       parceldata_aggregations_to_use=parceldata_aggregations_to_use)
 
 multicrop.detect_multicrop(input_parcel_csv=parcel_csv,
                            input_parcel_timeseries_data_csv=parcel_classification_data_csv)

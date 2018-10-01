@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def train_test_predict(input_parcel_train_csv: str
-                       , input_parcel_test_csv: str
-                       , input_parcel_all_csv: str
-                       , input_parcel_classification_data_csv: str
-                       , output_classifier_filepath: str
-                       , output_predictions_test_csv: str
-                       , output_predictions_all_csv: str
-                       , force: bool = False):
+def train_test_predict(input_parcel_train_csv: str,
+                       input_parcel_test_csv: str,
+                       input_parcel_all_csv: str,
+                       input_parcel_classification_data_csv: str,
+                       output_classifier_filepath: str,
+                       output_predictions_test_csv: str,
+                       output_predictions_all_csv: str,
+                       force: bool = False):
     """ Train a classifier, test it and do full predictions.
 
     Args
@@ -60,33 +60,33 @@ def train_test_predict(input_parcel_train_csv: str
     logger.debug('Read classification data file ready')
 
     # Train the classifiaction
-    train(input_parcel_train_csv=input_parcel_train_csv
-          , input_parcel_classification_data_csv=input_parcel_classification_data_csv
-          , output_classifier_filepath=output_classifier_filepath
-          , force=force
-          , df_input_parcel_classification_data=df_input_parcel_classification_data)
+    train(input_parcel_train_csv=input_parcel_train_csv,
+          input_parcel_classification_data_csv=input_parcel_classification_data_csv,
+          output_classifier_filepath=output_classifier_filepath,
+          force=force,
+          df_input_parcel_classification_data=df_input_parcel_classification_data)
 
     # Predict the test parcels
-    predict(input_parcel_csv=input_parcel_test_csv
-            , input_parcel_classification_data_csv=input_parcel_classification_data_csv
-            , input_classifier_filepath=output_classifier_filepath
-            , output_predictions_csv=output_predictions_test_csv
-            , force=force
-            , df_input_parcel_classification_data=df_input_parcel_classification_data)
+    predict(input_parcel_csv=input_parcel_test_csv,
+            input_parcel_classification_data_csv=input_parcel_classification_data_csv,
+            input_classifier_filepath=output_classifier_filepath,
+            output_predictions_csv=output_predictions_test_csv,
+            force=force,
+            df_input_parcel_classification_data=df_input_parcel_classification_data)
 
     # Predict all parcels
-    predict(input_parcel_csv=input_parcel_all_csv
-            , input_parcel_classification_data_csv=input_parcel_classification_data_csv
-            , input_classifier_filepath=output_classifier_filepath
-            , output_predictions_csv=output_predictions_all_csv
-            , force=force
-            , df_input_parcel_classification_data=df_input_parcel_classification_data)
+    predict(input_parcel_csv=input_parcel_all_csv,
+            input_parcel_classification_data_csv=input_parcel_classification_data_csv,
+            input_classifier_filepath=output_classifier_filepath,
+            output_predictions_csv=output_predictions_all_csv,
+            force=force,
+            df_input_parcel_classification_data=df_input_parcel_classification_data)
 
-def train(input_parcel_train_csv: str
-          , input_parcel_classification_data_csv: str
-          , output_classifier_filepath: str
-          , force: bool = False
-          , df_input_parcel_classification_data: pd.DataFrame = None):
+def train(input_parcel_train_csv: str,
+          input_parcel_classification_data_csv: str,
+          output_classifier_filepath: str,
+          force: bool = False,
+          df_input_parcel_classification_data: pd.DataFrame = None):
     """ Train a classifier and test it by predicting the test cases. """
 
     logger.info("train_and_test: Start")
@@ -115,12 +115,12 @@ def train(input_parcel_train_csv: str
 
     class_core.train(df_train=df_train, output_classifier_filepath=output_classifier_filepath)
 
-def predict(input_parcel_csv: str
-            , input_parcel_classification_data_csv: str
-            , input_classifier_filepath: str
-            , output_predictions_csv: str
-            , force: bool = False
-            , df_input_parcel_classification_data: pd.DataFrame = None):
+def predict(input_parcel_csv: str,
+            input_parcel_classification_data_csv: str,
+            input_classifier_filepath: str,
+            output_predictions_csv: str,
+            force: bool = False,
+            df_input_parcel_classification_data: pd.DataFrame = None):
     """ Predict the classes for the input data. """
 
     # If force is False, and the output file doesn't exist yet, stop
@@ -143,12 +143,12 @@ def predict(input_parcel_csv: str
     # Prepare the data to send to prediction logic...
     logger.info("Join train sample with the classification data")
     df_input_parcel_for_predict = (df_input_parcel[[gs.id_column, gs.class_column]]
-                                   .join(df_input_parcel_classification_data
-                                         , how='inner', on=gs.id_column))
+                                   .join(df_input_parcel_classification_data,
+                                         how='inner', on=gs.id_column))
 
-    df_proba = class_core.predict_proba(df_input_parcel=df_input_parcel_for_predict
-                                        , input_classifier_filepath=input_classifier_filepath
-                                        , output_parcel_predictions_csv=output_predictions_csv)
+    df_proba = class_core.predict_proba(df_input_parcel=df_input_parcel_for_predict,
+                                        input_classifier_filepath=input_classifier_filepath,
+                                        output_parcel_predictions_csv=output_predictions_csv)
 
     # Calculate the top 3 predictions
     df_top3 = _get_top_3_prediction(df_proba)
@@ -172,8 +172,8 @@ def predict(input_parcel_csv: str
 
     # Add a column with the prediction status... and all parcels in df_top3 got a prediction
     df_top3[gs.prediction_status] = 'OK'
-    df_top3.loc[(df_top3[gs.prediction_cons_column] == 'DOUBT')
-                , gs.prediction_status] = 'DOUBT'
+    df_top3.loc[(df_top3[gs.prediction_cons_column] == 'DOUBT'),
+                gs.prediction_status] = 'DOUBT'
 
     cols_to_join = df_top3.columns.difference(df_input_parcel.columns)
     df_pred = df_input_parcel.join(df_top3[cols_to_join], how='left')
@@ -185,8 +185,8 @@ def predict(input_parcel_csv: str
     # Parcels with too few pixels don't have a good accuracy and give many alfa errors...
     df_pred.loc[(df_pred[gs.pixcount_s1s2_column] <= 10)
                  & (df_pred[gs.prediction_status] != 'NODATA')
-                 & (df_pred[gs.prediction_status] != 'DOUBT')
-                , [gs.prediction_cons_column, gs.prediction_status]] = 'NOT_ENOUGH_PIXELS'
+                 & (df_pred[gs.prediction_status] != 'DOUBT'),
+                [gs.prediction_cons_column, gs.prediction_status]] = 'NOT_ENOUGH_PIXELS'
 
     df_pred.loc[df_pred[gs.class_column] == 'UNKNOWN', [gs.prediction_status]] = 'UNKNOWN'
     df_pred.loc[df_pred[gs.class_column].str.startswith('IGNORE_'), [gs.prediction_status]] = df_pred[gs.class_column]
@@ -234,10 +234,10 @@ def _get_top_3_prediction(df_probabilities):
                                    , axis=1)
 
     # Convert to dataframe, combine with input data and write to file
-    df_top3 = pd.DataFrame(id_class_top3
-                           , columns=[gs.id_column, gs.class_column
-                                      , gs.prediction_column, 'pred2', 'pred3'
-                                      , 'pred1_prob', 'pred2_prob', 'pred3_prob'])
+    df_top3 = pd.DataFrame(id_class_top3,
+                           columns=[gs.id_column, gs.class_column,
+                                    gs.prediction_column, 'pred2', 'pred3'
+                                    'pred1_prob', 'pred2_prob', 'pred3_prob'])
 
     return df_top3
 

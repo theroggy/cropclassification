@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def show(input_parcel_csv: str
-         , filter_id: str):
+def show(input_parcel_csv: str,
+         filter_id: str):
 
     # Load input data...
     df = pd.read_csv(input_parcel_csv)
@@ -80,5 +80,4 @@ if __name__ == "__main__":
     local_data_basedir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'
     local_data_dir = os.path.join(local_data_basedir, 'ClassificationAndTraining\\Hoofdteelt_2017-06-03_2017-09-04')
     input_parcel_csv = os.path.join(local_data_dir , 'BEVL2017_result.csv')
-    show(input_parcel_csv
-        ,filter_id = '0000280464DD96FF')
+    show(input_parcel_csv, filter_id = '0000280464DD96FF')

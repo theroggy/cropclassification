@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 # TODO?: report based on area instead of number parcel
 #     -> seems like being a bit "detached from reality", as for RFV the most important parameter is the number of parcels
 
-def write_full_report(parcel_predictions_csv: str
-                      , output_report_txt: str
-                      , parcel_ground_truth_csv: str = None
-                      , force: bool = None):
+def write_full_report(parcel_predictions_csv: str,
+                      output_report_txt: str,
+                      parcel_ground_truth_csv: str = None,
+                      force: bool = None):
     """Writes a report about the accuracy of the predictions to a file.
 
     Args:
@@ -77,18 +77,18 @@ def write_full_report(parcel_predictions_csv: str
         outputfile.write("************************************************************\n")
 
         # First report the general accuracies for the entire list to report on...
-        oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column]
-                                            , df_predict[gs.prediction_column]
-                                            , normalize=True
-                                            , sample_weight=None) * 100
+        oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column],
+                                            df_predict[gs.prediction_column],
+                                            normalize=True,
+                                            sample_weight=None) * 100
         message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
 
-        oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column]
-                                            , df_predict[gs.prediction_cons_column]
-                                            , normalize=True
-                                            , sample_weight=None) * 100
+        oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column],
+                                            df_predict[gs.prediction_cons_column],
+                                            normalize=True,
+                                            sample_weight=None) * 100
         message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
@@ -96,18 +96,18 @@ def write_full_report(parcel_predictions_csv: str
         # Now report on parcels that actually had a prediction
         df_predict_has_prediction = df_predict.loc[(df_predict[gs.prediction_status] != 'NODATA')
                                                    & (df_predict[gs.prediction_status] != 'NOT_ENOUGH_PIXELS')]
-        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column]
-                                            , df_predict_has_prediction[gs.prediction_column]
-                                            , normalize=True
-                                            , sample_weight=None) * 100
+        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column],
+                                            df_predict_has_prediction[gs.prediction_column],
+                                            normalize=True,
+                                            sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
 
-        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column]
-                                            , df_predict_has_prediction[gs.prediction_cons_column]
-                                            , normalize=True
-                                            , sample_weight=None) * 100
+        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column],
+                                            df_predict_has_prediction[gs.prediction_cons_column],
+                                            normalize=True,
+                                            sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
@@ -120,18 +120,18 @@ def write_full_report(parcel_predictions_csv: str
                 df_predict_accuracy_best_case[~df_predict_accuracy_best_case[gs.class_column]
                                               .str.startswith('IGNORE_', na=True)]
 
-        oa = sklearn.metrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column]
-                                            , df_predict_accuracy_best_case[gs.prediction_column]
-                                            , normalize=True
-                                            , sample_weight=None) * 100
+        oa = sklearn.metrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
+                                            df_predict_accuracy_best_case[gs.prediction_column],
+                                            normalize=True,
+                                            sample_weight=None) * 100
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
 
-        oa = sklearn.metrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column]
-                                            , df_predict_accuracy_best_case[gs.prediction_cons_column]
-                                            , normalize=True
-                                            , sample_weight=None) * 100
+        oa = sklearn.metrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
+                                            df_predict_accuracy_best_case[gs.prediction_cons_column],
+                                            normalize=True,
+                                            sample_weight=None) * 100
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n\n")
@@ -174,8 +174,8 @@ def write_full_report(parcel_predictions_csv: str
             logger.info(f"Read csv with ground truth ready, shape: {df_parcel_gt.shape}")
 
             # Rename the classname column in ground truth
-            df_parcel_gt.rename(columns={gs.class_column: gs.class_column + '_GT'}
-                                , inplace=True)
+            df_parcel_gt.rename(columns={gs.class_column: gs.class_column + '_GT'},
+                                inplace=True)
 
             # Join the prediction data
             cols_to_join = df_predict.columns.difference(df_parcel_gt.columns)
@@ -270,22 +270,22 @@ def write_full_report(parcel_predictions_csv: str
 
     if df_pixcount is not None:
         pixcount_output_report_txt = output_report_txt + '_pixcount.txt'
-        _write_OA_per_pixcount(df_parcel_predictions=df_predict
-                              , df_parcel_pixcount=df_pixcount
-                              , output_report_txt=pixcount_output_report_txt
-                              , force=force)
+        _write_OA_per_pixcount(df_parcel_predictions=df_predict,
+                               df_parcel_pixcount=df_pixcount,
+                               output_report_txt=pixcount_output_report_txt,
+                               force=force)
 
 def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     """ Returns a dataset with an extended confusion matrix. """
 
-    classes = sorted(np.unique(np.append(df_predict[prediction_column_to_use].unique()
-                                         , df_predict[gs.class_column].unique())))
+    classes = sorted(np.unique(np.append(df_predict[prediction_column_to_use].unique(),
+                                         df_predict[gs.class_column].unique())))
     logger.debug(f"Input shape: {df_predict.shape}, Unique classes found: {classes}")
 
     # Calculate standard confusion matrix
-    np_confmatrix = sklearn.metrics.confusion_matrix(df_predict[gs.class_column]
-                                                     , df_predict[prediction_column_to_use]
-                                                     , labels=classes)
+    np_confmatrix = sklearn.metrics.confusion_matrix(df_predict[gs.class_column],
+                                                     df_predict[prediction_column_to_use],
+                                                     labels=classes)
     df_confmatrix_ext = pd.DataFrame(np_confmatrix, classes, classes)
 
     # Add some more columns to the confusion matrix
@@ -322,45 +322,45 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
     df_count_per_pixcount = (df_predquality_pixcount.groupby(gs.pixcount_s1s2_column, as_index=False)
                              .size().to_frame('count_all'))
     values = df_count_per_pixcount['count_all'].cumsum(axis=0)
-    df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns)
-                                 , column='count_all_cumulative'
-                                 , value=values)
+    df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns),
+                                 column='count_all_cumulative',
+                                 value=values)
     values = (100 * df_count_per_pixcount['count_all_cumulative']
               / df_count_per_pixcount['count_all'].sum())
-    df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns)
-                                 , column='pct_all_cumulative'
-                                 , value=values)
+    df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns),
+                                 column='pct_all_cumulative',
+                                 value=values)
 
     # Now calculate the number of alfa errors per pixcount
     df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[PRED_QUALITY_CONS_COLUMN] == 'ERROR_ALFA']
-    df_alfa_per_pixcount = (df_alfa_error.groupby(gs.pixcount_s1s2_column
-                                                  , as_index=False)
+    df_alfa_per_pixcount = (df_alfa_error.groupby(gs.pixcount_s1s2_column,
+                                                  as_index=False)
                             .size().to_frame('count_error_alfa'))
 
     # Join them together, and calculate the alfa error percentages
     df_alfa_per_pixcount = df_count_per_pixcount.join(df_alfa_per_pixcount
                                                       , how='left')
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns)
-                                , column='count_error_alfa_cumulative'
-                                , value=df_alfa_per_pixcount['count_error_alfa'].cumsum(axis=0))
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
+                                column='count_error_alfa_cumulative',
+                                value=df_alfa_per_pixcount['count_error_alfa'].cumsum(axis=0))
     values = 100 * df_alfa_per_pixcount['count_error_alfa'] / df_alfa_per_pixcount['count_all']
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns)
-                                , column='pct_error_alfa_of_all', value=values)
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
+                                column='pct_error_alfa_of_all', value=values)
     values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative']
               / df_alfa_per_pixcount['count_error_alfa'].sum())
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns)
-                                , column='pct_error_alfa_of_alfa_cumulative', value=values)
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
+                                column='pct_error_alfa_of_alfa_cumulative', value=values)
     values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative']
               / df_alfa_per_pixcount['count_all'].sum())
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns)
-                                , column='pct_error_alfa_of_all_cumulative', value=values)
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
+                                column='pct_error_alfa_of_all_cumulative', value=values)
 
     return df_alfa_per_pixcount
 
-def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame
-                          , df_parcel_pixcount: pd.DataFrame
-                          , output_report_txt: str
-                          , force: bool = False):
+def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
+                           df_parcel_pixcount: pd.DataFrame,
+                           output_report_txt: str,
+                           force: bool = False):
     """ Write a report of the overall accuracy that parcels per pixcount get. """
     # If force == False Check and the output file exists already, stop.
     if force is False and os.path.exists(output_report_txt):
@@ -389,6 +389,5 @@ def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame
 
 # If the script is run directly...
 if __name__ == "__main__":
-
     logger.critical('Not implemented exception!')
     raise Exception('Not implemented')

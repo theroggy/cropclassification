@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def train(df_train: pd.DataFrame
-           , output_classifier_filepath: str):
+def train(df_train: pd.DataFrame,
+          output_classifier_filepath: str):
     """
     Train a classifier and output the trained classifier to the output file.
 
@@ -54,9 +54,9 @@ def train(df_train: pd.DataFrame
     logger.info(f"Write the learned model file to {output_classifier_filepath}")
     joblib.dump(classifier, output_classifier_filepath)
 
-def predict_proba(df_input_parcel: pd.DataFrame
-                  , input_classifier_filepath: str
-                  , output_parcel_predictions_csv: str):
+def predict_proba(df_input_parcel: pd.DataFrame,
+                  input_classifier_filepath: str,
+                  output_parcel_predictions_csv: str):
     """
     Predict the probabilities for all input data using the classifier provided and write it
     to the output file.
@@ -70,8 +70,8 @@ def predict_proba(df_input_parcel: pd.DataFrame
     """
 
     # Some basic checks that input is ok
-    if (gs.id_column not in df_input_parcel.columns
-            or gs.class_column not in df_input_parcel.columns):
+    if(gs.id_column not in df_input_parcel.columns
+       or gs.class_column not in df_input_parcel.columns):
         message = f"Columns {gs.id_column} and {gs.class_column} are mandatory for input parameter df_input!"
         logger.critical(message)
         raise Exception(message)

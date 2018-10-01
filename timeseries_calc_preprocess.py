@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def prepare_input(input_parcel_filepath: str
-                  , output_imagedata_parcel_input_filepath: str
-                  , force: bool = False):
+def prepare_input(input_parcel_filepath: str,
+                  output_imagedata_parcel_input_filepath: str,
+                  force: bool = False):
     """
     This function creates a file that is preprocessed to be a good input file for
     timeseries extraction of sentinel images.
@@ -33,7 +33,7 @@ def prepare_input(input_parcel_filepath: str
     #       so reprojection should be added here...
 
     # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_imagedata_parcel_input_filepath):
+    if(force is False and os.path.exists(output_imagedata_parcel_input_filepath)):
         logger.warning(f"prepare_input: output file already exists and force == False, so stop: {output_imagedata_parcel_input_filepath}")
         return
 
