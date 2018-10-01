@@ -28,14 +28,14 @@ from apiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
 import googleapiclient
+
+# Import local stuff
 import global_settings as gs
+import timeseries as ts
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-SENSORDATA_S1 = 'S1'                # Sentinel 1 data
-SENSORDATA_S1_ASCDESC = 'S1AscDesc' # Sentinel 1 data, divided in Ascending and Descending passes
-SENSORDATA_S2gt95 = 'S2gt95'        # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -45,14 +45,14 @@ global_gee_tasks_cache = None
 # The real work
 #-------------------------------------------------------------
 
-def get_timeseries_data(input_parcel_filepath: str
+def calc_timeseries_data(input_parcel_filepath: str
                         , input_country_code: str
                         , start_date_str: str
                         , end_date_str: str
                         , sensordata_to_get: List[str]
                         , base_filename: str
                         , dest_data_dir: str):
-    """ Get timeseries data for the input parcels
+    """ Calculate timeseries data for the input parcels
 
     args
     ------------
@@ -342,6 +342,14 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 #        return feature.set('area', feature.area(), 'perimeter', feature.perimeter(), 'type', feature.geometry().type())
 #    bevl2017 = bevl2017.map(add_feature_info)
 
+    # Buffer
+    # Now define a function to buffer the parcels inward
+    def bufferFeature(ft):
+      ft = ft.simplify(1).buffer(-20).simplify(1)
+#     return ft.set({ncoords: ft.geometry().coordinates().length()})
+      return ft
+    input_parcels = input_parcels.map(bufferFeature)
+
     # Export non-polygons..
 #    bevl2017_nopoly = bevl2017.filterMetadata('type', 'not_equals', 'Polygon')
 #    ee.batch.Export.table.toDrive(collection = bevl2017_nopoly, folder = 'Monitoring', description = 'BEVL2017_no_polygon', fileFormat = 'KMZ')
@@ -561,9 +569,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                 return image2
 
         # Get mean s1 image of the s1 images that are available in this period
-        if SENSORDATA_S1 in sensordata_to_get:
+        if ts.SENSORDATA_S1 in sensordata_to_get:
             # If the data is already available locally... skip
-            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1}"
+            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1}"
             if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
                 return
@@ -575,9 +583,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
                                   , export_descr=sensordata_descr)
 
         # Get mean s1 asc and desc image of the s1 images that are available in this period
-        if SENSORDATA_S1_ASCDESC in sensordata_to_get:
+        if ts.SENSORDATA_S1_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
-            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1_ASCDESC}"
+            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1_ASCDESC}"
             if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
             else:
@@ -591,8 +599,8 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str
 
         # Get mean s2 image of the s2 images that have (almost)cloud free images available in this
         # period
-        if SENSORDATA_S2gt95 in sensordata_to_get:
-            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S2gt95}"
+        if ts.SENSORDATA_S2gt95 in sensordata_to_get:
+            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S2gt95}"
 
             # If the data is already available locally... skip
             # Remark: this logic is puth here additionaly to evade having to calculate the 95% rule

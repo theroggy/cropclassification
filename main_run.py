@@ -9,8 +9,9 @@ Main script to do a classification.
 import logging
 import os
 import datetime
-import timeseries_s1s2_preprocessing as timeseries_pre
-import timeseries_s1s2_gee as timeseries
+import timeseries_s1s2_preprocessing as ts_pre
+import timeseries_s1s2_gee as ts_calc_gee
+import timeseries as ts
 import classification_preprocessing as class_pre
 import classification
 import classification_reporting as class_report
@@ -21,7 +22,7 @@ import classification_reporting as class_report
 year = 2018
 country_code = 'BEFL'        # The region of the classification: typically country code
 
-base_dir = 'C:\\temp\\CropClassification'                                               # Base dir
+base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
 input_dir = os.path.join(base_dir, 'InputData')                                         # Input dir
 input_preprocessed_dir = os.path.join(input_dir, 'Preprocessed')
 
@@ -56,8 +57,8 @@ balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 class_dir = os.path.join(class_base_dir, '2018-08-10_Run1')
 log_dir = os.path.join(class_dir, 'log')
 base_filename = f"{country_code}{year}_bufm10_weekly"
-sensordata_to_use = [timeseries.SENSORDATA_S1_ASCDESC, timeseries.SENSORDATA_S2gt95]
-parceldata_aggregations_to_use = [class_pre.PARCELDATA_AGGRAGATION_MEAN]
+sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
+parceldata_aggregations_to_use = [ts.PARCELDATA_AGGRAGATION_MEAN]
 
 # Check if the necessary input files and directories exist...
 if not os.path.exists(input_parcel_filepath):
@@ -113,7 +114,7 @@ logger.addHandler(fh)
 #    3) remove features that became null because of buffer
 imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm10"
 imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
-timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
+ts_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
                              , output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath)
 
 # STEP 2: Get the timeseries data needed for the classification
@@ -126,7 +127,7 @@ timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
 #    - the upload to gee as an asset is not implemented, because it need a google cloud account...
 #      so upload needs to be done manually
 input_parcel_filepath_gee = f"users/pieter_roggemans/{imagedata_input_parcel_filename_noext}"
-timeseries.get_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
+ts_calc_gee.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee
                                , input_country_code=country_code
                                , start_date_str=start_date_str
                                , end_date_str=end_date_str
@@ -156,12 +157,14 @@ class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
 
 # Combine all data needed to do the classification in one input file
 parcel_classification_data_csv = os.path.join(class_dir, f"{base_filename}_parcel_classdata.csv")
-class_pre.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
+ts.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir
                                               , base_filename=base_filename
+                                              , output_csv=parcel_classification_data_csv
                                               , start_date_str=start_date_str
                                               , end_date_str=end_date_str
-                                              , parceldata_aggregations_to_use=parceldata_aggregations_to_use
-                                              , output_csv=parcel_classification_data_csv)
+                                              , min_fraction_data_in_column=0.9
+                                              , sensordata_to_use=sensordata_to_use
+                                              , parceldata_aggregations_to_use=parceldata_aggregations_to_use)
 
 # STEP 4: Train, test and classify
 #-------------------------------------------------------------
