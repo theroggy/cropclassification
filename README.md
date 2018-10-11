@@ -26,24 +26,19 @@ You can install this from https://conda.io/docs/user-guide/install/index.html
    2. Install the dependencies manually
       1. Create a new conda environment
       ```
-	  conda create --name cropclassification python=3.6 anaconda`
+	  conda create --name cropclassification python=3.6
       conda activate cropclassification
 	  ```
       2. Install the dependencies for the crop classification scripts:
-	  ```
-      conda install geopandas
+      ```
+	  conda install -c conda-forge earthengine-api
+	  conda install -c conda-forge google-api-python-client
+	  conda install scikit-learn
+	  conda install geopandas
 	  ```
       3. I use spyder to edit my scripts. Recently after I installed geopandas, Spyder from the root environment doesn't work anymore and I need to install it here as well. If you use another editor, you can use that of course.
       ```
 	  conda install spyder
-	  ```
-      4. Install the python earth engine API
-      ```
-	  conda install -c conda-forge earthengine-api
-	  ```
-      5. Install scikit-learn
-      ```
-	  conda install scikit-learn
 	  ```
 
 4. When you want to download data from google earth engine, this data is placed on your google drive. For the scripts 
