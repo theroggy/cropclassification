@@ -45,10 +45,10 @@ end_date_str = f"{year}-07-15"                                 # End date is NOT
 classtype_to_prepare = 'MONITORING_CROPGROUPS'
 class_base_dir = os.path.join(base_dir, f"{year}_multicrop") # Dir for the classification type
 
-class_dir = os.path.join(class_base_dir, '2018-10-01_Run1')
+class_dir = os.path.join(class_base_dir, '2018-10-02_Run2_bufm10')
 log_dir = os.path.join(class_dir, 'log')
-base_filename = f"{country_code}{year}_bufm20_weekly"
-sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC]
+base_filename = f"{country_code}{year}_bufm10_weekly"
+sensordata_to_use = [ts.SENSORDATA_S1DB_ASCDESC]
 parceldata_aggregations_to_use = [ts.PARCELDATA_AGGRAGATION_STDDEV]
 
 # Check if the necessary input files and directories exist...
@@ -103,12 +103,12 @@ logger.addHandler(fh)
 #    TODO: 1) reproject to projection used in GEE: EPSG:4326
 #    2) apply a negative buffer on the parcel to evade mixels
 #    3) remove features that became null because of buffer
-#imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm20"
-imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}"
+imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm10"
+#imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}"
 '''
 imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
-timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath
-                             , output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath)
+timeseries_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
+                             output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath)
 '''
 # STEP 2: Get the timeseries data needed for the classification
 #-------------------------------------------------------------

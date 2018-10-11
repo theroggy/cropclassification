@@ -22,9 +22,11 @@ PARCELDATA_AGGRAGATION_MEAN = 'mean'      # Mean value of the pixels values in a
 PARCELDATA_AGGRAGATION_STDDEV = 'stdDev'  # std dev of the values of the pixels in a parcel
 
 # Constants for types of sensor data
-SENSORDATA_S1 = 'S1'                # Sentinel 1 data
-SENSORDATA_S1_ASCDESC = 'S1AscDesc' # Sentinel 1 data, divided in Ascending and Descending passes
-SENSORDATA_S2gt95 = 'S2gt95'        # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
+SENSORDATA_S1 = 'S1'                    # Sentinel 1 data
+SENSORDATA_S1DB = 'S1dB'                    # Sentinel 1 data, in dB
+SENSORDATA_S1_ASCDESC = 'S1AscDesc'     # Sentinel 1 data, divided in Ascending and Descending passes
+SENSORDATA_S1DB_ASCDESC = 'S1dBAscDesc' # Sentinel 1 data, in dB, divided in Ascending and Descending passes
+SENSORDATA_S2gt95 = 'S2gt95'            # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
 
 # Get a logger...
 logger = logging.getLogger(__name__)

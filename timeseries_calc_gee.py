@@ -342,6 +342,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
 #        return feature.set('area', feature.area(), 'perimeter', feature.perimeter(), 'type', feature.geometry().type())
 #    bevl2017 = bevl2017.map(add_feature_info)
 
+    '''
     # Buffer
     # Now define a function to buffer the parcels inward
     def bufferFeature(ft):
@@ -349,6 +350,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
 #     return ft.set({ncoords: ft.geometry().coordinates().length()})
       return ft
     input_parcels = input_parcels.map(bufferFeature)
+    '''
 
     # Export non-polygons..
 #    bevl2017_nopoly = bevl2017.filterMetadata('type', 'not_equals', 'Polygon')
@@ -536,7 +538,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                       export_descr=export_description)
 
     # Loop over all periods and export data per period to drive
-    # Create the reducer we want to user...
+    # Create the reducer we want to use...
     # Remark: always use both the mean and stdDev reducer, the stdDev is useful for detecting if
     #         the parcel isn't one crop in any case, and that way the name of the columns always
     #         end with the aggregation/reduce type used, otherwise it doesn't and other code will
@@ -580,6 +582,20 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                                   reducer=reducer,
                                   export_descr=sensordata_descr)
 
+        # Get mean s1 image of the s1 images that are available in this period
+        if ts.SENSORDATA_S1DB in sensordata_to_get:
+            # If the data is already available locally... skip
+            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1DB}"
+            if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
+                logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
+                return
+            else:
+                # Now the real work
+                s1_forperiod = get_s1_forperiod([period_start_str, period_end_str])
+                reduce_and_export(imagedata=to_db(s1_forperiod),
+                                  reducer=reducer,
+                                  export_descr=sensordata_descr)
+
         # Get mean s1 asc and desc image of the s1 images that are available in this period
         if ts.SENSORDATA_S1_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
@@ -592,6 +608,21 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                 s1_desc_forperiod = get_s1_desc_forperiod([period_start_str, period_end_str])
                 imagedata_forperiod = merge_bands(s1_asc_forperiod, s1_desc_forperiod)
                 reduce_and_export(imagedata=imagedata_forperiod,
+                                  reducer=reducer,
+                                  export_descr=sensordata_descr)
+
+        # Get mean s1 in DB, asc and desc image of the s1 images that are available in this period
+        if ts.SENSORDATA_S1DB_ASCDESC in sensordata_to_get:
+            # If the data is already available locally... skip
+            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1DB_ASCDESC}"
+            if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
+                logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
+            else:
+                # Now the real work
+                s1_asc_forperiod = get_s1_asc_forperiod([period_start_str, period_end_str])
+                s1_desc_forperiod = get_s1_desc_forperiod([period_start_str, period_end_str])
+                imagedata_forperiod = merge_bands(s1_asc_forperiod, s1_desc_forperiod)
+                reduce_and_export(imagedata=to_db(imagedata_forperiod),
                                   reducer=reducer,
                                   export_descr=sensordata_descr)
 
