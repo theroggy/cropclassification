@@ -236,7 +236,7 @@ def _get_top_3_prediction(df_probabilities):
     # Convert to dataframe, combine with input data and write to file
     df_top3 = pd.DataFrame(id_class_top3,
                            columns=[gs.id_column, gs.class_column,
-                                    gs.prediction_column, 'pred2', 'pred3'
+                                    gs.prediction_column, 'pred2', 'pred3',
                                     'pred1_prob', 'pred2_prob', 'pred3_prob'])
 
     return df_top3
