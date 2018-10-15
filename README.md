@@ -32,18 +32,17 @@ following steps:
 	  conda install geopandas
 	  ```
       3. Reboot your computer
-      4. Start the anaconda terminal window again and update all elements of the environment to
-      the latest version
+      4. Start the anaconda terminal window again and activate the environment
       ```
       conda activate cropclassification
-      conda conda update –all
       ```
-      4. I use spyder to edit my scripts. After installing geopandas Spyder doesn't seem to work
-      anymore, but installing it in the new environment explicitly solves this. If you use another
-      editor, you can use that of course.
+      5. I use spyder to edit my scripts. After installing geopandas Spyder doesn't seem to work
+      anymore, but installing it in the new environment explicitly and updating all
+      packages in this environment solves this.
       ```
 	  conda install spyder
-	  ```
+      conda conda update –all
+      ```
 
 4. When you want to download data from google earth engine, this data is placed on your google
 drive. For the scripts to be able to download this data they scripts need (read-only) access to your
