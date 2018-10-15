@@ -31,7 +31,14 @@ following steps:
 	  conda install scikit-learn
 	  conda install geopandas
 	  ```
-      3. I use spyder to edit my scripts. After installing geopandas Spyder doesn't seem to work
+      3. Reboot your computer
+      4. Start the anaconda terminal window again and update all elements of the environment to
+      the latest version
+      ```
+      conda activate cropclassification
+      conda conda update –all
+      ```
+      4. I use spyder to edit my scripts. After installing geopandas Spyder doesn't seem to work
       anymore, but installing it in the new environment explicitly solves this. If you use another
       editor, you can use that of course.
       ```
