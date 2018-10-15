@@ -93,22 +93,28 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
         # Read data, and loop over columns to check if there are columns that need to be dropped.
         df_in = pd.read_csv(curr_csv, low_memory=False)
         for column in df_in.columns:
+
+            # If it is the id column, continue
             if column == gs.id_column:
                 continue
-            elif (df_in[column].isnull().sum()/len(df_in[column])) < min_fraction_data_in_column:
-                # If the number of nan values for the column > x %, drop column
-                logger.warn(f"Drop column as it contains < {min_fraction_data_in_column} real data (not nan)!: {column}")
-                df_in.drop(column, axis=1, inplace=True)
-            else:
-                # Drop column if it doesn't end with something in parcel_data_aggregations_to_use
-                column_ok = False
-                for parceldata_aggregation in parceldata_aggregations_to_use:
-                    if column.endswith('_' + parceldata_aggregation):
-                        column_ok = True
 
-                if column_ok is False:
-                    logger.debug(f"Drop column as it's column aggregation isn't to be used: {column}")
-                    df_in.drop(column, axis=1, inplace=True)
+            # Check if the column is "asked"
+            column_ok = False
+            for parceldata_aggregation in parceldata_aggregations_to_use:
+                if column.endswith('_' + parceldata_aggregation):
+                    column_ok = True
+
+            if column_ok is False:
+                # Drop column if it doesn't end with something in parcel_data_aggregations_to_use
+                logger.debug(f"Drop column as it's column aggregation isn't to be used: {column}")
+                df_in.drop(column, axis=1, inplace=True)
+                continue
+
+            fraction_real_data = 1-(df_in[column].isnull().sum()/len(df_in[column]))
+            if fraction_real_data < min_fraction_data_in_column:
+                # If the number of nan values for the column > x %, drop column
+                logger.warn(f"Drop column as it contains only {fraction_real_data} real data (= not nan) which is < {min_fraction_data_in_column}!: {column}")
+                df_in.drop(column, axis=1, inplace=True)
 
         # Loop over columns to check if there are columns that need to be rescaled.
         for column in df_in.columns:
