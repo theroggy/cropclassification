@@ -6,3 +6,4 @@ Old/
 .spyproject/
 .spyproject/workspace.ini
 data_multicrop.py
+/.vs
