@@ -18,7 +18,7 @@ import classification_sklearn as class_core
 # Get the logger, at the moment just use the root logger...
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)
-
+#testje
 #-------------------------------------------------------------
 # The real work
 #-------------------------------------------------------------
