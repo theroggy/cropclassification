@@ -162,7 +162,7 @@ def download_sentinel_timeseries(dest_data_dir: str,
 
         # The client secret file needs to be located in the same dir as the script otherwise it
         # doesn't seem to work
-        client_secret_file = 'client_secret.json'
+        client_secret_file = 'client_secret_download-gee-data.json'
         store = file.Storage('credentials.json')
         creds = store.get()
         if not creds or creds.invalid:
