@@ -34,6 +34,8 @@ elif year == 2018:
 input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.shp")   # Input filepath of the parcel
 if year == 2017:
     input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2017_groundtruth.csv")    # The ground truth
+if year == 2018:
+    input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2018_groundtruth.csv")    # The ground truth
 else:
     input_groundtruth_csv = None
 
