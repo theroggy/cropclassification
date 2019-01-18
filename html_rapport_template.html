@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Monitoring visualize results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.2.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>GENERAL ACCURACIES</h1>
+                <p>Number of parcels per prediction status:</p>
+                <div class="row">
+                    <div class="col-md-4">$GENERAL_ACCURACIES_TABLE</div>
+                    <div class="col-md-6"><div id="chart_general_accuracies" style="height:300px;"></div></div>
+                </div>
+                <br />
+                <div class="row">
+                    <ul>$GENERAL_ACCURACIES_TEXT</ul>
+                </div>
+                <br />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <h1>CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS</h1>
+                <div>
+                    <p>Extended confusion matrix of the predictions: Rows: true/input classes, columns: predicted classes</p>
+                    <div id="chart_confusion_matrices" style="height: 2000px"></div>
+                    <button class="toggle-button">Show all data</button>
+                    <div class="toggle-visible" style="display:none;">$CONFUSION_MATRICES_TABLE</div>
+                </div>
+                <hr />
+                <div>
+                    <p>Extended confusion matrix of the consolidated predictions: Rows: true/input classes, columns: predicted classes</p>
+                    <div id="chart_confusion_matrices_consolidated" style="height: 2000px"></div>
+                    <button class="toggle-button">Show all data</button>
+                    <div class="toggle-visible" style="display:none;">$CONFUSION_MATRICES_CONSOLIDATED_TABLE</div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-10">
+                <div id="chart-all" style="height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        var general_acuracies_data = $CHART_A_DATA;
+        var confusion_matrices_data = $CONFUSION_MATRICES_DATA;
+        var confusion_matrices_consolidated_data = $CONFUSION_MATRICES_CONSOLIDATED_DATA;
+    </script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.1.0/echarts-en.min.js"></script>
+    <script type="text/javascript" src="C:\Projects\github\cropclassification\html_rapport_script.js"></script>
+</body>
+</html>

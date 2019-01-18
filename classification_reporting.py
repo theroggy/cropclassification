@@ -9,8 +9,9 @@ import logging
 import os
 import pandas as pd
 import numpy as np
-import sklearn
+import sklearn.metrics as skmetrics
 import global_settings as gs
+from string import Template
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -55,6 +56,18 @@ def write_full_report(parcel_predictions_csv: str,
     df_predict = pd.read_csv(parcel_predictions_csv, low_memory=False)
     df_predict.set_index(gs.id_column, inplace=True)
 
+    # alle waarde moeten gekend zijn voor de template engine, dus defaulten op niets
+    empty_string = "''";
+    html_data = {
+       'GENERAL_ACCURACIES_TABLE': empty_string,
+       'GENERAL_ACCURACIES_TEXT': empty_string,
+       'CONFUSION_MATRICES_TABLE': empty_string,
+       'CONFUSION_MATRICES_DATA': empty_string,
+       'CONFUSION_MATRICES_CONSOLIDATED_TABLE': empty_string,
+       'CONFUSION_MATRICES_CONSOLIDATED_DATA': empty_string,
+       'CHART_A_DATA': empty_string
+    }
+    
     # Build and write report...
     with open(output_report_txt, 'w') as outputfile:
         # Remark: the titles are 60 karakters wide...
@@ -68,49 +81,56 @@ def write_full_report(parcel_predictions_csv: str,
         values = 100 * count_per_pred_status['count'] / count_per_pred_status['count'].sum()
         count_per_pred_status.insert(loc=1, column='pct', value=values)
 
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            outputfile.write(f"Number of parcels per prediction status:\n{count_per_pred_status}\n\n")
-
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):
+            outputfile.write(f"Number of parcels per prediction status:\n{count_per_pred_status}\n\n")       
+            html_data['GENERAL_ACCURACIES_TABLE'] = count_per_pred_status.to_html()
+            html_data['CHART_A_DATA'] = count_per_pred_status.to_dict();
+            
         # Output general accuracies
         outputfile.write("************************************************************\n")
         outputfile.write("***************** GENERAL ACCURACIES ***********************\n")
         outputfile.write("************************************************************\n")
 
         # First report the general accuracies for the entire list to report on...
-        oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column],
+        oa = skmetrics.accuracy_score(df_predict[gs.class_column],
                                             df_predict[gs.prediction_column],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
         logger.info(message)
-        outputfile.write(f"{message}\n")
+        outputfile.write(f"{message}\n")        
+        html_data['GENERAL_ACCURACIES_TEXT'] = f"<li>{message}</li>\n";
 
-        oa = sklearn.metrics.accuracy_score(df_predict[gs.class_column],
+        oa = skmetrics.accuracy_score(df_predict[gs.class_column],
                                             df_predict[gs.prediction_cons_column],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
         logger.info(message)
-        outputfile.write(f"{message}\n")
+        outputfile.write(f"{message}\n")        
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
 
         # Now report on parcels that actually had a prediction
         df_predict_has_prediction = df_predict.loc[(df_predict[gs.prediction_status] != 'NODATA')
                                                    & (df_predict[gs.prediction_status] != 'NOT_ENOUGH_PIXELS')]
-        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column],
+        oa = skmetrics.accuracy_score(df_predict_has_prediction[gs.class_column],
                                             df_predict_has_prediction[gs.prediction_column],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
 
-        oa = sklearn.metrics.accuracy_score(df_predict_has_prediction[gs.class_column],
+
+        oa = skmetrics.accuracy_score(df_predict_has_prediction[gs.class_column],
                                             df_predict_has_prediction[gs.prediction_cons_column],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
 
         # Output best-case accuracy
         # Ignore the 'UNKNOWN' and 'IGNORE_' classes...
@@ -120,26 +140,28 @@ def write_full_report(parcel_predictions_csv: str,
                 df_predict_accuracy_best_case[~df_predict_accuracy_best_case[gs.class_column]
                                               .str.startswith('IGNORE_', na=True)]
 
-        oa = sklearn.metrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
+        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
                                             df_predict_accuracy_best_case[gs.prediction_column],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
 
-        oa = sklearn.metrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
+        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
                                             df_predict_accuracy_best_case[gs.prediction_cons_column],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n\n")
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
 
         df_pixcount = None
 
         # Write the recall, F1 score,... per class
-#        message = sklearn.metrics.classification_report(df_predict[gs.class_column]
+#        message = skmetrics.classification_report(df_predict[gs.class_column]
 #                                                        , df_predict[gs.prediction_column]
 #                                                        , labels=classes)
 #        outputfile.write(message)
@@ -153,6 +175,8 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write("\nExtended confusion matrix of the predictions: Rows: true/input classes, columns: predicted classes\n")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
             outputfile.write(f"{df_confmatrix_ext}\n")
+            html_data['CONFUSION_MATRICES_TABLE'] = df_confmatrix_ext.to_html()
+            html_data['CONFUSION_MATRICES_DATA'] = df_confmatrix_ext.to_json()
 
         # Calculate an extended confusion matrix with the consolidated prediction column and write
         # it to output...
@@ -160,6 +184,8 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write("\nExtended confusion matrix of the consolidated predictions: Rows: true/input classes, columns: predicted classes\n")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
             outputfile.write(f"{df_confmatrix_ext}\n\n")
+            html_data['CONFUSION_MATRICES_CONSOLIDATED_TABLE'] = df_confmatrix_ext.to_html()
+            html_data['CONFUSION_MATRICES_CONSOLIDATED_DATA'] = df_confmatrix_ext.to_json()
 
         # If a ground truth file is provided, report on the ground truth
         if parcel_ground_truth_csv is not None:
@@ -267,6 +293,14 @@ def write_full_report(parcel_predictions_csv: str,
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
                     message = f"Number of ERROR_ALFA parcels for the consolidated prediction per pixcount for the ground truth parcels:\n{df_per_pixcount}"
                     outputfile.write(f"{message}\n")
+                        
+    with open(output_report_txt.replace(".txt", ".html"), 'w') as outputfile:           
+        html_template_file = open('html_rapport_template.html').read()                        
+        src = Template(html_template_file)
+        
+        # replace strings and write to file
+        output = src.substitute(html_data)
+        outputfile.write(output)
 
     if df_pixcount is not None:
         pixcount_output_report_txt = output_report_txt + '_pixcount.txt'
@@ -283,9 +317,9 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     logger.debug(f"Input shape: {df_predict.shape}, Unique classes found: {classes}")
 
     # Calculate standard confusion matrix
-    np_confmatrix = sklearn.metrics.confusion_matrix(df_predict[gs.class_column],
-                                                     df_predict[prediction_column_to_use],
-                                                     labels=classes)
+    np_confmatrix = skmetrics.confusion_matrix(df_predict[gs.class_column],
+                                               df_predict[prediction_column_to_use],
+                                               labels=classes)
     df_confmatrix_ext = pd.DataFrame(np_confmatrix, classes, classes)
 
     # Add some more columns to the confusion matrix
@@ -382,7 +416,7 @@ def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
             if nb_predictions_pixcount == 0:
                 continue
 
-            overall_accuracy = 100.0*sklearn.metrics.accuracy_score(df_result_cur_pixcount[gs.class_column], df_result_cur_pixcount[gs.prediction_column], normalize=True, sample_weight=None)
+            overall_accuracy = 100.0*skmetrics.accuracy_score(df_result_cur_pixcount[gs.class_column], df_result_cur_pixcount[gs.prediction_column], normalize=True, sample_weight=None)
             message = f"OA for pixcount {i:2}: {overall_accuracy:3.2f} %, with {nb_predictions_pixcount} elements ({100*(nb_predictions_pixcount/nb_predictions_total):.4f} % of {nb_predictions_total})"
             logger.info(message)
             outputfile.write(f"{message}\n")
