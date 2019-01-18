@@ -22,7 +22,7 @@ import classification_reporting as class_report
 year = 2018
 country_code = 'BEFL'        # The region of the classification: typically country code
 
-base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
+base_dir = 'X:\\PerPersoon\\JANANT\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
 input_dir = os.path.join(base_dir, 'InputData')                                         # Input dir
 input_preprocessed_dir = os.path.join(input_dir, 'Preprocessed')
 
@@ -39,6 +39,8 @@ if year == 2018:
 else:
     input_groundtruth_csv = None
 
+input_groundtruth_csv = None
+
 input_parcel_filetype = country_code
 imagedata_dir = os.path.join(base_dir, 'Timeseries_data')      # General data download dir
 start_date_str = f"{year}-03-27"
@@ -51,13 +53,39 @@ classtype_to_prepare = 'MOST_POPULAR_CROPS'
 class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops7")    # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 '''
-# Settings for monitoring crop groups
-classtype_to_prepare = 'MONITORING_CROPGROUPS'
-class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
+# Settings for monitoring landcover
+classtype_to_prepare = 'MONITORING_LANDCOVER'
+class_base_dir = os.path.join(base_dir, f"{year}_class_landcover_mon") # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 
-class_dir = os.path.join(class_base_dir, '2018-08-10_Run1')
-log_dir = os.path.join(class_dir, 'log')
+# Settings for monitoring crop groups
+#classtype_to_prepare = 'MONITORING_CROPGROUPS'
+#class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
+#balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
+# manueel aanpassen bij 
+
+reuse_last_run_dir = False
+max_run_dir_id = 998
+prev_class_dir = None
+for i in range(max_run_dir_id):
+    # Check if we don't have too many run dirs for creating the dir name
+    if i >= max_run_dir_id:
+        raise Exception("Please cleanup the run dirs, too many!!!")
+        
+    # Now search for the last dir that is in use
+    class_dir = os.path.join(class_base_dir, f"Run_{i:03d}")
+    if os.path.exists(class_dir):
+        prev_class_dir
+    else:
+        # If we want to reuse the last dir, do so...
+        if reuse_last_run_dir and prev_class_dir is not None:
+            class_dir = prev_class_dir
+        else:
+            # Otherwise create new dir name with next index
+            class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
+            break       
+        
+log_dir = os.path.join(class_base_dir, 'log')
 base_filename = f"{country_code}{year}_bufm10_weekly"
 sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
 parceldata_aggregations_to_use = [ts.PARCELDATA_AGGRAGATION_MEAN]
