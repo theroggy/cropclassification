@@ -61,11 +61,17 @@ def write_full_report(parcel_predictions_csv: str,
     html_data = {
        'GENERAL_ACCURACIES_TABLE': empty_string,
        'GENERAL_ACCURACIES_TEXT': empty_string,
+       'GENERAL_ACCURACIES_DATA': empty_string,
        'CONFUSION_MATRICES_TABLE': empty_string,
        'CONFUSION_MATRICES_DATA': empty_string,
        'CONFUSION_MATRICES_CONSOLIDATED_TABLE': empty_string,
        'CONFUSION_MATRICES_CONSOLIDATED_DATA': empty_string,
-       'CHART_A_DATA': empty_string
+       'PREDICTION_QUALITY_OVERVIEW_TEXT': empty_string,
+       'PREDICTION_QUALITY_OVERVIEW_TABLE': empty_string,
+       'PREDICTION_QUALITY_CONS_OVERVIEW_TEXT': empty_string,
+       'PREDICTION_QUALITY_CONS_OVERVIEW_TABLE': empty_string,
+       'PREDICTION_QUALITY_ALPHA_ERROR_TEXT': empty_string,
+       'PREDICTION_QUALITY_ALPHA_ERROR_TABLE': empty_string
     }
     
     # Build and write report...
@@ -84,7 +90,7 @@ def write_full_report(parcel_predictions_csv: str,
         with pd.option_context("display.max_rows", None, "display.max_columns", None):
             outputfile.write(f"Number of parcels per prediction status:\n{count_per_pred_status}\n\n")       
             html_data['GENERAL_ACCURACIES_TABLE'] = count_per_pred_status.to_html()
-            html_data['CHART_A_DATA'] = count_per_pred_status.to_dict();
+            html_data['GENERAL_ACCURACIES_DATA'] = count_per_pred_status.to_dict();
             
         # Output general accuracies
         outputfile.write("************************************************************\n")
@@ -201,7 +207,7 @@ def write_full_report(parcel_predictions_csv: str,
 
             # Rename the classname column in ground truth
             df_parcel_gt.rename(columns={gs.class_column: gs.class_column + '_GT'},
-                                inplace=True)
+			                    inplace=True)
 
             # Join the prediction data
             cols_to_join = df_predict.columns.difference(df_parcel_gt.columns)
@@ -266,38 +272,50 @@ def write_full_report(parcel_predictions_csv: str,
             df_parcel_gt.to_csv(output_report_txt + "groundtruth_pred_quality_details.csv")
 
             # First write the result for the standard predictions
+            message = f"Prediction quality overview, for {len(df_parcel_gt)} predicted cases in ground truth:"
+            outputfile.write(f"{message}\n")
+            html_data['PREDICTION_QUALITY_OVERVIEW_TEXT'] = message
+            
             count_per_class = (df_parcel_gt.groupby(PRED_QUALITY_COLUMN, as_index=False)
                                .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                message = f"Prediction quality overview, for {len(df_parcel_gt)} predicted cases in ground truth:\n{count_per_class}"
-                logger.info(message)
-                outputfile.write(f"{message}\n")
+                outputfile.write(f"{count_per_class}\n")
+				logger.info(f"{count_per_class}\n")
+                html_data['PREDICTION_QUALITY_OVERVIEW_TABLE'] = count_per_class.to_html()
 
             # Now write the result for the consolidated predictions
+            message = f"Prediction quality cons overview, for {len(df_parcel_gt)} predicted cases in ground truth:"
+            outputfile.write(f"{message}\n")
+            html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TEXT'] = message
+            
             count_per_class = (df_parcel_gt.groupby(PRED_QUALITY_CONS_COLUMN, as_index=False)
                                .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                message = f"Prediction quality cons overview, for {len(df_parcel_gt)} predicted cases in ground truth:\n{count_per_class}"
-                logger.info(message)
-                outputfile.write(f"{message}\n")
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
+                outputfile.write(f"{count_per_class}\n")
+				logger.info(f"{count_per_class}\n")
+                html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
 
             # If the pixcount is available, write the number of ALFA errors per pixcount
             if gs.pixcount_s1s2_column in df_parcel_gt.columns:
                 # Get data, drop empty lines and write
+                message = f"Number of ERROR_ALFA parcels for the consolidated prediction per pixcount for the ground truth parcels:"
+                outputfile.write(f"{message}\n")            
+                html_data['PREDICTION_QUALITY_ALPHA_ERROR_TEXT'] = message
+                
                 df_per_pixcount = _get_alfa_errors_per_pixcount(df_parcel_gt)
-                df_per_pixcount.dropna(inplace=True)
-                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
-                    message = f"Number of ERROR_ALFA parcels for the consolidated prediction per pixcount for the ground truth parcels:\n{df_per_pixcount}"
-                    outputfile.write(f"{message}\n")
+                df_per_pixcount.dropna(inplace=True, how='all') # de eerste 10 records worden normaal weg gefilterd, omdat daar geen data voor is vanwege de negatieve 10m buffer
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"{df_per_pixcount}\n")
+					logger.info(f"{df_per_pixcount}\n")
+                    html_data['PREDICTION_QUALITY_ALPHA_ERROR_TABLE'] = df_per_pixcount.to_html()
                         
     with open(output_report_txt.replace(".txt", ".html"), 'w') as outputfile:           
         html_template_file = open('html_rapport_template.html').read()                        
         src = Template(html_template_file)
-        
         # replace strings and write to file
         output = src.substitute(html_data)
         outputfile.write(output)

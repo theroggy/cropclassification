@@ -32,6 +32,7 @@
                     <div id="chart_confusion_matrices" style="height: 2000px"></div>
                     <button class="toggle-button">Show all data</button>
                     <div class="toggle-visible" style="display:none;">$CONFUSION_MATRICES_TABLE</div>
+                    <br />
                 </div>
                 <hr />
                 <div>
@@ -39,17 +40,34 @@
                     <div id="chart_confusion_matrices_consolidated" style="height: 2000px"></div>
                     <button class="toggle-button">Show all data</button>
                     <div class="toggle-visible" style="display:none;">$CONFUSION_MATRICES_CONSOLIDATED_TABLE</div>
+                    <br />
                 </div>
             </div>
         </div>
         <div class="row">
-            <div class="col-md-10">
-                <div id="chart-all" style="height: 600px;"></div>
+            <div class="col-md-12">
+                <h1>REPORTING ON PREDICTION QUALITY BASED ON GROUND TRUTH</h1>
+                <p>$PREDICTION_QUALITY_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_QUALITY_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <p>$PREDICTION_QUALITY_CONS_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_QUALITY_CONS_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <p>$PREDICTION_QUALITY_ALPHA_ERROR_TEXT</p>
+                <div class="row">
+                    <div class="col-md-12">$PREDICTION_QUALITY_ALPHA_ERROR_TABLE</div>
+                    <br />
+                </div>
             </div>
         </div>
+
     </div>
     <script type="text/javascript">
-        var general_acuracies_data = $CHART_A_DATA;
+        var general_acuracies_data = $GENERAL_ACCURACIES_DATA;
         var confusion_matrices_data = $CONFUSION_MATRICES_DATA;
         var confusion_matrices_consolidated_data = $CONFUSION_MATRICES_CONSOLIDATED_DATA;
     </script>
