@@ -22,7 +22,8 @@ import classification_reporting as class_report
 year = 2018
 country_code = 'BEFL'        # The region of the classification: typically country code
 
-base_dir = 'X:\\PerPersoon\\JANANT\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
+#base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
+base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\JanAnt'                                               # Base dir
 input_dir = os.path.join(base_dir, 'InputData')                                         # Input dir
 input_preprocessed_dir = os.path.join(input_dir, 'Preprocessed')
 
@@ -52,18 +53,31 @@ end_date_str = f"{year}-08-10"                                 # End date is NOT
 classtype_to_prepare = 'MOST_POPULAR_CROPS'
 class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops7")    # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
+postprocess_to_groups = None
+'''
 '''
 # Settings for monitoring landcover
 classtype_to_prepare = 'MONITORING_LANDCOVER'
 class_base_dir = os.path.join(base_dir, f"{year}_class_landcover_mon") # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
-
+postprocess_to_groups = None
+'''
+#'''
 # Settings for monitoring crop groups
-#classtype_to_prepare = 'MONITORING_CROPGROUPS'
-#class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
-#balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
+classtype_to_prepare = 'MONITORING_CROPGROUPS'
+class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
+balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
+postprocess_to_groups = None
 # manueel aanpassen bij 
-
+#'''
+'''
+# Settings for monitoring landcover via crop groups
+#classtype_to_prepare = 'MONITORING_CROPGROUPS'
+#class_base_dir = os.path.join(base_dir, f"{year}_class_landcover_via_cropgroup_mon") # Dir for the classification type
+#balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
+#postprocess_to_groups = 'MONITORING_LANDCOVER'
+# manueel aanpassen bij 
+'''
 reuse_last_run_dir = False
 max_run_dir_id = 998
 prev_class_dir = None
@@ -73,16 +87,16 @@ for i in range(max_run_dir_id):
         raise Exception("Please cleanup the run dirs, too many!!!")
         
     # Now search for the last dir that is in use
-    class_dir = os.path.join(class_base_dir, f"Run_{i:03d}")
+    class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
     if os.path.exists(class_dir):
         prev_class_dir
     else:
         # If we want to reuse the last dir, do so...
         if reuse_last_run_dir and prev_class_dir is not None:
-            class_dir = prev_class_dir
+            class_dir = prev_class_dir            
         else:
             # Otherwise create new dir name with next index
-            class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
+            class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")         
             break       
         
 log_dir = os.path.join(class_base_dir, 'log')
@@ -217,9 +231,16 @@ classification.train_test_predict(input_parcel_train_csv=parcel_train_csv,
                                   input_parcel_classification_data_csv=parcel_classification_data_csv,
                                   output_classifier_filepath=classifier_filepath,
                                   output_predictions_test_csv=parcel_predictions_test_csv,
-                                  output_predictions_all_csv=parcel_predictions_all_csv)
 
-# STEP 5: Report on the test accuracy, incl. ground truth
+                                  output_predictions_all_csv=parcel_predictions_all_csv)
+'''
+# STEP 5: in necessary, postprocess results
+#-------------------------------------------------------------
+if postprocess_to_groups is not None:
+    ...ToDo
+'''
+
+# STEP 6: Report on the test accuracy, incl. ground truth
 #-------------------------------------------------------------
 # Preprocess the ground truth data
 groundtruth_csv = None
