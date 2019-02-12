@@ -74,18 +74,16 @@ $(document).ready(function () {
     }
     function chart_confusion_matrices(elem, data) {
 
-        // categories opvullen
+        // data verwerken
         var rows = Object.keys(data).filter(x => !x.startsWith("nb_") && !x.startsWith("pct_"));
         var series = [];
         var categories = [];
-
-        // data is geformateerd per column
 
         rows.forEach(function (rowKey, rowIndex) {
             categories.push(rowKey);
 
             rows.forEach(function (columnKey, columnIndex) {
-                // per rij loopen en de kolom waarde (=predicted) ophalen
+                // per rij loopen en de kolom waarde (=predicted value) ophalen
                 series.push([rowIndex, columnIndex, data[rowKey][columnKey] || "-"]);
             });
         });
@@ -139,11 +137,9 @@ $(document).ready(function () {
                 },
                 symbolSize: function (val) {
                     if (val[2] === "-") return 0;
-                    //if (val[0] === val[1]) return 10;
 
                     var total = data.nb_input[categories[val[0]]];
-                    var pct = (val[2] / total) * 100;
-                    return pct;
+                    return (val[2] / total) * 100;
                 }
             }
         };
