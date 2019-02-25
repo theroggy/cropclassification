@@ -40,7 +40,7 @@ if year == 2018:
 else:
     input_groundtruth_csv = None
 
-input_groundtruth_csv = None
+# input_groundtruth_csv = None
 
 input_parcel_filetype = country_code
 imagedata_dir = os.path.join(base_dir, 'Timeseries_data')      # General data download dir
@@ -231,7 +231,6 @@ classification.train_test_predict(input_parcel_train_csv=parcel_train_csv,
                                   input_parcel_classification_data_csv=parcel_classification_data_csv,
                                   output_classifier_filepath=classifier_filepath,
                                   output_predictions_test_csv=parcel_predictions_test_csv,
-
                                   output_predictions_all_csv=parcel_predictions_all_csv)
 '''
 # STEP 5: in necessary, postprocess results

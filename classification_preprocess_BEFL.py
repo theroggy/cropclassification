@@ -387,7 +387,9 @@ def prepare_input_landcover(input_parcel_filepath: str,
     #    - Drop the columns that aren't useful at all
     for column in df_parceldata.columns:
         if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
-            df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
+            if column == 'GESP_PM':
+                df_parceldata['GESP_PM'] = df_parceldata['GESP_PM'].replace(',', ';')
+            df_parceldata.rename(columns={column:'m#' + column}, inplace=True)            
 
         elif(column not in [gs.id_column, gs.class_column]
              and (not column.startswith('m#'))):
