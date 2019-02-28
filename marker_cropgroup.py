@@ -23,7 +23,7 @@ year = 2018
 country_code = 'BEFL'        # The region of the classification: typically country code
 
 #base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
-base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\JanAnt'                                               # Base dir
+base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\MarKet'                                               # Base dir
 input_dir = os.path.join(base_dir, 'InputData')                                         # Input dir
 input_preprocessed_dir = os.path.join(input_dir, 'Preprocessed')
 
