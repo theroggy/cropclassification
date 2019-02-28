@@ -9,8 +9,6 @@ Main script to do a classification.
 import logging
 import os
 import datetime
-
-import io_helper
 import timeseries_calc_preprocess as ts_pre
 import timeseries_calc_gee as ts_calc_gee
 import timeseries as ts
@@ -70,7 +68,7 @@ classtype_to_prepare = 'MONITORING_CROPGROUPS'
 class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 postprocess_to_groups = None
-# manueel aanpassen bij
+# manueel aanpassen bij 
 #'''
 '''
 # Settings for monitoring landcover via crop groups
@@ -78,13 +76,29 @@ postprocess_to_groups = None
 #class_base_dir = os.path.join(base_dir, f"{year}_class_landcover_via_cropgroup_mon") # Dir for the classification type
 #balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 #postprocess_to_groups = 'MONITORING_LANDCOVER'
-# manueel aanpassen bij
+# manueel aanpassen bij 
 '''
-
-# Get a (new) run dir
-io_helper.get_run_dir(run_base_dir=class_base_dir,
-                      reuse_last_run_dir=False)
-
+reuse_last_run_dir = False
+max_run_dir_id = 998
+prev_class_dir = None
+for i in range(max_run_dir_id):
+    # Check if we don't have too many run dirs for creating the dir name
+    if i >= max_run_dir_id:
+        raise Exception("Please cleanup the run dirs, too many!!!")
+        
+    # Now search for the last dir that is in use
+    class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
+    if os.path.exists(class_dir):
+        prev_class_dir
+    else:
+        # If we want to reuse the last dir, do so...
+        if reuse_last_run_dir and prev_class_dir is not None:
+            class_dir = prev_class_dir            
+        else:
+            # Otherwise create new dir name with next index
+            class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")         
+            break       
+        
 log_dir = os.path.join(class_base_dir, 'log')
 base_filename = f"{country_code}{year}_bufm10_weekly"
 sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
