@@ -95,14 +95,28 @@ $(document).ready(function () {
                 formatter: function (params) {
                     var categoryX = categories[params.value[0]];
                     var categoryY = categories[params.value[1]];
-                    var nb_input = data.nb_input[categoryX];
-                    var nb_predicted = data.nb_predicted[categoryX];
-                    var pct_predicted_correct = data.pct_predicted_correct[categoryX];
-                    var pct_predicted_wrong = data.pct_predicted_wrong[categoryX];
 
-                    return categoryX + ", " + categoryY + ": " + params.value[2] + "<br/>" +
-                        "input: " + nb_input + ", predicted: " + nb_predicted + "<br/>" +
-                        "correct: " + (pct_predicted_correct || 0).toFixed(2) + "%, wrong " + (pct_predicted_wrong || 0).toFixed(2) + "%";
+                    var nb_input_x = data.nb_input[categoryX];
+                    var nb_predicted_x = data.nb_predicted[categoryX];
+                    var nb_predicted_x_correct = data.nb_predicted_correct[categoryX];
+                    var nb_predicted_x_wrong = data.nb_predicted_wrong[categoryX];
+                    var pct_predicted_x_correct = data.pct_predicted_correct[categoryX];
+                    var pct_predicted_x_wrong = data.pct_predicted_wrong[categoryX];
+
+                    var nb_input_y = data.nb_input[categoryY];
+                    var nb_predicted_y = data.nb_predicted[categoryY];
+                    var nb_predicted_y_correct = data.nb_predicted_correct[categoryY];
+                    var nb_predicted_y_wrong = data.nb_predicted_wrong[categoryY];
+                    var pct_predicted_y_correct = data.pct_predicted_correct[categoryY];
+                    var pct_predicted_y_wrong = data.pct_predicted_wrong[categoryY];
+
+                    return params.value[2] + "/" + nb_input_x + "<br/>" +
+                        categoryX + " (input: " + nb_input_x + ", predicted: " + nb_predicted_x + ")<br/>" +
+                        "&nbsp;&nbsp;&nbsp;<span class='oi oi-thumb-up text-success'></span>" + (pct_predicted_x_correct || 0).toFixed(2) + "%" + 
+                            "(" + nb_predicted_x_correct + "/" + nb_input_x + "), <span class='oi oi-thumb-down text-danger'></span>" + (pct_predicted_x_wrong || 0).toFixed(2) + "% (" + nb_predicted_x_wrong + "/" + nb_input_x + ")<br/>" +
+                        categoryY + " (input: " + nb_input_y + ", predicted: " + nb_predicted_y + ")<br/>" +
+                        "&nbsp;&nbsp;&nbsp;<span class='oi oi-thumb-up text-success'></span>" + (pct_predicted_y_correct || 0).toFixed(2) + "%" +
+                            "(" + nb_predicted_y_correct + "/" + nb_input_y + "), <span class='oi oi-thumb-down text-danger'></span>" + (pct_predicted_y_wrong || 0).toFixed(2) + "% (" + nb_predicted_y_wrong + "/" + nb_input_y + ")<br/>";
                 }
             },
             legend: {
@@ -138,8 +152,13 @@ $(document).ready(function () {
                 symbolSize: function (val) {
                     if (val[2] === "-") return 0;
 
-                    var total = data.nb_input[categories[val[0]]];
-                    return (val[2] / total) * 100;
+                    var denomitor = data.nb_predicted[categories[val[0]]];
+                    if (categories[val[0]] === "DOUBT") {
+                        // NOTE: If we're comparing with DOUBT, then use the predicted value of the comparing crop. This provides more information.
+                        denomitor = data.nb_predicted[categories[val[1]]];
+                    }
+
+                    return (val[2] / denomitor) * 100;
                 }
             }
         };

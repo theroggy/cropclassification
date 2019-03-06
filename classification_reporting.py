@@ -56,8 +56,8 @@ def write_full_report(parcel_predictions_csv: str,
     df_predict = pd.read_csv(parcel_predictions_csv, low_memory=False)
     df_predict.set_index(gs.id_column, inplace=True)
 
-    # alle waarde moeten gekend zijn voor de template engine, dus defaulten op niets
-    empty_string = "''";
+    # Python template engine expects all values to be present, so initialize to empty
+    empty_string = "''"
     html_data = {
        'GENERAL_ACCURACIES_TABLE': empty_string,
        'GENERAL_ACCURACIES_TEXT': empty_string,
@@ -90,7 +90,7 @@ def write_full_report(parcel_predictions_csv: str,
         with pd.option_context("display.max_rows", None, "display.max_columns", None):
             outputfile.write(f"Number of parcels per prediction status:\n{count_per_pred_status}\n\n")       
             html_data['GENERAL_ACCURACIES_TABLE'] = count_per_pred_status.to_html()
-            html_data['GENERAL_ACCURACIES_DATA'] = count_per_pred_status.to_dict();
+            html_data['GENERAL_ACCURACIES_DATA'] = count_per_pred_status.to_dict()
             
         # Output general accuracies
         outputfile.write("************************************************************\n")
@@ -105,7 +105,7 @@ def write_full_report(parcel_predictions_csv: str,
         message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")        
-        html_data['GENERAL_ACCURACIES_TEXT'] = f"<li>{message}</li>\n";
+        html_data['GENERAL_ACCURACIES_TEXT'] = f"<li>{message}</li>\n"
 
         oa = skmetrics.accuracy_score(df_predict[gs.class_column],
                                             df_predict[gs.prediction_cons_column],
@@ -114,7 +114,7 @@ def write_full_report(parcel_predictions_csv: str,
         message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")        
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         # Now report on parcels that actually had a prediction
         df_predict_has_prediction = df_predict.loc[(df_predict[gs.prediction_status] != 'NODATA')
@@ -126,7 +126,7 @@ def write_full_report(parcel_predictions_csv: str,
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
 
         oa = skmetrics.accuracy_score(df_predict_has_prediction[gs.class_column],
@@ -136,15 +136,13 @@ def write_full_report(parcel_predictions_csv: str,
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         # Output best-case accuracy
         # Ignore the 'UNKNOWN' and 'IGNORE_' classes...
         logger.info("For best-case accuracy, remove the 'UNKNOWN' class and the classes that start with 'IGNORE_'")
-        df_predict_accuracy_best_case = df_predict_has_prediction[df_predict_has_prediction[gs.class_column] != 'UNKNOWN']
-        df_predict_accuracy_best_case = \
-                df_predict_accuracy_best_case[~df_predict_accuracy_best_case[gs.class_column]
-                                              .str.startswith('IGNORE_', na=True)]
+        df_predict_accuracy_best_case = df_predict[df_predict[gs.class_column] != 'UNKNOWN']
+        df_predict_accuracy_best_case = df_predict[~df_predict[gs.class_column].str.startswith('IGNORE_', na=True)]
 
         oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
                                             df_predict_accuracy_best_case[gs.prediction_column],
@@ -153,7 +151,7 @@ def write_full_report(parcel_predictions_csv: str,
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
                                             df_predict_accuracy_best_case[gs.prediction_cons_column],
@@ -162,7 +160,7 @@ def write_full_report(parcel_predictions_csv: str,
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n";
+        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         df_pixcount = None
 
@@ -282,7 +280,7 @@ def write_full_report(parcel_predictions_csv: str,
             count_per_class.insert(loc=1, column='pct', value=values)
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
                 outputfile.write(f"{count_per_class}\n")
-				logger.info(f"{count_per_class}\n")
+                logger.info(f"{count_per_class}\n")
                 html_data['PREDICTION_QUALITY_OVERVIEW_TABLE'] = count_per_class.to_html()
 
             # Now write the result for the consolidated predictions
@@ -296,7 +294,7 @@ def write_full_report(parcel_predictions_csv: str,
             count_per_class.insert(loc=1, column='pct', value=values)
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
                 outputfile.write(f"{count_per_class}\n")
-				logger.info(f"{count_per_class}\n")
+                logger.info(f"{count_per_class}\n")
                 html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
 
             # If the pixcount is available, write the number of ALFA errors per pixcount
@@ -307,10 +305,10 @@ def write_full_report(parcel_predictions_csv: str,
                 html_data['PREDICTION_QUALITY_ALPHA_ERROR_TEXT'] = message
                 
                 df_per_pixcount = _get_alfa_errors_per_pixcount(df_parcel_gt)
-                df_per_pixcount.dropna(inplace=True, how='all') # de eerste 10 records worden normaal weg gefilterd, omdat daar geen data voor is vanwege de negatieve 10m buffer
+                df_per_pixcount.dropna(inplace=True) 
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"{df_per_pixcount}\n")
-					logger.info(f"{df_per_pixcount}\n")
+                    logger.info(f"{df_per_pixcount}\n")
                     html_data['PREDICTION_QUALITY_ALPHA_ERROR_TABLE'] = df_per_pixcount.to_html()
                         
     with open(output_report_txt.replace(".txt", ".html"), 'w') as outputfile:           
@@ -330,8 +328,8 @@ def write_full_report(parcel_predictions_csv: str,
 def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     """ Returns a dataset with an extended confusion matrix. """
 
-    classes = sorted(np.unique(np.append(df_predict[prediction_column_to_use].unique(),
-                                         df_predict[gs.class_column].unique())))
+    classes = sorted(np.unique(np.append(df_predict[prediction_column_to_use],
+                                         df_predict[gs.class_column])))
     logger.debug(f"Input shape: {df_predict.shape}, Unique classes found: {classes}")
 
     # Calculate standard confusion matrix
@@ -385,13 +383,11 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
 
     # Now calculate the number of alfa errors per pixcount
     df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[PRED_QUALITY_CONS_COLUMN] == 'ERROR_ALFA']
-    df_alfa_per_pixcount = (df_alfa_error.groupby(gs.pixcount_s1s2_column,
-                                                  as_index=False)
+    df_alfa_per_pixcount = (df_alfa_error.groupby(gs.pixcount_s1s2_column, as_index=False)
                             .size().to_frame('count_error_alfa'))
 
     # Join them together, and calculate the alfa error percentages
-    df_alfa_per_pixcount = df_count_per_pixcount.join(df_alfa_per_pixcount
-                                                      , how='left')
+    df_alfa_per_pixcount = df_count_per_pixcount.join(df_alfa_per_pixcount, how='left')
     df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
                                 column='count_error_alfa_cumulative',
                                 value=df_alfa_per_pixcount['count_error_alfa'].cumsum(axis=0))
