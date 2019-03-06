@@ -1,13 +1,11 @@
-# -*- coding: utf-8 -*-
 import os
 import classification_reporting as class_report
 
-
-base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'        
+base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\JanAnt'        
 input_dir = os.path.join(base_dir, 'InputData')  
 class_base_dir = os.path.join(base_dir, f"HTML") 
-parcel_predictions_all_csv = os.path.join(class_base_dir, f"BEFL2017_bufm10_weekly_predict_all.csv")
-groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2017_groundTruth_classes.csv")
+parcel_predictions_all_csv = os.path.join(class_base_dir, f"BEFL2018_bufm10_weekly_predict_all.csv")
+groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2018_groundTruth_classes.csv")
 report_txt = os.path.join(class_base_dir, f"testje_accuracy_report.txt")
 report_html = report_txt.replace(".txt", ".html")
 

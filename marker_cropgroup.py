@@ -22,26 +22,21 @@ import classification_reporting as class_report
 year = 2018
 country_code = 'BEFL'        # The region of the classification: typically country code
 
-#base_dir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'                                               # Base dir
-base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\MarKet'                                               # Base dir
+base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\JanAnt'                                # Base dir
 input_dir = os.path.join(base_dir, 'InputData')                                         # Input dir
 input_preprocessed_dir = os.path.join(input_dir, 'Preprocessed')
 
 # Input file depends on the year
 if year == 2017:
     input_parcel_filename_noext = 'Prc_flanders_2017_2018-01-09'                        # Input filename
+    input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2017_groundtruth.csv")    # The ground truth
 elif year == 2018:
     input_parcel_filename_noext = 'Prc_BEFL_2018_2018-08-02'                            # Input filename
-input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.shp")   # Input filepath of the parcel
-if year == 2017:
-    input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2017_groundtruth.csv")    # The ground truth
-if year == 2018:
     input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2018_groundtruth.csv")    # The ground truth
 else:
     input_groundtruth_csv = None
 
-input_groundtruth_csv = None
-
+input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.shp")   # Input filepath of the parcel
 input_parcel_filetype = country_code
 imagedata_dir = os.path.join(base_dir, 'Timeseries_data')      # General data download dir
 start_date_str = f"{year}-03-27"
@@ -55,21 +50,21 @@ class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops7")    # Dir for
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 postprocess_to_groups = None
 '''
-'''
+#'''
 # Settings for monitoring landcover
 classtype_to_prepare = 'MONITORING_LANDCOVER'
 class_base_dir = os.path.join(base_dir, f"{year}_class_landcover_mon") # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 postprocess_to_groups = None
-'''
 #'''
+'''
 # Settings for monitoring crop groups
 classtype_to_prepare = 'MONITORING_CROPGROUPS'
 class_base_dir = os.path.join(base_dir, f"{year}_class_maincrops_mon") # Dir for the classification type
 balancing_strategy = class_pre.BALANCING_STRATEGY_MEDIUM
 postprocess_to_groups = None
 # manueel aanpassen bij 
-#'''
+'''
 '''
 # Settings for monitoring landcover via crop groups
 #classtype_to_prepare = 'MONITORING_CROPGROUPS'
@@ -89,7 +84,7 @@ for i in range(max_run_dir_id):
     # Now search for the last dir that is in use
     class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
     if os.path.exists(class_dir):
-        prev_class_dir
+        continue
     else:
         # If we want to reuse the last dir, do so...
         if reuse_last_run_dir and prev_class_dir is not None:
@@ -231,7 +226,6 @@ classification.train_test_predict(input_parcel_train_csv=parcel_train_csv,
                                   input_parcel_classification_data_csv=parcel_classification_data_csv,
                                   output_classifier_filepath=classifier_filepath,
                                   output_predictions_test_csv=parcel_predictions_test_csv,
-
                                   output_predictions_all_csv=parcel_predictions_all_csv)
 '''
 # STEP 5: in necessary, postprocess results
