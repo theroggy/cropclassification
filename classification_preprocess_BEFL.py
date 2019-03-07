@@ -45,7 +45,7 @@ def prepare_input(input_parcel_filepath: str,
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
                                         , crop_columnname='HOOFDTEELT_CTRL_COD')
     elif input_classtype_to_prepare == 'MONITORING_LANDCOVER_GROUNDTRUTH':
-        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
+        return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath
                                         , crop_columnname='HOOFDTEELT_CTRL_COD')    
     elif input_classtype_to_prepare == 'MOST_POPULAR_CROPS_GROUNDTRUTH':
         return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
@@ -216,6 +216,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
     #    - Drop the columns that aren't useful at all
     for column in df_parceldata.columns:
         if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
+            if column == 'GESP_PM':
+                df_parceldata['GESP_PM'] = df_parceldata['GESP_PM'].str.replace(',', ';')
             df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
 
         elif(column not in [gs.id_column, gs.class_column]
