@@ -209,7 +209,7 @@ def write_full_report(parcel_predictions_csv: str,
 
             # Join the prediction data
             cols_to_join = df_predict.columns.difference(df_parcel_gt.columns)
-            df_parcel_gt = df_parcel_gt.join(df_predict[cols_to_join], how='inner')
+            df_parcel_gt = df_parcel_gt.join(df_predict[cols_to_join], how='right')
             logger.info(f"After join of ground truth with predictions, shape: {df_parcel_gt.shape}")
 
             if len(df_parcel_gt) == 0:
@@ -305,7 +305,7 @@ def write_full_report(parcel_predictions_csv: str,
                 html_data['PREDICTION_QUALITY_ALPHA_ERROR_TEXT'] = message
                 
                 df_per_pixcount = _get_alfa_errors_per_pixcount(df_parcel_gt)
-                df_per_pixcount.dropna(inplace=True) 
+                df_per_pixcount.dropna(inplace=True) #how='all' om null records ook te tonen
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"{df_per_pixcount}\n")
                     logger.info(f"{df_per_pixcount}\n")
@@ -391,17 +391,15 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
     df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
                                 column='count_error_alfa_cumulative',
                                 value=df_alfa_per_pixcount['count_error_alfa'].cumsum(axis=0))
+                                
     values = 100 * df_alfa_per_pixcount['count_error_alfa'] / df_alfa_per_pixcount['count_all']
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
-                                column='pct_error_alfa_of_all', value=values)
-    values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative']
-              / df_alfa_per_pixcount['count_error_alfa'].sum())
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
-                                column='pct_error_alfa_of_alfa_cumulative', value=values)
-    values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative']
-              / df_alfa_per_pixcount['count_all'].sum())
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
-                                column='pct_error_alfa_of_all_cumulative', value=values)
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_all', value=values)
+                                
+    values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative'] / df_alfa_per_pixcount['count_error_alfa'].sum())
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_alfa_cumulative', value=values)
+
+    values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative'] / df_alfa_per_pixcount['count_all'].sum())
+    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_all_cumulative', value=values)
 
     return df_alfa_per_pixcount
 
