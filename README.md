@@ -1,4 +1,4 @@
-# cropclassification
+# Crop classification
 This is a collection of scripts that can help to classify crops using Sentinel data.
 
 ## Installation manual
