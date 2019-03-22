@@ -21,24 +21,17 @@ following steps:
 
       1. Create and activate a new conda environment
       ```
-	  conda create --name cropclassification python=3.6
+      conda create --name cropclassification python=3.6
       conda activate cropclassification
-	  ```
+      ```
       2. Install the dependencies for the crop classification scripts:
       ```
-          conda install --channel conda-forge earthengine-api google-api-python-client scikit-learn rasterio rasterstats geopandas
-	  ```
+      conda install --channel conda-forge earthengine-api google-api-python-client scikit-learn rasterio rasterstats geopandas
+      ```
       3. Possibly you need to install your computer now, especially if it was the first time you installed anaconda/geopandas
       4. Start the anaconda terminal window again and activate the environment
       ```
       conda activate cropclassification
-      ```
-      5. I use spyder to edit my scripts. After installing geopandas Spyder doesn't seem to work
-      anymore, but installing it in the new environment explicitly and updating all
-      packages in this environment solves this.
-      ```
-	  conda install spyder
-      conda update -–all
       ```
 4.  Run the following command to authenticate with google earth engine, and follow the procedure on the screen:
 ```
