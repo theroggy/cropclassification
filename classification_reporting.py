@@ -209,7 +209,7 @@ def write_full_report(parcel_predictions_csv: str,
 
             # Join the prediction data
             cols_to_join = df_predict.columns.difference(df_parcel_gt.columns)
-            df_parcel_gt = df_parcel_gt.join(df_predict[cols_to_join], how='right')
+            df_parcel_gt = df_parcel_gt.join(df_predict[cols_to_join], how='inner')
             logger.info(f"After join of ground truth with predictions, shape: {df_parcel_gt.shape}")
 
             if len(df_parcel_gt) == 0:
@@ -292,6 +292,7 @@ def write_full_report(parcel_predictions_csv: str,
                                .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
+            
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
                 outputfile.write(f"{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
@@ -300,12 +301,12 @@ def write_full_report(parcel_predictions_csv: str,
             # If the pixcount is available, write the number of ALFA errors per pixcount
             if gs.pixcount_s1s2_column in df_parcel_gt.columns:
                 # Get data, drop empty lines and write
-                message = f"Number of ERROR_ALFA parcels for the consolidated prediction per pixcount for the ground truth parcels:"
+                message = f"Number of ERROR_ALFA parcels for the actual prediction per pixcount for the ground truth parcels:"
                 outputfile.write(f"{message}\n")            
                 html_data['PREDICTION_QUALITY_ALPHA_ERROR_TEXT'] = message
                 
                 df_per_pixcount = _get_alfa_errors_per_pixcount(df_parcel_gt)
-                df_per_pixcount.dropna(inplace=True) #how='all' om null records ook te tonen
+                df_per_pixcount.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"{df_per_pixcount}\n")
                     logger.info(f"{df_per_pixcount}\n")
@@ -382,7 +383,7 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
                                  value=values)
 
     # Now calculate the number of alfa errors per pixcount
-    df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[PRED_QUALITY_CONS_COLUMN] == 'ERROR_ALFA']
+    df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[PRED_QUALITY_COLUMN] == 'ERROR_ALFA']
     df_alfa_per_pixcount = (df_alfa_error.groupby(gs.pixcount_s1s2_column, as_index=False)
                             .size().to_frame('count_error_alfa'))
 
