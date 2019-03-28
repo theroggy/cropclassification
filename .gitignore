@@ -1,10 +1,9 @@
-
 client_secret.json
+client_secret_download-gee-data.json
 credentials.json
-*.pyc
 Old/
+*.pyc
 .spyproject/
 .spyproject/workspace.ini
-data_multicrop.py
 /.vs
-client_secret_download-gee-data.json
+marker/local_overrule.ini

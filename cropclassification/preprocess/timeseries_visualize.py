@@ -11,7 +11,7 @@ import logging
 import os
 import pandas as pd
 import numpy as np
-import global_settings as gs
+import cropclassification.global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants

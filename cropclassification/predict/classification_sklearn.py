@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
 from sklearn.externals import joblib
-import global_settings as gs
+import cropclassification.global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants

@@ -9,8 +9,8 @@ import logging
 import os
 import numpy as np
 import pandas as pd
-import global_settings as gs
 import classification_sklearn as class_core
+import cropclassification.global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -157,7 +157,9 @@ def predict(input_parcel_csv: str,
     def calculate_consolidated_prediction(row):
         # For some reason the row['pred2_prob'] is sometimes seen as string, and so 2* gives a
         # repetition of the string value instead of a mathematic multiplication... so cast to float!
-        if float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']):
+
+# float(row['pred1_prob']) > 30
+        if ((float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']))):
             return row[gs.prediction_column]
         else:
             return 'DOUBT'

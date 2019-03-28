@@ -8,7 +8,7 @@ Create an input file for the sentinel timeseries processing.
 import logging
 import os
 import geopandas as gpd
-import global_settings as gs
+import cropclassification.global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants

@@ -10,7 +10,7 @@ import os
 import glob
 from typing import List
 import pandas as pd
-import global_settings as gs
+import cropclassification.global_settings as gs
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants

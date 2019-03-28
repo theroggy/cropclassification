@@ -30,8 +30,8 @@ from oauth2client import file, client, tools
 import googleapiclient
 
 # Import local stuff
-import global_settings as gs
-import timeseries as ts
+import cropclassification.global_settings as gs
+import cropclassification.preprocess.timeseries as ts
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants

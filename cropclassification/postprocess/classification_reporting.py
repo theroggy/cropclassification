@@ -10,7 +10,7 @@ import os
 import pandas as pd
 import numpy as np
 import sklearn.metrics as skmetrics
-import global_settings as gs
+import cropclassification.global_settings as gs
 from string import Template
 
 #-------------------------------------------------------------
@@ -313,7 +313,7 @@ def write_full_report(parcel_predictions_csv: str,
                     html_data['PREDICTION_QUALITY_ALPHA_ERROR_TABLE'] = df_per_pixcount.to_html()
                         
     with open(output_report_txt.replace(".txt", ".html"), 'w') as outputfile:           
-        html_template_file = open('html_rapport_template.html').read()                        
+        html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
         src = Template(html_template_file)
         # replace strings and write to file
         output = src.substitute(html_data)
