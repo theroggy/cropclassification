@@ -32,6 +32,7 @@ def signal_handler(sig, frame):
         print('You pressed Ctrl+C!')
         sys.exit(0)
 #signal.signal(signal.SIGINT, signal.default_int_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
 def calc_stats(features_filepath: str,
                image_paths: str,
@@ -51,8 +52,7 @@ def calc_stats(features_filepath: str,
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
-    signal.signal(signal.SIGINT, signal_handler)
-
+    
     # Create process pool for parallelisation...
     nb_parallel_images_max = 2
     nb_parallel = min(nb_parallel_images_max, len(image_paths))
