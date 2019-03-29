@@ -4,7 +4,7 @@ credentials.json
 *.pyc
 Old/
 .spyproject/
-.spyproject/workspace.ini
+.vscode/
 data_multicrop.py
 /.vs
 client_secret_download-gee-data.json
