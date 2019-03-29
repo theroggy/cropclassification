@@ -688,7 +688,8 @@ def main():
     temp_dir = os.path.join(base_dir, "tmp")
     logger.info(f"Clean the temp dir")
     if os.path.exists(temp_dir):
-        shutil.rmtree(f"{temp_dir}{os.sep}")
+        # By adding a / at the end, only the contents are recursively deleted
+        shutil.rmtree(temp_dir + os.sep)
     
     """
     # TEST CODE !!!!!!!!!!!!!!!!
@@ -697,15 +698,17 @@ def main():
     #input_image_filepaths = input_image_filepaths[:1]
     logger.info(f"As we are only testing, process only {len(input_image_filepaths)} first images")
 
-    # Delete log dir 
-    logger.info(f"As we are only testing, delete the log dir")
-    if os.path.exists(log_dir):
-        shutil.rmtree(log_dir)
+    # Clean log dir 
+    logger.info(f"As we are only testing, delete the contents of the log dir")
+    if os.path.exists(base_log_dir):
+        # By adding a / at the end, only the contents are recursively deleted
+        shutil.rmtree(base_log_dir + os.sep)
 
     # Delete output dir 
     logger.info(f"As we are only testing, delete the output dir")
     if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
+        # By adding a / at the end, only the contents are recursively deleted
+        shutil.rmtree(output_dir + os.sep)
     """    
     # END TEST CODE !!!!!!!!!!!!!!!!
     
