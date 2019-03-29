@@ -201,9 +201,14 @@ def calc_stats_image(features_filepath,
                                       target_epsg=image_epsg,
                                       columns_to_retain=["CODE_OBJ", "geometry"],
                                       bbox=image_bounds)
-    
-    # Prepare some variables for the further processing
+
+    # Check if features were found, otherwise no use to proceed
     nb_todo = len(features_gdf)
+    if nb_todo == 0:
+        logger.info(f"No features were found in the bounding box of the image, so return: {image_path}")
+        return True
+
+    # Prepare some variables for the further processing
     nb_parallel_max = multiprocessing.cpu_count()
     
     # Calculate the number per batch, but keep the number between 100 and 50000...
