@@ -46,7 +46,7 @@ def calc_stats(features_filepath: str,
     if len(image_paths) == 0:
         logger.info("No image paths... so nothing to do, so return")
         return
-        
+
     # General init
     start_time = datetime.now()
     os.makedirs(output_dir, exist_ok=True)
@@ -178,11 +178,12 @@ def calc_stats_image(features_filepath,
 
     # set up logging to file - see previous section for more details
     logger = logging.getLogger('calc_stats_image')
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s.%(msecs)03d|%(levelname)s|%(name)s|%(funcName)s|%(message)s',
-                        datefmt='%H:%M:%S',
-                        filename=f"{log_dir}'calc_stats_image'_{os.getpid()}.log",
-                        filemode='w')
+    logger.propagate = False
+    log_filepath = os.path.join(log_dir, f"{datetime.now():%Y-%m-%d_%H-%M-%S}_calc_stats_image_{os.getpid()}.log")
+    fh = logging.FileHandler(filename=log_filepath)
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
+    logger.addHandler(fh)
 
     start_time = datetime.now()
 
@@ -432,13 +433,13 @@ def calc_stats_image_gdf(features_gdf,
         logger = log_helper.main_log_init(log_dir, f"{__name__}_{os.getpid()}", False)
         #logger.setLevel(logging.ERROR)
     '''
-    # set up logging to file - see previous section for more details
-    logger = logging.getLogger('calc_stats_image_gdf')
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s.%(msecs)03d|%(levelname)s|%(name)s|%(funcName)s|%(message)s',
-                        datefmt='%H:%M:%S',
-                        filename=f"{log_dir}'calc_stats_image_gdf'_{os.getpid()}.log",
-                        filemode='w')
+    logger = logging.getLogger('calc_stats_image')
+    logger.propagate = False
+    log_filepath = os.path.join(log_dir, f"{datetime.now():%Y-%m-%d_%H-%M-%S}_calc_stats_image_{os.getpid()}.log")
+    fh = logging.FileHandler(filename=log_filepath)
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
+    logger.addHandler(fh)
 
     # Log the time betwoon scheduling the future and acually run...
     if future_start_time is not None:
@@ -658,14 +659,9 @@ def main():
     input_preprocessed_dir = os.path.join(input_dir, 'preprocessed')
 
     global logger
-    log_dir = os.path.join(base_dir, 'log')
-    logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s.%(msecs)03d|%(levelname)s|%(name)s|%(funcName)s|%(message)s',
-                    datefmt='%H:%M:%S',
-                    filename=f"{log_dir}'main'.log",
-                    filemode='w')
-
-    #logger = log_helper.main_log_init(log_dir, __name__)
+    base_log_dir = os.path.join(base_dir, 'log')
+    log_dir = os.path.join(base_dir, f"{datetime.now():%Y-%m-%d_%H-%M-%S}")
+    logger = log_helper.main_log_init(log_dir, __name__)
 
     # Input features file depends on the year
     if year == 2017:
