@@ -223,34 +223,6 @@ def calc_stats_image(features_filepath,
     # Create process pool for parallelisation...
     with futures.ProcessPoolExecutor(nb_parallel) as pool:
 
-        '''
-        # Loop through all batches to execute them... (Synchronous version)
-        for features_gdf_batch in features_gdf_batches:
-            
-            # Calc stats (for all bands)!
-            batch_start_time = datetime.now()
-            calc_stats_batch(features_gdf_batch=features_gdf_batch,
-                             image_data=image_data,
-                             image_affine=image_affine,
-                             image_id=123,
-                             output_filepath=output_filepath)
-        '''
-
-        '''
-        # Loop through all batches to execute them... (Parallel via map version)
-        # Put arguments to pass to map in lists
-        async_arg_image_filepath = [input_image_filepath for i in range(nb_batches)]
-        async_arg_image_id = [input_image_id for i in range(nb_batches)]
-        async_arg_output_filepath = [output_filepath for i in range(nb_batches)]
-        
-        # Exec in parallel and extract result
-        results = pool.map(calc_stats_batch,               # Function 
-                           features_gdf_batches,           # Arg 1-list
-                           async_arg_image_filepath,       # Arg 2-list
-                           async_arg_image_id,
-                           async_arg_output_filepath)      
-        '''
-
         # Now loop through all batches to execute them... (Parallel via submit version)
         start_time_loop = datetime.now()
         future_dict = {}
