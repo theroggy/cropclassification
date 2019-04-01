@@ -9,7 +9,7 @@ import logging
 import os
 import pandas as pd
 import cropclassification.preprocess.classification_preprocess_BEFL as befl
-import cropclassification.global_settings as gs
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -54,10 +54,10 @@ def prepare_input(input_parcel_filepath: str,
     logger.info(f'Read pixcount file {input_parcel_pixcount_csv}')
     df_pixcount = pd.read_csv(input_parcel_pixcount_csv)
     logger.debug(f'Read pixcount file ready, shape: {df_pixcount.shape}')
-    df_pixcount.set_index(gs.id_column, inplace=True)
+    df_pixcount.set_index(conf.csv['id_column'], inplace=True)
 
-    df_parceldata.set_index(gs.id_column, inplace=True)
-    df_parceldata = df_parceldata.join(df_pixcount[gs.pixcount_s1s2_column], how='left')
+    df_parceldata.set_index(conf.csv['id_column'], inplace=True)
+    df_parceldata = df_parceldata.join(df_pixcount[conf.csv['pixcount_s1s2_column']], how='left')
 
     # Export result to file
     output_ext = os.path.splitext(output_parcel_filepath)[1]
@@ -93,7 +93,7 @@ def create_train_test_sample(input_parcel_csv: str,
     logger.debug(f'Read input file ready, shape: {df_in.shape}')
 
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        count_per_class = df_in.groupby(gs.class_column, as_index=False).size()
+        count_per_class = df_in.groupby(conf.csv['class_column'], as_index=False).size()
         logger.info(f'Number of elements per classname in input dataset:\n{count_per_class}')
 
     # The test dataset should be as representative as possible for the entire dataset, so create
@@ -101,7 +101,7 @@ def create_train_test_sample(input_parcel_csv: str,
     # Remark: group_keys=False evades that apply creates an extra index-level of the groups above
     #         the data and evades having to do .reset_index(level=CLASS_COLUMN_NAME, drop=True)
     #         to get rid of the group level
-    df_test = df_in.groupby(gs.class_column, group_keys=False).apply(pd.DataFrame.sample, frac=0.20)
+    df_test = df_in.groupby(conf.csv['class_column'], group_keys=False).apply(pd.DataFrame.sample, frac=0.20)
     logger.debug(f"df_test after sampling 20% of data per class, shape: {df_test.shape}")
 
     # The candidate parcel for training are all non-test parcel
@@ -109,20 +109,20 @@ def create_train_test_sample(input_parcel_csv: str,
     logger.debug(f"df_train_base after isin\n{df_train_base}")
 
     # Remove parcel with too few pixels from the train sample
-    df_train_base = df_train_base[df_train_base[gs.pixcount_s1s2_column] >= 20]
+    df_train_base = df_train_base[df_train_base[conf.csv['pixcount_s1s2_column']] >= 20]
     logger.debug(f'Number of parcel in df_train_base after filter on pixcount >= 20: {len(df_train_base)}')
 
     # The 'UNKNOWN' and 'IGNORE_' classes arent' meant for training... so remove them!
     logger.info("Remove the 'UNKNOWN' class from training sample")
-    df_train_base = df_train_base[df_train_base[gs.class_column] != 'UNKNOWN']
+    df_train_base = df_train_base[df_train_base[conf.csv['class_column']] != 'UNKNOWN']
 
     # The 'IGNORE_' classes aren't meant for training either...
     logger.info("Remove the classes that start with 'IGNORE_' from training sample")
-    df_train_base = df_train_base[~df_train_base[gs.class_column].str.startswith('IGNORE_', na=True)]
+    df_train_base = df_train_base[~df_train_base[conf.csv['class_column']].str.startswith('IGNORE_', na=True)]
 
     # Print the train base result before applying any balancing
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        count_per_class = df_train_base.groupby(gs.class_column, as_index=False).size()
+        count_per_class = df_train_base.groupby(conf.csv['class_column'], as_index=False).size()
         logger.info(f"Number of elements per classname for train dataset, before balancing:\n{count_per_class}")
 
     # Depending on the balancing_strategy, use different way to get a training sample
@@ -134,7 +134,7 @@ def create_train_test_sample(input_parcel_csv: str,
         #         - this results in a relatively high accuracy in overall numbers, but the small
         #           classes are not detected at all
         df_train = (df_train_base
-                    .groupby(gs.class_column, group_keys=False)
+                    .groupby(conf.csv['class_column'], group_keys=False)
                     .apply(pd.DataFrame.sample, frac=0.15))
 
     elif balancing_strategy == BALANCING_STRATEGY_MEDIUM:
@@ -148,23 +148,23 @@ def create_train_test_sample(input_parcel_csv: str,
         upper_limit = 10000
         lower_limit = 1000
         logger.info(f"Cap over {upper_limit}, keep the full number of training sample till {lower_limit}, samples smaller than that are oversampled")
-        df_train = (df_train_base.groupby(gs.class_column).filter(lambda x: len(x) >= upper_limit)
-                    .groupby(gs.class_column, group_keys=False)
+        df_train = (df_train_base.groupby(conf.csv['class_column']).filter(lambda x: len(x) >= upper_limit)
+                    .groupby(conf.csv['class_column'], group_keys=False)
                     .apply(pd.DataFrame.sample, upper_limit))
         # Middle classes use the number as they are
         df_train = df_train.append(df_train_base
-                                   .groupby(gs.class_column).filter(lambda x: len(x) < upper_limit)
-                                   .groupby(gs.class_column).filter(lambda x: len(x) >= lower_limit))
+                                   .groupby(conf.csv['class_column']).filter(lambda x: len(x) < upper_limit)
+                                   .groupby(conf.csv['class_column']).filter(lambda x: len(x) >= lower_limit))
         # For smaller classes, oversample...
         df_train = df_train.append(df_train_base
-                                   .groupby(gs.class_column).filter(lambda x: len(x) < lower_limit)
-                                   .groupby(gs.class_column, group_keys=False)
+                                   .groupby(conf.csv['class_column']).filter(lambda x: len(x) < lower_limit)
+                                   .groupby(conf.csv['class_column'], group_keys=False)
                                    .apply(pd.DataFrame.sample, lower_limit, replace=True))
 
     elif balancing_strategy == BALANCING_STRATEGY_EQUAL:
         # In theory the most logical way to balance: make sure all classes have the same amount of
         # training data by undersampling the largest classes and oversampling the small classes.
-        df_train = (df_train_base.groupby(gs.class_column, group_keys=False)
+        df_train = (df_train_base.groupby(conf.csv['class_column'], group_keys=False)
                     .apply(pd.DataFrame.sample, 2000, replace=True))
 
     else:
@@ -172,12 +172,12 @@ def create_train_test_sample(input_parcel_csv: str,
 
     # Log the resulting numbers per class in the train sample
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        count_per_class = df_train.groupby(gs.class_column, as_index=False).size()
+        count_per_class = df_train.groupby(conf.csv['class_column'], as_index=False).size()
         logger.info(f'Number of elements per classname in train dataset:\n{count_per_class}')
 
     # Log the resulting numbers per class in the test sample
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        count_per_class = df_test.groupby(gs.class_column, as_index=False).size()
+        count_per_class = df_test.groupby(conf.csv['class_column'], as_index=False).size()
         logger.info(f'Number of elements per classname in test dataset:\n{count_per_class}')
 
     # Write to output files

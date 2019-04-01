@@ -30,8 +30,8 @@ from oauth2client import file, client, tools
 import googleapiclient
 
 # Import local stuff
-import cropclassification.global_settings as gs
 import cropclassification.preprocess.timeseries as ts
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -253,8 +253,8 @@ def clean_gee_downloaded_csv(csv_file: str):
             df_in.drop(column, axis=1, inplace=True)
             csv_changed = True
         elif column == 'count':
-            logger.info(f"Rename count column to {gs.pixcount_s1s2_column}")
-            df_in.rename(columns={'count': gs.pixcount_s1s2_column}, inplace=True)
+            logger.info(f"Rename count column to {conf.csv['pixcount_s1s2_column']}")
+            df_in.rename(columns={'count': conf.csv['pixcount_s1s2_column']}, inplace=True)
             csv_changed = True
 
     # If a column, was dropped... replace the original file by the cleaned one
@@ -508,7 +508,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
 
         # Get the sentinel data for each parcel
         # Remark: from the input parcels, only keep the ID column...
-        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([gs.id_column]),
+        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([conf.csv['id_column']]),
                                                       reducer=reducer,
                                                       scale=10)
 

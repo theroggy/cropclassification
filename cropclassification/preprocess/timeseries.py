@@ -10,7 +10,7 @@ import os
 import glob
 from typing import List
 import pandas as pd
-import cropclassification.global_settings as gs
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -95,7 +95,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
         for column in df_in.columns:
 
             # If it is the id column, continue
-            if column == gs.id_column:
+            if column == conf.csv['id_column']:
                 continue
 
             # Check if the column is "asked"
@@ -123,7 +123,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
                 df_in[column] = df_in[column]/10000
 
         # Set the index to the id_columnname, and join the data to the result...
-        df_in.set_index(gs.id_column, inplace=True)
+        df_in.set_index(conf.csv['id_column'], inplace=True)
         if result is None:
             result = df_in
         else:

@@ -9,7 +9,7 @@ import configparser
 import pprint
 
 def read_config(config_filepaths: []):
-        
+            
     # Read the configuration
     global config
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
@@ -18,21 +18,13 @@ def read_config(config_filepaths: []):
     global config_filepaths_used
     config_filepaths_used = config_filepaths
 
-    # Now set global variables to each section as shortcuts
-    global general
-    general = config['general']
-    global marker 
+    # Now set global variables to each section as shortcuts    
+    global marker
     marker = config['marker']
-    global train
-    train = config['train']
-    global predict
-    predict = config['predict']
-    global model
-    model = config['model']
+    global csv
+    csv = config['csv']
     global dirs
     dirs = config['dirs']
-    global files
-    files = config['files']
         
 def pformat_config():
     message = f"Config files used: {pprint.pformat(config_filepaths_used)} \n"

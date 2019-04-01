@@ -6,10 +6,8 @@ Created on Wed Sep 26 17:18:13 2018
 """
 
 import logging
-
 import pandas as pd
-
-import cropclassification.global_settings as gs
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -34,7 +32,7 @@ def detect_multicrop(input_parcel_csv: str,
     # If the classification data isn't passed as dataframe, read it from the csv
     logger.info(f"Read classification data file: {input_parcel_timeseries_data_csv}")
     df_timeseries_data = pd.read_csv(input_parcel_timeseries_data_csv, low_memory=False)
-    df_timeseries_data.set_index(gs.id_column, inplace=True)
+    df_timeseries_data.set_index(conf.csv['id_column'], inplace=True)
     logger.debug('Read classification data file ready')
 
     # Add column with the max of all columns (= all stdDev's)

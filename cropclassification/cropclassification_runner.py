@@ -17,7 +17,8 @@ import cropclassification.predict.classification as classification
 import cropclassification.postprocess.classification_reporting as class_report
 import cropclassification.helpers.dir_helper as dir_helper
 import cropclassification.helpers.log_helper as log_helper
-import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.config_helper as conf 
+
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
@@ -30,7 +31,7 @@ def run(config_filepaths: []):
     logger = log_helper.main_log_init(conf.dirs['log_dir'], __name__)      
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
-    year = conf.marker['year']
+    year = int(conf.marker['year'])
     country_code = conf.marker['country_code']
 
     base_dir = conf.dirs['base_dir']
@@ -52,7 +53,7 @@ def run(config_filepaths: []):
     imagedata_dir = os.path.join(base_dir, 'Timeseries_data')  # General data download dir
     start_date_str = conf.marker['start_date_str']
     end_date_str = conf.marker['end_date_str']
-    buffer = conf.marker['buffer'] or 10
+    buffer = int(conf.marker['buffer'])
 
     # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
     # Settings for monitoring landcover
@@ -61,8 +62,7 @@ def run(config_filepaths: []):
     balancing_strategy = conf.marker['balancing_strategy']
     postprocess_to_groups = conf.marker['postprocess_to_groups']
 
-    reuse_last_run_dir = conf.dirs['reuse_last_run_dir'] or False
-    class_dir = dir_helper.create_dir(class_base_dir, reuse_last_run_dir)
+    class_dir = dir_helper.create_dir(class_base_dir, bool(conf.dirs['reuse_last_run_dir']))
 
     base_filename = f"{country_code}{year}_bufm{buffer}_weekly"
     sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
@@ -92,7 +92,7 @@ def run(config_filepaths: []):
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
     ts_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
-                        output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath)
+                        output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath) 
 
     # STEP 2: Get the timeseries data needed for the classification
     #-------------------------------------------------------------
@@ -103,7 +103,7 @@ def run(config_filepaths: []):
     #      implementation is used
     #    - the upload to gee as an asset is not implemented, because it need a google cloud account...
     #      so upload needs to be done manually
-    input_parcel_filepath_gee = f"users/pieter_roggemans/{imagedata_input_parcel_filename_noext}"
+    input_parcel_filepath_gee = f"{conf.dirs['gee']}{imagedata_input_parcel_filename_noext}"
     ts_calc_gee.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee,
                                     input_country_code=country_code,
                                     start_date_str=start_date_str,

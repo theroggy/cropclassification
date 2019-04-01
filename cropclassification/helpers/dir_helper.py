@@ -14,11 +14,13 @@ def create_dir(class_base_dir: str,
         # Now search for the last dir that is in use
         class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
         if os.path.exists(class_dir):
+            prev_class_dir = class_dir
             continue
         else:
             # If we want to reuse the last dir, do so...
             if reuse_last_run_dir and prev_class_dir is not None:
-                class_dir = prev_class_dir            
+                class_dir = prev_class_dir
+                break         
             else:
                 # Otherwise create new dir name with next index
                 class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")         

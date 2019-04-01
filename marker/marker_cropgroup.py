@@ -4,9 +4,9 @@ import sys
 import cropclassification.cropclassification_runner as runner
 
 def main():        
-    runner.run(config_filepaths=['general.ini',
-                                 'marker_cropgroup.ini',
-                                 'local_overrule.ini'])
+    runner.run(config_filepaths=['marker/general.ini',
+                                 'marker/marker_cropgroup.ini',
+                                 'marker/local_overrule.ini'])
     
 if __name__ == '__main__':
     main()

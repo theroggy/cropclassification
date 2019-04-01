@@ -11,7 +11,7 @@ import logging
 import os
 import pandas as pd
 import numpy as np
-import cropclassification.global_settings as gs
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -30,17 +30,17 @@ def show(input_parcel_csv: str,
     df = pd.read_csv(input_parcel_csv)
 
     # Just keep one parcel
-    df = df[df[gs.id_column] == filter_id]
+    df = df[df[conf.csv['id_column']] == filter_id]
 
     # Remove all unnecessary columns
     for column in df:
         if(not column.startswith('VV_')
            and not column.startswith('VH_')
-           and not column == gs.id_column):
+           and not column == conf.csv['id_column']):
             df = df.drop(columns=column)
 
     # Set index for trnaspose
-    df.set_index(gs.id_column, inplace=True)
+    df.set_index(conf.csv['id_column'], inplace=True)
 
     # Transpose columns to rows to create time series
     df = df.transpose()

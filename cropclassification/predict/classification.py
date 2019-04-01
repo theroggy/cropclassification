@@ -9,8 +9,8 @@ import logging
 import os
 import numpy as np
 import pandas as pd
-import classification_sklearn as class_core
-import cropclassification.global_settings as gs
+import cropclassification.predict.classification_sklearn as class_core
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -56,7 +56,7 @@ def train_test_predict(input_parcel_train_csv: str,
     # Read the classification data from the csv so we can pass it on to the other functione to improve performance...
     logger.info(f"Read classification data file: {input_parcel_classification_data_csv}")
     df_input_parcel_classification_data = pd.read_csv(input_parcel_classification_data_csv, low_memory=False)
-    df_input_parcel_classification_data.set_index(gs.id_column, inplace=True)
+    df_input_parcel_classification_data.set_index(conf.csv['id_column'], inplace=True)
     logger.debug('Read classification data file ready')
 
     # Train the classifiaction
@@ -99,7 +99,7 @@ def train(input_parcel_train_csv: str,
     if df_input_parcel_classification_data is None:
         logger.info(f"Read classification data file: {input_parcel_classification_data_csv}")
         df_input_parcel_classification_data = pd.read_csv(input_parcel_classification_data_csv, low_memory=False)
-        df_input_parcel_classification_data.set_index(gs.id_column, inplace=True)
+        df_input_parcel_classification_data.set_index(conf.csv['id_column'], inplace=True)
         logger.debug('Read classification data file ready')
 
     # First train the classifier if needed
@@ -110,8 +110,8 @@ def train(input_parcel_train_csv: str,
 
     # Join the columns of df_classification_data that aren't yet in df_train
     logger.info("Join train sample with the classification data")
-    df_train = (df_train[[gs.id_column, gs.class_column]]
-                .join(df_input_parcel_classification_data, how='inner', on=gs.id_column))
+    df_train = (df_train[[conf.csv['id_column'], conf.csv['class_column']]]
+                .join(df_input_parcel_classification_data, how='inner', on=conf.csv['id_column']))
 
     class_core.train(df_train=df_train, output_classifier_filepath=output_classifier_filepath)
 
@@ -137,14 +137,14 @@ def predict(input_parcel_csv: str,
     if df_input_parcel_classification_data is None:
         logger.info(f"Read classification data file: {input_parcel_classification_data_csv}")
         df_input_parcel_classification_data = pd.read_csv(input_parcel_classification_data_csv, low_memory=False)
-        df_input_parcel_classification_data.set_index(gs.id_column, inplace=True)
+        df_input_parcel_classification_data.set_index(conf.csv['id_column'], inplace=True)
         logger.debug('Read classification data file ready')
 
     # Prepare the data to send to prediction logic...
     logger.info("Join train sample with the classification data")
-    df_input_parcel_for_predict = (df_input_parcel[[gs.id_column, gs.class_column]]
+    df_input_parcel_for_predict = (df_input_parcel[[conf.csv['id_column'], conf.csv['class_column']]]
                                    .join(df_input_parcel_classification_data,
-                                         how='inner', on=gs.id_column))
+                                         how='inner', on=conf.csv['id_column']))
 
     df_proba = class_core.predict_proba(df_input_parcel=df_input_parcel_for_predict,
                                         input_classifier_filepath=input_classifier_filepath,
@@ -160,38 +160,38 @@ def predict(input_parcel_csv: str,
 
 # float(row['pred1_prob']) > 30
         if ((float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']))):
-            return row[gs.prediction_column]
+            return row[conf.csv['prediction_column']]
         else:
             return 'DOUBT'
 
     values = df_top3.apply(calculate_consolidated_prediction, axis=1)
-    df_top3.insert(loc=2, column=gs.prediction_cons_column, value=values)
+    df_top3.insert(loc=2, column=conf.csv['prediction_cons_column'], value=values)
 
     # Make sure all input parcels are in the output. If there was no prediction, it means that there
     # was no data available for a classification, so set prediction to NODATA
-    df_top3.set_index(gs.id_column, inplace=True)
-    df_input_parcel.set_index(gs.id_column, inplace=True)
+    df_top3.set_index(conf.csv['id_column'], inplace=True)
+    df_input_parcel.set_index(conf.csv['id_column'], inplace=True)
 
     # Add a column with the prediction status... and all parcels in df_top3 got a prediction
-    df_top3[gs.prediction_status] = 'OK'
-    df_top3.loc[(df_top3[gs.prediction_cons_column] == 'DOUBT'),
-                gs.prediction_status] = 'DOUBT'
+    df_top3[conf.csv['prediction_status']] = 'OK'
+    df_top3.loc[(df_top3[conf.csv['prediction_cons_column']] == 'DOUBT'),
+                conf.csv['prediction_status']] = 'DOUBT'
 
     cols_to_join = df_top3.columns.difference(df_input_parcel.columns)
     df_pred = df_input_parcel.join(df_top3[cols_to_join], how='left')
-    df_pred[gs.prediction_column].fillna('NODATA', inplace=True)
-    df_pred[gs.prediction_cons_column].fillna('NODATA', inplace=True)
-    df_pred[gs.prediction_status].fillna('NODATA', inplace=True)
+    df_pred[conf.csv['prediction_column']].fillna('NODATA', inplace=True)
+    df_pred[conf.csv['prediction_cons_column']].fillna('NODATA', inplace=True)
+    df_pred[conf.csv['prediction_status']].fillna('NODATA', inplace=True)
 
     logger.info(f"Columns of df_pred: {df_pred.columns}")
     # Parcels with too few pixels don't have a good accuracy and give many alfa errors...
-    df_pred.loc[(df_pred[gs.pixcount_s1s2_column] <= 10)
-                 & (df_pred[gs.prediction_status] != 'NODATA')
-                 & (df_pred[gs.prediction_status] != 'DOUBT'),
-                [gs.prediction_cons_column, gs.prediction_status]] = 'NOT_ENOUGH_PIXELS'
+    df_pred.loc[(df_pred[conf.csv['pixcount_s1s2_column']] <= 10)
+                 & (df_pred[conf.csv['prediction_status']] != 'NODATA')
+                 & (df_pred[conf.csv['prediction_status']] != 'DOUBT'),
+                [conf.csv['prediction_cons_column'], conf.csv['prediction_status']]] = 'NOT_ENOUGH_PIXELS'
 
-    df_pred.loc[df_pred[gs.class_column] == 'UNKNOWN', [gs.prediction_status]] = 'UNKNOWN'
-    df_pred.loc[df_pred[gs.class_column].str.startswith('IGNORE_'), [gs.prediction_status]] = df_pred[gs.class_column]
+    df_pred.loc[df_pred[conf.csv['class_column']] == 'UNKNOWN', [conf.csv['prediction_status']]] = 'UNKNOWN'
+    df_pred.loc[df_pred[conf.csv['class_column']].str.startswith('IGNORE_'), [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
 
     logger.info("Write final prediction data to file")
     df_pred.to_csv(output_predictions_csv, float_format='%.10f', encoding='utf-8')
@@ -215,7 +215,7 @@ def _get_top_3_prediction(df_probabilities):
     logger.info("get_top_3_predictions: start")
     df_probabilities_tmp = df_probabilities.copy()
     for column in df_probabilities_tmp.columns:
-        if column in gs.dedicated_data_columns:
+        if column in conf.csv['dedicated_data_columns']:
             df_probabilities_tmp.drop(column, axis=1, inplace=True)
 
     # Get the top 3 predictions for each row
@@ -232,13 +232,13 @@ def _get_top_3_prediction(df_probabilities):
     # Concatenate both
     top3_pred = np.concatenate([top3_pred_classes, top3_pred_values], axis=1)
     # Concatenate the ids, the classes and the top3 predictions
-    id_class_top3 = np.concatenate([df_probabilities[[gs.id_column, gs.class_column]].values, top3_pred]
+    id_class_top3 = np.concatenate([df_probabilities[[conf.csv['id_column'], conf.csv['class_column']]].values, top3_pred]
                                    , axis=1)
 
     # Convert to dataframe, combine with input data and write to file
     df_top3 = pd.DataFrame(id_class_top3,
-                           columns=[gs.id_column, gs.class_column,
-                                    gs.prediction_column, 'pred2', 'pred3',
+                           columns=[conf.csv['id_column'], conf.csv['class_column'],
+                                    conf.csv['prediction_column'], 'pred2', 'pred3',
                                     'pred1_prob', 'pred2_prob', 'pred3_prob'])
 
     return df_top3
