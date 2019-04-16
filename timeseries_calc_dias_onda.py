@@ -36,7 +36,8 @@ def signal_handler(sig, frame):
 #signal.signal(signal.SIGINT, signal.default_int_handler)
 signal.signal(signal.SIGINT, signal_handler)
 
-def calc_stats(features_filepath: str,
+'''
+def calc_stats_old(features_filepath: str,
                image_paths: str,
                output_dir: str,
                temp_dir: str,
@@ -125,8 +126,8 @@ def calc_stats(features_filepath: str,
                 raise
     
     logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
-
-def calc_stats2(features_filepath: str,
+'''
+def calc_stats(features_filepath: str,
                image_paths: str,
                output_dir: str,
                temp_dir: str,
@@ -141,28 +142,26 @@ def calc_stats2(features_filepath: str,
         return
 
     # General init
-    start_time = datetime.now()
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
     
+    image_paths.sort()
+    start_time = datetime.now()
+    nb_todo = len(image_paths)
+
     # Create process pool for parallelisation...
     nb_parallel_max = multiprocessing.cpu_count()
     nb_parallel = nb_parallel_max
     with futures.ProcessPoolExecutor(nb_parallel) as pool:
 
         # Loop over all images to start the data preparation for each of them in parallel...
-        # TODO: cleanup variables: general code structure is correct now (can still be improved though), but data is copied in several dicts and it is a mess :-(.
-        image_future_dict = {}
-        batch_future_dict = {}
-        image_paths_busy = {}
-        start_time = datetime.now()
-        nb_todo = len(image_paths)
+        image_dict = {}
+        calc_stats_batch_dict = {}
         nb_done_total = 0
         curr_image_path_index = 0
-        image_info_dict = {}
-        image_paths.sort()
         while True:
+
             # If not all images aren't processed/processing yet
             if curr_image_path_index < len(image_paths):    
 
@@ -181,160 +180,159 @@ def calc_stats2(features_filepath: str,
                     continue
 
                 # Always make sure there are nb_parallel_max prepare_calc's active. 
-                if len(image_future_dict) < nb_parallel_max:          
+                nb_busy = 0
+                for image_path_tmp in image_dict:
+                    if image_dict[image_path_tmp]['status'] == 'PREPARE_CALC_BUSY':
+                        nb_busy += 1
+                if nb_busy < nb_parallel_max:          
                     # Start the prepare processing assync
-                    image_future = pool.submit(prepare_calc, 
-                                        features_filepath,
-                                        image_path,
-                                        output_filepath,
-                                        temp_dir,
-                                        log_dir,
-                                        nb_parallel_max)
-                    image_future_dict[image_future] = {"features_filepath": features_filepath,
-                                                       "image_path": image_path, 
-                                                       "future_start_time": datetime.now(),
-                                                       "output_filepath": output_filepath}
+                    future = pool.submit(prepare_calc, 
+                                         features_filepath,
+                                         image_path,
+                                         output_filepath,
+                                         temp_dir,
+                                         log_dir,
+                                         nb_parallel_max)
+                    image_dict[image_path] = {'prepare_calc_future': future, 
+                                              'prepare_calc_starttime': datetime.now(),
+                                              'output_filepath': output_filepath,
+                                              'output_done_filepath': output_done_filepath,
+                                              'status': 'IMAGE_PREPARE_CALC_BUSY'}
+                    
+                    # Jump to next image to start the prepare_calc for it...
                     continue
 
-            # Now loop through the prepare_calc futures to find which are ready... to start the real calculations...
-            image_futures_done = []
-            for image_future in image_future_dict:
-
-                # If it is still running, go to next...
-                if image_future.running():
+            # Loop through the images to find which are ready... to start the real calculations...
+            for image_path in image_dict:
+                
+                # Get the info that is available in the dict with futures for the one that has now completed
+                image_info = image_dict[image_path]
+                    
+                # If the status isn't PREPARE_CALC_BUSY or if the prepare_calc is still running, go to next...
+                if(image_info['status'] != 'IMAGE_PREPARE_CALC_BUSY' 
+                   or image_info['prepare_calc_future'].running()):
                     continue
 
                 # Extract the result from the preparation
                 try:
-                    # Get the info that is available in the dict with futures for the one that has now completed
-                    image_future_info = image_future_dict[image_future]
-                    start_time_latestbatch = image_future_info["future_start_time"]
-                    image_path = image_future_info["image_path"]
-
                     # Get the result from the completed  prepare_inputs
-                    prepared_input = image_future.result()
-                    nb_features_todo = prepared_input["nb_features"]
+                    prepare_calc_result = image_info['prepare_calc_future'].result()
 
-                    # Add to futures done list, so it can be removed 
-                    image_futures_done.append(image_future)
-
-                    # If nb_features_todo is 0
-                    if nb_features_todo == 0:
-                        image_done_filepath = f"{image_future_info['output_filepath']}_DONE"
-                        logger.info(f"No features found overlapping image, just create done file: {image_done_filepath}")
-                        create_file_atomic(image_done_filepath)
+                    # If nb_features to be treated is 0... set done file and continue with next...
+                    if prepare_calc_result['nb_features_to_calc_total'] == 0:
+                        logger.info(f"No features found overlapping image, just create done file: {image_info['output_done_filepath']}")
+                        create_file_atomic(image_info['output_done_filepath'])
+                        image_info['status'] = 'IMAGE_CALC_DONE'
                         continue
 
-                    image_prepared_path = prepared_input["image_prepared_path"]
-                    features_batches = prepared_input["feature_batches"]
+                    # Add info about the result of the prepare_calc to the image info...
+                    image_info['image_prepared_path'] = prepare_calc_result['image_prepared_path']
+                    image_info['feature_batches'] = prepare_calc_result['feature_batches']
+                    image_info['nb_features_to_calc_total'] = prepare_calc_result['nb_features_to_calc_total']
 
-                    image_info_dict[image_path] = {}
-                    image_info_dict[image_path]["image_prepared_path"] = image_prepared_path
+                    # Set status to calc_is_busy so we know calculation is busy...
+                    image_info['status'] = 'IMAGE_CALC_BUSY'
+                    image_info['calc_starttime'] = datetime.now()
 
-                    # Add to busy list, remove from image_future_dict
-                    image_paths_busy[image_path] = image_future_info
-                    logger.debug(f"Ready preparing calc for image {image_path}")
-
-                    # Now loop through all prepared feature batches to start the statistics calculation for each
-                    start_time_batch = datetime.now()
-                    nb_processed = 0        
-                    for features_batch in features_batches:
+                    # Now loop through all prepared feature batches to start the statistics calculation for each  
+                    for features_batch in image_info['feature_batches']:
                         start_time_batch = datetime.now()
-                        batch_future = pool.submit(calc_stats_image_gdf, 
-                                            features_batch["filepath"],
-                                            image_prepared_path,
-                                            image_future_info["output_filepath"],
-                                            log_dir,
-                                            start_time_batch)
-                        batch_future_dict[batch_future] = {"image_path": image_path,
-                                                           "image_prepared_path": image_prepared_path, 
-                                                           "start_time_batch": start_time_batch,
-                                                           "nb_items_batch": features_batch["nb_items"]}
+                        future = pool.submit(calc_stats_image_gdf, 
+                                             features_batch['filepath'],
+                                             image_info['image_prepared_path'],
+                                             image_info['output_filepath'],
+                                             log_dir,
+                                             start_time_batch)
+                        calc_stats_batch_dict[features_batch['filepath']] = {'calc_stats_future': future,
+                                                                       'image_path': image_path,
+                                                                       'image_prepared_path': image_info['image_prepared_path'], 
+                                                                       'start_time_batch': start_time_batch,
+                                                                       'nb_items_batch': features_batch['nb_items'],
+                                                                       'status': 'BATCH_CALC_BUSY'}
 
                 except Exception as ex:
-                    logger.error(f"Exception getting result for {image_future_info['image_path']}: {ex}")
-                    raise
+                    message = f"Exception getting result for {image_path}: {ex}"
+                    logger.error(message)
+                    raise Exception(message)
 
-            # Remove the completed image futures from the dict 
-            for image_future in image_futures_done:
-                del image_future_dict[image_future]
-
-            # Loop through the completed batches
-            batch_future_done = []
-            for batch_future in batch_future_dict:
+            # Loop through the completed calculations
+            for calc_stats_batch_id in calc_stats_batch_dict:
                 # Get some info about the future that has now completed
-                if batch_future.done():
-                    batch_future_info = batch_future_dict[batch_future]
-                    start_time_currbatch = batch_future_info['start_time_batch']
-                    nb_processed_currbatch = batch_future_info['nb_items_batch']
+                calc_stats_batch_info = calc_stats_batch_dict[calc_stats_batch_id]
+                
+                # If not processed yet, but it is done, get the results
+                if(calc_stats_batch_info['status'] == 'BATCH_CALC_BUSY' 
+                   and calc_stats_batch_info['calc_stats_future'].done() is True):
 
-                    # Try to extract the result
                     try:
-                        data = batch_future.result()
+                        # Get the result
+                        result = calc_stats_batch_info['calc_stats_future'].result()
+                        if not result:
+                            raise Exception("Returned False?")
                         
-                        # Remove the future from the dict, as it is ready...
-                        batch_future_done.append(batch_future)
-                        logger.debug(f"Ready processing batch of {nb_processed_currbatch} for features image: {batch_future_info['image_path']}")
+                        # Set the processed flag to True
+                        calc_stats_batch_info['status'] = 'BATCH_CALC_DONE'
+                        logger.debug(f"Ready processing batch of {calc_stats_batch_info['nb_items_batch']} for features image: {calc_stats_batch_info['image_path']}")
 
-                        # TODO: check if all batches for image are ready, and report progress...
                     except Exception as ex:
-                        logger.error(f"Exception getting result for {batch_future_info['image_path']}: {ex}")
+                        logger.error(f"Exception getting result for {calc_stats_batch_info['image_path']}: {ex}")
                         raise
 
-            # Remove the completed batches from the dict...
-            for batch_future in batch_future_done:
-                del batch_future_dict[batch_future]
+            # Loop over all image_paths that are busy being calculated to check if there are still calc stats batches busy
+            for image_path in image_dict:
 
-            # Loop over all image_paths that are busy being calculated to check if there are still batches busy
-            # Remark: the [:] forces to make a copy of file_paths_busy and iterate it, otherwise removing items from the list you are iterating gives troubles!
-            image_paths_busy_done = []
-            for image_path_busy in image_paths_busy:
-                batches_busy = False
-                for batch_future in batch_future_dict:
-                    if batch_future_dict[batch_future]["image_path"] == image_path_busy:
-                        batches_busy = True
-                        break
+                # If the image is busy being calculated...
+                image_info = image_dict[image_path]
+                if image_info['status'] == 'IMAGE_CALC_BUSY':
+
+                    # Check if there are still batches busy for this image...
+                    batches_busy = False
+                    for calc_stats_batch_id in calc_stats_batch_dict:
+                        if(calc_stats_batch_dict[calc_stats_batch_id]['image_path'] == image_path 
+                           and calc_stats_batch_dict[calc_stats_batch_id]['status'] == 'BATCH_CALC_BUSY'):
+                            batches_busy = True
+                            break
+                    
+                    # If no batches are busy anymore for the file_path... cleanup.
+                    if batches_busy == False:
+                        # If all batches are done, the image is done...
+                        image_info['status'] = 'IMAGE_CALC_DONE'
+
+                        # Create the DONE file to indicate this features-image combination has been processed
+                        # TODO: these paths (output_filepath, image_prepared_path,...) should be searched for again, or saved in a dict or???
+                        create_file_atomic(image_info['output_done_filepath'])
+                        logger.info(f"Time required for calculating data for {image_info['nb_features_to_calc_total']} features, all bands: {datetime.now()-start_time} s of {image_path}")
                 
-                # If no batches are busy anymore for the file_path... cleanup.
-                if batches_busy == False:
-                    image_path_busy_info = image_paths_busy[image_path_busy]
-                    image_paths_busy_done.append(image_path_busy)
+                        # If the preprocessing created a temp new file, clean it up again...
+                        image_prepared_path = image_info['image_prepared_path']
+                        if image_prepared_path != image_path:
+                            logger.info(f"Remove local temp image copy: {image_prepared_path}")
+                            if os.path.isdir(image_prepared_path):           
+                                shutil.rmtree(image_prepared_path, ignore_errors=True)
+                            else:
+                                os.remove(image_prepared_path)
+                            
+                        # Log the progress and prediction speed
+                        logger.info(f"Ready processing image: {image_path}")
+                        nb_done_latestbatch = 1
+                        nb_done_total += nb_done_latestbatch
+                        progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image_info['calc_starttime'])
+                        logger.info(progress_msg)
 
-                    # Create the DONE file to indicate this features-image combination has been processed
-                    # TODO: these paths (output_filepath, image_prepared_path,...) should be searched for again, or saved in a dict or???
-                    image_done_filepath = f"{image_path_busy_info['output_filepath']}_DONE"
-                    create_file_atomic(image_done_filepath)
-                    logger.info(f"Time required for calculating data for {nb_features_todo} features, all bands: {datetime.now()-start_time} s of {image_path_busy}")
-            
-                    # If the preprocessing created a temp new file, clean it up again...
-                    image_prepared_path = image_info_dict[image_path_busy]['image_prepared_path']
-                    if image_prepared_path != image_path_busy:
-                        logger.info(f"Remove local temp image copy: {image_prepared_path}")
-                        if os.path.isdir(image_prepared_path):           
-                            shutil.rmtree(image_prepared_path, ignore_errors=True)
-                        else:
-                            os.remove(image_prepared_path)
-                        
-                    # Log the progress and prediction speed
-                    logger.info(f"Ready processing image: {image_path_busy}")
-                    nb_done_latestbatch = 1
-                    nb_done_total += nb_done_latestbatch
-                    progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, start_time_latestbatch)
-                    logger.info(progress_msg)
+            # Loop over all images to check if they are all done
+            all_done = True
+            for image_path in image_paths:
+                if(image_path not in image_dict
+                   or image_dict[image_path]['status'] != 'IMAGE_CALC_DONE'):
+                    all_done = False
+                    break                   
 
-            # Remove the completed ones from dict
-            for image_path_busy_done in image_paths_busy_done:
-                del image_paths_busy[image_path_busy_done]
-                        
-            # If all processing is ready, stop.
-            # TODO: check if ok 
-            if(len(image_future_dict) == 0 
-               and len(image_paths_busy) == 0):
+            # If all processing is ready, stop the never ending loop...
+            if all_done is True:
                 break 
-
-            # Sleep before starting next iteration...
-            # TODO: can this be eliminated?
-            time.sleep(1)   
+            else:
+                # Sleep before starting next iteration...
+                time.sleep(1)   
 
         logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
 
@@ -412,7 +410,6 @@ def prepare_calc(features_filepath,
     fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
     logger.addHandler(fh)
 
-    start_time = datetime.now()
     ret_val = {}
 
     # Prepare the image
@@ -436,7 +433,7 @@ def prepare_calc(features_filepath,
 
     # Check if overlapping features were found, otherwise no use to proceed
     nb_todo = len(features_gdf)
-    ret_val['nb_features'] = nb_todo
+    ret_val['nb_features_to_calc_total'] = nb_todo
     if nb_todo == 0:
         logger.info(f"No features were found in the bounding box of the image, so return: {image_path}")
         return ret_val
@@ -454,27 +451,34 @@ def prepare_calc(features_filepath,
     temp_features_dirname = os.path.splitext(os.path.basename(image_path))[0]
     temp_features_dir = os.path.join(temp_dir, temp_features_dirname)
     if os.path.exists(temp_features_dir):
+        logger.info(f"Remove dir {temp_features_dir + os.sep}")
         shutil.rmtree(temp_features_dir + os.sep)
     else:
         os.makedirs(temp_features_dir, exist_ok=True)
 
+    '''
     if os.path.exists(temp_features_dir):
         logger.info(f"Temp dir exists: {temp_features_dir}")
-    
+    '''
+
     # Loop over the batches, pickle them and add the filepaths to the result...
     ret_val['feature_batches'] = []
     for i, features_gdf_batch in enumerate(features_gdf_batches):
         batch_info = {}
         pickle_filepath = os.path.join(temp_features_dir, f"{i}.pkl")
         logger.info(f"Write pkl of {len(features_gdf_batch)} features: {pickle_filepath}")
-        features_gdf_batch.to_pickle(pickle_filepath)
+        try:
+            features_gdf_batch.to_pickle(pickle_filepath)
+        except Exception as ex:
+            logger.error(f"Exception writing pickle: {pickle_filepath}: {ex}")
+            raise 
         batch_info["filepath"] = pickle_filepath
         batch_info["nb_items"] = len(features_gdf_batch)
         ret_val["feature_batches"].append(batch_info)
 
     # Ready... return
     return ret_val
-
+'''
 def calc_stats_image(features_filepath,
                      image_path: str,
                      output_filepath: str,
@@ -578,7 +582,7 @@ def calc_stats_image(features_filepath,
             os.remove(image_prepr_path)
 
     return True
-
+'''
 def load_features_file(features_filepath: str,
                        columns_to_retain: [],
                        target_epsg: int,
@@ -1103,7 +1107,7 @@ def main():
         shutil.rmtree(temp_dir + os.sep)
     
     # Output dir 
-    test = False
+    test = True
     if not test:
         output_basedir = os.path.join(base_dir, "output")
     else:
@@ -1143,7 +1147,7 @@ def main():
     """
 
     logger.info(f"Start processing")
-    calc_stats2(features_filepath=input_features_filepath,
+    calc_stats(features_filepath=input_features_filepath,
                image_paths=input_image_filepaths,
                output_dir=output_dir,
                temp_dir=temp_dir,
