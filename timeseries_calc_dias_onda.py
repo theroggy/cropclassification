@@ -182,7 +182,7 @@ def calc_stats(features_filepath: str,
                 # Always make sure there are nb_parallel_max prepare_calc's active. 
                 nb_busy = 0
                 for image_path_tmp in image_dict:
-                    if image_dict[image_path_tmp]['status'] == 'PREPARE_CALC_BUSY':
+                    if image_dict[image_path_tmp]['status'] == 'IMAGE_PREPARE_CALC_BUSY':
                         nb_busy += 1
                 if nb_busy < nb_parallel_max:          
                     # Start the prepare processing assync
