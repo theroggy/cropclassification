@@ -168,7 +168,9 @@ def calc_stats(features_filepath: str,
                 # Create output filepath
                 image_path = image_paths[curr_image_path_index]
                 curr_image_path_index += 1
-                output_filepath = get_output_filepath(features_filepath, image_path, output_dir)
+                image_info = get_image_info(image_path)
+                output_filepath = get_output_filepath(features_filepath, image_path, output_dir,
+                                                      image_info['orbit_properties_pass'])
 
                 # Check if the features-image combination has been processed already
                 # TODO: if force is true, remove the output files!
@@ -184,7 +186,8 @@ def calc_stats(features_filepath: str,
                 for image_path_tmp in image_dict:
                     if image_dict[image_path_tmp]['status'] == 'IMAGE_PREPARE_CALC_BUSY':
                         nb_busy += 1
-                if nb_busy < nb_parallel_max:          
+                if nb_busy < nb_parallel_max:
+                    logger.debug(f"nb_busy: {nb_busy}, nb_parallel_max: {nb_parallel_max}, so nb_busy < nb_parallel_max")          
                     # Start the prepare processing assync
                     future = pool.submit(prepare_calc, 
                                          features_filepath,
@@ -229,6 +232,7 @@ def calc_stats(features_filepath: str,
                     image_info['image_prepared_path'] = prepare_calc_result['image_prepared_path']
                     image_info['feature_batches'] = prepare_calc_result['feature_batches']
                     image_info['nb_features_to_calc_total'] = prepare_calc_result['nb_features_to_calc_total']
+                    image_info['temp_features_dir'] = prepare_calc_result['temp_features_dir']
 
                     # Set status to calc_is_busy so we know calculation is busy...
                     image_info['status'] = 'IMAGE_CALC_BUSY'
@@ -303,7 +307,7 @@ def calc_stats(features_filepath: str,
                         create_file_atomic(image_info['output_done_filepath'])
                         logger.info(f"Time required for calculating data for {image_info['nb_features_to_calc_total']} features, all bands: {datetime.now()-start_time} s of {image_path}")
                 
-                        # If the preprocessing created a temp new file, clean it up again...
+                        # If the preprocessing created a temp image file, clean it up...
                         image_prepared_path = image_info['image_prepared_path']
                         if image_prepared_path != image_path:
                             logger.info(f"Remove local temp image copy: {image_prepared_path}")
@@ -311,6 +315,9 @@ def calc_stats(features_filepath: str,
                                 shutil.rmtree(image_prepared_path, ignore_errors=True)
                             else:
                                 os.remove(image_prepared_path)
+
+                        # If the preprocessing created temp pickle files with features, clean them up...
+                        shutil.rmtree(image_info['temp_features_dir'], ignore_errors=True)
                             
                         # Log the progress and prediction speed
                         logger.info(f"Ready processing image: {image_path}")
@@ -336,10 +343,13 @@ def calc_stats(features_filepath: str,
 
         logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
 
-def get_output_filepath(features_filepath, 
-                        image_path,
-                        output_dir):
-
+def get_output_filepath(features_filepath: str, 
+                        image_path: str,
+                        output_dir: str,
+                        orbit_properties_pass: str):
+    """
+    Prepare the output filepath.
+    """
     # Filename of the features
     features_filename = os.path.splitext(os.path.basename(features_filepath))[0] 
     # Filename of the image -> remove .zip if it is a zip file
@@ -347,8 +357,18 @@ def get_output_filepath(features_filepath,
     image_filename_noext, image_ext = os.path.splitext(image_filename)
     if image_ext.lower() == '.zip':
         image_filename = image_filename_noext
-    output_filepath = os.path.join(output_dir, f"{features_filename}__{image_filename}.csv")
 
+    # Interprete the orbit...
+    if orbit_properties_pass == 'ASCENDING':
+        orbit = 'ASC'
+    elif orbit_properties_pass == 'DESCENDING':
+        orbit = 'DESC'
+    else:
+        message = f"Unknown orbit_properties_pass: {orbit_properties_pass}"
+        logger.error(message)
+        raise Exception(message)
+
+    output_filepath = os.path.join(output_dir, f"{features_filename}__{image_filename}_{orbit}.csv")
     return output_filepath
 
 def get_progress_message(nb_todo: int, 
@@ -450,6 +470,7 @@ def prepare_calc(features_filepath,
     # TODO: change dir so it is always unique
     temp_features_dirname = os.path.splitext(os.path.basename(image_path))[0]
     temp_features_dir = os.path.join(temp_dir, temp_features_dirname)
+    ret_val['temp_features_dir'] = temp_features_dir
     if os.path.exists(temp_features_dir):
         logger.info(f"Remove dir {temp_features_dir + os.sep}")
         shutil.rmtree(temp_features_dir + os.sep)
@@ -708,12 +729,15 @@ def load_features_file(features_filepath: str,
     if polygon is not None:
         logger.info("Filter polygon provided, start filter")
         polygon_gdf = gpd.GeoDataFrame(geometry=[polygon], crs={'init' :'epsg:4326'}, index=[0])
-        logger.info(f"polygon_gdf: {polygon_gdf}")
-        logger.info(f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}")
+        logger.debug(f"polygon_gdf: {polygon_gdf}")
+        logger.debug(f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}")
         polygon_gdf = polygon_gdf.to_crs(features_gdf.crs)
-        logger.info(f"polygon_gdf, after reproj: {polygon_gdf}")
-        logger.info(f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}")
+        logger.debug(f"polygon_gdf, after reproj: {polygon_gdf}")
+        logger.debug(f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}")
         features_gdf = gpd.sjoin(features_gdf, polygon_gdf, how='inner', op='within')
+        
+        # Drop column added by sjoin
+        features_gdf.drop(columns='index_right', inplace=True)
         '''
         spatial_index = gdf.sindex
         possible_matches_index = list(spatial_index.intersection(polygon.bounds))
@@ -747,7 +771,7 @@ def calc_stats_image_gdf(features_gdf,
     fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
     logger.addHandler(fh)
 
-    # Log the time betwoon scheduling the future and acually run...
+    # Log the time between scheduling the future and acually run...
     if future_start_time is not None:
         logger.info(f"Start, {(datetime.now()-future_start_time).total_seconds()} after future was scheduled")
 
@@ -762,7 +786,7 @@ def calc_stats_image_gdf(features_gdf,
     image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=['VV', 'VH'], pixel_buffer=1)
     
     # Loop over image bands
-    image_id = os.path.basename(image_path)
+    #image_id = os.path.basename(image_path)
     for band in image_data:
 
         # Calc zonal stats
@@ -863,7 +887,7 @@ def get_image_info(image_path) -> dict:
         
         # First extract and fill out some basic info
         image_info["image_type"] = "CARD"
-        image_dir, image_basename_noext = os.path.split(image_path_noext)
+        _, image_basename_noext = os.path.split(image_path_noext)
         image_info["image_id"] = image_basename_noext
         
         # Read info from the metadata file
@@ -886,8 +910,7 @@ def get_image_info(image_path) -> dict:
         #for coord in poly.findall("{http://www.opengis.net/gml}outerBoundaryIs/{http://www.opengis.net/gml}LinearRing/{http://www.opengis.net/gml}coord"):
         #    linear_ring.append((float(coord.findtext("{http://www.opengis.net/gml}X")),float(coord.findtext("{http://www.opengis.net/gml}Y"))))
         coord_str = poly.find("{http://www.opengis.net/gml}outerBoundaryIs/{http://www.opengis.net/gml}LinearRing/{http://www.opengis.net/gml}coordinates")
-        logger.info(coord_str)
-        logger.info(coord_str.text)
+        logger.debug(f"coord_str: {coord_str}, coord_str.text: {coord_str.text}")
         coord_list = coord_str.text.split(' ')
         for coord in coord_list:
             # Watch out, latitude (~y) is first, than longitude (~x)
@@ -1107,7 +1130,7 @@ def main():
         shutil.rmtree(temp_dir + os.sep)
     
     # Output dir 
-    test = True
+    test = False
     if not test:
         output_basedir = os.path.join(base_dir, "output")
     else:
