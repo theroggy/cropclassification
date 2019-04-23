@@ -32,25 +32,20 @@ def run(config_filepaths: []):
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     year = int(conf.marker['year'])
-    country_code = conf.marker['country_code']
-
     base_dir = conf.dirs['base_dir']
-    input_dir = os.path.join(base_dir, 'InputData')
-    input_preprocessed_dir =  os.path.join(input_dir, 'Preprocessed')    
+    input_dir = conf.dirs['input_dir']
+    input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
 
     # Input file depends on the year
-    if year == 2017:
-        input_parcel_filename_noext = 'Prc_flanders_2017_2018-01-09'                        # Input filename
-        input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2017_groundtruth.csv")    # The ground truth
-    elif year == 2018:
-        input_parcel_filename_noext = 'Prc_BEFL_2018_2018-08-02'                            # Input filename
-        input_groundtruth_csv = os.path.join(input_dir, "Prc_BEFL_2018_groundtruth.csv")    # The ground truth
+    if year:
+        input_parcel_filename_noext = conf.config[f'marker:{year}']['input_parcel_filename_noext']
+        input_groundtruth_csv = os.path.join(input_dir, conf.config[f'marker:{year}']['input_groundtruth_csv'])
     else:
         input_groundtruth_csv = None
 
     input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.shp")   # Input filepath of the parcel
-    input_parcel_filetype = country_code
-    imagedata_dir = os.path.join(base_dir, 'Timeseries_data')  # General data download dir
+    input_parcel_filetype = conf.marker['country_code']
+    imagedata_dir = conf.dirs['imagedata_dir']
     start_date_str = conf.marker['start_date_str']
     end_date_str = conf.marker['end_date_str']
     buffer = int(conf.marker['buffer'])
@@ -58,18 +53,18 @@ def run(config_filepaths: []):
     # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
     # Settings for monitoring landcover
     classtype_to_prepare = conf.marker['markertype']
-    class_base_dir = conf.dirs['classification_base_dir']
+    class_base_dir = conf.dirs['marker_base_dir']
     balancing_strategy = conf.marker['balancing_strategy']
     postprocess_to_groups = conf.marker['postprocess_to_groups']
 
-    class_dir = dir_helper.create_dir(class_base_dir, bool(conf.dirs['reuse_last_run_dir']))
+    marker_dir = dir_helper.create_dir(class_base_dir, bool(conf.dirs['reuse_last_run_dir']))
 
-    base_filename = f"{country_code}{year}_bufm{buffer}_weekly"
+    base_filename = f"{conf.marker['country_code']}{year}_bufm{buffer}_weekly"
     sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
     parceldata_aggregations_to_use = [ts.PARCELDATA_AGGRAGATION_MEAN]
 
     # Create the dir's if they don't exist yet...
-    for dir in [base_dir, imagedata_dir, class_base_dir, class_dir]:
+    for dir in [base_dir, imagedata_dir, class_base_dir, marker_dir]:
         if dir and not os.path.exists(dir):
             os.mkdir(dir)
 
@@ -105,7 +100,7 @@ def run(config_filepaths: []):
     #      so upload needs to be done manually
     input_parcel_filepath_gee = f"{conf.dirs['gee']}{imagedata_input_parcel_filename_noext}"
     ts_calc_gee.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee,
-                                    input_country_code=country_code,
+                                    input_country_code=conf.marker['country_code'],
                                     start_date_str=start_date_str,
                                     end_date_str=end_date_str,
                                     sensordata_to_get=sensordata_to_use,
@@ -124,7 +119,7 @@ def run(config_filepaths: []):
     #                      - if the classname starts with 'IGNORE_', the parcel will be ignored
     #           - pixcount (=global_settings.pixcount_s1s2_column): the number of S1/S2 pixels in the
     #             parcel. Is -1 if the parcel doesn't have any S1/S2 data.
-    parcel_csv = os.path.join(class_dir, f"{input_parcel_filename_noext}_parcel.csv")
+    parcel_csv = os.path.join(marker_dir, f"{input_parcel_filename_noext}_parcel.csv")
     parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")
     class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
                             input_filetype=input_parcel_filetype,
@@ -133,7 +128,7 @@ def run(config_filepaths: []):
                             input_classtype_to_prepare=classtype_to_prepare)
 
     # Combine all data needed to do the classification in one input file
-    parcel_classification_data_csv = os.path.join(class_dir, f"{base_filename}_parcel_classdata.csv")
+    parcel_classification_data_csv = os.path.join(marker_dir, f"{base_filename}_parcel_classdata.csv")
     ts.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir,
                                         base_filename=base_filename,
                                         output_csv=parcel_classification_data_csv,
@@ -147,8 +142,8 @@ def run(config_filepaths: []):
     #-------------------------------------------------------------
     # Create the training sample...
     # Remark: this creates a list of representative test parcel + a list of (candidate) training parcel
-    parcel_train_csv = os.path.join(class_dir, f"{base_filename}_parcel_train.csv")
-    parcel_test_csv = os.path.join(class_dir, f"{base_filename}_parcel_test.csv")
+    parcel_train_csv = os.path.join(marker_dir, f"{base_filename}_parcel_train.csv")
+    parcel_test_csv = os.path.join(marker_dir, f"{base_filename}_parcel_test.csv")
     class_pre.create_train_test_sample(input_parcel_csv=parcel_csv,
                                     output_parcel_train_csv=parcel_train_csv,
                                     output_parcel_test_csv=parcel_test_csv,
@@ -156,8 +151,8 @@ def run(config_filepaths: []):
 
     # Train the classifier and output test predictions
     classifier_filepath = os.path.splitext(parcel_train_csv)[0] + "_classifier.pkl"
-    parcel_predictions_test_csv = os.path.join(class_dir, f"{base_filename}_predict_test.csv")
-    parcel_predictions_all_csv = os.path.join(class_dir, f"{base_filename}_predict_all.csv")
+    parcel_predictions_test_csv = os.path.join(marker_dir, f"{base_filename}_predict_test.csv")
+    parcel_predictions_all_csv = os.path.join(marker_dir, f"{base_filename}_predict_all.csv")
     classification.train_test_predict(input_parcel_train_csv=parcel_train_csv,
                                     input_parcel_test_csv=parcel_test_csv,
                                     input_parcel_all_csv=parcel_csv,
@@ -178,7 +173,7 @@ def run(config_filepaths: []):
     groundtruth_csv = None
     if input_groundtruth_csv is not None:
         input_gt_noext, input_gt_ext = os.path.splitext(input_groundtruth_csv)
-        groundtruth_csv = os.path.join(class_dir, f"{input_gt_noext}_classes{input_gt_ext}")
+        groundtruth_csv = os.path.join(marker_dir, f"{input_gt_noext}_classes{input_gt_ext}")
         class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv,
                                 input_filetype=input_parcel_filetype,
                                 input_parcel_pixcount_csv=parcel_pixcount_csv,

@@ -33,16 +33,16 @@ def prepare_input(input_parcel_filepath: str,
     """
     if input_classtype_to_prepare == 'MONITORING_CROPGROUPS':
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath)
-    elif input_classtype_to_prepare == 'MONITORING_LANDCOVER':
-        return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath)
-    elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS':
-        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath)
     elif input_classtype_to_prepare == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
                                         , crop_columnname='HOOFDTEELT_CTRL_COD')
+    elif input_classtype_to_prepare == 'MONITORING_LANDCOVER':
+        return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath)
     elif input_classtype_to_prepare == 'MONITORING_LANDCOVER_GROUNDTRUTH':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath
-                                        , crop_columnname='HOOFDTEELT_CTRL_COD')    
+                                        , crop_columnname='HOOFDTEELT_CTRL_COD')  
+    elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS':
+        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath)      
     elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS_GROUNDTRUTH':
         return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
                                                 , crop_columnname='HOOFDTEELT_CTRL_COD')

@@ -23,9 +23,10 @@ PARCELDATA_AGGRAGATION_STDDEV = 'stdDev'  # std dev of the values of the pixels 
 
 # Constants for types of sensor data
 SENSORDATA_S1 = 'S1'                    # Sentinel 1 data
-SENSORDATA_S1DB = 'S1dB'                    # Sentinel 1 data, in dB
+SENSORDATA_S1DB = 'S1dB'                # Sentinel 1 data, in dB
 SENSORDATA_S1_ASCDESC = 'S1AscDesc'     # Sentinel 1 data, divided in Ascending and Descending passes
 SENSORDATA_S1DB_ASCDESC = 'S1dBAscDesc' # Sentinel 1 data, in dB, divided in Ascending and Descending passes
+SENSORDATA_S2 = 'S2'                    # Sentinel 2 data
 SENSORDATA_S2gt95 = 'S2gt95'            # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
 
 # Get a logger...
@@ -118,7 +119,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
 
         # Loop over columns to check if there are columns that need to be rescaled.
         for column in df_in.columns:
-            if column.startswith('S2'):
+            if column.startswith(SENSORDATA_S2):
                 logger.info(f"Column contains S2 data, so scale it by dividing by 10.000: {column}")
                 df_in[column] = df_in[column]/10000
 
