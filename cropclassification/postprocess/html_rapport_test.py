@@ -1,6 +1,8 @@
-import os
-import classification_reporting as class_report
-import classification_preprocess as class_pre
+import os, sys
+[sys.path.append(i) for i in ['.', '..']]
+
+import cropclassification.postprocess.classification_reporting as class_report
+import cropclassification.preprocess.classification_preprocess as class_pre
 
 base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\JoeBro'        
 input_dir = os.path.join(base_dir, 'InputData')  
