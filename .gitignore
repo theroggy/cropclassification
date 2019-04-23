@@ -5,6 +5,8 @@ Old/
 *.pyc
 .spyproject/
 .spyproject/workspace.ini
+.vscode/
+data_multicrop.py
 /.vs
 marker/local_overrule.ini
 .vscode/.ropeproject/objectdb
