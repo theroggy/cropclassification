@@ -1,3 +1,5 @@
+var IS_LOCAL_DEV = true;
+
 $(document).ready(function () {
 
     $("table")

@@ -10,14 +10,8 @@ import os
 import pandas as pd
 import numpy as np
 import sklearn.metrics as skmetrics
-import global_settings as gs
 from string import Template
-
-#-------------------------------------------------------------
-# First define/init some general variables/constants
-#-------------------------------------------------------------
-PRED_QUALITY_COLUMN = f"prediction_quality_{gs.prediction_column}"
-PRED_QUALITY_CONS_COLUMN = f"prediction_quality_{gs.prediction_cons_column}"
+import cropclassification.helpers.config_helper as conf
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -45,6 +39,7 @@ def write_full_report(parcel_predictions_csv: str,
 
     TODO: refactor function to split logic more...
     """
+
     # If force == False Check and the output file exists already, stop.
     if force is False and os.path.exists(output_report_txt):
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
@@ -54,7 +49,7 @@ def write_full_report(parcel_predictions_csv: str,
 
     logger.info(f"Read csv with predictions: {parcel_predictions_csv}")
     df_predict = pd.read_csv(parcel_predictions_csv, low_memory=False)
-    df_predict.set_index(gs.id_column, inplace=True)
+    df_predict.set_index(conf.csv['id_column'], inplace=True)
 
     # Python template engine expects all values to be present, so initialize to empty
     empty_string = "''"
@@ -82,7 +77,7 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write("***************** GENERAL ACCURACIES ***********************\n")
         outputfile.write("************************************************************\n")
         count_per_pred_status = (df_predict
-                                 .groupby(gs.prediction_status, as_index=False)
+                                 .groupby(conf.csv['prediction_status'], as_index=False)
                                  .size().to_frame('count'))
         values = 100 * count_per_pred_status['count'] / count_per_pred_status['count'].sum()
         count_per_pred_status.insert(loc=1, column='pct', value=values)
@@ -98,8 +93,8 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write("************************************************************\n")
 
         # First report the general accuracies for the entire list to report on...
-        oa = skmetrics.accuracy_score(df_predict[gs.class_column],
-                                            df_predict[gs.prediction_column],
+        oa = skmetrics.accuracy_score(df_predict[conf.csv['class_column']],
+                                            df_predict[conf.csv['prediction_column']],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
@@ -107,8 +102,8 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write(f"{message}\n")        
         html_data['GENERAL_ACCURACIES_TEXT'] = f"<li>{message}</li>\n"
 
-        oa = skmetrics.accuracy_score(df_predict[gs.class_column],
-                                            df_predict[gs.prediction_cons_column],
+        oa = skmetrics.accuracy_score(df_predict[conf.csv['class_column']],
+                                            df_predict[conf.csv['prediction_cons_column']],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
@@ -117,10 +112,10 @@ def write_full_report(parcel_predictions_csv: str,
         html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         # Now report on parcels that actually had a prediction
-        df_predict_has_prediction = df_predict.loc[(df_predict[gs.prediction_status] != 'NODATA')
-                                                   & (df_predict[gs.prediction_status] != 'NOT_ENOUGH_PIXELS')]
-        oa = skmetrics.accuracy_score(df_predict_has_prediction[gs.class_column],
-                                            df_predict_has_prediction[gs.prediction_column],
+        df_predict_has_prediction = df_predict.loc[(df_predict[conf.csv['prediction_status']] != 'NODATA')
+                                                   & (df_predict[conf.csv['prediction_status']] != 'NOT_ENOUGH_PIXELS')]
+        oa = skmetrics.accuracy_score(df_predict_has_prediction[conf.csv['class_column']],
+                                            df_predict_has_prediction[conf.csv['prediction_column']],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for standard prediction"
@@ -129,8 +124,8 @@ def write_full_report(parcel_predictions_csv: str,
         html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
 
-        oa = skmetrics.accuracy_score(df_predict_has_prediction[gs.class_column],
-                                            df_predict_has_prediction[gs.prediction_cons_column],
+        oa = skmetrics.accuracy_score(df_predict_has_prediction[conf.csv['class_column']],
+                                            df_predict_has_prediction[conf.csv['prediction_cons_column']],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
@@ -141,11 +136,11 @@ def write_full_report(parcel_predictions_csv: str,
         # Output best-case accuracy
         # Ignore the 'UNKNOWN' and 'IGNORE_' classes...
         logger.info("For best-case accuracy, remove the 'UNKNOWN' class and the classes that start with 'IGNORE_'")
-        df_predict_accuracy_best_case = df_predict[df_predict[gs.class_column] != 'UNKNOWN']
-        df_predict_accuracy_best_case = df_predict[~df_predict[gs.class_column].str.startswith('IGNORE_', na=True)]
+        df_predict_accuracy_best_case = df_predict[df_predict[conf.csv['class_column']] != 'UNKNOWN']
+        df_predict_accuracy_best_case = df_predict[~df_predict[conf.csv['class_column']].str.startswith('IGNORE_', na=True)]
 
-        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
-                                            df_predict_accuracy_best_case[gs.prediction_column],
+        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[conf.csv['class_column']],
+                                            df_predict_accuracy_best_case[conf.csv['prediction_column']],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for standard prediction"
@@ -153,8 +148,8 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write(f"{message}\n")
         html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
-        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[gs.class_column],
-                                            df_predict_accuracy_best_case[gs.prediction_cons_column],
+        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[conf.csv['class_column']],
+                                            df_predict_accuracy_best_case[conf.csv['prediction_cons_column']],
                                             normalize=True,
                                             sample_weight=None) * 100
         message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for consolidated prediction"
@@ -175,7 +170,7 @@ def write_full_report(parcel_predictions_csv: str,
         outputfile.write("************************************************************\n")
         # Calculate an extended confusion matrix with the standard prediction column and write
         # it to output...
-        df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, gs.prediction_column)
+        df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, conf.csv['prediction_column'])
         outputfile.write("\nExtended confusion matrix of the predictions: Rows: true/input classes, columns: predicted classes\n")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
             outputfile.write(f"{df_confmatrix_ext}\n")
@@ -184,7 +179,7 @@ def write_full_report(parcel_predictions_csv: str,
 
         # Calculate an extended confusion matrix with the consolidated prediction column and write
         # it to output...
-        df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, gs.prediction_cons_column)
+        df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, conf.csv['prediction_cons_column'])
         outputfile.write("\nExtended confusion matrix of the consolidated predictions: Rows: true/input classes, columns: predicted classes\n")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
             outputfile.write(f"{df_confmatrix_ext}\n\n")
@@ -200,11 +195,11 @@ def write_full_report(parcel_predictions_csv: str,
             # Read ground truth
             logger.info(f"Read csv with ground truth (with their classes): {parcel_ground_truth_csv}")
             df_parcel_gt = pd.read_csv(parcel_ground_truth_csv, low_memory=False)
-            df_parcel_gt.set_index(gs.id_column, inplace=True)
+            df_parcel_gt.set_index(conf.csv['id_column'], inplace=True)
             logger.info(f"Read csv with ground truth ready, shape: {df_parcel_gt.shape}")
 
             # Rename the classname column in ground truth
-            df_parcel_gt.rename(columns={gs.class_column: gs.class_column + '_GT'},
+            df_parcel_gt.rename(columns={conf.csv['class_column']: conf.csv['class_column'] + '_GT'},
 			                    inplace=True)
 
             # Join the prediction data
@@ -226,15 +221,15 @@ def write_full_report(parcel_predictions_csv: str,
                 # so 2* gives a repetition of the string value instead
                 # of a mathematic multiplication... so cast to float!
 
-                if row[gs.class_column] == row[gs.class_column + '_GT']:
+                if row[conf.csv['class_column']] == row[conf.csv['class_column'] + '_GT']:
                     # Farmer did a correct application
-                    if row[gs.class_column + '_GT'] == row[prediction_column_to_use]:
+                    if row[conf.csv['class_column'] + '_GT'] == row[prediction_column_to_use]:
                         # Prediction was the same as the ground truth, so correct!
                         return 'OK_EVERYTHING_CORRECT'
-                    elif (row[gs.class_column] == 'UNKNOWN'
-                          or row[gs.class_column].startswith('IGNORE_')):
+                    elif (row[conf.csv['class_column']] == 'UNKNOWN'
+                          or row[conf.csv['class_column']].startswith('IGNORE_')):
                         # Input classname was special
-                        return f"OK_BENEFIT_OF_DOUBT_CLASSNAME={row[gs.class_column]}"
+                        return f"OK_BENEFIT_OF_DOUBT_CLASSNAME={row[conf.csv['class_column']]}"
                     elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
                         # Prediction resulted in doubt or there was no/not enough data
                         return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
@@ -243,16 +238,16 @@ def write_full_report(parcel_predictions_csv: str,
                         return 'ERROR_ALFA'
                 else:
                     # Farmer did an incorrect application
-                    if row[gs.class_column + '_GT'] == row[prediction_column_to_use]:
+                    if row[conf.csv['class_column'] + '_GT'] == row[prediction_column_to_use]:
                         # Prediction was the same as the ground truth, so correct!
                         return 'OK_FARMER_WRONG_PREDICTION_CORRECT'
-                    elif row[gs.class_column] == row[prediction_column_to_use]:
+                    elif row[conf.csv['class_column']] == row[prediction_column_to_use]:
                         # Prediction was wrong, but same as the farmer!
                         return 'ERROR_BETA_FARMER_WRONG_PREDICTION_DIDNT_OPPOSE'
-                    elif (row[gs.class_column] == 'UNKNOWN'
-                          or row[gs.class_column].startswith('IGNORE_')):
+                    elif (row[conf.csv['class_column']] == 'UNKNOWN'
+                          or row[conf.csv['class_column']].startswith('IGNORE_')):
                         # Input classname was special
-                        return f"ERROR_BETA_FARMER_WRONG_CLASSNAME={row[gs.class_column]}"
+                        return f"ERROR_BETA_FARMER_WRONG_CLASSNAME={row[conf.csv['class_column']]}"
                     elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
                         # Prediction resulted in doubt or there was no/not enough data
                         return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
@@ -260,13 +255,13 @@ def write_full_report(parcel_predictions_csv: str,
                         # Prediction was wrong, but same as the farmer!
                         return 'OK_FARMER_WRONG_PREDICTION_DIFFERENT'
 
-#            df_parcel_gt[PRED_QUALITY_COLUMN] = df_parcel_gt.apply(get_prediction_quality
+#            df_parcel_gt[f"prediction_quality_{conf.csv['prediction_column']}"] = df_parcel_gt.apply(get_prediction_quality
 #                                                                   , args=[gs.prediction_cons_column]
 #                                                                   , axis=1).tolist()
-            values = df_parcel_gt.apply(get_prediction_quality, args=[gs.prediction_column], axis=1)
-            df_parcel_gt.insert(loc=2, column=PRED_QUALITY_COLUMN, value=values)
-            values = df_parcel_gt.apply(get_prediction_quality, args=[gs.prediction_cons_column], axis=1)
-            df_parcel_gt.insert(loc=2, column=PRED_QUALITY_CONS_COLUMN, value=values)
+            values = df_parcel_gt.apply(get_prediction_quality, args=[conf.csv['prediction_column']], axis=1)
+            df_parcel_gt.insert(loc=2, column=f"prediction_quality_{conf.csv['prediction_column']}", value=values)
+            values = df_parcel_gt.apply(get_prediction_quality, args=[conf.csv['prediction_cons_column']], axis=1)
+            df_parcel_gt.insert(loc=2, column=f"prediction_quality_{conf.csv['prediction_cons_column']}", value=values)
             df_parcel_gt.to_csv(output_report_txt + "groundtruth_pred_quality_details.csv")
 
             # First write the result for the standard predictions
@@ -274,7 +269,7 @@ def write_full_report(parcel_predictions_csv: str,
             outputfile.write(f"{message}\n")
             html_data['PREDICTION_QUALITY_OVERVIEW_TEXT'] = message
             
-            count_per_class = (df_parcel_gt.groupby(PRED_QUALITY_COLUMN, as_index=False)
+            count_per_class = (df_parcel_gt.groupby(f"prediction_quality_{conf.csv['prediction_column']}", as_index=False)
                                .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
@@ -288,7 +283,7 @@ def write_full_report(parcel_predictions_csv: str,
             outputfile.write(f"{message}\n")
             html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TEXT'] = message
             
-            count_per_class = (df_parcel_gt.groupby(PRED_QUALITY_CONS_COLUMN, as_index=False)
+            count_per_class = (df_parcel_gt.groupby(f"prediction_quality_{conf.csv['prediction_cons_column']}", as_index=False)
                                .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
@@ -299,7 +294,7 @@ def write_full_report(parcel_predictions_csv: str,
                 html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
 
             # If the pixcount is available, write the number of ALFA errors per pixcount
-            if gs.pixcount_s1s2_column in df_parcel_gt.columns:
+            if conf.csv['pixcount_s1s2_column'] in df_parcel_gt.columns:
                 # Get data, drop empty lines and write
                 message = f"Number of ERROR_ALFA parcels for the actual prediction per pixcount for the ground truth parcels:"
                 outputfile.write(f"{message}\n")            
@@ -313,7 +308,7 @@ def write_full_report(parcel_predictions_csv: str,
                     html_data['PREDICTION_QUALITY_ALPHA_ERROR_TABLE'] = df_per_pixcount.to_html()
                         
     with open(output_report_txt.replace(".txt", ".html"), 'w') as outputfile:           
-        html_template_file = open('html_rapport_template.html').read()                        
+        html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
         src = Template(html_template_file)
         # replace strings and write to file
         output = src.substitute(html_data)
@@ -330,11 +325,11 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     """ Returns a dataset with an extended confusion matrix. """
 
     classes = sorted(np.unique(np.append(df_predict[prediction_column_to_use],
-                                         df_predict[gs.class_column])))
+                                         df_predict[conf.csv['class_column']])))
     logger.debug(f"Input shape: {df_predict.shape}, Unique classes found: {classes}")
 
     # Calculate standard confusion matrix
-    np_confmatrix = skmetrics.confusion_matrix(df_predict[gs.class_column],
+    np_confmatrix = skmetrics.confusion_matrix(df_predict[conf.csv['class_column']],
                                                df_predict[prediction_column_to_use],
                                                labels=classes)
     df_confmatrix_ext = pd.DataFrame(np_confmatrix, classes, classes)
@@ -370,7 +365,7 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
     """ Returns a dataset with detailed information about the number of alfa errors per pixcount """
 
     # Calculate the number of parcels per pixcount, the cumulative sum + the pct of all
-    df_count_per_pixcount = (df_predquality_pixcount.groupby(gs.pixcount_s1s2_column, as_index=False)
+    df_count_per_pixcount = (df_predquality_pixcount.groupby(conf.csv['pixcount_s1s2_column'], as_index=False)
                              .size().to_frame('count_all'))
     values = df_count_per_pixcount['count_all'].cumsum(axis=0)
     df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns),
@@ -383,8 +378,8 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
                                  value=values)
 
     # Now calculate the number of alfa errors per pixcount
-    df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[PRED_QUALITY_COLUMN] == 'ERROR_ALFA']
-    df_alfa_per_pixcount = (df_alfa_error.groupby(gs.pixcount_s1s2_column, as_index=False)
+    df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[f"prediction_quality_{conf.csv['prediction_column']}"] == 'ERROR_ALFA']
+    df_alfa_per_pixcount = (df_alfa_error.groupby(conf.csv['pixcount_s1s2_column'], as_index=False)
                             .size().to_frame('count_error_alfa'))
 
     # Join them together, and calculate the alfa error percentages
@@ -415,8 +410,8 @@ def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
         return
 
     # Set the index to the id_columnname, and join the data to the result...
-    df_parcel_predictions.set_index(gs.id_column, inplace=True)
-    df_parcel_pixcount.set_index(gs.id_column, inplace=True)
+    df_parcel_predictions.set_index(conf.csv['id_column'], inplace=True)
+    df_parcel_pixcount.set_index(conf.csv['id_column'], inplace=True)
     df_result = df_parcel_predictions.join(df_parcel_pixcount, how='inner')
     nb_predictions_total = len(df_result.index)
 
@@ -424,12 +419,12 @@ def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
     with open(output_report_txt, 'w') as outputfile:
         for i in range(40):
 
-            df_result_cur_pixcount = df_result[df_result[gs.pixcount_s1s2_column] == i]
+            df_result_cur_pixcount = df_result[df_result[conf.csv['pixcount_s1s2_column']] == i]
             nb_predictions_pixcount = len(df_result_cur_pixcount.index)
             if nb_predictions_pixcount == 0:
                 continue
 
-            overall_accuracy = 100.0*skmetrics.accuracy_score(df_result_cur_pixcount[gs.class_column], df_result_cur_pixcount[gs.prediction_column], normalize=True, sample_weight=None)
+            overall_accuracy = 100.0*skmetrics.accuracy_score(df_result_cur_pixcount[conf.csv['class_column']], df_result_cur_pixcount[conf.csv['prediction_column']], normalize=True, sample_weight=None)
             message = f"OA for pixcount {i:2}: {overall_accuracy:3.2f} %, with {nb_predictions_pixcount} elements ({100*(nb_predictions_pixcount/nb_predictions_total):.4f} % of {nb_predictions_total})"
             logger.info(message)
             outputfile.write(f"{message}\n")

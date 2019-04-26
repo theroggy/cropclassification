@@ -11,13 +11,17 @@ import logging
 import os
 import pandas as pd
 import numpy as np
-import global_settings as gs
+import cropclassification.helpers.config_helper as conf
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
+
+# Constants for types of sensor data
+SENSORDATA_VV = 'VV' # Vertical Vertical
+SENSORDATA_VH = 'VH' # Vertical Horizontal
 
 #-------------------------------------------------------------
 # The real work
@@ -30,17 +34,17 @@ def show(input_parcel_csv: str,
     df = pd.read_csv(input_parcel_csv)
 
     # Just keep one parcel
-    df = df[df[gs.id_column] == filter_id]
+    df = df[df[conf.csv['id_column']] == filter_id]
 
     # Remove all unnecessary columns
     for column in df:
-        if(not column.startswith('VV_')
-           and not column.startswith('VH_')
-           and not column == gs.id_column):
+        if(not column.startswith(SENSORDATA_VV + '_')
+           and not column.startswith(SENSORDATA_VH + '_')
+           and not column == conf.csv['id_column']):
             df = df.drop(columns=column)
 
     # Set index for trnaspose
-    df.set_index(gs.id_column, inplace=True)
+    df.set_index(conf.csv['id_column'], inplace=True)
 
     # Transpose columns to rows to create time series
     df = df.transpose()
@@ -62,9 +66,9 @@ def show(input_parcel_csv: str,
     #df.set_index('date', inplace=True)
 
     df = df[filter_id]
-    df['VH/VV'] = np.log10(df['VH'] / df['VV'])*10
-    df['VH'] = np.log10(df['VH'])*10
-    df['VV'] = np.log10(df['VV'])*10
+    df[SENSORDATA_VH + '/' + SENSORDATA_VV] = np.log10(df[SENSORDATA_VH] / df[SENSORDATA_VV])*10
+    df[SENSORDATA_VH] = np.log10(df[SENSORDATA_VH])*10
+    df[SENSORDATA_VV] = np.log10(df[SENSORDATA_VV])*10
 
     for column in df:
         logger.info(column)
@@ -73,11 +77,13 @@ def show(input_parcel_csv: str,
 
     # Plot
     df.plot()
-
+    
+'''
 # If the script is run directly...
 if __name__ == "__main__":
-
+    
     local_data_basedir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'
     local_data_dir = os.path.join(local_data_basedir, 'ClassificationAndTraining\\Hoofdteelt_2017-06-03_2017-09-04')
     input_parcel_csv = os.path.join(local_data_dir , 'BEVL2017_result.csv')
     show(input_parcel_csv, filter_id = '0000280464DD96FF')
+'''    
