@@ -334,8 +334,8 @@ def calc_stats(features_filepath: str,
                     all_done = False
                     break                   
 
-            # If all processing is ready, stop the never ending loop...
-            if all_done is True:
+            # If no processing is needed, or if all processing is ready, stop the never ending loop...
+            if len(image_dict) == 0 or all_done is True:
                 break 
             else:
                 # Sleep before starting next iteration...
