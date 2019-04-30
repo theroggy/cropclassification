@@ -8,6 +8,7 @@ This is a temporary script file.
 import logging
 import glob
 import os
+import pandas as pd
 #import geopandas as gpd
 #import global_settings as gs
 
@@ -34,50 +35,76 @@ logger = logging.getLogger(__name__)
 # Start
 #-------------------------------------------------------------
 def calculate_weekly_data(input_filepath_str: str,
-                          input_start_date_str: str,
-                          input_stop_date_str: str,
+                          input_start_date_str: str,   #formaat: %Y-%m-%d
+                          input_stop_date_str: str,   #formaat: %Y-%m-%d
                           output_filepath_str: str):
     """
     This function creates a file that is a weekly summarize of timeseries images from DIAZ.
     """
 
-    # init
-    year = 2019
+    # Init
+    year = 2018  #2019
     country_code = 'BEFL'
 
-    # lijstje maken van de bestanden -- we starten met VV -- later ook VH + combinaties van Asc en Desc
+    base_filename = f"Prc_{country_code}{year}_" #VRAAG: die Prc blijft erbij?
+
     # Get the list of inputfiles    
+    # marina: lijstje maken van de bestanden -- voorlopig voor VV -- later ook VH + combinaties van Asc en Desc
     Csv_InputFiles_List = glob.glob(os.path.join(input_filepath_str, f"*[VV]_.csv"))
 
+    # marina: start en stop path definiëren
+    filepath_start = os.path.join(input_filepath_str, f"{base_filename}_{input_start_date_str}.csv")
+    filepath_end = os.path.join(input_filepath_str, f"{base_filename}_{input_stop_date_str}.csv")
+    logger.debug(f'filepath_start_date: {filepath_start}')
+    logger.debug(f'filepath_end_date: {filepath_end}')
 
-
-
-    # theoretische weken bepalen uit van-tot datum 
-    # -> commando: datetime.??? zie timeseries_calc_gee.py
+    # marina: theoretische weken bepalen uit van-tot datum 
     
     # First adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
     logger.info('Adapt start_date and end_date so they are mondays')
-    def get_monday(date_str):
+    def get_monday(date_str):   # marina: vb 2018_5_1 -  maandag van week 5 van 2018
         """ Get the first monday before the date provided. """
+#vraag: strptime -> strftime -> om eruit te halen en dan w te kunnen toevoegen?
+#vraag: wanneer strptime en strftime - gevoelsmatig?
         parseddate = datetime.strptime(date_str, '%Y-%m-%d')
         year_week = parseddate.strftime('%Y_%W')
         year_week_monday = datetime.strptime(year_week + '_1', '%Y_%W_%w')
         return year_week_monday
 
-    start_date = get_monday(start_date_str)
-    end_date = get_monday(end_date_str)  
-    # Loop over all input files
+    start_date = get_monday(input_start_date_str) # marina: b 2018_2_1 - maandag van week 2 van 2018
+    end_date = get_monday(input_stop_date_str) # marina: vb 2018_5_1 -  maandag van week 5 van 2018
+    start_date_monday = start_date.strftime('%Y-%m-%d') 
+    end_date_monday = end_date.strftime('%Y-%m-%d')
+
+
+    # Loop over all sorted input files 
+    # vraag: maakt sorted iets uit?
     for curr_csv in sorted(Csv_InputFiles_List):
-   
- 
+    
+        # The only data we want to process is the data in the range of dates
+        # marina: enkel de bestanden die tss start en eind datum liggen 
+        if((curr_csv < filepath_start) or (curr_csv >= filepath_end)):
+            logger.debug(f"File is not in date range asked, skip it: {curr_csv}")
+            continue
 
+        logger.info(f'Process file: {curr_csv}')
 
+        # An empty file signifies that there wasn't any valable data for that period/sensor/...
+        if os.path.getsize(curr_csv) == 0:
+            logger.info(f"File is empty, so SKIP: {curr_csv}")
+            continue
 
-
-    # bestandsnaam samenstellen voor betreffende week - gelijkaardig vb BEFL2018_bufm0_weekly_2018-03-26_S1AscDesc
-        # Get the basename of the file -> new file name
-        #current_filename = os.path.basename(input_filepath_str)
-        NewFileName = f"{country_code}{year}_weekly_{datumvanmaandag}_{kanalen}.csv"
+        # marina: per week samennemen - telkens - per week - een nieuw lijstje maken?
+        # 
+        # 
+        # 
+        # # New file name
+        # marina: bestandsnaam samenstellen voor betreffende week - gelijkaardig vb BEFL2018_bufm0_weekly_2018-03-26_S1AscDesc
+        # marina: current_filename = os.path.basename(input_filepath_str)
+        # marina: TO DO : buffer nog inbouwen
+        # marina: TO DO : {datumvanmaandag} nog bepalen
+        # marina: TO DO : {kanalen} nog bepalen
+        NewFileName = f"{country_code}{year}_bufm0_weekly_{datumvanmaandag}_{kanalen}.csv"
         dest_filepath = os.path.join(output_filepath_str, NewFileName)
         
         
@@ -120,7 +147,12 @@ def calculate_weekly_data(input_filepath_str: str,
 
 
 
-# onderaan functie aanroepen met params om te testen/runnen 
+# onderaan functie aanroepen met params om te testen/runnen
+calculate_weekly_data('X:\Monitoring\Markers\playground\_algemeen\timeseries_dias',   #input_filepath_str
+                      '2018-01-15', #input_start_date_str,   #formaat: %Y-%m-%d
+                      '2018-02-15', #input_stop_date_str,   #formaat: %Y-%m-%d
+                      'X:\Monitoring\Markers\playground\_algemeen\timeseries_diasTODOWNLOAD\MarKet')   #output_filepath_str
+
 
 
 
