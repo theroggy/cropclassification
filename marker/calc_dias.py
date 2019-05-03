@@ -33,9 +33,9 @@ def main():
     input_image_dir = "X:\\GIS\\GIS DATA\\Ortho_Belgie\\Sentinel2\\S2_NDVI_Periodiek"
     #input_image_searchstr = f"{input_image_dir}{os.sep}*.tif"
     input_image_searchstr = "/mnt/NAS3/CARD/FLANDERS/S1*/L1TC/2018/*/*/*.CARD"
+    input_image_searchstr = "/mnt/NAS3/CARD/FLANDERS/S1*/L1CO/2018/*/*/*.CARD"
     input_image_filepaths = glob.glob(input_image_searchstr)
     logger.info(f"Found {len(input_image_filepaths)} images to process")
-
   
     # Temp dir + clean contents from it.
     temp_dir = os.path.join(base_dir, "tmp")
@@ -44,8 +44,9 @@ def main():
         # By adding a / at the end, only the contents are recursively deleted
         shutil.rmtree(temp_dir + os.sep)
     
+    test = True
+
     # Output dir 
-    test = False
     if not test:
         output_basedir = os.path.join(base_dir, "output")
     else:
@@ -87,9 +88,11 @@ def main():
     logger.info(f"Start processing")
     calc_ts.calc_stats(features_filepath=input_features_filepath,
                        image_paths=input_image_filepaths,
+                       bands=['VV', 'VH'],
                        output_dir=output_dir,
                        temp_dir=temp_dir,
-                       log_dir=log_dir)
+                       log_dir=log_dir,
+                       stop_on_error=False)
 
 if __name__ == '__main__':
     main()
