@@ -50,14 +50,17 @@ def run(config_filepaths: []):
     end_date_str = conf.marker['end_date_str']
     buffer = int(conf.marker['buffer'])
 
-    # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
+    # REMARK: the column names that are used/expected can be found/changed in the config files!
     # Settings for monitoring landcover
     classtype_to_prepare = conf.marker['markertype']
     class_base_dir = conf.dirs['marker_base_dir']
     balancing_strategy = conf.marker['balancing_strategy']
     postprocess_to_groups = conf.marker['postprocess_to_groups']
 
-    marker_dir = dir_helper.create_dir(class_base_dir, bool(conf.dirs['reuse_last_run_dir']))
+    # Create run dir to be used for the results
+    reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
+    marker_dir = dir_helper.create_run_dir(class_base_dir, reuse_last_run_dir)
+    logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {marker_dir}")
 
     base_filename = f"{conf.marker['country_code']}{year}_bufm{buffer}_weekly"
     sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
