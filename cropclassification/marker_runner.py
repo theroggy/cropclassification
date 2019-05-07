@@ -175,8 +175,9 @@ def run(config_filepaths: []):
     # Preprocess the ground truth data
     groundtruth_csv = None
     if input_groundtruth_csv is not None:
-        input_gt_noext, input_gt_ext = os.path.splitext(input_groundtruth_csv)
-        groundtruth_csv = os.path.join(marker_dir, f"{input_gt_noext}_classes{input_gt_ext}")
+        _, input_gt_filename = os.path.split(input_groundtruth_csv)
+        input_gt_filename_noext, input_gt_filename_ext = os.path.splitext(input_gt_filename)
+        groundtruth_csv = os.path.join(marker_dir, f"{input_gt_filename_noext}_classes{input_gt_filename_ext}")
         class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv,
                                 input_filetype=input_parcel_filetype,
                                 input_parcel_pixcount_csv=parcel_pixcount_csv,
