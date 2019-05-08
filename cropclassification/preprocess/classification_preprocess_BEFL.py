@@ -34,18 +34,18 @@ def prepare_input(input_parcel_filepath: str,
     if input_classtype_to_prepare == 'MONITORING_CROPGROUPS':
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath)
     elif input_classtype_to_prepare == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
-        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath
-                                        , crop_columnname='HOOFDTEELT_CTRL_COD')
+        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath,
+                                        crop_columnname='HOOFDTEELT_CTRL_COD')
     elif input_classtype_to_prepare == 'MONITORING_LANDCOVER':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath)
     elif input_classtype_to_prepare == 'MONITORING_LANDCOVER_GROUNDTRUTH':
-        return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath
-                                        , crop_columnname='HOOFDTEELT_CTRL_COD')  
+        return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath,
+                                       crop_columnname='HOOFDTEELT_CTRL_COD')  
     elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS':
         return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath)      
     elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS_GROUNDTRUTH':
-        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath
-                                                , crop_columnname='HOOFDTEELT_CTRL_COD')
+        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath,
+                                                crop_columnname='HOOFDTEELT_CTRL_COD')
     else:
         message = f"Unknown value for parameter input_classtype_to_prepare: {input_classtype_to_prepare}"
         logger.fatal(message)
@@ -224,7 +224,7 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
     return df_parceldata
 
 def prepare_input_landcover(input_parcel_filepath: str,
-                             crop_columnname: str = 'GWSCOD_H'):
+                            crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -396,7 +396,6 @@ def prepare_input_landcover(input_parcel_filepath: str,
             df_parceldata.drop(column, axis=1, inplace=True)
 
     return df_parceldata
-
 
 def prepare_input_most_popular_crops(input_parcel_filepath: str,
                                      crop_columnname: str = 'GWSCOD_H'):

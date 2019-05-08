@@ -50,14 +50,17 @@ def run(config_filepaths: []):
     end_date_str = conf.marker['end_date_str']
     buffer = int(conf.marker['buffer'])
 
-    # REMARK: the column names that are used/expected can be found/changed in global_constants.py!
+    # REMARK: the column names that are used/expected can be found/changed in the config files!
     # Settings for monitoring landcover
     classtype_to_prepare = conf.marker['markertype']
     class_base_dir = conf.dirs['marker_base_dir']
     balancing_strategy = conf.marker['balancing_strategy']
     postprocess_to_groups = conf.marker['postprocess_to_groups']
 
-    marker_dir = dir_helper.create_dir(class_base_dir, bool(conf.dirs['reuse_last_run_dir']))
+    # Create run dir to be used for the results
+    reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
+    marker_dir = dir_helper.create_run_dir(class_base_dir, reuse_last_run_dir)
+    logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {marker_dir}")
 
     base_filename = f"{conf.marker['country_code']}{year}_bufm{buffer}_weekly"
     sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
@@ -87,7 +90,7 @@ def run(config_filepaths: []):
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
     ts_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
-                        output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath) 
+                         output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath) 
 
     # STEP 2: Get the timeseries data needed for the classification
     #-------------------------------------------------------------
@@ -100,12 +103,12 @@ def run(config_filepaths: []):
     #      so upload needs to be done manually
     input_parcel_filepath_gee = f"{conf.dirs['gee']}{imagedata_input_parcel_filename_noext}"
     ts_calc_gee.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee,
-                                    input_country_code=conf.marker['country_code'],
-                                    start_date_str=start_date_str,
-                                    end_date_str=end_date_str,
-                                    sensordata_to_get=sensordata_to_use,
-                                    base_filename=base_filename,
-                                    dest_data_dir=imagedata_dir)
+                                     input_country_code=conf.marker['country_code'],
+                                     start_date_str=start_date_str,
+                                     end_date_str=end_date_str,
+                                     sensordata_to_get=sensordata_to_use,
+                                     base_filename=base_filename,
+                                     dest_data_dir=imagedata_dir)
 
     # STEP 3: Preprocess all data needed for the classification
     #-------------------------------------------------------------
@@ -131,13 +134,13 @@ def run(config_filepaths: []):
     # Combine all data needed to do the classification in one input file
     parcel_classification_data_csv = os.path.join(marker_dir, f"{base_filename}_parcel_classdata.csv")
     ts.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir,
-                                        base_filename=base_filename,
-                                        output_csv=parcel_classification_data_csv,
-                                        start_date_str=start_date_str,
-                                        end_date_str=end_date_str,
-                                        min_fraction_data_in_column=0.9,
-                                        sensordata_to_use=sensordata_to_use,
-                                        parceldata_aggregations_to_use=parceldata_aggregations_to_use)
+                                           base_filename=base_filename,
+                                           output_csv=parcel_classification_data_csv,
+                                           start_date_str=start_date_str,
+                                           end_date_str=end_date_str,
+                                           min_fraction_data_in_column=0.9,
+                                           sensordata_to_use=sensordata_to_use,
+                                           parceldata_aggregations_to_use=parceldata_aggregations_to_use)
 
     # STEP 4: Train, test and classify
     #-------------------------------------------------------------
@@ -146,21 +149,21 @@ def run(config_filepaths: []):
     parcel_train_csv = os.path.join(marker_dir, f"{base_filename}_parcel_train.csv")
     parcel_test_csv = os.path.join(marker_dir, f"{base_filename}_parcel_test.csv")
     class_pre.create_train_test_sample(input_parcel_csv=parcel_csv,
-                                    output_parcel_train_csv=parcel_train_csv,
-                                    output_parcel_test_csv=parcel_test_csv,
-                                    balancing_strategy=balancing_strategy)
+                                       output_parcel_train_csv=parcel_train_csv,
+                                       output_parcel_test_csv=parcel_test_csv,
+                                       balancing_strategy=balancing_strategy)
 
     # Train the classifier and output test predictions
     classifier_filepath = os.path.splitext(parcel_train_csv)[0] + "_classifier.pkl"
     parcel_predictions_test_csv = os.path.join(marker_dir, f"{base_filename}_predict_test.csv")
     parcel_predictions_all_csv = os.path.join(marker_dir, f"{base_filename}_predict_all.csv")
     classification.train_test_predict(input_parcel_train_csv=parcel_train_csv,
-                                    input_parcel_test_csv=parcel_test_csv,
-                                    input_parcel_all_csv=parcel_csv,
-                                    input_parcel_classification_data_csv=parcel_classification_data_csv,
-                                    output_classifier_filepath=classifier_filepath,
-                                    output_predictions_test_csv=parcel_predictions_test_csv,
-                                    output_predictions_all_csv=parcel_predictions_all_csv)
+                                      input_parcel_test_csv=parcel_test_csv,
+                                      input_parcel_all_csv=parcel_csv,
+                                      input_parcel_classification_data_csv=parcel_classification_data_csv,
+                                      output_classifier_filepath=classifier_filepath,
+                                      output_predictions_test_csv=parcel_predictions_test_csv,
+                                      output_predictions_all_csv=parcel_predictions_all_csv)
     
     # STEP 5: in necessary, postprocess results
     #-------------------------------------------------------------    
@@ -173,8 +176,9 @@ def run(config_filepaths: []):
     # Preprocess the ground truth data
     groundtruth_csv = None
     if input_groundtruth_csv is not None:
-        input_gt_noext, input_gt_ext = os.path.splitext(input_groundtruth_csv)
-        groundtruth_csv = os.path.join(marker_dir, f"{input_gt_noext}_classes{input_gt_ext}")
+        _, input_gt_filename = os.path.split(input_groundtruth_csv)
+        input_gt_filename_noext, input_gt_filename_ext = os.path.splitext(input_gt_filename)
+        groundtruth_csv = os.path.join(marker_dir, f"{input_gt_filename_noext}_classes{input_gt_filename_ext}")
         class_pre.prepare_input(input_parcel_filepath=input_groundtruth_csv,
                                 input_filetype=input_parcel_filetype,
                                 input_parcel_pixcount_csv=parcel_pixcount_csv,
@@ -184,15 +188,15 @@ def run(config_filepaths: []):
     # Print full reporting on the accuracy
     report_txt = f"{parcel_predictions_test_csv}_accuracy_report.txt"
     class_report.write_full_report(parcel_predictions_csv=parcel_predictions_test_csv,
-                                output_report_txt=report_txt,
-                                parcel_ground_truth_csv=groundtruth_csv)
+                                   output_report_txt=report_txt,
+                                   parcel_ground_truth_csv=groundtruth_csv)
 
     # STEP 7: Report on the full accuracy, incl. ground truth
     #-------------------------------------------------------------
     # Print full reporting on the accuracy
     report_txt = f"{parcel_predictions_all_csv}_accuracy_report.txt"
     class_report.write_full_report(parcel_predictions_csv=parcel_predictions_all_csv,
-                                output_report_txt=report_txt,
-                                parcel_ground_truth_csv=groundtruth_csv)
+                                   output_report_txt=report_txt,
+                                   parcel_ground_truth_csv=groundtruth_csv)
 
     logging.shutdown()
