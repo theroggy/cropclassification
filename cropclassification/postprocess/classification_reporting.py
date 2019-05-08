@@ -134,25 +134,25 @@ def write_full_report(parcel_predictions_csv: str,
         html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         # Output best-case accuracy
-        # Ignore the 'UNKNOWN' and 'IGNORE_' classes...
-        logger.info("For best-case accuracy, remove the 'UNKNOWN' class and the classes that start with 'IGNORE_'")
-        df_predict_accuracy_best_case = df_predict[df_predict[conf.csv['class_column']] != 'UNKNOWN']
-        df_predict_accuracy_best_case = df_predict[~df_predict[conf.csv['class_column']].str.startswith('IGNORE_', na=True)]
-
+        # Ignore the classes to be ignored...
+        logger.info("For best-case accuracy, remove the classes_to_ignore and classes_to_ignore_for_train classses")
+        df_predict_accuracy_best_case = df_predict[~df_predict[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore_for_train'))]
+        df_predict_accuracy_best_case = df_predict_accuracy_best_case[~df_predict_accuracy_best_case[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore'))]
+        
         oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[conf.csv['class_column']],
-                                            df_predict_accuracy_best_case[conf.csv['prediction_column']],
-                                            normalize=True,
-                                            sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for standard prediction"
+                                      df_predict_accuracy_best_case[conf.csv['prediction_column']],
+                                      normalize=True,
+                                      sample_weight=None) * 100
+        message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes_to_ignore(_for_train) classes, for standard prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
         html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
 
         oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[conf.csv['class_column']],
-                                            df_predict_accuracy_best_case[conf.csv['prediction_cons_column']],
-                                            normalize=True,
-                                            sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes UNKNOWN and IGNORE_*, for consolidated prediction"
+                                      df_predict_accuracy_best_case[conf.csv['prediction_cons_column']],
+                                      normalize=True,
+                                      sample_weight=None) * 100
+        message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes_to_ignore(_for_train) classes, for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n\n")
         html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
@@ -226,8 +226,8 @@ def write_full_report(parcel_predictions_csv: str,
                     if row[conf.csv['class_column'] + '_GT'] == row[prediction_column_to_use]:
                         # Prediction was the same as the ground truth, so correct!
                         return 'OK_EVERYTHING_CORRECT'
-                    elif (row[conf.csv['class_column']] == 'UNKNOWN'
-                          or row[conf.csv['class_column']].startswith('IGNORE_')):
+                    elif (row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore_for_train')
+                          or row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore')):
                         # Input classname was special
                         return f"OK_BENEFIT_OF_DOUBT_CLASSNAME={row[conf.csv['class_column']]}"
                     elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
@@ -244,8 +244,8 @@ def write_full_report(parcel_predictions_csv: str,
                     elif row[conf.csv['class_column']] == row[prediction_column_to_use]:
                         # Prediction was wrong, but same as the farmer!
                         return 'ERROR_BETA_FARMER_WRONG_PREDICTION_DIDNT_OPPOSE'
-                    elif (row[conf.csv['class_column']] == 'UNKNOWN'
-                          or row[conf.csv['class_column']].startswith('IGNORE_')):
+                    elif (row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore_for_train')
+                          or row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore')):
                         # Input classname was special
                         return f"ERROR_BETA_FARMER_WRONG_CLASSNAME={row[conf.csv['class_column']]}"
                     elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:

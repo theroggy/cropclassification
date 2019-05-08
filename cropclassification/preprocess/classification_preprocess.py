@@ -112,13 +112,13 @@ def create_train_test_sample(input_parcel_csv: str,
     df_train_base = df_train_base[df_train_base[conf.csv['pixcount_s1s2_column']] >= 20]
     logger.debug(f'Number of parcel in df_train_base after filter on pixcount >= 20: {len(df_train_base)}')
 
-    # The 'UNKNOWN' and 'IGNORE_' classes arent' meant for training... so remove them!
-    logger.info("Remove the 'UNKNOWN' class from training sample")
-    df_train_base = df_train_base[df_train_base[conf.csv['class_column']] != 'UNKNOWN']
+    # Some classes shouldn't be used for teaining... so remove them!
+    logger.info("Remove the 'classes_to_ignore_for_train' from training sample")
+    df_train_base = df_train_base[~df_train_base[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore_for_train'))]
 
-    # The 'IGNORE_' classes aren't meant for training either...
-    logger.info("Remove the classes that start with 'IGNORE_' from training sample")
-    df_train_base = df_train_base[~df_train_base[conf.csv['class_column']].str.startswith('IGNORE_', na=True)]
+    # All classes_to_ignore aren't meant for training either...
+    logger.info("Remove the 'classes_to_ignore' from training sample")
+    df_train_base = df_train_base[~df_train_base[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore'))]
 
     # Print the train base result before applying any balancing
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):

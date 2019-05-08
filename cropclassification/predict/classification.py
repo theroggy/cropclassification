@@ -190,8 +190,8 @@ def predict(input_parcel_csv: str,
                  & (df_pred[conf.csv['prediction_status']] != 'DOUBT'),
                 [conf.csv['prediction_cons_column'], conf.csv['prediction_status']]] = 'NOT_ENOUGH_PIXELS'
 
-    df_pred.loc[df_pred[conf.csv['class_column']] == 'UNKNOWN', [conf.csv['prediction_status']]] = 'UNKNOWN'
-    df_pred.loc[df_pred[conf.csv['class_column']].str.startswith('IGNORE_'), [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
+    df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore_for_train')), [conf.csv['prediction_status']]] = 'UNKNOWN'
+    df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore')), [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
 
     logger.info("Write final prediction data to file")
     df_pred.to_csv(output_predictions_csv, float_format='%.10f', encoding='utf-8')

@@ -121,8 +121,8 @@ def run(config_filepaths: [],
     #    - the result is/should be a csv file with the following columns
     #           - id (=global_settings.id_column): unique ID for each parcel
     #           - classname (=global_settings.class_column): the class that must be classified to.
-    #             Remarks: - if the classname is 'UNKNOWN', the parcel won't be used for training
-    #                      - if the classname starts with 'IGNORE_', the parcel will be ignored
+    #             Remarks: - if the classname is listed in classes_to_ignore_for_train in the conf file, the parcel won't be used for training
+    #                      - if the classname is listed in classes_to_ignore in the conf file, the parcel will be ignored
     #           - pixcount (=global_settings.pixcount_s1s2_column): the number of S1/S2 pixels in the
     #             parcel. Is -1 if the parcel doesn't have any S1/S2 data.
     parcel_csv = os.path.join(marker_dir, f"{input_parcel_filename_noext}_parcel.csv")
