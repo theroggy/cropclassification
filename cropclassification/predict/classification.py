@@ -185,7 +185,7 @@ def predict(input_parcel_csv: str,
 
     logger.info(f"Columns of df_pred: {df_pred.columns}")
     # Parcels with too few pixels don't have a good accuracy and give many alfa errors...
-    df_pred.loc[(df_pred[conf.csv['pixcount_s1s2_column']] <= 10)
+    df_pred.loc[(df_pred[conf.csv['pixcount_s1s2_column']] <= conf.marker.getint('min_nb_pixels'))
                  & (df_pred[conf.csv['prediction_status']] != 'NODATA')
                  & (df_pred[conf.csv['prediction_status']] != 'DOUBT'),
                 [conf.csv['prediction_cons_column'], conf.csv['prediction_status']]] = 'NOT_ENOUGH_PIXELS'
