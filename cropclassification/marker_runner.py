@@ -32,7 +32,7 @@ def run(config_filepaths: [],
     logger = log_helper.main_log_init(conf.dirs['log_dir'], __name__)      
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
-    year = int(conf.marker['year'])
+    year = conf.marker.getint('year')
     base_dir = conf.dirs['base_dir']
     input_dir = conf.dirs['input_dir']
     input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
@@ -49,7 +49,7 @@ def run(config_filepaths: [],
     imagedata_dir = conf.dirs['imagedata_dir']
     start_date_str = conf.marker['start_date_str']
     end_date_str = conf.marker['end_date_str']
-    buffer = int(conf.marker['buffer'])
+    buffer = conf.marker.getint('buffer')
 
     # REMARK: the column names that are used/expected can be found/changed in the config files!
     # Settings for monitoring landcover
