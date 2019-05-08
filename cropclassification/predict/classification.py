@@ -215,7 +215,7 @@ def _get_top_3_prediction(df_probabilities):
     logger.info("get_top_3_predictions: start")
     df_probabilities_tmp = df_probabilities.copy()
     for column in df_probabilities_tmp.columns:
-        if column in conf.csv['dedicated_data_columns']:
+        if column in conf.csv.getlist('dedicated_data_columns'):
             df_probabilities_tmp.drop(column, axis=1, inplace=True)
 
     # Get the top 3 predictions for each row
