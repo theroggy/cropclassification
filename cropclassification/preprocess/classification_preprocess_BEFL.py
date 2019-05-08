@@ -217,7 +217,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
             df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
 
         elif(column not in [conf.csv['id_column'], conf.csv['class_column']]
-             and (not column.startswith('m#'))):
+             and column not in conf.csv['extra_export_columns']
+             and not column.startswith('m#')):
             df_parceldata.drop(column, axis=1, inplace=True)
 
     return df_parceldata
@@ -285,7 +286,7 @@ def prepare_input_landcover(input_parcel_filepath: str,
 
     # Check if the id column is present...
     if conf.csv['id_column'] not in df_parceldata.columns:
-        message = f"STOP: Column {conf.csv['id_column']} not found in input parcel file: {input_parcel_filepath}. Make sure the column is present or change the column name in global_constants.py"
+        message = f"STOP: Column {conf.csv['id_column']} not found in input parcel file: {input_parcel_filepath}. Make sure the column is present or change the column name in the ini file.py"
         logger.critical(message)
         raise Exception(message)
 
@@ -382,7 +383,7 @@ def prepare_input_landcover(input_parcel_filepath: str,
 
     # For columns that aren't needed for the classification:
     #    - Rename the ones interesting for interpretation
-    #    - Drop the columns that aren't useful at all
+    #    - Drop the columns that aren't useful at all, except thoses excluded for export in the ini file
     for column in df_parceldata.columns:
         if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
             if column == 'GESP_PM':
@@ -390,7 +391,8 @@ def prepare_input_landcover(input_parcel_filepath: str,
             df_parceldata.rename(columns={column:'m#' + column}, inplace=True)            
 
         elif(column not in [conf.csv['id_column'], conf.csv['class_column']]
-             and (not column.startswith('m#'))):
+             and column not in conf.csv['extra_export_columns']
+             and not column.startswith('m#')):
             df_parceldata.drop(column, axis=1, inplace=True)
 
     return df_parceldata
@@ -460,6 +462,7 @@ def prepare_input_most_popular_crops(input_parcel_filepath: str,
         if column in ['GRAF_OPP']:
             df_parceldata.rename(columns={column:'m#' + column}, inplace=True)
         elif (column not in [conf.csv['id_column'], conf.csv['class_column']]
+              and column not in conf.csv['extra_export_columns']
               and (not column.startswith('m#'))):
             df_parceldata.drop(column, axis=1, inplace=True)
 

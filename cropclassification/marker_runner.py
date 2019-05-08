@@ -119,6 +119,7 @@ def run(config_filepaths: []):
     #                      - if the classname starts with 'IGNORE_', the parcel will be ignored
     #           - pixcount (=global_settings.pixcount_s1s2_column): the number of S1/S2 pixels in the
     #             parcel. Is -1 if the parcel doesn't have any S1/S2 data.
+    #           - extra columns defined in the ini file under ${csv:extra_export_columns}
     parcel_csv = os.path.join(marker_dir, f"{input_parcel_filename_noext}_parcel.csv")
     parcel_pixcount_csv = os.path.join(imagedata_dir, f"{base_filename}_pixcount.csv")
     class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
