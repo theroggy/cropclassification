@@ -65,8 +65,12 @@ def run(config_filepaths: [],
     marker_dir = dir_helper.create_run_dir(class_base_dir, reuse_last_run_dir)
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {marker_dir}")
 
-    base_filename = f"{conf.marker['country_code']}{year}_bufm{buffer}_weekly"
-    sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
+    #base_filename = f"{conf.marker['country_code']}{year}_bufm{buffer}_weekly"
+    input_parcel_filename = os.path.basename(input_parcel_filepath)
+    input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
+    base_filename = f"{input_parcel_filename_noext}_bufm{buffer}_weekly"
+    #sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
+    sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC]
     parceldata_aggregations_to_use = [ts.PARCELDATA_AGGRAGATION_MEAN]
 
     # Create the dir's if they don't exist yet...
