@@ -68,7 +68,7 @@ def prepare_input(input_parcel_filepath: str,
     logger.info('Apply buffer on parcel')
     parceldata_buf = gdf_parceldata.copy()
     # resolution = number of segments per circle
-    parceldata_buf['geometry'] = parceldata_buf['geometry'].buffer(-conf.marker['buffer'], resolution=5)
+    parceldata_buf['geometry'] = parceldata_buf['geometry'].buffer(-conf.marker.getint('buffer'), resolution=5)
 
     # Export buffered geometries that result in empty geometries
     logger.info('Export parcel that are empty after buffer')
@@ -91,7 +91,7 @@ def prepare_input(input_parcel_filepath: str,
     for column in parceldata_buf_poly.columns:
         if column not in [conf.csv['id_column'], 'geometry']:
             parceldata_buf_poly.drop(column, axis=1, inplace=True)
-    logger.debug(f'parcel that are (multi)polygons, shape: {parceldata_buf_poly.shape}')
+    logger.debug(f"parcel that are (multi)polygons, shape: {parceldata_buf_poly.shape}")
     parceldata_buf_poly.to_file(output_imagedata_parcel_input_filepath)
 
     # If the needed to be created... it didn't exist yet and so it needs to be uploaded manually
