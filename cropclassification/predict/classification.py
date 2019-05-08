@@ -185,13 +185,13 @@ def predict(input_parcel_csv: str,
 
     logger.info(f"Columns of df_pred: {df_pred.columns}")
     # Parcels with too few pixels don't have a good accuracy and give many alfa errors...
-    df_pred.loc[(df_pred[conf.csv['pixcount_s1s2_column']] <= 10)
+    df_pred.loc[(df_pred[conf.csv['pixcount_s1s2_column']] <= conf.marker.getint('min_nb_pixels'))
                  & (df_pred[conf.csv['prediction_status']] != 'NODATA')
                  & (df_pred[conf.csv['prediction_status']] != 'DOUBT'),
                 [conf.csv['prediction_cons_column'], conf.csv['prediction_status']]] = 'NOT_ENOUGH_PIXELS'
 
-    df_pred.loc[df_pred[conf.csv['class_column']] == 'UNKNOWN', [conf.csv['prediction_status']]] = 'UNKNOWN'
-    df_pred.loc[df_pred[conf.csv['class_column']].str.startswith('IGNORE_'), [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
+    df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore_for_train')), [conf.csv['prediction_status']]] = 'UNKNOWN'
+    df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore')), [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
 
     logger.info("Write final prediction data to file")
     df_pred.to_csv(output_predictions_csv, float_format='%.10f', encoding='utf-8')
@@ -215,7 +215,7 @@ def _get_top_3_prediction(df_probabilities):
     logger.info("get_top_3_predictions: start")
     df_probabilities_tmp = df_probabilities.copy()
     for column in df_probabilities_tmp.columns:
-        if column in conf.csv['dedicated_data_columns']:
+        if column in conf.csv.getlist('dedicated_data_columns'):
             df_probabilities_tmp.drop(column, axis=1, inplace=True)
 
     # Get the top 3 predictions for each row

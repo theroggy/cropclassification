@@ -23,7 +23,8 @@ import cropclassification.helpers.config_helper as conf
 # First define/init some general variables/constants
 #-------------------------------------------------------------
 
-def run(config_filepaths: []):
+def run(config_filepaths: [],
+        reuse_last_run_dir: bool = None):
     # Read the configuration
     conf.read_config(config_filepaths)
 
@@ -31,7 +32,7 @@ def run(config_filepaths: []):
     logger = log_helper.main_log_init(conf.dirs['log_dir'], __name__)      
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
-    year = int(conf.marker['year'])
+    year = conf.marker.getint('year')
     base_dir = conf.dirs['base_dir']
     input_dir = conf.dirs['input_dir']
     input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
@@ -48,7 +49,7 @@ def run(config_filepaths: []):
     imagedata_dir = conf.dirs['imagedata_dir']
     start_date_str = conf.marker['start_date_str']
     end_date_str = conf.marker['end_date_str']
-    buffer = int(conf.marker['buffer'])
+    buffer = conf.marker.getint('buffer')
 
     # REMARK: the column names that are used/expected can be found/changed in the config files!
     # Settings for monitoring landcover
@@ -58,7 +59,9 @@ def run(config_filepaths: []):
     postprocess_to_groups = conf.marker['postprocess_to_groups']
 
     # Create run dir to be used for the results
-    reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
+    # If reuse_last_run_dir is not specified, look for it in the config
+    if reuse_last_run_dir is None:
+        reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
     marker_dir = dir_helper.create_run_dir(class_base_dir, reuse_last_run_dir)
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {marker_dir}")
 
@@ -118,8 +121,8 @@ def run(config_filepaths: []):
     #    - the result is/should be a csv file with the following columns
     #           - id (=global_settings.id_column): unique ID for each parcel
     #           - classname (=global_settings.class_column): the class that must be classified to.
-    #             Remarks: - if the classname is 'UNKNOWN', the parcel won't be used for training
-    #                      - if the classname starts with 'IGNORE_', the parcel will be ignored
+    #             Remarks: - if the classname is listed in classes_to_ignore_for_train in the conf file, the parcel won't be used for training
+    #                      - if the classname is listed in classes_to_ignore in the conf file, the parcel will be ignored
     #           - pixcount (=global_settings.pixcount_s1s2_column): the number of S1/S2 pixels in the
     #             parcel. Is -1 if the parcel doesn't have any S1/S2 data.
     #           - extra columns defined in the ini file under ${csv:extra_export_columns}

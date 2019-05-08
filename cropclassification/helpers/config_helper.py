@@ -12,7 +12,8 @@ def read_config(config_filepaths: []):
             
     # Read the configuration
     global config
-    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation(),
+                                       converters={'list': lambda x: [i.strip() for i in x.split(',')]})
 
     config.read(config_filepaths)
     global config_filepaths_used
