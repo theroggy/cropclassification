@@ -69,6 +69,8 @@ def run(config_filepaths: [],
     input_parcel_filename = os.path.basename(input_parcel_filepath)
     input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
     base_filename = f"{input_parcel_filename_noext}_bufm{buffer}_weekly"
+
+    # TODO: config should be used to ini file
     #sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC, ts.SENSORDATA_S2gt95]
     sensordata_to_use = [ts.SENSORDATA_S1_ASCDESC]
     parceldata_aggregations_to_use = [ts.PARCELDATA_AGGRAGATION_MEAN]
