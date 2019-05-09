@@ -23,8 +23,7 @@ import cropclassification.helpers.config_helper as conf
 # First define/init some general variables/constants
 #-------------------------------------------------------------
 
-def run(config_filepaths: [],
-        reuse_last_run_dir: bool = None):
+def run(config_filepaths: []):
     # Read the configuration
     conf.read_config(config_filepaths)
 
@@ -59,9 +58,7 @@ def run(config_filepaths: [],
     postprocess_to_groups = conf.marker['postprocess_to_groups']
 
     # Create run dir to be used for the results
-    # If reuse_last_run_dir is not specified, look for it in the config
-    if reuse_last_run_dir is None:
-        reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
+    reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
     marker_dir = dir_helper.create_run_dir(class_base_dir, reuse_last_run_dir)
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {marker_dir}")
 
