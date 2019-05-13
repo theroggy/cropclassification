@@ -69,7 +69,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
     logger.debug(f'filepath_end_date: {filepath_end}')
 
     csv_files = glob.glob(os.path.join(imagedata_dir, f"{base_filename}_*.csv"))
-    result = None
+    result_df = None
     for curr_csv in sorted(csv_files):
 
         # Only process data that is of the right sensor types
@@ -125,17 +125,17 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
 
         # Set the index to the id_columnname, and join the data to the result...
         df_in.set_index(conf.csv['id_column'], inplace=True)
-        if result is None:
-            result = df_in
+        if result_df is None:
+            result_df = df_in
         else:
-            nb_rows_before_join = len(result)
-            result = result.join(df_in, how='inner')
-            nb_rows_after_join = len(result)
+            nb_rows_before_join = len(result_df)
+            result_df = result_df.join(df_in, how='inner')
+            nb_rows_after_join = len(result_df)
             if nb_rows_after_join != nb_rows_before_join:
                 logger.warning(f"Number of rows in result decreased in join from {nb_rows_before_join} to {nb_rows_after_join}")
 
-    # Write all rows that (still) have empty data to a file
-    df_parcel_with_empty_data = result[result.isnull().any(1)]
+    # Write all rows that have empty data to a file
+    df_parcel_with_empty_data = result_df[result_df.isnull().any(1)]
     if len(df_parcel_with_empty_data) > 0:
         # Write the rows with empty data to a csv file
         parcel_with_empty_data_csv = f'{output_csv}_rowsWithEmptyData.csv'
@@ -145,8 +145,10 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
         # Remove rows that have empty data
         logger.info("Remove the rows with empty data fields from the result")
         result.dropna(inplace=True)                 # Delete rows with empty values
+        result_df.dropna(inplace=True)                        # Delete rows with empty values
 
     # Write output file...
     logger.debug(f"Start writing output to csv: {output_csv}")
     result.to_csv(output_csv)
-    logger.info(f"Output (with shape: {result.shape}) written to : {output_csv}")
+    logger.info(f"Write output to file, start: {output_csv}")
+    logger.info(f"Write output to file, ready (with shape: {result_df.shape})")
