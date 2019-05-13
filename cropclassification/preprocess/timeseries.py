@@ -142,10 +142,10 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
         logger.warn(f"There were {len(df_parcel_with_empty_data)} rows with at least one columns = nan, write them to {parcel_with_empty_data_csv}")
         df_parcel_with_empty_data.to_csv(parcel_with_empty_data_csv)
 
-        # Remove rows that have empty data
-        logger.info("Remove the rows with empty data fields from the result")
-        result.dropna(inplace=True)                 # Delete rows with empty values
-        result_df.dropna(inplace=True)                        # Delete rows with empty values
+        # replace empty data with 0
+        logger.info("Replace NAN values with 0, so the rows are usable afterwards!")
+        result_df.fillna(0, inplace=True)                   # Replace NAN values with 0
+        #result.dropna(inplace=True)                        # Delete rows with empty values
 
     # Write output file...
     logger.debug(f"Start writing output to csv: {output_csv}")
