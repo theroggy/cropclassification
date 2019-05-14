@@ -125,9 +125,9 @@ def write_full_report(parcel_predictions_csv: str,
 
 
         oa = skmetrics.accuracy_score(df_predict_has_prediction[conf.csv['class_column']],
-                                            df_predict_has_prediction[conf.csv['prediction_cons_column']],
-                                            normalize=True,
-                                            sample_weight=None) * 100
+                                      df_predict_has_prediction[conf.csv['prediction_cons_column']],
+                                      normalize=True,
+                                      sample_weight=None) * 100
         message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
         logger.info(message)
         outputfile.write(f"{message}\n")
@@ -186,6 +186,135 @@ def write_full_report(parcel_predictions_csv: str,
             html_data['CONFUSION_MATRICES_CONSOLIDATED_TABLE'] = df_confmatrix_ext.to_html()
             html_data['CONFUSION_MATRICES_CONSOLIDATED_DATA'] = df_confmatrix_ext.to_json()
 
+        # If the pixcount is available, write the OA per pixcount
+        if conf.csv['pixcount_s1s2_column'] in df_predict.columns:
+            pixcount_output_report_txt = output_report_txt + '_OA_per_pixcount.txt'
+            _write_OA_per_pixcount(df_parcel_predictions=df_predict,
+                                   output_report_txt=pixcount_output_report_txt,
+                                   force=force)
+        
+        outputfile.write("************************************************************\n")
+        outputfile.write("********** REPORTING ON PREDICTION CONSEQUENCES ************\n")
+        outputfile.write("************************************************************\n")
+
+        # Calculate consequences for the predictions
+        logger.info("Calculate the consequences for the predictions")
+
+        '''
+        # REMARK: calculating row per row using DataFrame.apply() is 300 times slower than
+        # calculate it using native pandas operations!!!  
+        # TODO: this code can be cleaned up after on commit
+
+        # Calculate the consequence for one row
+        def get_prediction_consequence(row, prediction_column_to_use) -> str:
+            """ Get a string that gives the consequence of the prediction. """
+            # For some reason the row['pred2_prob'] is sometimes seen as string, and
+            # so 2* gives a repetition of the string value instead
+            # of a mathematic multiplication... so cast to float!
+
+            if row[conf.csv['class_column']] == row[prediction_column_to_use]:
+                return 'PREDICTION=DECLARATION'
+            elif (row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore_for_train')
+                    or row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore')):
+                # Input classname was special
+                return f"IGNORE_CLASSNAME={row[conf.csv['class_column']]}"
+            elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
+                # Prediction resulted in doubt or there was no/not enough data
+                return f"DOUBT_REASON={row[prediction_column_to_use]}"
+            else:
+                # Prediction was wrong, and opposes the farmer!
+                return 'PREDICTION<>DECLARATION'
+
+        new_columnname = f"prediction_consequence_{conf.csv['prediction_column']}"
+        logger.info(f"Calculate {new_columnname}")
+        values = df_predict.apply(get_prediction_consequence, args=[conf.csv['prediction_column']], axis=1)
+        df_predict.insert(loc=2, column=new_columnname, value=values)
+        '''
+
+        # REMARK: calculating it like this, using native pandas operations, is 300 times faster than
+        # using DataFrame.apply() with a function!!!
+        def add_prediction_consequence(in_df,
+                                       new_columnname, 
+                                       prediction_column_to_use):
+
+            # Add the new column with a fixed value first 
+            in_df[new_columnname] = 'UNDEFINED'
+
+            # Parcels that weren't use in training, can't have prediction = input_classname 
+            in_df.loc[in_df[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore_for_train')),
+                      new_columnname] = 'IGNORE_INPUTCLASSNAME=' + in_df[conf.csv['class_column']].map(str)
+            # Parcels that should be ignored in general, get this consequence
+            in_df.loc[in_df[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore')),
+                      new_columnname] = 'IGNORE_INPUTCLASSNAME=' + in_df[conf.csv['class_column']].map(str)
+            # If consequence still UNDEFINED, check if prediction equals the input class 
+            in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                       & (in_df[conf.csv['class_column']] == in_df[prediction_column_to_use]),
+                      new_columnname] = 'PREDICTION=INPUT_CLASS'
+            # If consequence still UNDEFINED, check if doubt 
+            in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                       & (in_df[prediction_column_to_use].isin(['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS'])),
+                      new_columnname] = 'DOUBT_REASON=' + in_df[prediction_column_to_use].map(str)
+            # If consequence still UNDEFINED, prediction is different from input 
+            in_df.loc[in_df[new_columnname] == 'UNDEFINED',
+                      new_columnname] = 'PREDICTION<>INPUT_CLASS'
+
+        add_prediction_consequence(in_df=df_predict,
+                                   new_columnname=f"pred_consequence_{conf.csv['prediction_column']}",
+                                   prediction_column_to_use=conf.csv['prediction_column'])
+        add_prediction_consequence(in_df=df_predict,
+                                   new_columnname=f"pred_consequence_{conf.csv['prediction_withdoubt_column']}",
+                                   prediction_column_to_use=conf.csv['prediction_withdoubt_column'])
+        add_prediction_consequence(in_df=df_predict,
+                                   new_columnname=f"pred_consequence_{conf.csv['prediction_cons_column']}",
+                                   prediction_column_to_use=conf.csv['prediction_cons_column'])
+
+        # Write the rough data to file
+        df_predict.to_csv(output_report_txt + "_pred_consequence_details.tsv", sep='\t')
+
+        # Write the consequence for the standard predictions
+        message = f"Prediction concequences overview, for {len(df_predict)} predicted cases:"
+        outputfile.write(f"\n{message}\n")
+        html_data['PREDICTION_CONSEQUENCE_OVERVIEW_TEXT'] = message
+        
+        count_per_class = (df_predict.groupby(f"pred_consequence_{conf.csv['prediction_column']}", as_index=False)
+                            .size().to_frame('count'))
+        values = 100*count_per_class['count']/count_per_class['count'].sum()
+        count_per_class.insert(loc=1, column='pct', value=values)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            outputfile.write(f"\n{count_per_class}\n")
+            logger.info(f"{count_per_class}\n")
+            html_data['PREDICTION_CONSEQUENCE_OVERVIEW_TABLE'] = count_per_class.to_html()
+
+        # Write the result for the withdoubt predictions
+        message = f"Prediction consequences with doubt overview, for {len(df_predict)} predicted cases:"
+        outputfile.write(f"\n{message}\n")
+        html_data['PREDICTION_CONSEQUENCE_WITHDOUBT_OVERVIEW_TEXT'] = message
+        
+        count_per_class = (df_predict.groupby(f"pred_consequence_{conf.csv['prediction_withdoubt_column']}", as_index=False)
+                            .size().to_frame('count'))
+        values = 100*count_per_class['count']/count_per_class['count'].sum()
+        count_per_class.insert(loc=1, column='pct', value=values)
+        
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
+            outputfile.write(f"\n{count_per_class}\n")
+            logger.info(f"{count_per_class}\n")
+            html_data['PREDICTION_CONSEQUENCE_WITHDOUBT_OVERVIEW_TABLE'] = count_per_class.to_html()
+
+        # Write the result for the consolidated predictions
+        message = f"Prediction consequences cons (doubt + not_enough_pixels) overview, for {len(df_predict)} predicted cases:"
+        outputfile.write(f"\n{message}\n")
+        html_data['PREDICTION_CONSEQUENCE_CONS_OVERVIEW_TEXT'] = message
+        
+        count_per_class = (df_predict.groupby(f"pred_consequence_{conf.csv['prediction_cons_column']}", as_index=False)
+                            .size().to_frame('count'))
+        values = 100*count_per_class['count']/count_per_class['count'].sum()
+        count_per_class.insert(loc=1, column='pct', value=values)
+        
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
+            outputfile.write(f"\n{count_per_class}\n")
+            logger.info(f"{count_per_class}\n")
+            html_data['PREDICTION_CONSEQUENCE_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
+
         # If a ground truth file is provided, report on the ground truth
         if parcel_ground_truth_csv is not None:
             outputfile.write("************************************************************\n")
@@ -215,6 +344,7 @@ def write_full_report(parcel_predictions_csv: str,
             # Add the alfa error
             # TODO: this needs to be reviewed, maybe need to compare with original classname
             #       instead of _IGNORE, UNKNOWN,...
+            # TODO: rewrite using native pandas commands to improve performance
             def get_prediction_quality(row, prediction_column_to_use) -> str:
                 """ Get a string that gives a quality indicator of the prediction. """
                 # For some reason the row['pred2_prob'] is sometimes seen as string, and
@@ -229,10 +359,10 @@ def write_full_report(parcel_predictions_csv: str,
                     elif (row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore_for_train')
                           or row[conf.csv['class_column']] in conf.marker.getlist('classes_to_ignore')):
                         # Input classname was special
-                        return f"OK_BENEFIT_OF_DOUBT_CLASSNAME={row[conf.csv['class_column']]}"
+                        return f"IGNORE_CLASSNAME={row[conf.csv['class_column']]}"
                     elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
                         # Prediction resulted in doubt or there was no/not enough data
-                        return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
+                        return f"DOUBT_REASON={row[prediction_column_to_use]}"
                     else:
                         # Prediction was wrong, and opposes the farmer!
                         return 'ERROR_ALFA'
@@ -250,7 +380,7 @@ def write_full_report(parcel_predictions_csv: str,
                         return f"ERROR_BETA_FARMER_WRONG_CLASSNAME={row[conf.csv['class_column']]}"
                     elif row[prediction_column_to_use] in ['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS']:
                         # Prediction resulted in doubt or there was no/not enough data
-                        return f"OK_BENEFIT_OF_DOUBT_PRED={row[prediction_column_to_use]}"
+                        return f"DOUBT_PRED={row[prediction_column_to_use]}"
                     else:
                         # Prediction was wrong, but same as the farmer!
                         return 'OK_FARMER_WRONG_PREDICTION_DIFFERENT'
@@ -258,15 +388,24 @@ def write_full_report(parcel_predictions_csv: str,
 #            df_parcel_gt[f"prediction_quality_{conf.csv['prediction_column']}"] = df_parcel_gt.apply(get_prediction_quality
 #                                                                   , args=[gs.prediction_cons_column]
 #                                                                   , axis=1).tolist()
+            # Calculate quality of standard prediction
             values = df_parcel_gt.apply(get_prediction_quality, args=[conf.csv['prediction_column']], axis=1)
             df_parcel_gt.insert(loc=2, column=f"prediction_quality_{conf.csv['prediction_column']}", value=values)
+
+            # Calculate quality of prediction with doubt
+            values = df_parcel_gt.apply(get_prediction_quality, args=[conf.csv['prediction_withdoubt_column']], axis=1)
+            df_parcel_gt.insert(loc=2, column=f"prediction_quality_{conf.csv['prediction_withdoubt_column']}", value=values)
+
+            # Calculate quality of consolidated prediction
             values = df_parcel_gt.apply(get_prediction_quality, args=[conf.csv['prediction_cons_column']], axis=1)
             df_parcel_gt.insert(loc=2, column=f"prediction_quality_{conf.csv['prediction_cons_column']}", value=values)
-            df_parcel_gt.to_csv(output_report_txt + "groundtruth_pred_quality_details.csv")
+            
+            # Write the rough data to file
+            df_parcel_gt.to_csv(output_report_txt + "_groundtruth_pred_quality_details.tsv", sep='\t')
 
-            # First write the result for the standard predictions
+            # Write the result for the standard predictions
             message = f"Prediction quality overview, for {len(df_parcel_gt)} predicted cases in ground truth:"
-            outputfile.write(f"{message}\n")
+            outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_OVERVIEW_TEXT'] = message
             
             count_per_class = (df_parcel_gt.groupby(f"prediction_quality_{conf.csv['prediction_column']}", as_index=False)
@@ -274,13 +413,28 @@ def write_full_report(parcel_predictions_csv: str,
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                outputfile.write(f"{count_per_class}\n")
+                outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
                 html_data['PREDICTION_QUALITY_OVERVIEW_TABLE'] = count_per_class.to_html()
 
-            # Now write the result for the consolidated predictions
-            message = f"Prediction quality cons overview, for {len(df_parcel_gt)} predicted cases in ground truth:"
-            outputfile.write(f"{message}\n")
+            # Write the result for the withdoubt predictions
+            message = f"Prediction quality with doubt overview, for {len(df_parcel_gt)} predicted cases in ground truth:"
+            outputfile.write(f"\n{message}\n")
+            html_data['PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TEXT'] = message
+            
+            count_per_class = (df_parcel_gt.groupby(f"prediction_quality_{conf.csv['prediction_withdoubt_column']}", as_index=False)
+                               .size().to_frame('count'))
+            values = 100*count_per_class['count']/count_per_class['count'].sum()
+            count_per_class.insert(loc=1, column='pct', value=values)
+            
+            with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
+                outputfile.write(f"\n{count_per_class}\n")
+                logger.info(f"{count_per_class}\n")
+                html_data['PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TABLE'] = count_per_class.to_html()
+
+            # Write the result for the consolidated predictions
+            message = f"Prediction quality cons (doubt + not_enough_pixels) overview, for {len(df_parcel_gt)} predicted cases in ground truth:"
+            outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TEXT'] = message
             
             count_per_class = (df_parcel_gt.groupby(f"prediction_quality_{conf.csv['prediction_cons_column']}", as_index=False)
@@ -289,37 +443,30 @@ def write_full_report(parcel_predictions_csv: str,
             count_per_class.insert(loc=1, column='pct', value=values)
             
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
-                outputfile.write(f"{count_per_class}\n")
+                outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
                 html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
 
-            # If the pixcount is available, write the number of ALFA errors per pixcount
+            # If the pixcount is available, write the number of ALFA errors per pixcount (for the prediction with doubt)
             if conf.csv['pixcount_s1s2_column'] in df_parcel_gt.columns:
                 # Get data, drop empty lines and write
-                message = f"Number of ERROR_ALFA parcels for the actual prediction per pixcount for the ground truth parcels:"
-                outputfile.write(f"{message}\n")            
+                message = f"Number of ERROR_ALFA parcels for the 'prediction with doubt' per pixcount for the ground truth parcels:"
+                outputfile.write(f"\n{message}\n")            
                 html_data['PREDICTION_QUALITY_ALPHA_ERROR_TEXT'] = message
                 
                 df_per_pixcount = _get_alfa_errors_per_pixcount(df_parcel_gt)
                 df_per_pixcount.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
-                    outputfile.write(f"{df_per_pixcount}\n")
+                    outputfile.write(f"\n{df_per_pixcount}\n")
                     logger.info(f"{df_per_pixcount}\n")
                     html_data['PREDICTION_QUALITY_ALPHA_ERROR_TABLE'] = df_per_pixcount.to_html()
                         
-    with open(output_report_txt.replace(".txt", ".html"), 'w') as outputfile:           
+    with open(output_report_txt.replace('.txt', '.html'), 'w') as outputfile:           
         html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
         src = Template(html_template_file)
         # replace strings and write to file
         output = src.substitute(html_data)
         outputfile.write(output)
-
-    if df_pixcount is not None:
-        pixcount_output_report_txt = output_report_txt + '_pixcount.txt'
-        _write_OA_per_pixcount(df_parcel_predictions=df_predict,
-                               df_parcel_pixcount=df_pixcount,
-                               output_report_txt=pixcount_output_report_txt,
-                               force=force)
 
 def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     """ Returns a dataset with an extended confusion matrix. """
@@ -378,7 +525,7 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
                                  value=values)
 
     # Now calculate the number of alfa errors per pixcount
-    df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[f"prediction_quality_{conf.csv['prediction_column']}"] == 'ERROR_ALFA']
+    df_alfa_error = df_predquality_pixcount[df_predquality_pixcount[f"prediction_quality_{conf.csv['prediction_withdoubt_column']}"] == 'ERROR_ALFA']
     df_alfa_per_pixcount = (df_alfa_error.groupby(conf.csv['pixcount_s1s2_column'], as_index=False)
                             .size().to_frame('count_error_alfa'))
 
@@ -400,7 +547,6 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount):
     return df_alfa_per_pixcount
 
 def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
-                           df_parcel_pixcount: pd.DataFrame,
                            output_report_txt: str,
                            force: bool = False):
     """ Write a report of the overall accuracy that parcels per pixcount get. """
@@ -409,17 +555,12 @@ def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
         return
 
-    # Set the index to the id_columnname, and join the data to the result...
-    df_parcel_predictions.set_index(conf.csv['id_column'], inplace=True)
-    df_parcel_pixcount.set_index(conf.csv['id_column'], inplace=True)
-    df_result = df_parcel_predictions.join(df_parcel_pixcount, how='inner')
-    nb_predictions_total = len(df_result.index)
-
     # Write output...
+    nb_predictions_total = len(df_parcel_predictions.index)
     with open(output_report_txt, 'w') as outputfile:
         for i in range(40):
 
-            df_result_cur_pixcount = df_result[df_result[conf.csv['pixcount_s1s2_column']] == i]
+            df_result_cur_pixcount = df_parcel_predictions[df_parcel_predictions[conf.csv['pixcount_s1s2_column']] == i]
             nb_predictions_pixcount = len(df_result_cur_pixcount.index)
             if nb_predictions_pixcount == 0:
                 continue
