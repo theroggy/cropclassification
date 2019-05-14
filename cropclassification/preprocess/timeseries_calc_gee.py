@@ -313,6 +313,8 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                                         .filterMetadata('country_co', 'equals', input_country_code)
                                         .union().first()).buffer(1000).geometry()
 
+    # TODO: add check if the ID column exists in the parcel file, otherwise he processes everything without ID column in output :-(!!!
+
     # First adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
     logger.info('Adapt start_date and end_date so they are mondays')
     def get_monday(date_str):
@@ -569,9 +571,10 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                 return image2
 
         # Get mean s1 image of the s1 images that are available in this period
-        if ts.SENSORDATA_S1 in sensordata_to_get:
+        SENSORDATA_S1 = conf.general['SENSORDATA_S1']
+        if SENSORDATA_S1 in sensordata_to_get:
             # If the data is already available locally... skip
-            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1}"
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1}"
             if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
                 return
@@ -583,9 +586,10 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                                   export_descr=sensordata_descr)
 
         # Get mean s1 image of the s1 images that are available in this period
-        if ts.SENSORDATA_S1DB in sensordata_to_get:
+        SENSORDATA_S1DB = conf.general['SENSORDATA_S1DB']
+        if SENSORDATA_S1DB in sensordata_to_get:
             # If the data is already available locally... skip
-            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1DB}"
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1DB}"
             if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
                 return
@@ -597,9 +601,10 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                                   export_descr=sensordata_descr)
 
         # Get mean s1 asc and desc image of the s1 images that are available in this period
-        if ts.SENSORDATA_S1_ASCDESC in sensordata_to_get:
+        SENSORDATA_S1_ASCDESC = conf.general['SENSORDATA_S1_ASCDESC']
+        if SENSORDATA_S1_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
-            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1_ASCDESC}"
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1_ASCDESC}"
             if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
             else:
@@ -612,9 +617,10 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                                   export_descr=sensordata_descr)
 
         # Get mean s1 in DB, asc and desc image of the s1 images that are available in this period
-        if ts.SENSORDATA_S1DB_ASCDESC in sensordata_to_get:
+        SENSORDATA_S1DB_ASCDESC = conf.general['SENSORDATA_S1DB_ASCDESC']
+        if SENSORDATA_S1DB_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
-            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S1DB_ASCDESC}"
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1DB_ASCDESC}"
             if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
             else:
@@ -628,8 +634,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
 
         # Get mean s2 image of the s2 images that have (almost)cloud free images available in this
         # period
-        if ts.SENSORDATA_S2gt95 in sensordata_to_get:
-            sensordata_descr = f"{base_filename}_{period_start_str}_{ts.SENSORDATA_S2gt95}"
+        SENSORDATA_S2gt95 = conf.general['SENSORDATA_S2gt95']
+        if SENSORDATA_S2gt95 in sensordata_to_get:
+            sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S2gt95}"
 
             # If the data is already available locally... skip
             # Remark: this logic is puth here additionaly to evade having to calculate the 95% rule

@@ -16,19 +16,6 @@ import cropclassification.helpers.config_helper as conf
 # First define/init some general variables/constants
 #-------------------------------------------------------------
 
-# Some constantsto choose which type of data to use in the marker.
-# Remark: the string needs to be the same as the end of the name of the columns in the csv files!
-PARCELDATA_AGGRAGATION_MEAN = 'mean'      # Mean value of the pixels values in a parcel.
-PARCELDATA_AGGRAGATION_STDDEV = 'stdDev'  # std dev of the values of the pixels in a parcel
-
-# Constants for types of sensor data
-SENSORDATA_S1 = 'S1'                    # Sentinel 1 data
-SENSORDATA_S1DB = 'S1dB'                # Sentinel 1 data, in dB
-SENSORDATA_S1_ASCDESC = 'S1AscDesc'     # Sentinel 1 data, divided in Ascending and Descending passes
-SENSORDATA_S1DB_ASCDESC = 'S1dBAscDesc' # Sentinel 1 data, in dB, divided in Ascending and Descending passes
-SENSORDATA_S2 = 'S2'                    # Sentinel 2 data
-SENSORDATA_S2gt95 = 'S2gt95'            # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
-
 # Get a logger...
 logger = logging.getLogger(__name__)
 
@@ -49,6 +36,20 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
     Collect all timeseries data to use for the classification and prepare it by applying
     scaling,... as needed.
     """
+
+    # Some constants to choose which type of data to use in the marker.
+    # Remark: the string needs to be the same as the end of the name of the columns in the csv files!
+    PARCELDATA_AGGRAGATION_MEAN = conf.general['PARCELDATA_AGGRAGATION_MEAN']      # Mean value of the pixels values in a parcel.
+    PARCELDATA_AGGRAGATION_STDDEV = conf.general['PARCELDATA_AGGRAGATION_STDDEV']  # std dev of the values of the pixels in a parcel
+
+    # Constants for types of sensor data
+    SENSORDATA_S1 = conf.general['SENSORDATA_S1']                     # Sentinel 1 data
+    SENSORDATA_S1DB = conf.general['SENSORDATA_S1DB']                 # Sentinel 1 data, in dB
+    SENSORDATA_S1_ASCDESC = conf.general['SENSORDATA_S1_ASCDESC']     # Sentinel 1 data, divided in Ascending and Descending passes
+    SENSORDATA_S1DB_ASCDESC = conf.general['SENSORDATA_S1DB_ASCDESC'] # Sentinel 1 data, in dB, divided in Ascending and Descending passes
+    SENSORDATA_S2 = conf.general['SENSORDATA_S2']                     # Sentinel 2 data
+    SENSORDATA_S2gt95 = conf.general['SENSORDATA_S2gt95']             # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
+
     # TODO: If we use S2 data, it is necessary to fill missing values in whatever way, otherwise
     #       there won't be a classification at all for that parcel!!!
 
