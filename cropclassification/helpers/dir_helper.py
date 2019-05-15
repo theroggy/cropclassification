@@ -1,25 +1,21 @@
-import os
+import os, re
 
 def create_run_dir(class_base_dir: str, 
                    reuse_last_run_dir: bool):
-               
-    max_run_dir_id = 998
-    prev_class_dir = None
-    class_dir = None 
-    for i in range(1, max_run_dir_id):
-        # Check if we don't have too many run dirs for creating the dir name
-        if i >= max_run_dir_id:
-            raise Exception("Please cleanup the run dirs, too many!!!")
-            
-        # Now search for the last dir that is in use
-        class_dir = os.path.join(class_base_dir, f"Run_{i:03d}")
-        if os.path.exists(class_dir):
-            prev_class_dir = class_dir
-            continue
-        else:
-            # If we want to reuse the last dir, do so...
-            if reuse_last_run_dir is True and prev_class_dir is not None:
-                return prev_class_dir
-            else:
-                # Otherwise return the newest dir
-                return class_dir
+    pattern = re.compile('Run_[0-9]{3}')
+    dir_list = [x.path for x in os.scandir(class_base_dir) if x.is_dir() and re.search(pattern, x.path) ]
+ 
+    if (dir_list is None or not any(dir_list)):
+        # first run
+        return os.path.join(class_base_dir, f"Run_{1:03d}")
+
+    # get last run and increment if needed
+    last_dir = sorted(dir_list, reverse=True)[0]
+
+    if (reuse_last_run_dir):
+        return last_dir
+
+    last_dir_iteration = re.search(pattern, last_dir) 
+    last_iteration = int(last_dir_iteration.group().split('_')[1]) 
+        
+    return os.path.join(class_base_dir, f"Run_{last_iteration + 1:03d}")
