@@ -11,6 +11,7 @@ import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.preprocess.classification_preprocess as class_pre
 import cropclassification.predict.classification as classification
+import cropclassification.postprocess.classification_postprocess as class_post
 import cropclassification.postprocess.classification_reporting as class_report
 import cropclassification.helpers.dir_helper as dir_helper
 import cropclassification.helpers.log_helper as log_helper
@@ -152,25 +153,36 @@ def run(config_filepaths: []):
                                        output_parcel_test_csv=parcel_test_csv,
                                        balancing_strategy=balancing_strategy)
 
-    # Train the classifier and output test predictions
+    # Train the classifier and output predictions
     classifier_filepath = os.path.splitext(parcel_train_csv)[0] + "_classifier.pkl"
-    parcel_predictions_test_csv = os.path.join(run_dir, f"{base_filename}_predict_test.csv")
-    parcel_predictions_all_csv = os.path.join(run_dir, f"{base_filename}_predict_all.csv")
+    parcel_predictions_proba_test_filepath = os.path.join(run_dir, f"{base_filename}_predict_proba_test.parquet")
+    parcel_predictions_proba_all_filepath = os.path.join(run_dir, f"{base_filename}_predict_proba_all.parquet")
     classification.train_test_predict(input_parcel_train_csv=parcel_train_csv,
                                       input_parcel_test_csv=parcel_test_csv,
                                       input_parcel_all_csv=parcel_csv,
                                       input_parcel_classification_data_csv=parcel_classification_data_csv,
                                       output_classifier_filepath=classifier_filepath,
-                                      output_predictions_test_csv=parcel_predictions_test_csv,
-                                      output_predictions_all_csv=parcel_predictions_all_csv)
+                                      output_predictions_test_filepath=parcel_predictions_proba_test_filepath,
+                                      output_predictions_all_filepath=parcel_predictions_proba_all_filepath)
     
-    # STEP 5: in necessary, postprocess results
+    # STEP 5: if necessary, do extra postprocessing
     #-------------------------------------------------------------    
     '''if postprocess_to_groups is not None:
         # TODO 
     '''
-    
-    # STEP 6: Report on the test accuracy, incl. ground truth
+
+    # STEP 6: do the default, mandatory postprocessing
+    #-------------------------------------------------------------    
+    parcel_predictions_test_csv = os.path.join(run_dir, f"{base_filename}_predict_test.csv")
+    class_post.calc_top3_and_consolidation(input_parcel_filepath=parcel_test_csv,
+                                           input_parcel_probabilities_filepath=parcel_predictions_proba_test_filepath,
+                                           output_predictions_filepath=parcel_predictions_test_csv)
+    parcel_predictions_all_csv = os.path.join(run_dir, f"{base_filename}_predict_all.csv")        
+    class_post.calc_top3_and_consolidation(input_parcel_filepath=parcel_csv,
+                                           input_parcel_probabilities_filepath=parcel_predictions_proba_all_filepath,
+                                           output_predictions_filepath=parcel_predictions_all_csv)
+
+    # STEP 7: Report on the test accuracy, incl. ground truth
     #-------------------------------------------------------------
     # Preprocess the ground truth data
     groundtruth_csv = None

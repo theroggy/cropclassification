@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 """
 Module that implements the classification logic.
-
-@author: Pieter Roggemans
 """
 
 import logging
+
 import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
 from sklearn.externals import joblib
+
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-# Get the logger, at the moment just use the root logger...
+# Get a logger...
 logger = logging.getLogger(__name__)
 
 #-------------------------------------------------------------
@@ -35,6 +36,7 @@ def train(df_train: pd.DataFrame,
         output_classifier_filepath: the filepath where the classifier can be written
     """
 
+    # Split the input dataframe in one with the train classes and one with the train data
     df_train_classes = df_train[conf.csv['class_column']]
     cols_to_keep = df_train.columns.difference([conf.csv['id_column'], conf.csv['class_column']])
     df_train_data = df_train[cols_to_keep]
@@ -43,10 +45,9 @@ def train(df_train: pd.DataFrame,
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         logger.info(f"Resulting Columns for training data: {df_train_data.columns}")
 
-    logger.info('Start training')
-
     # Using almost all defaults for the classifier seems to work best...
-    classifier = MLPClassifier(max_iter=100, hidden_layer_sizes=(150, ))
+    logger.info('Start training')
+    classifier = MLPClassifier(max_iter=1000, hidden_layer_sizes=(100, 100, ))
     logger.info(f"Classifier info:\n{classifier}")
     classifier.fit(df_train_data, df_train_classes)
 
@@ -56,7 +57,7 @@ def train(df_train: pd.DataFrame,
 
 def predict_proba(df_input_parcel: pd.DataFrame,
                   input_classifier_filepath: str,
-                  output_parcel_predictions_csv: str):
+                  output_parcel_predictions_filepath: str) -> pd.DataFrame:
     """
     Predict the probabilities for all input data using the classifier provided and write it
     to the output file.
@@ -98,6 +99,10 @@ def predict_proba(df_input_parcel: pd.DataFrame,
     cols = [conf.csv['id_column'], conf.csv['class_column']]
     cols.extend(classifier.classes_)
     df_proba = pd.DataFrame(id_class_proba, columns=cols)
+
+    # If output path provided, write results
+    if output_parcel_predictions_filepath:
+        pdh.to_file(df_proba, output_parcel_predictions_filepath)
 
     return df_proba
 
