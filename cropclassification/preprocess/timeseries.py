@@ -138,7 +138,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
     # Write all rows that have empty data to a file
     df_parcel_with_empty_data = result_df[result_df.isnull().any(1)]
     if len(df_parcel_with_empty_data) > 0:
-        # Write the rows with empty data to a csv file
+        # Write the rows with empty data to a file
         parcel_with_empty_data_csv = f'{output_csv}_rowsWithEmptyData.csv'
         logger.warn(f"There were {len(df_parcel_with_empty_data)} rows with at least one columns = nan, write them to {parcel_with_empty_data_csv}")
         df_parcel_with_empty_data.to_csv(parcel_with_empty_data_csv)
@@ -149,7 +149,7 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
         #result.dropna(inplace=True)                        # Delete rows with empty values
 
     # Write output file...
-    logger.debug(f"Start writing output to csv: {output_csv}")
-    result.to_csv(output_csv)
     logger.info(f"Write output to file, start: {output_csv}")
+    result_df.to_csv(output_csv)
+
     logger.info(f"Write output to file, ready (with shape: {result_df.shape})")
