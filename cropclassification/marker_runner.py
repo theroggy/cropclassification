@@ -132,7 +132,7 @@ def run(config_filepaths: []):
                             input_classtype_to_prepare=classtype_to_prepare)
 
     # Combine all data needed to do the classification in one input file
-    parcel_classification_data_csv = os.path.join(run_dir, f"{base_filename}_parcel_classdata.parquet")
+    parcel_classification_data_csv = os.path.join(run_dir, f"{base_filename}_parcel_classdata.csv")
     ts.collect_and_prepare_timeseries_data(imagedata_dir=imagedata_dir,
                                            base_filename=base_filename,
                                            output_csv=parcel_classification_data_csv,
