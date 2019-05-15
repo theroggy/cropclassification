@@ -20,6 +20,8 @@ def read_config(config_filepaths: []):
     config_filepaths_used = config_filepaths
 
     # Now set global variables to each section as shortcuts    
+    global general
+    general = config['general']
     global marker
     marker = config['marker']
     global csv
