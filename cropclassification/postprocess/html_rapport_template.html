@@ -9,16 +9,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
 </head>
 <body>
-    <div class="container-fluid">
+    <div class="container-fluid">         
         <div class="row">
             <div class="col-md-12">
-                <h1>GENERAL ACCURACIES</h1>
-                <p>Number of parcels per prediction status:</p>
+                <h1>GENERAL RESULTS</h1>
+                <h2>GENERAL CONCLUSIONS</h2>
+                <p>$GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT</p>
                 <div class="row">
-                    <div class="col-md-4">$GENERAL_ACCURACIES_TABLE</div>
+                    <div class="col-md-4">$GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TABLE</div>
                     <div class="col-md-6"><div id="chart_general_accuracies" style="height:300px;"></div></div>
                 </div>
                 <br />
+                <h2>GENERAL ACCURACIES</h2>
                 <div class="row">
                     <ul>$GENERAL_ACCURACIES_TEXT</ul>
                 </div>
@@ -27,7 +29,28 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h1>CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS</h1>
+                <h1>DETAILED RESULTS</h1>
+                <h2>REPORTING ON PREDICTION DETAILED CONCLUSIONS</h2>
+                <p>$PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <p>$PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <p>$PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+            </div>
+        </div>           
+        <div class="row">
+            <div class="col-md-12">
+                <h2>CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS</h2>
                 <div>
                     <p>Extended confusion matrix of the predictions: Rows: true/input classes, columns: predicted classes</p>
                     <div id="chart_confusion_matrices" style="height: 2000px"></div>
@@ -47,27 +70,7 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h1>REPORTING ON PREDICTION CONSEQUENCES</h1>
-                <p>$PREDICTION_CONSEQUENCE_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_CONSEQUENCE_OVERVIEW_TABLE</div>
-                    <br />
-                </div>
-                <p>$PREDICTION_CONSEQUENCE_WITHDOUBT_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_CONSEQUENCE_WITHDOUBT_OVERVIEW_TABLE</div>
-                    <br />
-                </div>
-                <p>$PREDICTION_CONSEQUENCE_CONS_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_CONSEQUENCE_CONS_OVERVIEW_TABLE</div>
-                    <br />
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
-                <h1>REPORTING ON PREDICTION QUALITY BASED ON GROUND TRUTH</h1>
+                <h2>REPORTING ON PREDICTION QUALITY BASED ON GROUND TRUTH</h2>
                 <p>$PREDICTION_QUALITY_OVERVIEW_TEXT</p>
                 <div class="row">
                     <div class="col-md-6">$PREDICTION_QUALITY_OVERVIEW_TABLE</div>

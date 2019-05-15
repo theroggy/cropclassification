@@ -4,6 +4,7 @@ Module with postprocessing functions on classification results.
 """
 
 import logging
+import os
 
 import numpy as np
 import pandas as pd
@@ -24,7 +25,13 @@ logger = logging.getLogger(__name__)
 
 def calc_top3_and_consolidation(input_parcel_filepath: str,
                                 input_parcel_probabilities_filepath: str,
-                                output_predictions_filepath: str):
+                                output_predictions_filepath: str,
+                                force: bool = False):
+
+    if(force is False
+       and os.path.exists(output_predictions_filepath)):
+        logger.warning(f"calc_top3_and_consolidation: output file exist and force is False, so stop: {output_predictions_filepath}")
+        return
 
     # Read input files
     df_input_parcel = pdh.read_file(input_parcel_filepath)
@@ -80,6 +87,71 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
                 [conf.csv['prediction_status']]] = 'UNKNOWN'
     df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore')), 
                 [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
+
+    # Calculate consequences for the predictions
+    logger.info("Calculate the consequences for the predictions")
+
+    def add_prediction_conclusion(in_df,
+                                  new_columnname, 
+                                  prediction_column_to_use,
+                                  detailed: bool):
+        """
+        Calculate the "conclusions" for the predictions 
+
+        REMARK: calculating it like this, using native pandas operations, is 300 times faster than
+                using DataFrame.apply() with a function!!!
+        """
+        # Add the new column with a fixed value first 
+        in_df[new_columnname] = 'UNDEFINED'
+
+        # Get a list of the classes to ignore
+        all_classes_to_ignore = conf.marker.getlist('classes_to_ignore_for_train') + conf.marker.getlist('classes_to_ignore')
+
+        # Some conclusions are different is detailed info is asked...
+        if detailed == True:
+            # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
+            in_df.loc[in_df[conf.csv['class_column']].isin(all_classes_to_ignore),
+                      new_columnname] = 'IGNORE:INPUTCLASSNAME=' + in_df[conf.csv['class_column']].map(str)
+            # If conclusion still UNDEFINED, check if doubt 
+            in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[prediction_column_to_use].isin(['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS'])),
+                    new_columnname] = 'DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
+        else:
+            # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
+            in_df.loc[in_df[conf.csv['class_column']].isin(all_classes_to_ignore),
+                      new_columnname] = 'IGNORE'
+            # If conclusion still UNDEFINED, check if doubt 
+            in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[prediction_column_to_use].isin(['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS'])),
+                    new_columnname] = 'DOUBT'
+
+        # If conclusion still UNDEFINED, check if prediction equals the input class 
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                & (in_df[conf.csv['class_column']] == in_df[prediction_column_to_use]),
+                new_columnname] = 'OK:PREDICTION=INPUT_CLASS'
+        # If conclusion still UNDEFINED, prediction is different from input 
+        in_df.loc[in_df[new_columnname] == 'UNDEFINED',
+                new_columnname] = 'NOK:PREDICTION<>INPUT_CLASS'
+
+    # Calculate detailed conclusions
+    add_prediction_conclusion(in_df=df_pred,
+                              new_columnname=conf.csv['prediction_conclusion_detail_column'],
+                              prediction_column_to_use=conf.csv['prediction_column'],
+                              detailed=True)
+    add_prediction_conclusion(in_df=df_pred,
+                              new_columnname=conf.csv['prediction_conclusion_detail_withdoubt_column'],
+                              prediction_column_to_use=conf.csv['prediction_withdoubt_column'],
+                              detailed=True)
+    add_prediction_conclusion(in_df=df_pred,
+                              new_columnname=conf.csv['prediction_conclusion_detail_cons_column'],
+                              prediction_column_to_use=conf.csv['prediction_cons_column'],
+                              detailed=True)
+
+    # Calculate general conclusions for cons as well
+    add_prediction_conclusion(in_df=df_pred,
+                              new_columnname=conf.csv['prediction_conclusion_cons_column'],
+                              prediction_column_to_use=conf.csv['prediction_cons_column'],
+                              detailed=False)
 
     logger.info("Write final prediction data to file")
     pdh.to_file(df_pred, output_predictions_filepath)
