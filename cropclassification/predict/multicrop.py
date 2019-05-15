@@ -46,7 +46,7 @@ def detect_multicrop(input_parcel_csv: str,
                                          , how='inner', on=gs.id_column))
 
     # Only keep the parcels with relevant crops/production types
-    productiontype_column = 'm#GESP_PM'
+    productiontype_column = 'm__GESP_PM'
     if productiontype_column in df_input_parcel_for_detect.columns:
         # Serres, tijdelijke overkappingen en loodsen
         df_input_parcel_for_detect.loc[~df_input_parcel_for_detect[productiontype_column].isin(['SER', 'SGM'])]
@@ -54,7 +54,7 @@ def detect_multicrop(input_parcel_csv: str,
         df_input_parcel_for_detect.loc[df_input_parcel_for_detect[productiontype_column] != 'LOO']     # Een loods is hetzelfde als een stal...
         df_input_parcel_for_detect.loc[df_input_parcel_for_detect[productiontype_column] != 'CON']    # Containers, niet op volle grond...
 
-    crop_columnname = 'm#GWSCOD_H'
+    crop_columnname = 'm__GWSCOD_H'
     df_input_parcel_for_detect.loc[~df_input_parcel_for_detect[crop_columnname].isin(['1', '2', '3'])]
 
     # Keep the parcels with the 1000 largest stdDev
