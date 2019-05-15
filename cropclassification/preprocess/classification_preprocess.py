@@ -59,7 +59,7 @@ def prepare_input(input_parcel_filepath: str,
     output_ext = os.path.splitext(output_parcel_filepath)[1]
     for column in df_parceldata.columns:
         # if the output asked is a csv... we don't need the geometry...
-        if column == 'geometry' and output_ext == '.csv':
+        if column == conf.csv['geom_column'] and output_ext == '.csv':
             df_parceldata.drop(column, axis=1, inplace=True)
 
     logger.info(f'Write output to {output_parcel_filepath}')
