@@ -4,20 +4,19 @@ Script to create timeseries data per parcel of
   - S1: the mean VV and VH backscatter data
   - S2: the 4 bands for periods when there is good coverage of cloudfree images of the area of
         interest
-
-@author: Pieter Roggemans
-
 """
 
 from __future__ import print_function
-import logging
-import os
-import glob
-import time
-import pathlib
-from typing import List
 from datetime import datetime
 from datetime import timedelta
+import glob
+import logging
+import os
+import pathlib
+import time
+from typing import List
+
+import numpy as np
 import pandas as pd
 
 # Imports for google earth engine
@@ -32,11 +31,11 @@ import googleapiclient
 # Import local stuff
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-
 # Get a logger...
 logger = logging.getLogger(__name__)
 global_gee_tasks_cache = None
@@ -232,37 +231,76 @@ def download_sentinel_timeseries(dest_data_dir: str,
     return return_status
 
 def clean_gee_downloaded_csvs_in_dir(dir_path: str):
-    """ Cleans csv's downloaded from gee by removing gee specific columns,... """
+    """ 
+    Cleans csv's downloaded from gee by removing gee specific columns,... 
+    """
 
     # Loop through all csv files in dir and remove the gee columns...
     csv_files = glob.glob(os.path.join(dir_path, '*.csv'))
     for curr_csv in sorted(csv_files):
-        clean_gee_downloaded_csv(curr_csv)
+        clean_gee_downloaded_csv(curr_csv,
+                                 remove_orig_csv=False)
 
-def clean_gee_downloaded_csv(csv_file: str):
-    """ Cleans a csv downloaded from gee by removing gee specific columns... """
+def clean_gee_downloaded_csv(csv_file: str,
+                             remove_orig_csv: bool = False):
+    """ 
+    Cleans a csv downloaded from gee by removing gee specific columns... 
+    """
 
-    logger.debug(f"Remove gee specifice columns from {csv_file}")
-    # Read the file
-    df_in = pd.read_csv(csv_file)
+    try:
+        # Prepare output filename
+        file_noext, _ = os.path.splitext(csv_file)
+        output_file = f"{file_noext}{conf.general['columndata_ext']}"
 
-    # Drop unnecessary gee specific columns...
-    csv_changed = False
-    for column in df_in.columns:
-        if column in ['system:index', '.geo']:
-            df_in.drop(column, axis=1, inplace=True)
-            csv_changed = True
-        elif column == 'count':
-            logger.info(f"Rename count column to {conf.csv['pixcount_s1s2_column']}")
-            df_in.rename(columns={'count': conf.csv['pixcount_s1s2_column']}, inplace=True)
-            csv_changed = True
+        # Check if output file exists already even though it is different from input file
+        if output_file != csv_file and os.path.exists(output_file):
+            logger.warning(f"Output file exists already, so don't create it again: {output_file}")
+        elif os.path.getsize(csv_file) == 0:
+            # If input file is empty...
+            logger.info(f"File is empty, so just create new empty output file: {output_file}")
+            open(output_file, 'w').close()
+        else:
+            # Read the file
+            logger.debug(f"Read file and remove gee specifice columns from {csv_file}")
 
-    # If a column, was dropped... replace the original file by the cleaned one
-    if csv_changed is True:
-        logger.info(f"Replace the csv file with the gee specific columns removed: {csv_file}")
-        csv_file_tmp = f"{csv_file}_cleaned.tmp"
-        df_in.to_csv(csv_file_tmp, index=False)
-        os.replace(csv_file_tmp, csv_file)
+            # Sample 100 rows of data to determine dtypes, so floats can be read as float32 instead of the 
+            # default float64. Writing those to eg. parquet is a lot more efficiënt.
+            df_test = pd.read_csv(csv_file, nrows=100)
+            float_cols = [c for c in df_test if df_test[c].dtype == "float64"]
+            float32_cols = {c: np.float32 for c in float_cols}
+
+            # Now read entire file
+            df_in = pd.read_csv(csv_file, engine='c', dtype=float32_cols)
+            
+            # Drop unnecessary gee specific columns...
+            for column in df_in.columns:
+                if column in ['system:index', '.geo']:
+                    df_in.drop(column, axis=1, inplace=True)
+                elif column == 'count':
+                    logger.info(f"Rename count column to {conf.columns['pixcount_s1s2']}")
+                    df_in.rename(columns={'count': conf.columns['pixcount_s1s2']}, inplace=True)
+
+            # Set the id column as index
+            #df_in.set_index('CODE_OBJ', inplace=True)
+            df_in.set_index(conf.columns['id'], inplace=True)
+
+            # If there are data columns, write to output file
+            if len(df_in.columns) > 0:
+                # Replace the original file by the cleaned one
+                logger.info(f"Write the file with the gee specific columns removed to a new file: {output_file}")
+                pdh.to_file(df_in, output_file, index=True)
+            else:
+                logger.warning(f"No data columns found in file {csv_file}, so return!!!")
+                return            
+
+        # If remove_orig_csv is True and the output filepath is different from orig filepath, 
+        # remove orig file. 
+        if remove_orig_csv and output_file != csv_file:
+            logger.info(f"Remove orig csv file: {csv_file}")
+            os.remove(csv_file)
+
+    except Exception as ex:
+        raise Exception(f"Error processing file {csv_file}") from ex
 
 def calculate_sentinel_timeseries(input_parcel_filepath: str,
                                   input_country_code: str,
@@ -510,7 +548,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
 
         # Get the sentinel data for each parcel
         # Remark: from the input parcels, only keep the ID column...
-        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([conf.csv['id_column']]),
+        imagedata_perparcel = imagedata.reduceRegions(collection=input_parcels.select([conf.columns['id']]),
                                                       reducer=reducer,
                                                       scale=10)
 

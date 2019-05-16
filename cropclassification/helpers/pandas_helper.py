@@ -27,7 +27,8 @@ def read_file(filepath: str,
         raise Exception(f"Not implemented for extension {ext_lower}")
 
 def to_file(df: pd.DataFrame,
-            filepath: str):
+            filepath: str,
+            index: bool = True):
     """
     Reads a pandas dataframe to file. The fileformat is detected based on the filepath extension.
 
@@ -37,10 +38,10 @@ def to_file(df: pd.DataFrame,
 
     ext_lower = ext.lower()
     if ext_lower == '.csv':
-        df.to_csv(filepath, float_format='%.10f', encoding='utf-8')
+        df.to_csv(filepath, float_format='%.10f', encoding='utf-8', index=index)
     elif ext_lower == '.tsv':
-        df.to_csv(filepath, sep='\t', float_format='%.10f', encoding='utf-8')
+        df.to_csv(filepath, sep='\t', float_format='%.10f', encoding='utf-8', index=index)
     elif ext_lower == '.parquet':
-        df.to_parquet(filepath)
+        df.to_parquet(filepath, index=index)
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")

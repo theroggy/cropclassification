@@ -37,8 +37,8 @@ def train(df_train: pd.DataFrame,
     """
 
     # Split the input dataframe in one with the train classes and one with the train data
-    df_train_classes = df_train[conf.csv['class_column']]
-    cols_to_keep = df_train.columns.difference([conf.csv['id_column'], conf.csv['class_column']])
+    df_train_classes = df_train[conf.columns['class']]
+    cols_to_keep = df_train.columns.difference([conf.columns['id'], conf.columns['class']])
     df_train_data = df_train[cols_to_keep]
 
     logger.info(f"Train file processed and rows with missing data removed, data shape: {df_train_data.shape}, labels shape: {df_train_classes.shape}")
@@ -71,15 +71,16 @@ def predict_proba(df_input_parcel: pd.DataFrame,
     """
 
     # Some basic checks that input is ok
-    if(conf.csv['id_column'] not in df_input_parcel.columns
-       or conf.csv['class_column'] not in df_input_parcel.columns):
-        message = f"Columns {conf.csv['id_column']} and {conf.csv['class_column']} are mandatory for input parameter df_input!"
+    df_input_parcel.reset_index(inplace=True)
+    if(conf.columns['id'] not in df_input_parcel.columns
+       or conf.columns['class'] not in df_input_parcel.columns):
+        message = f"Columns {conf.columns['id']} and {conf.columns['class']} are mandatory for input parameter df_input!"
         logger.critical(message)
         raise Exception(message)
 
     # Now do final preparation for the classification
-    df_input_classes = df_input_parcel[conf.csv['class_column']]
-    cols_to_keep = df_input_parcel.columns.difference([conf.csv['id_column'], conf.csv['class_column']])
+    df_input_classes = df_input_parcel[conf.columns['class']]
+    cols_to_keep = df_input_parcel.columns.difference([conf.columns['id'], conf.columns['class']])
     df_input_data = df_input_parcel[cols_to_keep]
 
     logger.info(f"Train file processed and rows with missing data removed, data shape: {df_input_data.shape}, labels shape: {df_input_classes.shape}")
@@ -95,8 +96,8 @@ def predict_proba(df_input_parcel: pd.DataFrame,
     logger.info(f"Predict classes with probabilities ready")
 
     # Convert probabilities to dataframe, combine with input data and write to file
-    id_class_proba = np.concatenate([df_input_parcel[[conf.csv['id_column'], conf.csv['class_column']]].values, class_proba], axis=1)
-    cols = [conf.csv['id_column'], conf.csv['class_column']]
+    id_class_proba = np.concatenate([df_input_parcel[[conf.columns['id'], conf.columns['class']]].values, class_proba], axis=1)
+    cols = [conf.columns['id'], conf.columns['class']]
     cols.extend(classifier.classes_)
     df_proba = pd.DataFrame(id_class_proba, columns=cols)
 

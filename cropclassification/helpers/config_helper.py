@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module that manages the configuration of a segmentation
-
-@author: Pieter Roggemans
+Module that manages configuration data.
 """
 
 import configparser
@@ -24,8 +22,10 @@ def read_config(config_filepaths: []):
     general = config['general']
     global marker
     marker = config['marker']
-    global csv
-    csv = config['csv']
+    global columns
+    columns = config['columns']
+    global preprocess
+    preprocess = config['preprocess']
     global dirs
     dirs = config['dirs']
         

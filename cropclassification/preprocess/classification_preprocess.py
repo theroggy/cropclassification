@@ -7,9 +7,12 @@ Module with helper functions to preprocess the data to use for the classificatio
 
 import logging
 import os
+
 import pandas as pd
+
 import cropclassification.preprocess.classification_preprocess_BEFL as befl
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -24,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def prepare_input(input_parcel_filepath: str,
                   input_filetype: str,
-                  input_parcel_pixcount_csv: str,
+                  input_parcel_pixcount_filepath: str,
                   input_classtype_to_prepare: str,
                   output_parcel_filepath: str,
                   force: bool = False):
@@ -47,54 +50,55 @@ def prepare_input(input_parcel_filepath: str,
         raise Exception(message)
 
     # Load pixcount data and join it
-    logger.info(f'Read pixcount file {input_parcel_pixcount_csv}')
-    df_pixcount = pd.read_csv(input_parcel_pixcount_csv)
-    logger.debug(f'Read pixcount file ready, shape: {df_pixcount.shape}')
-    df_pixcount.set_index(conf.csv['id_column'], inplace=True)
+    logger.info(f"Read pixcount file {input_parcel_pixcount_filepath}")
+    df_pixcount = pdh.read_file(input_parcel_pixcount_filepath)
+    logger.debug(f"Read pixcount file ready, shape: {df_pixcount.shape}")
+    if df_pixcount.index.name != conf.columns['id']: 
+        df_pixcount.set_index(conf.columns['id'], inplace=True)
 
-    df_parceldata.set_index(conf.csv['id_column'], inplace=True)
-    df_parceldata = df_parceldata.join(df_pixcount[conf.csv['pixcount_s1s2_column']], how='left')
+    df_parceldata.set_index(conf.columns['id'], inplace=True)
+    df_parceldata = df_parceldata.join(df_pixcount[conf.columns['pixcount_s1s2']], how='left')
 
     # Export result to file
     output_ext = os.path.splitext(output_parcel_filepath)[1]
     for column in df_parceldata.columns:
         # if the output asked is a csv... we don't need the geometry...
-        if column == conf.csv['geom_column'] and output_ext == '.csv':
+        if column == conf.columns['geom'] and output_ext == '.csv':
             df_parceldata.drop(column, axis=1, inplace=True)
 
-    logger.info(f'Write output to {output_parcel_filepath}')
-    if output_ext == '.csv':         # If extension is csv, write csv (=a lot faster!)
-        df_parceldata.to_csv(output_parcel_filepath)
+    logger.info(f"Write output to {output_parcel_filepath}")
+    if output_ext.lower() != '.shp':         # If extension is not .shp, write using pandas (=a lot faster!)
+        pdh.to_file(df_parceldata, output_parcel_filepath)
     else:
         df_parceldata.to_file(output_parcel_filepath, index=False)
 
-def create_train_test_sample(input_parcel_csv: str,
-                             output_parcel_train_csv: str,
-                             output_parcel_test_csv: str,
+def create_train_test_sample(input_parcel_filepath: str,
+                             output_parcel_train_filepath: str,
+                             output_parcel_test_filepath: str,
                              balancing_strategy: str,
                              force: bool = False):
     """ Create a seperate train and test sample from the general input file. """
 
     # If force == False Check and the output files exist already, stop.
     if(force is False
-            and os.path.exists(output_parcel_train_csv) is True
-            and os.path.exists(output_parcel_test_csv) is True):
-        logger.warning(f"create_train_test_sample: output files already exist and force == False, so stop: {output_parcel_train_csv}, {output_parcel_test_csv}")
+            and os.path.exists(output_parcel_train_filepath) is True
+            and os.path.exists(output_parcel_test_filepath) is True):
+        logger.warning(f"create_train_test_sample: output files already exist and force == False, so stop: {output_parcel_train_filepath}, {output_parcel_test_filepath}")
         return
 
     # Load input data...
-    logger.info(f'Start create_train_test_sample with balancing_strategy {balancing_strategy}')
-    logger.info(f'Read input file {input_parcel_csv}')
-    df_in = pd.read_csv(input_parcel_csv)
-    logger.debug(f'Read input file ready, shape: {df_in.shape}')
+    logger.info(f"Start create_train_test_sample with balancing_strategy {balancing_strategy}")
+    logger.info(f"Read input file {input_parcel_filepath}")
+    df_in = pdh.read_file(input_parcel_filepath)
+    logger.debug(f"Read input file ready, shape: {df_in.shape}")
 
     # Init some many-used variables from config
-    class_balancing_column = conf.csv['class_balancing_column']
-    class_column = conf.csv['class_column']
+    class_balancing_column = conf.columns['class_balancing']
+    class_column = conf.columns['class']
 
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         count_per_class = df_in.groupby(class_balancing_column, as_index=False).size()
-        logger.info(f'Number of elements per classname in input dataset:\n{count_per_class}')
+        logger.info(f"Number of elements per classname in input dataset:\n{count_per_class}")
 
     # The test dataset should be as representative as possible for the entire dataset, so create
     # this first as a 20% sample of each class without any additional checks...
@@ -110,7 +114,7 @@ def create_train_test_sample(input_parcel_csv: str,
 
     # Remove parcel with too few pixels from the train sample
     min_pixcount = 10
-    df_train_base = df_train_base[df_train_base[conf.csv['pixcount_s1s2_column']] >= min_pixcount]
+    df_train_base = df_train_base[df_train_base[conf.columns['pixcount_s1s2']] >= min_pixcount]
     logger.debug(f"Number of parcels in df_train_base after filter on pixcount >= {min_pixcount}: {len(df_train_base)}")
 
     # Some classes shouldn't be used for teaining... so remove them!
@@ -200,8 +204,8 @@ def create_train_test_sample(input_parcel_csv: str,
 
     # Write to output files
     logger.info('Write the output files')
-    df_train.to_csv(output_parcel_train_csv, index=False)    # The ID column is the index...
-    df_test.to_csv(output_parcel_test_csv, index=False)      # The ID column is the index...
+    pdh.to_file(df_train, output_parcel_train_filepath)    # The ID column is the index...
+    pdh.to_file(df_test, output_parcel_test_filepath)      # The ID column is the index...
 
 # If the script is run directly...
 if __name__ == "__main__":

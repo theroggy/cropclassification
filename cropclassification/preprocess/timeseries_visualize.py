@@ -9,9 +9,12 @@ TODO: Recently hasn't been tested anymore!!!
 
 import logging
 import os
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -27,24 +30,24 @@ SENSORDATA_VH = 'VH' # Vertical Horizontal
 # The real work
 #-------------------------------------------------------------
 
-def show(input_parcel_csv: str,
+def show(input_parcel_filepath: str,
          filter_id: str):
 
     # Load input data...
-    df = pd.read_csv(input_parcel_csv)
+    df = pdh.read_file(input_parcel_filepath)
 
     # Just keep one parcel
-    df = df[df[conf.csv['id_column']] == filter_id]
+    df = df[df[conf.columns['id']] == filter_id]
 
     # Remove all unnecessary columns
     for column in df:
         if(not column.startswith(SENSORDATA_VV + '_')
            and not column.startswith(SENSORDATA_VH + '_')
-           and not column == conf.csv['id_column']):
+           and not column == conf.columns['id']):
             df = df.drop(columns=column)
 
     # Set index for trnaspose
-    df.set_index(conf.csv['id_column'], inplace=True)
+    df.set_index(conf.columns['id'], inplace=True)
 
     # Transpose columns to rows to create time series
     df = df.transpose()
@@ -84,6 +87,6 @@ if __name__ == "__main__":
     
     local_data_basedir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'
     local_data_dir = os.path.join(local_data_basedir, 'ClassificationAndTraining\\Hoofdteelt_2017-06-03_2017-09-04')
-    input_parcel_csv = os.path.join(local_data_dir , 'BEVL2017_result.csv')
-    show(input_parcel_csv, filter_id = '0000280464DD96FF')
+    input_parcel_filepath = os.path.join(local_data_dir , 'BEVL2017_result.csv')
+    show(input_parcel_filepath, filter_id = '0000280464DD96FF')
 '''    

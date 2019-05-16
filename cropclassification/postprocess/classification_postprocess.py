@@ -48,45 +48,46 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
 
         # float(row['pred1_prob']) > 30
         if ((float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']))):
-            return row[conf.csv['prediction_column']]
+            return row[conf.columns['prediction']]
         else:
             return 'DOUBT'
 
     values = df_top3.apply(calculate_consolidated_prediction, axis=1)
-    df_top3.insert(loc=2, column=conf.csv['prediction_withdoubt_column'], value=values)
+    df_top3.insert(loc=2, column=conf.columns['prediction_withdoubt'], value=values)
 
     # Make sure all input parcels are in the output. If there was no prediction, it means that there
     # was no data available for a classification, so set prediction to NODATA
-    df_top3.set_index(conf.csv['id_column'], inplace=True)
-    df_input_parcel.set_index(conf.csv['id_column'], inplace=True)
+    df_top3.set_index(conf.columns['id'], inplace=True)
+    if df_input_parcel.index.name != conf.columns['id']:
+        df_input_parcel.set_index(conf.columns['id'], inplace=True)
 
     # Add a column with the prediction status... and all parcels in df_top3 got a prediction
-    df_top3[conf.csv['prediction_status']] = 'OK'
-    df_top3.loc[(df_top3[conf.csv['prediction_withdoubt_column']] == 'DOUBT'),
-                conf.csv['prediction_status']] = 'DOUBT'
+    df_top3[conf.columns['prediction_status']] = 'OK'
+    df_top3.loc[(df_top3[conf.columns['prediction_withdoubt']] == 'DOUBT'),
+                conf.columns['prediction_status']] = 'DOUBT'
 
     cols_to_join = df_top3.columns.difference(df_input_parcel.columns)
     df_pred = df_input_parcel.join(df_top3[cols_to_join], how='left')
-    df_pred[conf.csv['prediction_column']].fillna('NODATA', inplace=True)
-    df_pred[conf.csv['prediction_withdoubt_column']].fillna('NODATA', inplace=True)
-    df_pred[conf.csv['prediction_status']].fillna('NODATA', inplace=True)
+    df_pred[conf.columns['prediction']].fillna('NODATA', inplace=True)
+    df_pred[conf.columns['prediction_withdoubt']].fillna('NODATA', inplace=True)
+    df_pred[conf.columns['prediction_status']].fillna('NODATA', inplace=True)
 
     logger.info(f"Columns of df_pred: {df_pred.columns}")
 
     # Now calculate the full consolidated prediction: 
     #    * Can be doubt if probability too low
     #    * Parcels with too few pixels don't have a good accuracy and give many alfa errors...
-    df_pred[conf.csv['prediction_cons_column']] = df_pred[conf.csv['prediction_withdoubt_column']]
-    df_pred.loc[(df_pred[conf.csv['pixcount_s1s2_column']] <= conf.marker.getint('min_nb_pixels'))
-                 & (df_pred[conf.csv['prediction_status']] != 'NODATA')
-                 & (df_pred[conf.csv['prediction_status']] != 'DOUBT'),
-                [conf.csv['prediction_cons_column'], conf.csv['prediction_status']]] = 'NOT_ENOUGH_PIXELS'
+    df_pred[conf.columns['prediction_cons']] = df_pred[conf.columns['prediction_withdoubt']]
+    df_pred.loc[(df_pred[conf.columns['pixcount_s1s2']] <= conf.marker.getint('min_nb_pixels'))
+                 & (df_pred[conf.columns['prediction_status']] != 'NODATA')
+                 & (df_pred[conf.columns['prediction_status']] != 'DOUBT'),
+                [conf.columns['prediction_cons'], conf.columns['prediction_status']]] = 'NOT_ENOUGH_PIXELS'
 
     # Set the prediction status for classes that should be ignored
-    df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore_for_train')), 
-                [conf.csv['prediction_status']]] = 'UNKNOWN'
-    df_pred.loc[df_pred[conf.csv['class_column']].isin(conf.marker.getlist('classes_to_ignore')), 
-                [conf.csv['prediction_status']]] = df_pred[conf.csv['class_column']]
+    df_pred.loc[df_pred[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore_for_train')), 
+                [conf.columns['prediction_status']]] = 'UNKNOWN'
+    df_pred.loc[df_pred[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore')), 
+                [conf.columns['prediction_status']]] = df_pred[conf.columns['class']]
 
     # Calculate consequences for the predictions
     logger.info("Calculate the consequences for the predictions")
@@ -110,15 +111,15 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
         # Some conclusions are different is detailed info is asked...
         if detailed == True:
             # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
-            in_df.loc[in_df[conf.csv['class_column']].isin(all_classes_to_ignore),
-                      new_columnname] = 'IGNORE:INPUTCLASSNAME=' + in_df[conf.csv['class_column']].map(str)
+            in_df.loc[in_df[conf.columns['class']].isin(all_classes_to_ignore),
+                      new_columnname] = 'IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
             # If conclusion still UNDEFINED, check if doubt 
             in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
                     & (in_df[prediction_column_to_use].isin(['DOUBT', 'NODATA', 'NOT_ENOUGH_PIXELS'])),
                     new_columnname] = 'DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
         else:
             # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
-            in_df.loc[in_df[conf.csv['class_column']].isin(all_classes_to_ignore),
+            in_df.loc[in_df[conf.columns['class']].isin(all_classes_to_ignore),
                       new_columnname] = 'IGNORE'
             # If conclusion still UNDEFINED, check if doubt 
             in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
@@ -127,7 +128,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
 
         # If conclusion still UNDEFINED, check if prediction equals the input class 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                & (in_df[conf.csv['class_column']] == in_df[prediction_column_to_use]),
+                & (in_df[conf.columns['class']] == in_df[prediction_column_to_use]),
                 new_columnname] = 'OK:PREDICTION=INPUT_CLASS'
         # If conclusion still UNDEFINED, prediction is different from input 
         in_df.loc[in_df[new_columnname] == 'UNDEFINED',
@@ -135,22 +136,22 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
 
     # Calculate detailed conclusions
     add_prediction_conclusion(in_df=df_pred,
-                              new_columnname=conf.csv['prediction_conclusion_detail_column'],
-                              prediction_column_to_use=conf.csv['prediction_column'],
+                              new_columnname=conf.columns['prediction_conclusion_detail'],
+                              prediction_column_to_use=conf.columns['prediction'],
                               detailed=True)
     add_prediction_conclusion(in_df=df_pred,
-                              new_columnname=conf.csv['prediction_conclusion_detail_withdoubt_column'],
-                              prediction_column_to_use=conf.csv['prediction_withdoubt_column'],
+                              new_columnname=conf.columns['prediction_conclusion_detail_withdoubt'],
+                              prediction_column_to_use=conf.columns['prediction_withdoubt'],
                               detailed=True)
     add_prediction_conclusion(in_df=df_pred,
-                              new_columnname=conf.csv['prediction_conclusion_detail_cons_column'],
-                              prediction_column_to_use=conf.csv['prediction_cons_column'],
+                              new_columnname=conf.columns['prediction_conclusion_detail_cons'],
+                              prediction_column_to_use=conf.columns['prediction_cons'],
                               detailed=True)
 
     # Calculate general conclusions for cons as well
     add_prediction_conclusion(in_df=df_pred,
-                              new_columnname=conf.csv['prediction_conclusion_cons_column'],
-                              prediction_column_to_use=conf.csv['prediction_cons_column'],
+                              new_columnname=conf.columns['prediction_conclusion_cons'],
+                              prediction_column_to_use=conf.columns['prediction_cons'],
                               detailed=False)
 
     logger.info("Write final prediction data to file")
@@ -175,7 +176,7 @@ def _get_top_3_prediction(df_probabilities):
     logger.info("get_top_3_predictions: start")
     df_probabilities_tmp = df_probabilities.copy()
     for column in df_probabilities_tmp.columns:
-        if column in conf.csv.getlist('dedicated_data_columns'):
+        if column in conf.preprocess.getlist('dedicated_data_columns'):
             df_probabilities_tmp.drop(column, axis=1, inplace=True)
 
     # Get the top 3 predictions for each row
@@ -192,13 +193,13 @@ def _get_top_3_prediction(df_probabilities):
     # Concatenate both
     top3_pred = np.concatenate([top3_pred_classes, top3_pred_values], axis=1)
     # Concatenate the ids, the classes and the top3 predictions
-    id_class_top3 = np.concatenate([df_probabilities[[conf.csv['id_column'], conf.csv['class_column']]].values, top3_pred]
+    id_class_top3 = np.concatenate([df_probabilities[[conf.columns['id'], conf.columns['class']]].values, top3_pred]
                                    , axis=1)
 
     # Convert to dataframe and return
     df_top3 = pd.DataFrame(id_class_top3,
-                           columns=[conf.csv['id_column'], conf.csv['class_column'],
-                                    conf.csv['prediction_column'], 'pred2', 'pred3',
+                           columns=[conf.columns['id'], conf.columns['class'],
+                                    conf.columns['prediction'], 'pred2', 'pred3',
                                     'pred1_prob', 'pred2_prob', 'pred3_prob'])
 
     return df_top3
