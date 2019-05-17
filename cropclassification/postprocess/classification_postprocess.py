@@ -40,22 +40,12 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
     # Calculate the top 3 predictions
     df_top3 = _get_top_3_prediction(df_proba)
 
-    # Add the consolidated prediction
-    # TODO: try to rewrite using native pandas commands to improve performance
-    def calculate_consolidated_prediction(row):
-        # For some reason the row['pred2_prob'] is sometimes seen as string, and so 2* gives a
-        # repetition of the string value instead of a mathematic multiplication... so cast to float!
+    # Calculate predictions with doubt
+    df_top3[conf.columns['prediction_withdoubt']] = 'DOUBT'
+    df_top3.loc[df_top3['pred1_prob'].map(float) >= 2.0 * df_top3['pred2_prob'].map(float),
+                conf.columns['prediction_withdoubt']] = df_top3[conf.columns['prediction']]
 
-        # float(row['pred1_prob']) > 30
-        if ((float(row['pred1_prob']) >= 2.0 * float(row['pred2_prob']))):
-            return row[conf.columns['prediction']]
-        else:
-            return 'DOUBT'
-
-    values = df_top3.apply(calculate_consolidated_prediction, axis=1)
-    df_top3.insert(loc=2, column=conf.columns['prediction_withdoubt'], value=values)
-
-    # Make sure all input parcels are in the output. If there was no prediction, it means that there
+    # Make sure all input parcels stay in the output. If there was no prediction, it means that there
     # was no data available for a classification, so set prediction to NODATA
     df_top3.set_index(conf.columns['id'], inplace=True)
     if df_input_parcel.index.name != conf.columns['id']:
@@ -72,7 +62,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
     df_pred[conf.columns['prediction_withdoubt']].fillna('NODATA', inplace=True)
     df_pred[conf.columns['prediction_status']].fillna('NODATA', inplace=True)
 
-    logger.info(f"Columns of df_pred: {df_pred.columns}")
+    logger.debug(f"Columns of df_pred: {df_pred.columns}")
 
     # Now calculate the full consolidated prediction: 
     #    * Can be doubt if probability too low
@@ -89,8 +79,8 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
     df_pred.loc[df_pred[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore')), 
                 [conf.columns['prediction_status']]] = df_pred[conf.columns['class']]
 
-    # Calculate consequences for the predictions
-    logger.info("Calculate the consequences for the predictions")
+    # Calculate conclusions for the predictions
+    logger.info("Calculate the conclusions for the predictions")
 
     def add_prediction_conclusion(in_df,
                                   new_columnname, 
