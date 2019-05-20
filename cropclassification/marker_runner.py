@@ -35,6 +35,11 @@ def run(config_filepaths: []):
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
+    # Write the consolidated config as ini file again to the run dir
+    config_used_filepath = os.path.join(run_dir, 'config_used.ini')
+    with open(config_used_filepath, 'w') as config_used_file:
+        conf.config.write(config_used_file)
+
     # Get some general config
     columndata_ext = conf.general['columndata_ext']
     rowdata_ext = conf.general['rowdata_ext']
