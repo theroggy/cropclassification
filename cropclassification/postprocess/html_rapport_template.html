@@ -9,7 +9,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
 </head>
 <body>
-    <div class="container-fluid">         
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>PARAMETERS USED</h1>
+                <p>$PARAMETERS_USED_TEXT</p>
+                <div class="row">
+                    <div class="col-md-4">$PARAMETERS_USED_TABLE</div>
+                </div>
+                <br />
+            </div>
+        </div>                 
         <div class="row">
             <div class="col-md-12">
                 <h1>GENERAL RESULTS</h1>
@@ -20,11 +30,12 @@
                     <div class="col-md-6"><div id="chart_general_accuracies" style="height:300px;"></div></div>
                 </div>
                 <br />
-                <h2>GENERAL ACCURACIES</h2>
+                <h2>OVERALL ACCURACIES</h2>
+                <p>$OVERALL_ACCURACIES_TEXT</p>
                 <div class="row">
-                    <ul>$GENERAL_ACCURACIES_TEXT</ul>
+                    <div class="col-md-6">$OVERALL_ACCURACIES_TABLE</div>
+                    <br />
                 </div>
-                <br />
             </div>
         </div>
         <div class="row">
@@ -96,7 +107,7 @@
 
     </div>
     <script type="text/javascript">
-        var general_acuracies_data = $GENERAL_ACCURACIES_DATA;
+        var general_acuracies_data = $GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA;
         var confusion_matrices_data = $CONFUSION_MATRICES_DATA;
         var confusion_matrices_consolidated_data = $CONFUSION_MATRICES_CONSOLIDATED_DATA;
     </script>

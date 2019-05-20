@@ -51,6 +51,9 @@ def write_full_report(parcel_predictions_filepath: str,
 
     logger.info("Start write_full_report")
 
+    pandas_option_context_list = ['display.max_rows', None, 'display.max_columns', None, 
+                                  'display.max_colwidth', 300, 'display.width', 2000, 
+                                  'display.colheader_justify', 'left']
     logger.info(f"Read file with predictions: {parcel_predictions_filepath}")
     df_predict = pdh.read_file(parcel_predictions_filepath)
     df_predict.set_index(conf.columns['id'], inplace=True)
@@ -76,23 +79,25 @@ def write_full_report(parcel_predictions_filepath: str,
     # Build and write report...
     with open(output_report_txt, 'w') as outputfile:
 
-        '''
-        # Remark: the titles are 60 karakters wide...
-        # Output general classification status
         outputfile.write("************************************************************\n")
-        outputfile.write("***************** GENERAL ACCURACIES ***********************\n")
+        outputfile.write("********************* PARAMETERS USED **********************\n")
         outputfile.write("************************************************************\n")
-        count_per_pred_status = (df_predict
-                                 .groupby(conf.columns['prediction_status'], as_index=False)
-                                 .size().to_frame('count'))
-        values = 100 * count_per_pred_status['count'] / count_per_pred_status['count'].sum()
-        count_per_pred_status.insert(loc=1, column='pct', value=values)
+        outputfile.write("\n")
+        message = "Main parameters used for the marker"
+        outputfile.write(f"\n{message}\n")
+        html_data['PARAMETERS_USED_TEXT'] = message
 
-        with pd.option_context("display.max_rows", None, "display.max_columns", None):
-            outputfile.write(f"Number of parcels per prediction status:\n{count_per_pred_status}\n\n")       
-            html_data['GENERAL_ACCURACIES_TABLE'] = count_per_pred_status.to_html()
-            html_data['GENERAL_ACCURACIES_DATA'] = count_per_pred_status.to_dict()
-        '''
+        logger.info(f"{dict(conf.marker)}")
+        parameter_list = [['marker', key, value] for key, value in conf.marker.items()]
+        parameter_list += [['preprocess', key, value] for key, value in conf.preprocess.items()]
+        parameter_list += [['classifier', key, value] for key, value in conf.classifier.items()]
+        
+        parameters_used_df = pd.DataFrame(parameter_list, columns=['parameter_type', 'parameter', 'value'])
+        with pd.option_context(*pandas_option_context_list):
+            outputfile.write(f"\n{parameters_used_df}\n")
+            logger.info(f"{parameters_used_df}\n")
+            html_data['PARAMETERS_USED_TABLE'] = parameters_used_df.to_html(index=False) 
+              
         outputfile.write("************************************************************\n")
         outputfile.write("**************** RECAP OF GENERAL RESULTS ******************\n")
         outputfile.write("************************************************************\n")
@@ -110,81 +115,73 @@ def write_full_report(parcel_predictions_filepath: str,
         values = 100*count_per_class['count']/count_per_class['count'].sum()
         count_per_class.insert(loc=1, column='pct', value=values)
         
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
+        with pd.option_context(*pandas_option_context_list):                                
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data['GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
-            html_data['GENERAL_ACCURACIES_TABLE'] = count_per_class.to_html()
-            html_data['GENERAL_ACCURACIES_DATA'] = count_per_class.to_dict()
+            html_data['GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA'] = count_per_class.to_dict()
 
         # Output general accuracies
         outputfile.write("************************************************************\n")
-        outputfile.write("*                   GENERAL ACCURACIES                     *\n")
+        outputfile.write("*                   OVERALL ACCURACIES                     *\n")
         outputfile.write("************************************************************\n")
+        overall_accuracies_list = []
 
-        # First report the general accuracies for the entire list to report on...
+        # Calculate overall accuracies for all parcels
         oa = skmetrics.accuracy_score(df_predict[conf.columns['class']],
                                       df_predict[conf.columns['prediction']],
                                       normalize=True,
                                       sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for all parcels to report on, for standard prediction"
-        logger.info(message)
-        outputfile.write(f"{message}\n")        
-        html_data['GENERAL_ACCURACIES_TEXT'] = f"<li>{message}</li>\n"
+        overall_accuracies_list.append({'parcels': 'All', 'prediction_type': 'standard', 'accuracy': oa})
 
         oa = skmetrics.accuracy_score(df_predict[conf.columns['class']],
                                       df_predict[conf.columns['prediction_cons']],
                                       normalize=True,
                                       sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for all parcels to report on, for consolidated prediction"
-        logger.info(message)
-        outputfile.write(f"{message}\n")        
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
+        overall_accuracies_list.append({'parcels': 'All', 'prediction_type': 'consolidated', 'accuracy': oa})
 
-        # Now report on parcels that actually had a prediction
-        df_predict_has_prediction = df_predict.loc[(df_predict[conf.columns['prediction_status']] != 'NODATA')
-                                                   & (df_predict[conf.columns['prediction_status']] != 'NOT_ENOUGH_PIXELS')]
-        oa = skmetrics.accuracy_score(df_predict_has_prediction[conf.columns['class']],
-                                      df_predict_has_prediction[conf.columns['prediction']],
-                                      normalize=True,
-                                      sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for standard prediction"
-        logger.info(message)
-        outputfile.write(f"{message}\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
-
-        oa = skmetrics.accuracy_score(df_predict_has_prediction[conf.columns['class']],
-                                      df_predict_has_prediction[conf.columns['prediction_cons']],
-                                      normalize=True,
-                                      sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for parcels with a prediction (= excl. NODATA, NOT_ENOUGH_PIXELS parcels), for consolidated prediction"
-        logger.info(message)
-        outputfile.write(f"{message}\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
-
-        # Output best-case accuracy
-        # Ignore the classes to be ignored...
-        logger.info("For best-case accuracy, remove the classes_to_ignore and classes_to_ignore_for_train classses")
-        df_predict_accuracy_best_case = df_predict[~df_predict[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore_for_train'))]
-        df_predict_accuracy_best_case = df_predict_accuracy_best_case[~df_predict_accuracy_best_case[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore'))]
+        # Calculate while ignoring the classes to be ignored...
+        df_predict_accuracy_no_ignore = df_predict[~df_predict[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore_for_train'))]
+        df_predict_accuracy_no_ignore = df_predict_accuracy_no_ignore[~df_predict_accuracy_no_ignore[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore'))]
         
-        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[conf.columns['class']],
-                                      df_predict_accuracy_best_case[conf.columns['prediction']],
+        oa = skmetrics.accuracy_score(df_predict_accuracy_no_ignore[conf.columns['class']],
+                                      df_predict_accuracy_no_ignore[conf.columns['prediction']],
                                       normalize=True,
                                       sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes_to_ignore(_for_train) classes, for standard prediction"
-        logger.info(message)
-        outputfile.write(f"{message}\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
+        overall_accuracies_list.append({'parcels': 'Exclude classes_to_ignore(_for_train) classes', 'prediction_type': 'standard', 'accuracy': oa})
 
-        oa = skmetrics.accuracy_score(df_predict_accuracy_best_case[conf.columns['class']],
-                                      df_predict_accuracy_best_case[conf.columns['prediction_cons']],
+        oa = skmetrics.accuracy_score(df_predict_accuracy_no_ignore[conf.columns['class']],
+                                      df_predict_accuracy_no_ignore[conf.columns['prediction_cons']],
                                       normalize=True,
                                       sample_weight=None) * 100
-        message = f"OA: {oa:.2f} for the parcels with a prediction, excl. classes_to_ignore(_for_train) classes, for consolidated prediction"
-        logger.info(message)
-        outputfile.write(f"{message}\n\n")
-        html_data['GENERAL_ACCURACIES_TEXT'] += f"<li>{message}</li>\n"
+        overall_accuracies_list.append({'parcels': 'Exclude classes_to_ignore(_for_train) classes', 'prediction_type': 'consolidated', 'accuracy': oa})
+
+        # Calculate ignoring both classes to ignored + parcels not having a valid prediction
+        df_predict_no_ignore_has_prediction = df_predict_accuracy_no_ignore.loc[(df_predict_accuracy_no_ignore[conf.columns['prediction_status']] != 'NODATA')
+                                                   & (df_predict_accuracy_no_ignore[conf.columns['prediction_status']] != 'NOT_ENOUGH_PIXELS')]
+        oa = skmetrics.accuracy_score(df_predict_no_ignore_has_prediction[conf.columns['class']],
+                                      df_predict_no_ignore_has_prediction[conf.columns['prediction']],
+                                      normalize=True,
+                                      sample_weight=None) * 100
+        overall_accuracies_list.append({'parcels': 'Exclude ignored ones + with prediction (= excl. NODATA, NOT_ENOUGH_PIXELS)', 'prediction_type': 'standard', 'accuracy': oa})
+
+        oa = skmetrics.accuracy_score(df_predict_no_ignore_has_prediction[conf.columns['class']],
+                                      df_predict_no_ignore_has_prediction[conf.columns['prediction_cons']],
+                                      normalize=True,
+                                      sample_weight=None) * 100
+        overall_accuracies_list.append({'parcels': 'Exclude ignored ones + with prediction (= excl. NODATA, NOT_ENOUGH_PIXELS)', 'prediction_type': 'consolidated', 'accuracy': oa})
+
+        # Output the resulting overall accuracies
+        message = 'Overall accuracies for different sub-groups of the data'
+        outputfile.write(f"\n{message}\n")
+        html_data['OVERALL_ACCURACIES_TEXT'] = message
+
+        overall_accuracies_df = pd.DataFrame(overall_accuracies_list, columns=['parcels', 'prediction_type', 'accuracy'])
+        overall_accuracies_df.set_index(keys=['parcels', 'prediction_type'], inplace=True)
+        with pd.option_context(*pandas_option_context_list):
+            outputfile.write(f"\n{overall_accuracies_df}\n")
+            logger.info(f"{overall_accuracies_df}\n")
+            html_data['OVERALL_ACCURACIES_TABLE'] = overall_accuracies_df.to_html()        
 
         # Write the recall, F1 score,... per class
 #        message = skmetrics.classification_report(df_predict[gs.class_column]
