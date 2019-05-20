@@ -11,7 +11,8 @@ def read_config(config_filepaths: []):
     # Read the configuration
     global config
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation(),
-                                       converters={'list': lambda x: [i.strip() for i in x.split(',')]})
+                                       converters={'list': lambda x: [i.strip() for i in x.split(',')],
+                                                   'listint': lambda x: [int(i.strip()) for i in x.split(',')]})
 
     config.read(config_filepaths)
     global config_filepaths_used
@@ -24,6 +25,8 @@ def read_config(config_filepaths: []):
     marker = config['marker']
     global columns
     columns = config['columns']
+    global classifier
+    classifier = config['classifier']
     global preprocess
     preprocess = config['preprocess']
     global dirs

@@ -47,7 +47,8 @@ def train(df_train: pd.DataFrame,
 
     # Using almost all defaults for the classifier seems to work best...
     logger.info('Start training')
-    classifier = MLPClassifier(max_iter=1000, hidden_layer_sizes=(100, 100, ))
+    hidden_layer_sizes = tuple(conf.classifier.getlistint('hidden_layer_sizes'))
+    classifier = MLPClassifier(max_iter=1000, hidden_layer_sizes=hidden_layer_sizes)
     logger.info(f"Classifier info:\n{classifier}")
     classifier.fit(df_train_data, df_train_classes)
 
