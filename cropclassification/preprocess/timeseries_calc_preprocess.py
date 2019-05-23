@@ -8,7 +8,10 @@ Create an input file for the sentinel timeseries processing.
 import logging
 import os
 import geopandas as gpd
+
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.geofile as geofile_util
+import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -22,10 +25,19 @@ logger = logging.getLogger(__name__)
 
 def prepare_input(input_parcel_filepath: str,
                   output_imagedata_parcel_input_filepath: str,
+                  output_imagedata_parcel_input_4326_filepath: str = None,
+                  output_parcel_nogeo_filepath: str = None,
                   force: bool = False):
     """
     This function creates a file that is preprocessed to be a good input file for
     timeseries extraction of sentinel images.
+
+    Args
+        input_parcel_filepath: input file
+        output_imagedata_parcel_input_filepath: prepared output file
+        output_imagedata_parcel_input_4326_filepath: prepared output file reprojected to 4326
+        output_parcel_nogeo_filepath: output file with a copy of the non-geo data
+        force: force creation, even if output file(s) exist already
 
     """
 
@@ -33,15 +45,25 @@ def prepare_input(input_parcel_filepath: str,
     #       so reprojection should be added here...
 
     # If force == False Check and the output file exists already, stop.
-    if(force is False and os.path.exists(output_imagedata_parcel_input_filepath)):
-        logger.warning(f"prepare_input: output file already exists and force == False, so stop: {output_imagedata_parcel_input_filepath}")
+    if(force is False 
+       and os.path.exists(output_imagedata_parcel_input_filepath)
+       and (output_imagedata_parcel_input_4326_filepath is None or os.path.exists(output_imagedata_parcel_input_4326_filepath))
+       and (output_parcel_nogeo_filepath is None or os.path.exists(output_parcel_nogeo_filepath))):
+        logger.warning("prepare_input: force == False and output files exist, so stop: " +
+                f"{output_imagedata_parcel_input_filepath}, {output_imagedata_parcel_input_4326_filepath}, {output_parcel_nogeo_filepath}")
         return
 
     # Check if parameters are OK and init some extra params
     if not os.path.exists(input_parcel_filepath):
         raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
-    else:
-        logger.info(f"Process input file {input_parcel_filepath}")
+    
+    # Check if the input file has a projection specified
+    if geofile_util.get_crs(input_parcel_filepath) is None:
+        message = f"The parcel input file doesn't have a projection/crs specified, so STOP: {input_parcel_filepath}"
+        logger.critical(message)
+        raise Exception(message)
+
+    logger.info(f"Process input file {input_parcel_filepath}")
 
     # Create temp dir to store temporary data for tracebility
     output_dir, output_filename = os.path.split(output_imagedata_parcel_input_filepath)
@@ -56,17 +78,22 @@ def prepare_input(input_parcel_filepath: str,
 
     # Read the parcel data and do the necessary conversions
     #--------------------------------------------------------------------------
-    gdf_parceldata = gpd.read_file(input_parcel_filepath)
-    logger.info(f'Parceldata read, shape: {gdf_parceldata.shape}')
+    parceldata_gdf = gpd.read_file(input_parcel_filepath)
+    logger.info(f'Parceldata read, shape: {parceldata_gdf.shape}')
 
     # Check if the id column is present...
-    if conf.columns['id'] not in gdf_parceldata.columns:
+    if conf.columns['id'] not in parceldata_gdf.columns:
         message = f"STOP: Column {conf.columns['id']} not found in input parcel file: {input_parcel_filepath}. Make sure the column is present or change the column name in global_constants.py"
         logger.critical(message)
         raise Exception(message)
+        
+    if force is True or os.path.exists(output_parcel_nogeo_filepath) == False:
+        logger.info(f"Save non-geo data to {output_parcel_nogeo_filepath}")
+        parceldata_nogeo_df = parceldata_gdf.drop(['geometry'], axis = 1)
+        pdh.to_file(parceldata_nogeo_df, output_parcel_nogeo_filepath)
 
     logger.info('Apply buffer on parcel')
-    parceldata_buf = gdf_parceldata.copy()
+    parceldata_buf = parceldata_gdf.copy()
 
     # resolution = number of segments per circle
     parceldata_buf[conf.columns['geom']] = parceldata_buf[conf.columns['geom']].buffer(-conf.marker.getint('buffer'), resolution=5)
@@ -93,6 +120,14 @@ def prepare_input(input_parcel_filepath: str,
         if column not in [conf.columns['id'], conf.columns['geom']]:
             parceldata_buf_poly.drop(column, axis=1, inplace=True)
     logger.debug(f"parcel that are (multi)polygons, shape: {parceldata_buf_poly.shape}")
+
+    # Check crs of the input file.  is WGS84 (epsg:4326), if not, create reprojected version as well.
+    if output_imagedata_parcel_input_4326_filepath is not None:            
+        target_epsg = 4326
+        logger.info(f"Reproject features from {parceldata_buf_poly.crs} to epsg:{target_epsg}")
+        parceldata_buf_poly_4326 = parceldata_buf_poly.to_crs(epsg=target_epsg)
+        parceldata_buf_poly_4326.to_file(output_imagedata_parcel_input_4326_filepath)
+
     parceldata_buf_poly.to_file(output_imagedata_parcel_input_filepath)
 
     # If the needed to be created... it didn't exist yet and so it needs to be uploaded manually

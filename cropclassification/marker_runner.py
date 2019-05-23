@@ -85,9 +85,9 @@ def run(config_filepaths: []):
     # Check if the necessary input files exist...
     if not os.path.exists(input_parcel_filepath):
         message = f"The parcel input file doesn't exist, so STOP: {input_parcel_filepath}"
-        print(message)
+        logger.critical(message)
         raise Exception(message)
-
+       
     #-------------------------------------------------------------
     # The real work
     #-------------------------------------------------------------
@@ -98,10 +98,14 @@ def run(config_filepaths: []):
     #    TODO: 1) reproject to projection used in GEE: EPSG:4326
     #    2) apply a negative buffer on the parcel to evade mixels
     #    3) remove features that became null because of buffer
+    input_parcel_nogeo_filepath = os.path.join(input_preprocessed_dir, f"{input_parcel_filename_noext}{columndata_ext}")
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
+    imagedata_input_parcel_4326_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326.shp")
     ts_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
-                         output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath) 
+                         output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath,
+                         output_imagedata_parcel_input_4326_filepath=imagedata_input_parcel_4326_filepath,
+                         output_parcel_nogeo_filepath=input_parcel_nogeo_filepath)
 
     # STEP 2: Get the timeseries data needed for the classification
     #-------------------------------------------------------------
@@ -135,7 +139,7 @@ def run(config_filepaths: []):
     #             parcel. Is -1 if the parcel doesn't have any S1/S2 data.
     parcel_filepath = os.path.join(run_dir, f"{input_parcel_filename_noext}_parcel{columndata_ext}")
     parcel_pixcount_filepath = os.path.join(imagedata_dir, f"{base_filename}_pixcount{columndata_ext}")
-    class_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
+    class_pre.prepare_input(input_parcel_filepath=input_parcel_nogeo_filepath,
                             input_filetype=input_parcel_filetype,
                             input_parcel_pixcount_filepath=parcel_pixcount_filepath,
                             output_parcel_filepath=parcel_filepath,
