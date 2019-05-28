@@ -5,7 +5,7 @@ import cropclassification.marker_runner as runner
 
 def main():        
     runner.run(config_filepaths=['marker/general.ini',
-                                 'marker/marker_landcover.ini',
+                                 'marker/marker_landcover_late.ini',
                                  'marker/local_overrule.ini'])
     
 if __name__ == '__main__':

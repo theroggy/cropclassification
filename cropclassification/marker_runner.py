@@ -63,7 +63,7 @@ def run(config_filepaths: []):
     imagedata_dir = conf.dirs['imagedata_dir']
 
     # Settings for preprocessing the inputdata
-    classtype_to_prepare = conf.marker['markertype']
+    classtype_to_prepare = conf.marker['input_classtype_to_prepare']
     balancing_strategy = conf.marker['balancing_strategy']
     postprocess_to_groups = conf.marker['postprocess_to_groups']  
     buffer = conf.marker.getint('buffer')

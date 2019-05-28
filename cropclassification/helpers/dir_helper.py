@@ -14,6 +14,12 @@ def create_run_dir(class_base_dir: str,
         class_base_dir: the base dir to use to create the run dir in
         reuse_last_run_dir: True to find the latest existing run dir and return that, False to create a new run dir
     """
+
+    # Create class_base_dir if it doesn't exist
+    if not os.path.exists(class_base_dir):
+        os.makedirs(class_base_dir)
+
+    # Look for all existing run dirs
     pattern = re.compile('Run_[0-9]{3}')
     dir_list = [x.path for x in os.scandir(class_base_dir) if x.is_dir() and re.search(pattern, x.path)]
     #print(f"Dirs found: {dir_list}")
