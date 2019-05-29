@@ -78,7 +78,7 @@ def prepare_input(input_parcel_filepath: str,
 
     # Read the parcel data and do the necessary conversions
     #--------------------------------------------------------------------------
-    parceldata_gdf = gpd.read_file(input_parcel_filepath)
+    parceldata_gdf = geofile_util.read_file(input_parcel_filepath)
     logger.info(f'Parceldata read, shape: {parceldata_gdf.shape}')
 
     # Check if the id column is present...
