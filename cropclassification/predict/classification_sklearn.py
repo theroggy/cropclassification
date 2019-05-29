@@ -8,6 +8,7 @@ import logging
 import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 
 import cropclassification.helpers.config_helper as conf
@@ -47,10 +48,21 @@ def train(df_train: pd.DataFrame,
 
     # Using almost all defaults for the classifier seems to work best...
     logger.info('Start training')
-    hidden_layer_sizes = tuple(conf.classifier.getlistint('hidden_layer_sizes'))
-    max_iter = conf.classifier.getint('max_iter')
-    classifier = MLPClassifier(max_iter=max_iter, hidden_layer_sizes=hidden_layer_sizes)
-    logger.info(f"Classifier info:\n{classifier}")
+    classifier_type_lower = conf.classifier['classifier_type'].lower()
+    if classifier_type_lower == 'randomforest':
+        n_estimators = conf.classifier.getint('randomforest_n_estimators')
+        max_depth = conf.classifier.getint('randomforest_max_depth')
+        classifier = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth)
+    elif classifier_type_lower == 'multilayer_perceptron':
+        hidden_layer_sizes = tuple(conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes'))
+        max_iter = conf.classifier.getint('multilayer_perceptron_max_iter')
+        classifier = MLPClassifier(max_iter=max_iter, hidden_layer_sizes=hidden_layer_sizes)
+    else:
+        message = f"Unsupported classifier in conf.classifier['classifier_type']: {conf.classifier['classifier_type']}"
+        logger.critical(message)
+        raise Exception(message)
+
+    logger.info(f"Start fitting classifier:\n{classifier}")
     classifier.fit(df_train_data, df_train_classes)
 
     # Write the learned model to a file...
