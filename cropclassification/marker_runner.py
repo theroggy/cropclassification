@@ -3,9 +3,10 @@
 Main script to do a classification.
 """
 
+import datetime
 import logging
 import os
-import datetime
+
 import cropclassification.preprocess.timeseries_calc_preprocess as ts_pre
 import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
 import cropclassification.preprocess.timeseries as ts
@@ -20,10 +21,22 @@ import cropclassification.helpers.config_helper as conf
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
+def run(markertype_to_calc: str,
+        input_parcel_filename: str,
+        input_parcel_filetype: str,
+        input_groundtruth_filename: str,
+        country_code: str,
+        year: int):
 
-def run(config_filepaths: []):
-    # Read the configuration
-    conf.read_config(config_filepaths)
+    # Determine the config files to load depending on the marker_type
+    markertype_to_calc_lower = markertype_to_calc.lower()
+    marker_ini = f"config/{markertype_to_calc_lower}.ini"
+    config_filepaths= ["config/general.ini",
+                       marker_ini,
+                       "config/local_overrule.ini"]
+
+    # Read the configuration files
+    conf.read_config(config_filepaths, year=year)
 
     # Create run dir to be used for the results
     run_base_dir = conf.dirs['marker_base_dir']
@@ -44,30 +57,22 @@ def run(config_filepaths: []):
     columndata_ext = conf.general['columndata_ext']
     rowdata_ext = conf.general['rowdata_ext']
     output_ext = conf.general['output_ext']
+    geofile_ext = conf.general['geofile_ext']
 
     # Get some more specific info
-    year = conf.marker.getint('year')
     base_dir = conf.dirs['base_dir']
     input_dir = conf.dirs['input_dir']
     input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
-
-    # Input file depends on the year
-    if year:
-        input_parcel_filename_noext = conf.config[f'marker:{year}']['input_parcel_filename_noext']
-        input_groundtruth_filepath = os.path.join(input_dir, conf.config[f'marker:{year}']['input_groundtruth_filepath'])
-    else:
-        input_groundtruth_filepath = None
-
-    input_parcel_filepath = os.path.join(input_dir, f"{input_parcel_filename_noext}.shp")   # Input filepath of the parcel
-    input_parcel_filetype = conf.marker['country_code']
     imagedata_dir = conf.dirs['imagedata_dir']
+
+    # Prepare input filepaths
+    input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
+    input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
 
     # Settings for preprocessing the inputdata
     classtype_to_prepare = conf.marker['input_classtype_to_prepare']
     balancing_strategy = conf.marker['balancing_strategy']
-    postprocess_to_groups = conf.marker['postprocess_to_groups']  
     buffer = conf.marker.getint('buffer')
-    input_parcel_filename = os.path.basename(input_parcel_filepath)
     input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
 
     # The data to use to do the classification
@@ -98,10 +103,13 @@ def run(config_filepaths: []):
     #    TODO: 1) reproject to projection used in GEE: EPSG:4326
     #    2) apply a negative buffer on the parcel to evade mixels
     #    3) remove features that became null because of buffer
-    input_parcel_nogeo_filepath = os.path.join(input_preprocessed_dir, f"{input_parcel_filename_noext}{columndata_ext}")
+    input_parcel_nogeo_filepath = os.path.join(
+            input_preprocessed_dir, f"{input_parcel_filename_noext}{columndata_ext}")
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
-    imagedata_input_parcel_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}.shp")
-    imagedata_input_parcel_4326_filepath = os.path.join(input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326.shp")
+    imagedata_input_parcel_filepath = os.path.join(
+            input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}{geofile_ext}")
+    imagedata_input_parcel_4326_filepath = os.path.join(
+            input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326{geofile_ext}")
     ts_pre.prepare_input(input_parcel_filepath=input_parcel_filepath,
                          output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath,
                          output_imagedata_parcel_input_4326_filepath=imagedata_input_parcel_4326_filepath,
@@ -118,7 +126,7 @@ def run(config_filepaths: []):
     #      so upload needs to be done manually
     input_parcel_filepath_gee = f"{conf.dirs['gee']}{imagedata_input_parcel_filename_noext}"
     ts_calc_gee.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee,
-                                     input_country_code=conf.marker['country_code'],
+                                     input_country_code=country_code,
                                      start_date_str=start_date_str,
                                      end_date_str=end_date_str,
                                      sensordata_to_get=sensordata_to_use,
