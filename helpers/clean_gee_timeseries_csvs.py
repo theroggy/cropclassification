@@ -10,8 +10,8 @@ import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
 
 def main():        
     # Read the configuration
-    conf.read_config(['marker/general.ini',
-                      'marker/local_overrule.ini'])
+    conf.read_config(['config/general.ini',
+                      'config/local_overrule.ini'])
 
     # Go!
     imagedata_dir = conf.dirs['imagedata_dir']
