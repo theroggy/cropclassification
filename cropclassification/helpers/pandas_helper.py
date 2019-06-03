@@ -18,9 +18,19 @@ def read_file(filepath: str,
 
     ext_lower = ext.lower()
     if ext_lower == '.csv':
-        return pd.read_csv(filepath, low_memory=False)
+        try:
+            data_read_df = pd.read_csv(filepath, low_memory=False)
+        except UnicodeDecodeError:
+            # If a unicode decode error is thrown, try again using ANSI encoding
+            data_read_df = pd.read_csv(filepath, low_memory=False, encoding='ANSI')
+        return data_read_df
     elif ext_lower == '.tsv':
-        return pd.read_csv(filepath, sep='\t', low_memory=False)
+        try:
+            data_read_df = pd.read_csv(filepath, sep='\t', low_memory=False)
+        except UnicodeDecodeError:
+            # If a unicode decode error is thrown, try again using ANSI encoding
+            data_read_df = pd.read_csv(filepath, sep='\t', low_memory=False, encoding='ANSI')
+        return data_read_df
     elif ext_lower == '.parquet':
         return pd.read_parquet(filepath, columns=columns)
     else:
