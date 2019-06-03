@@ -131,21 +131,6 @@ def prepare_input_cropgroup(
     # Copy orig classname to classification classname
     parceldata_df.insert(loc=0, column=conf.columns['class'], value=parceldata_df[conf.columns['class_orig']])
     
-    # Add column to signify that the parcel is eligible and set ineligible crop types (important
-    # for reporting afterwards)
-    # TODO: would be cleaner if this is based on refe as well instead of hardcoded
-    parceldata_df.insert(loc=0, column=conf.columns['is_eligible'], value=1)
-    parceldata_df.loc[parceldata_df[crop_columnname].isin(['1', '2']), conf.columns['is_eligible']] = 1
-
-    # Add column to signify if the crop/class is permanent, so can/should be followed up in the
-    # LPIS upkeep
-    # TODO: would be cleaner if this is based on refe as well instead of hardcoded
-    parceldata_df.insert(loc=0, column=conf.columns['is_permanent'], value=1)
-    parceldata_df.loc[parceldata_df[crop_columnname].isin(['1', '2', '3']), conf.columns['is_permanent']] = 1
-    if 'GESP_PM' in parceldata_df.columns:
-        # Serres, tijdelijke overkappingen en loodsen
-        parceldata_df.loc[parceldata_df['GESP_PM'].isin(['SER', 'SGM', 'LOO']), conf.columns['is_permanent']] = 1
-
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if 'GESP_PM' in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
@@ -270,7 +255,6 @@ def prepare_input_landcover(input_parcel_filepath: str,
         parceldata_df = geofile_util.read_file(input_parcel_filepath)
     else:
         parceldata_df = pdh.read_file(input_parcel_filepath)
-
     logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")
 
     # Check if the id column is present...
@@ -295,17 +279,6 @@ def prepare_input_landcover(input_parcel_filepath: str,
     # Data verwijderen
 #    df = df[df[classname] != 'Andere subsidiabele gewassen']  # geen boomkweek
 
-    # Add column to signify that the parcel is eligible and set ineligible crop types (important
-    # for reporting afterwards)
-    # TODO: would be cleaner if this is based on refe as well instead of hardcoded
-    parceldata_df.insert(loc=0, column=conf.columns['is_eligible'], value=1)
-    parceldata_df.loc[parceldata_df[crop_columnname].isin(['1', '2']), conf.columns['is_eligible']] = 1
-
-    # Add column to signify if the crop/class is permanent, so can/should be followed up in the
-    # LPIS upkeep
-    # TODO: would be cleaner if this is based on refe as well instead of hardcoded
-    parceldata_df.insert(loc=0, column=conf.columns['is_permanent'], value=1)
-    parceldata_df.loc[parceldata_df[crop_columnname].isin(['1', '2', '3']), conf.columns['is_permanent']] = 1
     if 'GESP_PM' in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
         parceldata_df.loc[parceldata_df['GESP_PM'].isin(['SER', 'SGM', 'LOO']), conf.columns['is_permanent']] = 1
