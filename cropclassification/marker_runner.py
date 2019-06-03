@@ -82,7 +82,7 @@ def run(markertype_to_calc: str,
     input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
 
     # Settings for preprocessing the inputdata
-    classtype_to_prepare = conf.marker['classtype_to_prepare']
+    classtype_to_prepare = conf.preprocess['classtype_to_prepare']
     balancing_strategy = conf.marker['balancing_strategy']
     buffer = conf.marker.getint('buffer')
     input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)

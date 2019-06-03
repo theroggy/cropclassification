@@ -33,28 +33,29 @@ def prepare_input(input_parcel_filepath: str,
         - object_id: column with a unique identifier
         - classname: a string column with a readable name of the classes that will be classified to
     """
-    if classtype_to_prepare == 'MONITORING_CROPGROUPS':
-        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath)
-    elif classtype_to_prepare == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
-        return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath,
-                                        crop_columnname='HOOFDTEELT_CTRL_COD')
-    elif classtype_to_prepare == 'MONITORING_LANDCOVER':
+    if classtype_to_prepare == 'CROPGROUP':
+        return prepare_input_cropgroup(input_parcel_filepath=input_parcel_filepath)
+    elif classtype_to_prepare == 'CROPGROUP_GROUNDTRUTH':
+        return prepare_input_cropgroup(input_parcel_filepath=input_parcel_filepath,
+                                       crop_columnname='HOOFDTEELT_CTRL_COD')
+    elif classtype_to_prepare == 'LANDCOVER':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath)
-    elif classtype_to_prepare == 'MONITORING_LANDCOVER_GROUNDTRUTH':
+    elif classtype_to_prepare == 'LANDCOVER_GROUNDTRUTH':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath,
                                        crop_columnname='HOOFDTEELT_CTRL_COD')  
-    elif classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS':
-        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath)      
-    elif classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS_GROUNDTRUTH':
-        return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath,
-                                                crop_columnname='HOOFDTEELT_CTRL_COD')
+    elif classtype_to_prepare == 'POPULAR_CROP':
+        return prepare_input_most_popular_crop(input_parcel_filepath=input_parcel_filepath)      
+    elif classtype_to_prepare == 'POPULAR_CROP_GROUNDTRUTH':
+        return prepare_input_most_popular_crop(input_parcel_filepath=input_parcel_filepath,
+                                               crop_columnname='HOOFDTEELT_CTRL_COD')
     else:
         message = f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
         logger.fatal(message)
         raise Exception(message)
 
-def prepare_input_cropgroups(input_parcel_filepath: str,
-                             crop_columnname: str = 'GWSCOD_H'):
+def prepare_input_cropgroup(
+            input_parcel_filepath: str,
+            crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -72,8 +73,6 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
     #--------------------------------------------------------------------------
     if not os.path.exists(input_parcel_filepath):
         raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
-    else:
-        logger.info(f"Process input file {input_parcel_filepath}")
 
     # Read and cleanup the mapping table from crop codes to classes
     #--------------------------------------------------------------------------
@@ -81,8 +80,6 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
     input_classes_filepath = os.path.join(input_dir, "refe_mon_cropgroups_landcover_2018.csv")
     if not os.path.exists(input_classes_filepath):
         raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
-    else:
-        logger.info(f"Process input class table file {input_classes_filepath}")
 
     # REM: needs to be read as ANSI, as SQLDetective apparently saves as ANSI
     logger.info(f"Read classes conversion table from {input_classes_filepath}")
@@ -174,8 +171,8 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
     # 'MON_RAAPACHTIGEN': 25% correct classifications: rest spread over many other classes
     # 'MON_STRUIK': 10%
     #    TODO: nakijken, wss opsplitsen of toevoegen aan MON_BOOMKWEEK???
-    classes_badresults = ['MON_ANDERE_SUBSID_GEWASSEN', 'MON_AARDBEIEN', 'MON_BRAAK', 'MON_KLAVER'
-                          , 'MON_MENGSEL', 'MON_POEL', 'MON_RAAPACHTIGEN', 'MON_STRUIK']
+    classes_badresults = ['MON_ANDERE_SUBSID_GEWASSEN', 'MON_AARDBEIEN', 'MON_BRAAK', 'MON_KLAVER', 
+                          'MON_MENGSEL', 'MON_POEL', 'MON_RAAPACHTIGEN', 'MON_STRUIK']
     parceldata_df.loc[parceldata_df[conf.columns['class']].isin(classes_badresults), conf.columns['class']] = 'UNKNOWN'
 
     # MON_BONEN en MON_WIKKEN have omongst each other a very large percentage of false
@@ -200,7 +197,7 @@ def prepare_input_cropgroups(input_parcel_filepath: str,
     parceldata_df.loc[parceldata_df[conf.columns['class']].isin(['MON_STAL', 'SERRES', 'TIJDELIJKE_OVERK']), conf.columns['class']] = 'MON_STAL_SER'
 
     # Set classes with very few elements to UNKNOWN!
-    for index, row in parceldata_df.groupby(conf.columns['class']).size().reset_index(name='count').iterrows():
+    for _, row in parceldata_df.groupby(conf.columns['class']).size().reset_index(name='count').iterrows():
         if row['count'] <= 100:
             logger.info(f"Class <{row[conf.columns['class']]}> only contains {row['count']} elements, so put them to UNKNOWN")
             parceldata_df.loc[parceldata_df[conf.columns['class']] == row[conf.columns['class']], conf.columns['class']] = 'UNKNOWN'
@@ -234,14 +231,10 @@ def prepare_input_landcover(input_parcel_filepath: str,
     This specific implementation converts the typiscal export format used in BE-Flanders to
     this format.
     """
-    logger.info('Start of create_classes_landcover')
-
     # Check if parameters are OK and init some extra params
     #--------------------------------------------------------------------------
     if not os.path.exists(input_parcel_filepath):
         raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
-    else:
-        logger.info(f"Process input file {input_parcel_filepath}")
 
     # Read and cleanup the mapping table from crop codes to classes
     #--------------------------------------------------------------------------
@@ -249,8 +242,6 @@ def prepare_input_landcover(input_parcel_filepath: str,
     input_classes_filepath = os.path.join(input_dir, "refe_mon_cropgroups_landcover_2018.csv")
     if not os.path.exists(input_classes_filepath):
         raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
-    else:
-        logger.info(f"Process input class table file {input_classes_filepath}")
 
     # REM: needs to be read as ANSI, as SQLDetective apparently saves as ANSI
     logger.info(f"Read classes conversion table from {input_classes_filepath}")
@@ -338,7 +329,7 @@ def prepare_input_landcover(input_parcel_filepath: str,
 
     # For columns that aren't needed for the classification:
     #    - Rename the ones interesting for interpretation
-    #    - Drop the columns that aren't useful at all, except thoses excluded for export in the ini file
+    #    - Drop the columns that aren't useful at all, except those excluded for export in the ini file
     for column in parceldata_df.columns:
         if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
             if column == 'GESP_PM':
@@ -352,8 +343,9 @@ def prepare_input_landcover(input_parcel_filepath: str,
 
     return parceldata_df
 
-def prepare_input_most_popular_crops(input_parcel_filepath: str,
-                                     crop_columnname: str = 'GWSCOD_H'):
+def prepare_input_most_popular_crop(
+            input_parcel_filepath: str,
+            crop_columnname: str = 'GWSCOD_H'):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -377,15 +369,12 @@ def prepare_input_most_popular_crops(input_parcel_filepath: str,
 
     # Read and cleanup the mapping table from crop codes to classes
     #--------------------------------------------------------------------------
-    logger.info('Start prepare of inputfile')
-#    df = pd.read_csv(input_parcel_filepath, low_memory=False)
-
-    logger.info(f'Read parceldata from {input_parcel_filepath}')
-    if os.path.splitext(input_parcel_filepath)[1] == '.csv':
-        parceldata_df = pd.read_csv(input_parcel_filepath)
+    logger.info(f"Read parceldata from {input_parcel_filepath}")
+    if geofile_util.is_geofile(input_parcel_filepath):
+        parceldata_df = geofile_util.read_file(input_parcel_filepath)
     else:
-        parceldata_df = gpd.read_file(input_parcel_filepath)
-    logger.info(f'Read Parceldata ready, shape: {parceldata_df.shape}')
+        parceldata_df = pdh.read_file(input_parcel_filepath)
+    logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")
 
     # Rename the column containing the object id to OBJECT_ID
 #    df.rename(columns = {'CODE_OBJ':'object_id'}, inplace = True)
