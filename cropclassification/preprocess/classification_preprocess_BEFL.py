@@ -349,7 +349,7 @@ def prepare_input_landcover_early(
 
     # Remove unneeded columns
     for column in classes_df.columns:
-        if (column not in [conf.columns['class_orig'], crop_columnname]):
+        if (column not in [conf.columns['class_orig'], crop_columnname, 'MON_EARLY_LATE']):
             classes_df.drop(column, axis=1, inplace=True)
 
     # Set the index
