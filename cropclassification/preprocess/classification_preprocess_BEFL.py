@@ -43,6 +43,11 @@ def prepare_input(input_parcel_filepath: str,
     elif classtype_to_prepare == 'LANDCOVER_GROUNDTRUTH':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath,
                                        crop_columnname='HOOFDTEELT_CTRL_COD')  
+    elif classtype_to_prepare == 'LANDCOVER_EARLY':
+        return prepare_input_landcover_early(input_parcel_filepath=input_parcel_filepath)
+    elif classtype_to_prepare == 'LANDCOVER_EARLY_GROUNDTRUTH':
+        return prepare_input_landcover_early(input_parcel_filepath=input_parcel_filepath,
+                                             crop_columnname='HOOFDTEELT_CTRL_COD')  
     elif classtype_to_prepare == 'POPULAR_CROP':
         return prepare_input_most_popular_crop(input_parcel_filepath=input_parcel_filepath)      
     elif classtype_to_prepare == 'POPULAR_CROP_GROUNDTRUTH':
@@ -74,16 +79,14 @@ def prepare_input_cropgroup(
     if not os.path.exists(input_parcel_filepath):
         raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
 
-    # Read and cleanup the mapping table from crop codes to classes
-    #--------------------------------------------------------------------------
-    input_dir = conf.dirs['input_dir']
-    input_classes_filepath = os.path.join(input_dir, "refe_mon_cropgroups_landcover_2018.csv")
+    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
     if not os.path.exists(input_classes_filepath):
         raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
 
-    # REM: needs to be read as ANSI, as SQLDetective apparently saves as ANSI
+    # Read and cleanup the mapping table from crop codes to classes
+    #--------------------------------------------------------------------------
     logger.info(f"Read classes conversion table from {input_classes_filepath}")
-    classes_df = pd.read_csv(input_classes_filepath, low_memory=False, sep=',', encoding='ANSI')
+    classes_df = pdh.read_file(input_classes_filepath)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
@@ -108,7 +111,6 @@ def prepare_input_cropgroup(
         parceldata_df = geofile_util.read_file(input_parcel_filepath)
     else:
         parceldata_df = pdh.read_file(input_parcel_filepath)
-
     logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")
 
     # Check if the id column is present...
@@ -221,16 +223,14 @@ def prepare_input_landcover(input_parcel_filepath: str,
     if not os.path.exists(input_parcel_filepath):
         raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
 
-    # Read and cleanup the mapping table from crop codes to classes
-    #--------------------------------------------------------------------------
-    input_dir = conf.dirs['input_dir']
-    input_classes_filepath = os.path.join(input_dir, "refe_mon_cropgroups_landcover_2018.csv")
+    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
     if not os.path.exists(input_classes_filepath):
         raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
 
-    # REM: needs to be read as ANSI, as SQLDetective apparently saves as ANSI
+    # Read and cleanup the mapping table from crop codes to classes
+    #--------------------------------------------------------------------------
     logger.info(f"Read classes conversion table from {input_classes_filepath}")
-    classes_df = pd.read_csv(input_classes_filepath, low_memory=False, sep=',', encoding='ANSI')
+    classes_df = pdh.read_file(input_classes_filepath)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
@@ -279,9 +279,112 @@ def prepare_input_landcover(input_parcel_filepath: str,
     # Data verwijderen
 #    df = df[df[classname] != 'Andere subsidiabele gewassen']  # geen boomkweek
 
+    # Copy orig classname to classification classname
+    parceldata_df.insert(loc=0, column=conf.columns['class'], value=parceldata_df[conf.columns['class_orig']])
+
+    # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if 'GESP_PM' in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
-        parceldata_df.loc[parceldata_df['GESP_PM'].isin(['SER', 'SGM', 'LOO']), conf.columns['is_permanent']] = 1
+        parceldata_df.loc[parceldata_df['GESP_PM'].isin(['SER', 'PLA', 'PLO']), conf.columns['class']] = 'MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS'
+        parceldata_df.loc[parceldata_df['GESP_PM'].isin(['SGM', 'NPO', 'LOO', 'CON']), conf.columns['class']] = 'MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS_NS'
+        # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
+        #parceldata_df.loc[parceldata_df['GESP_PM'] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
+    else:
+        logger.warning("The column 'GESP_PM' doesn't exist, so this part of the code was skipped!")
+
+    # Some extra cleanup: classes starting with 'nvt' or empty ones
+    logger.info("Set classes that are still empty, not specific enough or that contain to little values to 'UNKNOWN'")
+    parceldata_df.loc[parceldata_df[conf.columns['class']].str.startswith('nvt', na=True), conf.columns['class']] = 'MON_LC_UNKNOWN'
+
+    # For columns that aren't needed for the classification:
+    #    - Rename the ones interesting for interpretation
+    #    - Drop the columns that aren't useful at all, except thoses excluded for export in the ini file
+    for column in parceldata_df.columns:
+        if column in (['GRAF_OPP', 'GWSCOD_H', 'GESP_PM']):
+            if column == 'GESP_PM':
+                parceldata_df['GESP_PM'] = parceldata_df['GESP_PM'].str.replace(',', ';')
+            parceldata_df.rename(columns={column:'m__' + column}, inplace=True)            
+
+        elif(column not in [conf.columns['id'], conf.columns['class']]
+             and column not in conf.preprocess.getlist('extra_export_columns')
+             and not column.startswith('m__')):
+            parceldata_df.drop(column, axis=1, inplace=True)
+
+    return parceldata_df
+
+def prepare_input_landcover_early(
+            input_parcel_filepath: str,
+            crop_columnname: str = 'GWSCOD_H'):
+    """
+    This function creates a file that is compliant with the assumptions used by the rest of the
+    classification functionality.
+
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be classified to
+
+    This specific implementation converts the typiscal export format used in BE-Flanders to
+    this format.
+    """
+    # Check if parameters are OK and init some extra params
+    #--------------------------------------------------------------------------
+    if not os.path.exists(input_parcel_filepath):
+        raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
+    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
+    if not os.path.exists(input_classes_filepath):
+        raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
+
+    # Read and cleanup the mapping table from crop codes to classes
+    #--------------------------------------------------------------------------
+    logger.info(f"Read classes conversion table from {input_classes_filepath}")
+    classes_df = pdh.read_file(input_classes_filepath)
+    logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
+
+    # REM: SQLDetective apparently saves as ANSI, so file was read as ansi, and gewas is int, 
+    # so the data needs to be converted to unicode to be able to do comparisons with the other data
+    classes_df[crop_columnname] = classes_df['CROPCODE'].astype('unicode')
+
+    # Map column MON_group to orig classname
+    classes_df[conf.columns['class_orig']] = classes_df['MON_LC_GROUP']
+
+    # Remove unneeded columns
+    for column in classes_df.columns:
+        if (column not in [conf.columns['class_orig'], crop_columnname]):
+            classes_df.drop(column, axis=1, inplace=True)
+
+    # Set the index
+    classes_df.set_index(crop_columnname, inplace=True, verify_integrity=True)
+
+    # Read the parcel data and do the necessary conversions
+    #--------------------------------------------------------------------------
+    logger.info(f"Read parceldata from {input_parcel_filepath}")
+    if geofile_util.is_geofile(input_parcel_filepath):
+        parceldata_df = geofile_util.read_file(input_parcel_filepath)
+    else:
+        parceldata_df = pdh.read_file(input_parcel_filepath)
+    logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")
+
+    # Check if the id column is present...
+    if conf.columns['id'] not in parceldata_df.columns:
+        message = f"STOP: Column {conf.columns['id']} not found in input parcel file: {input_parcel_filepath}. Make sure the column is present or change the column name in the ini file.py"
+        logger.critical(message)
+        raise Exception(message)
+
+    # Rename the column containing the object id to OBJECT_ID
+#    df.rename(columns = {'CODE_OBJ':'object_id'}, inplace = True)
+
+    # Convert the crop to unicode, in case the input is int...
+    parceldata_df[crop_columnname] = parceldata_df[crop_columnname].astype('unicode')
+
+    # Join/merge the classname
+    logger.info('Add the classes to the parceldata')
+    parceldata_df = parceldata_df.merge(classes_df, how='left',
+                                        left_on=crop_columnname,
+                                        right_index=True,
+                                        validate='many_to_one')
+
+    # Data verwijderen
+#    df = df[df[classname] != 'Andere subsidiabele gewassen']  # geen boomkweek
 
     # Copy orig classname to classification classname
     parceldata_df.insert(loc=0, column=conf.columns['class'], value=parceldata_df[conf.columns['class_orig']])
@@ -299,6 +402,9 @@ def prepare_input_landcover(input_parcel_filepath: str,
     # Some extra cleanup: classes starting with 'nvt' or empty ones
     logger.info("Set classes that are still empty, not specific enough or that contain to little values to 'UNKNOWN'")
     parceldata_df.loc[parceldata_df[conf.columns['class']].str.startswith('nvt', na=True), conf.columns['class']] = 'MON_LC_UNKNOWN'
+
+    # Set late crops to ignore
+    parceldata_df.loc[parceldata_df['MON_EARLY_LATE'].isin(['MON_TEELTEN_LATE']), conf.columns['class']] = 'IGNORE_LATE_CROP'
 
     # For columns that aren't needed for the classification:
     #    - Rename the ones interesting for interpretation
