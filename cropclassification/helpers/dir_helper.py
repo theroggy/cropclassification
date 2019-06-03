@@ -2,6 +2,7 @@
 Helper regarding directory operations.
 """
 
+from datetime import datetime 
 import os
 import re
 
@@ -20,20 +21,20 @@ def create_run_dir(class_base_dir: str,
         os.makedirs(class_base_dir)
 
     # Look for all existing run dirs
-    pattern = re.compile('Run_[0-9]{3}')
+    base_filename = f"Run_{datetime.now().strftime('%Y-%m-%d')}"
+    pattern = re.compile(base_filename + '_[0-9]{3}')
     dir_list = [x.path for x in os.scandir(class_base_dir) if x.is_dir() and re.search(pattern, x.path)]
-    #print(f"Dirs found: {dir_list}")
+
+    # No dir yet with the patern -> return new one 
     if (dir_list is None or not any(dir_list)):
-        # first run
-        return os.path.join(class_base_dir, f"Run_{1:03d}")
+        return os.path.join(class_base_dir, f"{base_filename}_{1:03d}")
 
-    # get last run and increment if needed
+    # Get last run dir found... if we want to reuse it, return it
     last_dir = sorted(dir_list, reverse=True)[0]
-    #print(f"Last dir: {last_dir}")
-
     if reuse_last_run_dir:
         return last_dir
 
-    last_dir_iteration = re.search(pattern, last_dir)
-    last_iteration = int(last_dir_iteration.group().split('_')[1])
-    return os.path.join(class_base_dir, f"Run_{last_iteration + 1:03d}")
+    # We don't want to reuse it, so create next one
+    _, last_dirname = os.path.split(last_dir)
+    last_iteration = int(last_dirname.replace(base_filename, 'tmp').split('_')[1])
+    return os.path.join(class_base_dir, f"{base_filename}_{last_iteration + 1:03d}")
