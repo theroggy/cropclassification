@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def prepare_input(input_parcel_filepath: str,
-                  input_classtype_to_prepare: str):
+                  classtype_to_prepare: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -33,23 +33,23 @@ def prepare_input(input_parcel_filepath: str,
         - object_id: column with a unique identifier
         - classname: a string column with a readable name of the classes that will be classified to
     """
-    if input_classtype_to_prepare == 'MONITORING_CROPGROUPS':
+    if classtype_to_prepare == 'MONITORING_CROPGROUPS':
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath)
-    elif input_classtype_to_prepare == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
+    elif classtype_to_prepare == 'MONITORING_CROPGROUPS_GROUNDTRUTH':
         return prepare_input_cropgroups(input_parcel_filepath=input_parcel_filepath,
                                         crop_columnname='HOOFDTEELT_CTRL_COD')
-    elif input_classtype_to_prepare == 'MONITORING_LANDCOVER':
+    elif classtype_to_prepare == 'MONITORING_LANDCOVER':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath)
-    elif input_classtype_to_prepare == 'MONITORING_LANDCOVER_GROUNDTRUTH':
+    elif classtype_to_prepare == 'MONITORING_LANDCOVER_GROUNDTRUTH':
         return prepare_input_landcover(input_parcel_filepath=input_parcel_filepath,
                                        crop_columnname='HOOFDTEELT_CTRL_COD')  
-    elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS':
+    elif classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS':
         return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath)      
-    elif input_classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS_GROUNDTRUTH':
+    elif classtype_to_prepare == 'MONITORING_MOST_POPULAR_CROPS_GROUNDTRUTH':
         return prepare_input_most_popular_crops(input_parcel_filepath=input_parcel_filepath,
                                                 crop_columnname='HOOFDTEELT_CTRL_COD')
     else:
-        message = f"Unknown value for parameter input_classtype_to_prepare: {input_classtype_to_prepare}"
+        message = f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
         logger.fatal(message)
         raise Exception(message)
 

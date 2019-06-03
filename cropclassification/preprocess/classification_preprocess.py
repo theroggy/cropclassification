@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def prepare_input(input_parcel_filepath: str,
-                  input_filetype: str,
+                  input_parcel_filetype: str,
                   input_parcel_pixcount_filepath: str,
-                  input_classtype_to_prepare: str,
+                  classtype_to_prepare: str,
                   output_parcel_filepath: str,
                   force: bool = False):
     """
@@ -41,11 +41,11 @@ def prepare_input(input_parcel_filepath: str,
         logger.warning(f"prepare_input: output file already exists and force == False, so stop: {output_parcel_filepath}")
         return
 
-    if input_filetype == 'BEFL':
+    if input_parcel_filetype == 'BEFL':
         df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath,
-                                           input_classtype_to_prepare=input_classtype_to_prepare)
+                                           classtype_to_prepare=classtype_to_prepare)
     else:
-        message = f"Unknown value for parameter input_filetype: {input_filetype}"
+        message = f"Unknown value for parameter input_parcel_filetype: {input_parcel_filetype}"
         logger.critical(message)
         raise Exception(message)
 
