@@ -9,5 +9,4 @@ Old/
 /.vs
 .vscode/.ropeproject/objectdb
 .vscode/.ropeproject/config.py
-marker/local_overrule.ini
 config/local_overrule.ini
