@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Module with helper functions to preprocess the data to use for the classification.
-
-@author: Pieter Roggemans
 """
 
 import logging
@@ -166,6 +164,50 @@ def create_train_test_sample(input_parcel_filepath: str,
                                    .groupby(class_balancing_column, group_keys=False)
                                    .apply(pd.DataFrame.sample, lower_limit, replace=True))
 
+    elif balancing_strategy == 'BALANCING_STRATEGY_PROPORTIONAL_GROUPS':
+        # Balance the train data, but still use some larger samples for the classes that have a lot
+        # of members in the input dataset
+        # Remark: with the upper limit of 10.000 this gives still OK results overall, and also the
+        #         smaller classes give some results with upper limit of 4000 results significantly
+        #         less good.
+
+        # For the larger classes, leave the samples larger but cap
+        upper_count_limit1 = 100000
+        upper_train_limit1 = 30000
+        logger.info(f"Cap balancing classes over {upper_count_limit1} to {upper_train_limit1}")
+        df_train = (df_train_base
+                    .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit1)
+                    .groupby(class_balancing_column, group_keys=False)
+                    .apply(pd.DataFrame.sample, upper_train_limit1))
+        upper_count_limit2 = 50000
+        upper_train_limit2 = 20000
+        logger.info(f"Cap balancing classes between {upper_count_limit2} and {upper_count_limit1} to {upper_train_limit2}")
+        df_train = df_train.append(df_train_base
+                .groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit1)
+                .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit2)
+                .groupby(class_balancing_column, group_keys=False)
+                .apply(pd.DataFrame.sample, upper_train_limit2))
+        upper_count_limit3 = 20000
+        upper_train_limit3 = 10000
+        logger.info(f"Cap balancing classes between {upper_count_limit3} and {upper_count_limit2} to {upper_train_limit3}")
+        df_train = df_train.append(df_train_base
+                .groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit2)
+                .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit3)
+                .groupby(class_balancing_column, group_keys=False)
+                .apply(pd.DataFrame.sample, upper_train_limit3))
+        upper_count_limit4 = 10000
+        upper_train_limit4 = 5000
+        logger.info(f"Cap balancing classes between {upper_count_limit4} and {upper_count_limit3} to {upper_train_limit4}")
+        df_train = df_train.append(df_train_base
+                .groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit3)
+                .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit4)
+                .groupby(class_balancing_column, group_keys=False)
+                .apply(pd.DataFrame.sample, upper_train_limit4))
+
+        # For smaller balancing classes, just use all samples
+        df_train = df_train.append(
+                df_train_base.groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit4))
+
     elif balancing_strategy == 'BALANCING_STRATEGY_UPPER_LIMIT':
         # Balance the train data, but still use some larger samples for the classes that have a lot
         # of members in the input dataset
@@ -195,12 +237,18 @@ def create_train_test_sample(input_parcel_filepath: str,
     # Log the resulting numbers per class in the train sample
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         count_per_class = df_train.groupby(class_balancing_column, as_index=False).size()
-        logger.info(f'Number of elements per classname in train dataset:\n{count_per_class}')
+        logger.info(f'Number of elements per class_balancing_column in train dataset:\n{count_per_class}')
+        if class_balancing_column != class_column:
+            count_per_class = df_train.groupby(class_column, as_index=False).size()
+            logger.info(f'Number of elements per class_column in train dataset:\n{count_per_class}')
 
     # Log the resulting numbers per class in the test sample
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         count_per_class = df_test.groupby(class_balancing_column, as_index=False).size()
-        logger.info(f'Number of elements per classname in test dataset:\n{count_per_class}')
+        logger.info(f'Number of elements per class_balancing_column in test dataset:\n{count_per_class}')
+        if class_balancing_column != class_column:
+            count_per_class = df_test.groupby(class_column, as_index=False).size()
+            logger.info(f'Number of elements per class_column in test dataset:\n{count_per_class}')
 
     # Write to output files
     logger.info('Write the output files')
