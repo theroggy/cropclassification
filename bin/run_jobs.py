@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Process a job.
+Process the jobs in the job directory.
 """
 
 import configparser
@@ -20,7 +20,7 @@ def run_jobs():
     models_dir = conf.dirs['model_dir']                                  
     
     # Get the jobs and treat them
-    job_filepaths = glob.glob(os.path.join(jobs_dir, "*.ini"))
+    job_filepaths = sorted(glob.glob(os.path.join(jobs_dir, "*.ini")))
     for job_filepath in job_filepaths:      
         # Create configparser and read job file!
         job_config = configparser.ConfigParser(
