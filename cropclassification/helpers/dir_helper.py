@@ -1,29 +1,40 @@
+"""
+Helper regarding directory operations.
+"""
+
+from datetime import datetime 
 import os
+import re
 
-def create_dir(class_base_dir: str, 
-               reuse_last_run_dir: bool):
-               
-    max_run_dir_id = 998
-    prev_class_dir = None
-    class_dir = None 
-    for i in range(max_run_dir_id):
-        # Check if we don't have too many run dirs for creating the dir name
-        if i >= max_run_dir_id:
-            raise Exception("Please cleanup the run dirs, too many!!!")
-            
-        # Now search for the last dir that is in use
-        class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")
-        if os.path.exists(class_dir):
-            prev_class_dir = class_dir
-            continue
-        else:
-            # If we want to reuse the last dir, do so...
-            if reuse_last_run_dir and prev_class_dir is not None:
-                class_dir = prev_class_dir
-                break         
-            else:
-                # Otherwise create new dir name with next index
-                class_dir = os.path.join(class_base_dir, f"Run_{i+1:03d}")         
-                break 
+def create_run_dir(class_base_dir: str,
+                   reuse_last_run_dir: bool) -> str:
+    """
+    Create a new run dir, or get the last run dir.
 
-    return class_dir
+    Args
+        class_base_dir: the base dir to use to create the run dir in
+        reuse_last_run_dir: True to find the latest existing run dir and return that, False to create a new run dir
+    """
+
+    # Create class_base_dir if it doesn't exist
+    if not os.path.exists(class_base_dir):
+        os.makedirs(class_base_dir)
+
+    # Look for all existing run dirs
+    base_filename = f"Run_{datetime.now().strftime('%Y-%m-%d')}"
+    pattern = re.compile(base_filename + '_[0-9]{3}')
+    dir_list = [x.path for x in os.scandir(class_base_dir) if x.is_dir() and re.search(pattern, x.path)]
+
+    # No dir yet with the patern -> return new one 
+    if (dir_list is None or not any(dir_list)):
+        return os.path.join(class_base_dir, f"{base_filename}_{1:03d}")
+
+    # Get last run dir found... if we want to reuse it, return it
+    last_dir = sorted(dir_list, reverse=True)[0]
+    if reuse_last_run_dir:
+        return last_dir
+
+    # We don't want to reuse it, so create next one
+    _, last_dirname = os.path.split(last_dir)
+    last_iteration = int(last_dirname.replace(base_filename, 'tmp').split('_')[1])
+    return os.path.join(class_base_dir, f"{base_filename}_{last_iteration + 1:03d}")

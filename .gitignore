@@ -7,6 +7,6 @@ Old/
 .spyproject/workspace.ini
 .vscode/
 /.vs
-marker/local_overrule.ini
 .vscode/.ropeproject/objectdb
 .vscode/.ropeproject/config.py
+config/local_overrule.ini
