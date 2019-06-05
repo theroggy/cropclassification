@@ -789,13 +789,12 @@ def get_image_info(image_path) -> dict:
 
         try:            
             # Get the filename
-            image_info["filename"] = metadata_root.find('filename').text
+            image_info["productFilename"] = metadata_root.find('productFilename').text
 
             # Get the footprint
             image_info["footprint"] = {}
-            #footprint = metadata_root.find('footprint')
-            footprint_gml = metadata_root
-            poly = footprint_gml.find("{http://www.opengis.net/gml}Polygon")
+            footprint = metadata_root.find('footprint')
+            poly = footprint.find("{http://www.opengis.net/gml}Polygon")
             image_info["footprint"]["srsname"] = poly.attrib.get("srsName")
             linear_ring = []
             #for coord in poly.findall("{http://www.opengis.net/gml}outerBoundaryIs/{http://www.opengis.net/gml}LinearRing/{http://www.opengis.net/gml}coord"):
@@ -829,8 +828,8 @@ def get_image_info(image_path) -> dict:
 
                 # Define namespaces...
                 ns = {"safe": "http://www.esa.int/safe/sentinel-1.0",
-                    "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
-                    "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
+                      "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
+                      "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
 
                 logger.debug(f"Parse manifest info from {metadata_xml_filepath}")
                 image_info["transmitter_receiver_polarisation"] = []
