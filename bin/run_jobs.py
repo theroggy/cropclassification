@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Process a job.
+Process the jobs in the job directory.
 """
 
 import configparser
@@ -12,7 +12,7 @@ import sys
 import cropclassification.helpers.config_helper as conf 
 import cropclassification.marker_runner as marker_runner 
 
-def run_job():
+def run_jobs():
     
     # First read the general config to get the job and models dir
     conf.read_config(config_filepaths=['config/general.ini', 'config/local_overrule.ini'], year=-1)
@@ -20,7 +20,7 @@ def run_job():
     models_dir = conf.dirs['model_dir']                                  
     
     # Get the jobs and treat them
-    job_filepaths = glob.glob(os.path.join(jobs_dir, "*.ini"))
+    job_filepaths = sorted(glob.glob(os.path.join(jobs_dir, "*.ini")))
     for job_filepath in job_filepaths:      
         # Create configparser and read job file!
         job_config = configparser.ConfigParser(
@@ -52,4 +52,4 @@ def run_job():
                 input_model_to_use_filepath=input_model_to_use_filepath)
 
 if __name__ == '__main__':
-    run_job()
+    run_jobs()
