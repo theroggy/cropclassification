@@ -10,6 +10,7 @@ import pandas as pd
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
+from sklearn.svm import SVC
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
@@ -57,6 +58,11 @@ def train(df_train: pd.DataFrame,
         hidden_layer_sizes = tuple(conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes'))
         max_iter = conf.classifier.getint('multilayer_perceptron_max_iter')
         classifier = MLPClassifier(max_iter=max_iter, hidden_layer_sizes=hidden_layer_sizes)
+    elif classifier_type_lower == 'svm':
+        # cache_size=1000 (MB) should speed up training
+        # probability=True is necessary to be able to use predict_proba
+        classifier = SVC(C=1.0, gamma='auto', 
+                probability=True, cache_size=1000)
     else:
         message = f"Unsupported classifier in conf.classifier['classifier_type']: {conf.classifier['classifier_type']}"
         logger.critical(message)
