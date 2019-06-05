@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.externals import joblib
 
 import cropclassification.helpers.config_helper as conf
@@ -53,6 +54,8 @@ def train(df_train: pd.DataFrame,
         n_estimators = conf.classifier.getint('randomforest_n_estimators')
         max_depth = conf.classifier.getint('randomforest_max_depth')
         classifier = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth)
+    elif classifier_type_lower == 'nearestneighbor':
+        classifier = KNeighborsClassifier(weights='distance', n_jobs=-1)
     elif classifier_type_lower == 'multilayer_perceptron':
         hidden_layer_sizes = tuple(conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes'))
         max_iter = conf.classifier.getint('multilayer_perceptron_max_iter')
