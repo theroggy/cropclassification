@@ -64,7 +64,7 @@ def train(df_train: pd.DataFrame,
     elif classifier_type_lower == 'svm':
         # cache_size=1000 (MB) should speed up training
         # probability=True is necessary to be able to use predict_proba
-        classifier = SVC(C=1.0, gamma='auto', 
+        classifier = SVC(C=64.0, gamma=0.125, 
                 probability=True, cache_size=1000)
     else:
         message = f"Unsupported classifier in conf.classifier['classifier_type']: {conf.classifier['classifier_type']}"
