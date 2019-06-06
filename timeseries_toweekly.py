@@ -156,7 +156,7 @@ def calculate_weekly_data(input_filepath: str,
         
         # Loop all weekfiles
         df_result = None
-        numberfiles = None
+        # numberfiles = None
         for countfiles, weekfile in enumerate(weekfiles_list):
             
             # Read the file - columns : code_obj,count,max,mean,min,p25,p50,p75,std,band
@@ -164,12 +164,19 @@ def calculate_weekly_data(input_filepath: str,
             df_in = pd.read_csv(os.path.join(input_filepath, f"{weekfile}.csv"), 
                                 usecols=['CODE_OBJ', 'count', 'max', 'mean', 'min', 'std'],
                                 index_col='CODE_OBJ')  
-            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            #print(df_in[max].isna().sum(axis=1))
-            if df_in.max.isna() :
-                numberfiles = numberfiles +1
-                print(numberfiles)
-            
+            '''print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+            print(df_in.max.isnull())
+
+            if df_in.max.isnull() :
+                numberfiles = 0
+            else:    
+                numberfiles = 1
+
+            df_in[numberfiles] = 
+            print(numberfiles)
+
+            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')'''
+
             # rename columns - add unique number                   
             df_in.rename(columns={'count': 'count'+str(countfiles+1), 'max': 'max'+str(countfiles+1), 
                                   'mean': 'mean'+str(countfiles+1), 'min': 'min'+str(countfiles+1),
@@ -182,8 +189,7 @@ def calculate_weekly_data(input_filepath: str,
                 df_result = pd.concat([df_result, df_in], axis=1, sort=False) 
                 df_result.count
         
-        df_result['NumberFiles'] = numberfiles
-
+        
         # Calculate max, mean, min, ...
         logger.info('Calculate max, mean, min, ...')
 
@@ -199,6 +205,10 @@ def calculate_weekly_data(input_filepath: str,
             meancolumnstouse.append(f"mean{j}")
             mincolumnstouse.append(f"min{j}")
             stdcolumnstouse.append(f"std{j}")
+
+        # 
+        # df_result['NumberFiles'] = df_result[maxcolumnstouse].isna.sum(axis=1)
+
 
         # Get the date of the monday of week i
         week_i_monday = datetime.datetime.strptime(str(year) + '_' + str(i) + '_1', '%Y_%W_%w')
@@ -226,10 +236,6 @@ def calculate_weekly_data(input_filepath: str,
 
         # Number of Files used
         #df_result[f"{NewColumnName}_countfiles"] = df_result.isna().sum()
-
-        print(df_result.head(5))
-        df_result.head(5).to_csv(output_filepath, 'tussenbestand')
-        
         #print(df_result.isna(axis=1).sum())
         #for i in range(0,5) : #range(len(df_result.index()) :
             #print("Nan in row ", i , " : " ,  df_result.iloc[i].isnull().sum())
