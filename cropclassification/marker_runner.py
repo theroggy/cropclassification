@@ -79,7 +79,10 @@ def run(markertype_to_calc: str,
 
     # Prepare input filepaths
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
-    input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
+    if input_groundtruth_filename is not None:
+        input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
+    else:
+        input_groundtruth_filepath = None
 
     # Settings for preprocessing the inputdata
     classtype_to_prepare = conf.preprocess['classtype_to_prepare']
