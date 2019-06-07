@@ -75,7 +75,8 @@ def run(markertype_to_calc: str,
     base_dir = conf.dirs['base_dir']
     input_dir = conf.dirs['input_dir']
     input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
-    imagedata_dir = conf.dirs['imagedata_dir']
+    timeseries_periodic_dir = conf.dirs['timeseries_periodic_dir']
+    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
 
     # Prepare input filepaths
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
@@ -98,7 +99,7 @@ def run(markertype_to_calc: str,
     parceldata_aggregations_to_use = conf.marker.getlist('parceldata_aggregations_to_use')
 
     # Create the dir's if they don't exist yet...
-    for dir in [base_dir, imagedata_dir, run_base_dir, run_dir]:
+    for dir in [base_dir, timeseries_periodic_dir, run_base_dir, run_dir]:
         if dir and not os.path.exists(dir):
             os.mkdir(dir)
 
@@ -148,7 +149,7 @@ def run(markertype_to_calc: str,
                                      end_date_str=end_date_str,
                                      sensordata_to_get=sensordata_to_use,
                                      base_filename=base_filename,
-                                     dest_data_dir=imagedata_dir)
+                                     dest_data_dir=timeseries_periodic_dir)
 
     # STEP 3: Preprocess all data needed for the classification
     #-------------------------------------------------------------
@@ -167,7 +168,7 @@ def run(markertype_to_calc: str,
     parcel_filepath = os.path.join(
             run_dir, f"{input_parcel_filename_noext}_parcel{columndata_ext}")
     parcel_pixcount_filepath = os.path.join(
-            imagedata_dir, f"{base_filename}_pixcount{columndata_ext}")
+            timeseries_periodic_dir, f"{base_filename}_pixcount{columndata_ext}")
     class_pre.prepare_input(input_parcel_filepath=input_parcel_nogeo_filepath,
                             input_parcel_filetype=input_parcel_filetype,
                             input_parcel_pixcount_filepath=parcel_pixcount_filepath,
@@ -178,7 +179,7 @@ def run(markertype_to_calc: str,
     parcel_classification_data_filepath = os.path.join(
             run_dir, f"{base_filename}_parcel_classdata{rowdata_ext}")
     ts.collect_and_prepare_timeseries_data(
-            imagedata_dir=imagedata_dir,
+            timeseries_dir=timeseries_periodic_dir,
             base_filename=base_filename,
             output_filepath=parcel_classification_data_filepath,
             start_date_str=start_date_str,

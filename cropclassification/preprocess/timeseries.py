@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def collect_and_prepare_timeseries_data(imagedata_dir: str,
+def collect_and_prepare_timeseries_data(timeseries_dir: str,
                                         base_filename: str,
                                         output_filepath: str,
                                         start_date_str: str,
@@ -65,12 +65,12 @@ def collect_and_prepare_timeseries_data(imagedata_dir: str,
 
     # Loop over all input data... to find the data we really need...
     columndata_ext = conf.general['columndata_ext']
-    filepath_start = os.path.join(imagedata_dir, f"{base_filename}_{start_date_str}{columndata_ext}")
-    filepath_end = os.path.join(imagedata_dir, f"{base_filename}_{end_date_str}{columndata_ext}")
+    filepath_start = os.path.join(timeseries_dir, f"{base_filename}_{start_date_str}{columndata_ext}")
+    filepath_end = os.path.join(timeseries_dir, f"{base_filename}_{end_date_str}{columndata_ext}")
     logger.debug(f'filepath_start_date: {filepath_start}')
     logger.debug(f'filepath_end_date: {filepath_end}')
 
-    ts_data_files = glob.glob(os.path.join(imagedata_dir, f"{base_filename}_*{columndata_ext}"))
+    ts_data_files = glob.glob(os.path.join(timeseries_dir, f"{base_filename}_*{columndata_ext}"))
     result_df = None
     for curr_filepath in sorted(ts_data_files):
 
