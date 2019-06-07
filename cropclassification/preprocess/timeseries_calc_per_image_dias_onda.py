@@ -25,8 +25,8 @@ from shapely.geometry import polygon as sh_polygon
 import xml.etree.ElementTree as ET
 import zipfile
 
-from cropclassification.helpers import log_helper
 from cropclassification.helpers import pandas_helper as pdh
+from cropclassification.helpers import geofile
 
 # General init
 logger = logging.getLogger(__name__)
@@ -39,6 +39,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def calc_stats(features_filepath: str,
+               id_column: str,
                image_paths: str,
                bands: [],
                output_dir: str,
@@ -148,6 +149,7 @@ def calc_stats(features_filepath: str,
                     # TODO: possibly it is cleaner to do this per band...
                     future = pool.submit(prepare_calc, 
                                          features_filepath,
+                                         id_column,
                                          image_path,
                                          output_base_filepath,
                                          temp_dir,
@@ -213,6 +215,7 @@ def calc_stats(features_filepath: str,
                         start_time_batch = datetime.now()
                         future = pool.submit(calc_stats_image_gdf, 
                                              features_batch['filepath'],
+                                             id_column,
                                              image['image_prepared_path'],
                                              bands,
                                              image['output_base_busy_filepath'],
@@ -407,6 +410,7 @@ def get_progress_message(nb_todo: int,
     return message
     
 def prepare_calc(features_filepath,
+                 id_column,
                  image_path: str,
                  output_filepath: str,
                  temp_dir: str,
@@ -448,12 +452,12 @@ def prepare_calc(features_filepath,
         footprint_shape = image_info['footprint']['shape']
     features_gdf = load_features_file(features_filepath=features_filepath, 
                                       target_epsg=image_info['image_epsg'],
-                                      columns_to_retain=['CODE_OBJ', 'geometry'],
+                                      columns_to_retain=[id_column, 'geometry'],
                                       bbox=image_info['image_bounds'],
                                       polygon=footprint_shape)
 
     # Check if overlapping features were found, otherwise no use to proceed
-    nb_todo = len(features_gdf)
+    nb_todo = len(features_gdf.index)
     ret_val['nb_features_to_calc_total'] = nb_todo
     if nb_todo == 0:
         logger.info(f"No features were found in the bounding box of the image, so return: {image_path}")
@@ -528,7 +532,7 @@ def load_features_file(features_filepath: str,
 
     # Determine the correct filename for the input features in the correct projection.
     if features_epsg != target_epsg:
-        features_prepr_filepath = f"{features_filepath_noext}_{target_epsg}{ext}"
+        features_prepr_filepath = f"{features_filepath_noext}_{target_epsg}.gpkg"
     else:
         features_prepr_filepath = features_filepath
 
@@ -549,8 +553,8 @@ def load_features_file(features_filepath: str,
                 # Read (all) original features + remove unnecessary columns...
                 logger.info(f"Read original file {features_filepath}")
                 start_time = datetime.now()
-                features_gdf = gpd.read_file(features_filepath)
-                logger.info(f"Read ready, found {len(features_gdf)} features, crs: {features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s")
+                features_gdf = geofile.read_file(features_filepath)
+                logger.info(f"Read ready, found {len(features_gdf.index)} features, crs: {features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s")
                 for column in features_gdf.columns:
                     if column not in columns_to_retain and column not in ['geometry', 'x_ref']:
                         features_gdf.drop(columns=column, inplace=True)
@@ -567,8 +571,8 @@ def load_features_file(features_filepath: str,
                 features_gdf.reset_index(inplace=True)
 
                 # Cache the file for future use
-                logger.info(f"Write {len(features_gdf)} reprojected features to {features_prepr_filepath}")
-                features_gdf.to_file(features_prepr_filepath)
+                logger.info(f"Write {len(features_gdf.index)} reprojected features to {features_prepr_filepath}")
+                geofile.to_file(features_gdf, features_prepr_filepath, index=False)
                 logger.info(f"Reprojected features written")
 
                 """ 
@@ -578,7 +582,12 @@ def load_features_file(features_filepath: str,
                 df2 = pd.read_pickle('file.pkl')
                 logger.info(f"Pickle read")
                 """
-
+            except Exception as ex:
+                # If an exception occurs...
+                message = f"Exception, so delete possibly not completed file: {features_prepr_filepath}"
+                logger.exception(message)
+                os.remove(features_prepr_filepath)
+                raise Exception(message) from ex
             finally:    
                 # Remove lock file as everything is ready for other processes to use it...
                 os.remove(features_prepr_filepath_busy)
@@ -588,7 +597,7 @@ def load_features_file(features_filepath: str,
                 logger.info(f"bbox provided, so filter features in the bbox of {bbox}")
                 xmin, ymin, xmax, ymax = bbox
                 features_gdf = features_gdf.cx[xmin:xmax, ymin:ymax]
-                logger.info(f"Found {len(features_gdf)} features in bbox")
+                logger.info(f"Found {len(features_gdf.index)} features in bbox")
 
                 """ Slower + crashes?
                 logger.info(f"Filter only features in the bbox of image with spatial index {image_bounds}")
@@ -596,7 +605,7 @@ def load_features_file(features_filepath: str,
                 possible_matches_index = list(spatial_index.intersection(image_bounds))
                 features_gdf = features_gdf.iloc[possible_matches_index]
                 #features_gdf = features_gdf[features_gdf.intersects(image_shape)]
-                logger.info(f"Found {len(features_gdf)} features in the bbox of image {image_bounds}")                    
+                logger.info(f"Found {len(features_gdf.index)} features in the bbox of image {image_bounds}")                    
                 """
 
     # If there exists already a file with the features in the right projection, we can just read the data
@@ -608,8 +617,8 @@ def load_features_file(features_filepath: str,
 
         logger.info(f"Read {features_prepr_filepath}")
         start_time = datetime.now()
-        features_gdf = gpd.read_file(features_prepr_filepath, bbox=bbox)
-        logger.info(f"Read ready, found {len(features_gdf)} features, crs: {features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s")
+        features_gdf = geofile.read_file(features_prepr_filepath, bbox=bbox)
+        logger.info(f"Read ready, found {len(features_gdf.index)} features, crs: {features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s")
 
         # Order features on x_ref to (probably) have more clustering of features in further action... 
         if 'x_ref' not in features_gdf.columns:
@@ -641,12 +650,13 @@ def load_features_file(features_filepath: str,
         possible_matches = gdf.iloc[possible_matches_index]
         precise_matches = possible_matches[possible_matches.intersects(polygon)]
         '''
-        logger.info(f"Filter ready, found {len(features_gdf)}")
+        logger.info(f"Filter ready, found {len(features_gdf.index)}")
             
     # Ready, so return result...
     return features_gdf
 
 def calc_stats_image_gdf(features_gdf,
+                         id_column: str,
                          image_path: str,
                          bands: [],
                          output_base_filepath: str,
@@ -678,7 +688,7 @@ def calc_stats_image_gdf(features_gdf,
         features_gdf_pkl_filepath = features_gdf
         logger.info(f"Read pickle: {features_gdf_pkl_filepath}")
         features_gdf = pd.read_pickle(features_gdf_pkl_filepath)
-        logger.info(f"Read pickle with {len(features_gdf)} features ready")
+        logger.info(f"Read pickle with {len(features_gdf.index)} features ready")
 
     # Reset index, otherwise the concat later one gives wrong results
     features_gdf.reset_index(inplace=True)
@@ -691,7 +701,6 @@ def calc_stats_image_gdf(features_gdf,
     for band in image_data:
 
         # Extract info from band
-        id_column = 'CODE_OBJ'
         if band == 'SCL_20m':
             # Specific for Scene Classification (SCL) band, interprete already
             # Folowing values are considered "bad":
@@ -1033,6 +1042,9 @@ def get_image_info(image_path) -> dict:
             if len(band_filename_noext_split) == 4:
                 # IMG_DATA files
                 band = f"{band_filename_noext_split[2]}_{band_filename_noext_split[3]}"
+            elif len(band_filename_noext_split) == 5:
+                # IMG_DATA files
+                band = f"{band_filename_noext_split[3]}_{band_filename_noext_split[4]}"
             elif len(band_filename_noext_split) == 3:
                 # QI_DATA files
                 band = band_filename_noext
