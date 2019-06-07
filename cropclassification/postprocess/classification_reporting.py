@@ -73,7 +73,9 @@ def write_full_report(parcel_predictions_filepath: str,
        'PREDICTION_QUALITY_CONS_OVERVIEW_TEXT': empty_string,
        'PREDICTION_QUALITY_CONS_OVERVIEW_TABLE': empty_string,
        'PREDICTION_QUALITY_ALPHA_ERROR_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_ERROR_TABLE': empty_string
+       'PREDICTION_QUALITY_ALPHA_ERROR_TABLE': empty_string,
+       'PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TEXT': empty_string,
+       'PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TABLE': empty_string
     }
     
     # Build and write report...
