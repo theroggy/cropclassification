@@ -10,29 +10,38 @@ import shutil
 import sys
 [sys.path.append(i) for i in ['.', '..']]
 
+from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-from cropclassification.preprocess import timeseries_calc_dias_onda as calc_ts
+from cropclassification.preprocess import timeseries_calc_per_image_dias_onda as calc_ts
 
 def main():
 
-    # First define/init some general variables/constants
-    #base_dir = "X:\\Monitoring\\Markers\\PlayGround\\PIEROG"                                # Base dir
-    base_dir = f"{os.path.expanduser('~')}{os.sep}markers{os.sep}cropclassification"
-    input_dir = os.path.join(base_dir, 'inputdata')                                         # Input dir
-
-    # Input features file depends on the year
-    input_features_filename = "Prc_BEFL_2018_2018-08-02.shp"
-    input_features_filepath = os.path.join(input_dir, input_features_filename)   # Input filepath of the parcel
-
     test = False
-    
+
+    # Determine the config files to load depending on the marker_type
+    config_filepaths = ["../config/general.ini",
+                        "../config/local_overrule_linux.ini"]
+
+    # Specify the date range:
+    year = 2018
+    month_start = 3
+    month_stop = 9
+
+    # Read the configuration files
+    conf.read_config(config_filepaths, year=year)
+
+    # Get the general output dir
+    base_dir = conf.dirs['base_dir']
+    input_dir = conf.dirs['input_dir']
+    input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
+    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
+
     # Init logging
     if not test:
-        base_log_dir = os.path.join(base_dir, 'log')
+        base_log_dir = conf.dirs['log_dir']
     else:
-        base_log_dir = os.path.join(base_dir, 'log_test')
-    
-    log_dir = os.path.join(base_log_dir, f"{datetime.now():%Y-%m-%d_%H-%M-%S}")
+        base_log_dir = conf.dirs['log_dir'] + '_test'
+    log_dir = f"{base_log_dir}{os.sep}calc_dias_{datetime.now():%Y-%m-%d_%H-%M-%S}"
 
     # Clean test log dir if it exist
     if test and os.path.exists(base_log_dir):
@@ -40,10 +49,26 @@ def main():
 
     global logger
     logger = log_helper.main_log_init(log_dir, __name__)
+    logger.info(f"Config used: \n{conf.pformat_config()}")
 
     if test:         
         logger.info(f"As we are testing, clean all test logging and use new log_dir: {log_dir}")
 
+    # Write the consolidated config as ini file again to the run dir
+    config_used_filepath = os.path.join(log_dir, 'config_used.ini')
+    with open(config_used_filepath, 'w') as config_used_file:
+        conf.config.write(config_used_file)
+
+    # Get some general config
+    columndata_ext = conf.general['columndata_ext']
+    rowdata_ext = conf.general['rowdata_ext']
+    output_ext = conf.general['output_ext']
+    geofile_ext = conf.general['geofile_ext']
+
+    # Input features file depends on the year
+    input_features_filename = "Prc_BEFL_2018_2019-05-02_bufm5.shp"
+    input_features_filepath = os.path.join(input_preprocessed_dir, input_features_filename)
+    
     # Init output dir 
     if not test:
         output_basedir = os.path.join(base_dir, "output")
@@ -59,8 +84,8 @@ def main():
             shutil.rmtree(output_dir + os.sep)
   
     # Temp dir + clean contents from it.
-    temp_dir = os.path.join(base_dir, "tmp")
-    logger.info(f"Clean the temp dir")
+    temp_dir = conf.dirs['temp_dir'] + os.sep + 'calc_dias'
+    logger.info(f"Clean the temp dir {temp_dir}")
     if os.path.exists(temp_dir):
         # By adding a / at the end, only the contents are recursively deleted
         shutil.rmtree(temp_dir + os.sep)
@@ -78,12 +103,11 @@ def main():
     # Start calculation
     """
 
-    # Specify the date range:
-    year = 2018
-    month_start = 3
-    month_stop = 9
+    if test:
+        stop_on_error = True
+    else:
+        stop_on_error = False
 
-    '''
     # Process S1 images
     # -------------------------------   
     input_image_filepaths = []
@@ -91,9 +115,7 @@ def main():
         input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1TC/{year}/{i:02d}/*/*.CARD"
         input_image_filepaths.extend(glob.glob(input_image_searchstr))
         #input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1CO/2018/{i:02d}/*/*.CARD"
-        #input_image_filepaths.extend(glob.glob(input_image_searchstr))
-        input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S2*/L2A/{year}/{i:02d}/*/*.SAFE"
-        input_image_filepaths.extend(glob.glob(input_image_searchstr))    
+        #input_image_filepaths.extend(glob.glob(input_image_searchstr))  
     logger.info(f"Found {len(input_image_filepaths)} images to process")
 
     if test:
@@ -103,13 +125,13 @@ def main():
 
     logger.info(f"Start processing S1 images")
     calc_ts.calc_stats(features_filepath=input_features_filepath,
+                       id_column=conf.columns['id'],
                        image_paths=input_image_filepaths,
                        bands=['VV', 'VH'],
                        output_dir=output_dir,
                        temp_dir=temp_dir,
                        log_dir=log_dir,
-                       stop_on_error=False)
-    '''
+                       stop_on_error=stop_on_error)
 
     # Process S2 images
     # -------------------------------
@@ -126,12 +148,13 @@ def main():
 
     logger.info(f"Start processing S2 images")
     calc_ts.calc_stats(features_filepath=input_features_filepath,
+                       id_column=conf.columns['id'],
                        image_paths=input_image_filepaths,
                        bands=['B02_10m', 'B03_10m', 'B04_10m', 'B08_10m', 'SCL_20m'],
-                       output_dir=output_dir,
+                       output_dir=timeseries_per_image_dir,
                        temp_dir=temp_dir,
                        log_dir=log_dir,
-                       stop_on_error=False)
+                       stop_on_error=stop_on_error)
 
 if __name__ == '__main__':
     main()
