@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-@author: Pieter Roggemans
+Calculate timeseries data per image.
 """
 
 from concurrent import futures
@@ -26,6 +26,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from cropclassification.helpers import log_helper
+from cropclassification.helpers import pandas_helper as pdh
 
 # General init
 logger = logging.getLogger(__name__)
@@ -63,70 +64,72 @@ def calc_stats(features_filepath: str,
     os.makedirs(temp_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
     
-    image_paths.sort()
-    start_time = datetime.now()
-    nb_todo = len(image_paths)
-
     # Create process pool for parallelisation...
     nb_parallel_max = multiprocessing.cpu_count()
     nb_parallel = nb_parallel_max
     with futures.ProcessPoolExecutor(nb_parallel) as pool:
 
         # Loop over all images to start the data preparation for each of them in parallel...
+        image_paths.sort()
+        start_time = datetime.now()
+        nb_todo = len(image_paths)
+
         image_dict = {}
         calc_stats_batch_dict = {}
         nb_done_total = 0
-        curr_image_path_index = 0
+        i = 0
         while True:
 
             # If not all images aren't processed/processing yet
-            if curr_image_path_index < len(image_paths):    
+            if i < len(image_paths):    
 
                 # Get more detailed info about the image
-                image_path = image_paths[curr_image_path_index]
-                curr_image_path_index += 1
+                image_path = image_paths[i]
+                i += 1
                 try:
                     image_info = get_image_info(image_path)
                 except Exception as ex:
                     # If not possible to get info for image, log and skip it
                     logger.exception(f"SKIP image, because error getting info for {image_path}: {ex}")
+                    nb_todo -= 1
+                    continue
+
+                # if sentinel2 and cloud coverage too high... skip
+                max_cloudcover_pct = 5
+                if image_info['satellite'].startswith('S2') and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct:
+                    logger.info(f"SKIP image, Cloud_Coverage_Assessment: {image_info['Cloud_Coverage_Assessment']:0.2f} > {max_cloudcover_pct} for {image_path}")
+                    nb_todo -= 1
                     continue
 
                 # Create base output filename
-                output_base_filepath = get_output_filepath(features_filepath, image_path, output_dir,
-                                                           image_info['orbit_properties_pass'], band=None)
-                output_base_busy_filepath = f"{output_base_filepath}_BUSY"
-                output_base_zip_filepath = f"{output_base_filepath}.zip"
+                orbit = None
+                if image_info['satellite'].startswith('S1'):
+                    orbit = image_info['orbit_properties_pass']    
+                output_base_filepath = get_output_filepath(
+                        features_filepath, image_path, output_dir, orbit, band=None)
+                output_base_dir, output_base_filename = os.path.split(output_base_filepath)
+                output_base_busy_filepath = f"{output_base_dir}{os.sep}BUSY_{output_base_filename}"
 
                 # Check for which bands there is a valid output file already
                 bands_done = 0
                 for band in bands:
                     # Prepare the output filepaths...
-                    output_band_filepath = get_output_filepath(features_filepath, image_path, output_dir,
-                                                               image_info['orbit_properties_pass'], band)
-                    output_band_busy_filepath = f"{output_band_filepath}_BUSY"
-                    output_band_zip_filepath = f"{output_band_filepath}.zip"
+                    output_band_filepath = get_output_filepath(
+                            features_filepath, image_path, output_dir, orbit, band)
+                    output_band_dir, output_band_filename = os.path.split(output_band_filepath)
+                    output_band_busy_filepath = f"{output_band_dir}{os.sep}BUSY_{output_band_filename}"
 
                     # If a busy output file exists, remove it, otherwise we can get double data in it...
                     if os.path.exists(output_band_busy_filepath):
                         os.remove(output_band_busy_filepath)
 
                     # Check if the output file exists already
-                    if os.path.exists(output_band_zip_filepath):
+                    if os.path.exists(output_band_filepath):
                         if force == False:
-                            logger.info(f"Output file for band exists already {output_band_zip_filepath}")
+                            logger.info(f"Output file for band exists already {output_band_filepath}")
                             bands_done += 1
                         else:
-                            # If force True, remove both done file and output file
-                            os.remove(output_band_zip_filepath)
-                    else:
-                        # If a not-zipped output file exists, zip it...
-                        if os.path.exists(output_band_filepath):
-                            with zipfile.ZipFile(output_band_zip_filepath, mode='w', compression=zipfile.ZIP_DEFLATED) as zip:
-                                zip.write(output_band_filepath, arcname=os.path.basename(output_band_filepath))
-                                os.remove(output_band_filepath)
-                                logger.info(f"Output file for band exists already and has now been zipped as well to {output_band_zip_filepath}")                                
-                                bands_done += 1                                
+                            os.remove(output_band_filepath)
 
                 # If all bands already processed, skip image...
                 if len(bands) == bands_done:
@@ -152,10 +155,10 @@ def calc_stats(features_filepath: str,
                                          nb_parallel_max)
                     image_dict[image_path] = {'features_filepath': features_filepath,
                                               'prepare_calc_future': future, 
+                                              'image_info': image_info,
                                               'prepare_calc_starttime': datetime.now(),
                                               'output_base_filepath': output_base_filepath,
                                               'output_base_busy_filepath': output_base_busy_filepath,
-                                              'output_base_zip_filepath': output_base_zip_filepath,
                                               'status': 'IMAGE_PREPARE_CALC_BUSY'}
                     
                     # Jump to next image to start the prepare_calc for it...
@@ -165,63 +168,66 @@ def calc_stats(features_filepath: str,
             for image_path in image_dict:
                 
                 # Get all info that is available in the dict with futures for the one that has now completed
-                image_info = image_dict[image_path]
+                image = image_dict[image_path]
                     
                 # If the status isn't PREPARE_CALC_BUSY or if the prepare_calc is still running, go to next...
-                if(image_info['status'] != 'IMAGE_PREPARE_CALC_BUSY' 
-                   or image_info['prepare_calc_future'].running()):
+                if(image['status'] != 'IMAGE_PREPARE_CALC_BUSY' 
+                   or image['prepare_calc_future'].running()):
                     continue
 
                 # Extract the result from the preparation
                 try:
                     # Get the result from the completed  prepare_inputs
-                    prepare_calc_result = image_info['prepare_calc_future'].result()
+                    prepare_calc_result = image['prepare_calc_future'].result()
 
                     # If nb_features to be treated is 0... create (empty) output files and continue with next...
                     if prepare_calc_result['nb_features_to_calc_total'] == 0:
                         for band in bands:
                             # Prepare the output filepath...
-                            output_band_filepath = get_output_filepath(features_filepath, image_path, output_dir,
-                                                                    image_info['orbit_properties_pass'], band)
-                            output_band_zip_filepath = f"{output_band_filepath}.zip"
-
-                            logger.info(f"No features found overlapping image, just create done file: {output_band_zip_filepath}")
+                            orbit = None
+                            if image['image_info']['satellite'].startswith('S1'):
+                                orbit = image['image_info']['orbit_properties_pass']
+                            output_band_filepath = get_output_filepath(
+                                    features_filepath, image_path, output_dir, orbit, band)
+                            logger.info(f"No features found overlapping image, just create done file: {output_band_filepath}")
 
                             # Create output file
-                            create_file_atomic(output_band_zip_filepath)
-                            image_info['status'] = 'IMAGE_CALC_DONE'
-                            continue
+                            create_file_atomic(output_band_filepath)
+                            image['status'] = 'IMAGE_CALC_DONE'
+
+                        # Jump to next image
+                        continue
 
                     # Add info about the result of the prepare_calc to the image info...
-                    image_info['image_prepared_path'] = prepare_calc_result['image_prepared_path']
-                    image_info['feature_batches'] = prepare_calc_result['feature_batches']
-                    image_info['nb_features_to_calc_total'] = prepare_calc_result['nb_features_to_calc_total']
-                    image_info['temp_features_dir'] = prepare_calc_result['temp_features_dir']
+                    image['image_prepared_path'] = prepare_calc_result['image_prepared_path']
+                    image['feature_batches'] = prepare_calc_result['feature_batches']
+                    image['nb_features_to_calc_total'] = prepare_calc_result['nb_features_to_calc_total']
+                    image['temp_features_dir'] = prepare_calc_result['temp_features_dir']
 
                     # Set status to calc_is_busy so we know calculation is busy...
-                    image_info['status'] = 'IMAGE_CALC_BUSY'
-                    image_info['calc_starttime'] = datetime.now()
+                    image['status'] = 'IMAGE_CALC_BUSY'
+                    image['calc_starttime'] = datetime.now()
 
                     # Now loop through all prepared feature batches to start the statistics calculation for each  
-                    for features_batch in image_info['feature_batches']:
+                    for features_batch in image['feature_batches']:
                         start_time_batch = datetime.now()
                         future = pool.submit(calc_stats_image_gdf, 
                                              features_batch['filepath'],
-                                             image_info['image_prepared_path'],
+                                             image['image_prepared_path'],
                                              bands,
-                                             image_info['output_base_busy_filepath'],
+                                             image['output_base_busy_filepath'],
                                              log_dir,
                                              start_time_batch)
                         calc_stats_batch_dict[features_batch['filepath']] = {
                                 'calc_stats_future': future,
                                 'image_path': image_path,
-                                'image_prepared_path': image_info['image_prepared_path'], 
+                                'image_prepared_path': image['image_prepared_path'], 
                                 'start_time_batch': start_time_batch,
                                 'nb_items_batch': features_batch['nb_items'],
                                 'status': 'BATCH_CALC_BUSY'}
 
                 except Exception as ex:
-                    message = f"Exception getting result of prepare_calc for {image_path}"
+                    message = f"Exception getting result of prepare_calc for {image}"
                     logger.exception(message)
                     if stop_on_error:
                         raise Exception(message) from ex
@@ -246,7 +252,7 @@ def calc_stats(features_filepath: str,
                         logger.debug(f"Ready processing batch of {calc_stats_batch_info['nb_items_batch']} for features image: {calc_stats_batch_info['image_path']}")
 
                     except Exception as ex:
-                        message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info['image_path']}"
+                        message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info}"
                         logger.exception(message)
                         if stop_on_error:
                             raise Exception(message) from ex 
@@ -255,8 +261,8 @@ def calc_stats(features_filepath: str,
             for image_path in image_dict:
 
                 # If the image is busy being calculated...
-                image_info = image_dict[image_path]
-                if image_info['status'] == 'IMAGE_CALC_BUSY':
+                image = image_dict[image_path]
+                if image['status'] == 'IMAGE_CALC_BUSY':
 
                     # Check if there are still batches busy for this image...
                     batches_busy = False
@@ -269,10 +275,10 @@ def calc_stats(features_filepath: str,
                     # If no batches are busy anymore for the file_path... cleanup.
                     if batches_busy == False:
                         # If all batches are done, the image is done...
-                        image_info['status'] = 'IMAGE_CALC_DONE'
+                        image['status'] = 'IMAGE_CALC_DONE'
                 
                         # If the preprocessing created a temp image file, clean it up...
-                        image_prepared_path = image_info['image_prepared_path']
+                        image_prepared_path = image['image_prepared_path']
                         if image_prepared_path != image_path:
                             logger.info(f"Remove local temp image copy: {image_prepared_path}")
                             if os.path.isdir(image_prepared_path):           
@@ -281,11 +287,11 @@ def calc_stats(features_filepath: str,
                                 os.remove(image_prepared_path)
 
                         # If the preprocessing created temp pickle files with features, clean them up...
-                        shutil.rmtree(image_info['temp_features_dir'], ignore_errors=True)
+                        shutil.rmtree(image['temp_features_dir'], ignore_errors=True)
 
-                        # Rename + zip the output files
-                        output_base_filepath_noext, output_base_ext = os.path.splitext(image_info['output_base_filepath'])
-                        output_base_busy_filepath_noext, output_base_busy_ext = os.path.splitext(image_info['output_base_busy_filepath'])
+                        # Rename the (completed) output files
+                        output_base_filepath_noext, output_base_ext = os.path.splitext(image['output_base_filepath'])
+                        output_base_busy_filepath_noext, output_base_busy_ext = os.path.splitext(image['output_base_busy_filepath'])
                         for band in bands:
                             # TODO: creating the output filepaths should probably be cleaner centralised...
                             output_band_busy_filepath = f"{output_base_busy_filepath_noext}_{band}{output_base_busy_ext}"
@@ -294,34 +300,31 @@ def calc_stats(features_filepath: str,
                             # Rename the output file, so it isn't "BUSY" anymore...
                             if os.path.exists(output_band_busy_filepath):
                                 os.rename(output_band_busy_filepath, output_band_filepath)
-
-                                # Now zip it                               
-                                output_band_zip_filepath = output_band_filepath + ".zip"
-                                with zipfile.ZipFile(output_band_zip_filepath, mode='w', compression=zipfile.ZIP_DEFLATED) as zip:
-                                    zip.write(output_band_filepath, arcname=os.path.basename(output_band_filepath))
-                                    os.remove(output_band_filepath)
-
+                            
                         # Log the progress and prediction speed
                         logger.info(f"Ready processing image: {image_path}")
                         nb_done_latestbatch = 1
                         nb_done_total += nb_done_latestbatch
-                        progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image_info['calc_starttime'])
+                        progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image['calc_starttime'])
                         logger.info(progress_msg)
 
-            # Loop over all images to check if they are all done
-            all_done = True
-            for image_path in image_paths:
-                if(image_path not in image_dict
-                   or image_dict[image_path]['status'] != 'IMAGE_CALC_DONE'):
-                    all_done = False
-                    break                   
+            # If all images have been started, loop over all images to check if they are all done
+            if i == len(image_paths):
+                all_done = True
+                for image_path in image_paths:
+                    if(image_path in image_dict
+                       and image_dict[image_path]['status'] != 'IMAGE_CALC_DONE'):
+                        all_done = False
+                        break
+            else:
+                all_done = False
 
             # If no processing is needed, or if all processing is ready, stop the never ending loop...
             if len(image_dict) == 0 or all_done is True:
                 break 
             else:
                 # Sleep before starting next iteration...
-                time.sleep(1)   
+                time.sleep(0.1)
 
         logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
 
@@ -342,24 +345,28 @@ def get_output_filepath(features_filepath: str,
         image_filename = image_filename_noext
 
     # Interprete the orbit...
-    if orbit_properties_pass == 'ASCENDING':
-        orbit = 'ASC'
-    elif orbit_properties_pass == 'DESCENDING':
-        orbit = 'DESC'
+    if orbit_properties_pass is not None:
+        if orbit_properties_pass == 'ASCENDING':
+            orbit = '_ASC'
+        elif orbit_properties_pass == 'DESCENDING':
+            orbit = '_DESC'
+        else:
+            message = f"Unknown orbit_properties_pass: {orbit_properties_pass}"
+            logger.error(message)
+            raise Exception(message)
     else:
-        message = f"Unknown orbit_properties_pass: {orbit_properties_pass}"
-        logger.error(message)
-        raise Exception(message)
+        orbit = ''
 
     # Prepare basic filepath
-    output_filepath_noext = os.path.join(output_dir, f"{features_filename}__{image_filename}_{orbit}")
+    output_filepath_noext = os.path.join(
+            output_dir, f"{features_filename}__{image_filename}{orbit}")
 
-    # If a band was specified...
+    # If a band was specified
     if band is not None:
         output_filepath_noext = f"{output_filepath_noext}_{band}"
     
     # Add extension
-    output_filepath = f"{output_filepath_noext}.csv"
+    output_filepath = f"{output_filepath_noext}.sqlite"
     return output_filepath
 
 def get_progress_message(nb_todo: int, 
@@ -435,12 +442,15 @@ def prepare_calc(features_filepath,
     # Load the features that overlap with the image.
     # TODO: passing both bbox and poly is double, or not? 
     # footprint epsg should be passed as well, or reproject here first?
-    logger.info(f"poly: {image_info['footprint']['shape']}")
+    footprint_shape = None
+    if 'footprint' in image_info:
+        logger.info(f"poly: {image_info['footprint']['shape']}")
+        footprint_shape = image_info['footprint']['shape']
     features_gdf = load_features_file(features_filepath=features_filepath, 
                                       target_epsg=image_info['image_epsg'],
-                                      columns_to_retain=["CODE_OBJ", "geometry"],
+                                      columns_to_retain=['CODE_OBJ', 'geometry'],
                                       bbox=image_info['image_bounds'],
-                                      polygon=image_info["footprint"]["shape"])
+                                      polygon=footprint_shape)
 
     # Check if overlapping features were found, otherwise no use to proceed
     nb_todo = len(features_gdf)
@@ -670,6 +680,9 @@ def calc_stats_image_gdf(features_gdf,
         features_gdf = pd.read_pickle(features_gdf_pkl_filepath)
         logger.info(f"Read pickle with {len(features_gdf)} features ready")
 
+    # Reset index, otherwise the concat later one gives wrong results
+    features_gdf.reset_index(inplace=True)
+
     # Get the image data   
     image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=bands, pixel_buffer=1)
     
@@ -677,45 +690,61 @@ def calc_stats_image_gdf(features_gdf,
     #image_id = os.path.basename(image_path)
     for band in image_data:
 
-        # Calc zonal stats
-        logger.info(f"Calculate statistics for band {band} on {len(features_gdf)} features")
-        # TODO: probably some kind of masking is still necessary at the edges of the images!!!
-        features_stats = zonal_stats(features_gdf, image_data[band]['data'], 
-                                     affine=image_data[band]['transform'], prefix="", nodata=0, geojson_out=True,
-                                     stats=["count", "mean", "std", "min", "max", "percentile_25", "percentile_50", "percentile_75"])
-        logger.info(f"Statistics calculated... ")
-        #features_stats_df = pd.DataFrame(features_stats)
-        features_stats_gdf = gpd.GeoDataFrame.from_features(features_stats)
-        
-        logger.info(f"Dataframe created from stats... ")
+        # Extract info from band
+        id_column = 'CODE_OBJ'
+        if band == 'SCL_20m':
+            # Specific for Scene Classification (SCL) band, interprete already
+            # Folowing values are considered "bad":
+            #   -> 0 (no_data), 1 (saturated or defective), 3 (cloud shadows),
+            #      8: (cloud, medium proba), 9 (cloud, high proba), 11 (snow)
+            # These are considered "OK":
+            #   -> 2 (dark area pixels), 4 (vegetation), 5 (not_vegetated),
+            #      6 (water), 7 (unclassified), 10 (thin cirrus)
+            # List of classes: https://usermanual.readthedocs.io/en/latest/pages/ProductGuide.html#quality-indicator-bands
+            logger.info(f"Calculate categorical counts for band {band} on {len(features_gdf.index)} features")
+            features_stats = zonal_stats(features_gdf, image_data[band]['data'], 
+                    affine=image_data[band]['transform'], prefix="", nodata=0, categorical=True)
+            features_stats_df = pd.DataFrame(features_stats)
 
-        #df = pd.DataFrame.from_dict(df.properties.to_dict(), orient='index')
-        #features_stats_gdf['image_id'] = image_id
-        features_stats_gdf['band'] = band
-        
-        logger.info(f"Rename columns... ")
-        features_stats_gdf.rename(index=str, columns={"percentile_25": "p25", "percentile_50": "p50","percentile_75": "p75"}, inplace=True)
-        
-        # df is the dataframe
-        if len(features_stats_gdf) > 0:
+            # Drop the columns with "OK" pixels and sum the numbers of remaining columns
+            features_stats_df.drop(['2.0', '4.0', '5.0', '6.0', '7.0', '10.0'], errors='ignore')
+            new_column_name = 'nb_bad_pixels'
+            features_stats_df[new_column_name] = features_stats_df.sum(axis=1)
 
-            # Remove rows with empty data
-            features_stats_gdf.dropna(inplace=True)
-            if len(features_stats_gdf.values) > 0:
-                output_base_filepath_noext, output_ext = os.path.splitext(output_base_filepath)
-                output_band_filepath = f"{output_base_filepath_noext}_{band}{output_ext}"
-                logger.info(f"Write data for {len(features_stats_gdf.values)} parcels found to {output_band_filepath}")
-                features_stats_df = features_stats_gdf.drop(columns='geometry')
+            # Join original id column with statistics
+            features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
+        else:
+            # Calculate statistics
+            logger.info(f"Calculate zonal statistics for band {band} on {len(features_gdf.index)} features")
+            features_stats = zonal_stats(features_gdf, image_data[band]['data'], 
+                    affine=image_data[band]['transform'], prefix="", nodata=0, 
+                    stats=['count', 'mean', 'std', 'min', 'max', 'percentile_25', 'percentile_50', 'percentile_75'])
+            features_stats_df = pd.DataFrame(features_stats)
 
-                # If file exists already... append
-                # TODO: This isn't full-proof in a parallel context!!!
-                if not os.path.exists(output_band_filepath):
-                    features_stats_df.to_csv(output_band_filepath, index=False, sep=',')
-                else:
-                    features_stats_df.to_csv(output_band_filepath, index=False, mode='a', header=False, sep=',')
-            else:
-                logger.info(f"No data found")
-    
+            # Add original id column to statistics dataframe
+            features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
+            features_stats_df.rename(index=str, inplace=True,
+                    columns={'percentile_25':'p25', 'percentile_50':'p50', 'percentile_75':'p75'})
+
+        """
+        # If data is found, write it to file
+        if len(features_stats_df.index) == 0:
+            logger.info(f"No data found, before dropna")
+            continue
+        """
+
+        # Remove rows with empty data
+        features_stats_df.dropna(inplace=True)
+        if len(features_stats_df.index) == 0:
+            logger.info(f"No data found for band {band}, so no use to process other bands")
+            return True
+
+        output_base_filepath_noext, output_ext = os.path.splitext(output_base_filepath)
+        output_band_filepath = f"{output_base_filepath_noext}_{band}{output_ext}"
+        logger.info(f"Write data for {len(features_stats_df.index)} parcels found to {output_band_filepath}")
+
+        pdh.to_file(features_stats_df, output_band_filepath, index=False, append=True)
+
     return True
 
 def get_image_data(image_path,
@@ -754,7 +783,8 @@ def get_image_data(image_path,
                 # Determine the window we need to read from the image:
                 window_to_read = projected_bounds_to_window(
                         bounds, src.transform, src.width, src.height, pixel_buffer) 
-                image_data[band]['transform'] = rasterio.windows.transform(window_to_read, src.transform) 
+                image_data[band]['transform'] = rasterio.windows.transform(window_to_read, 
+                                                                           src.transform) 
                 # Read!
                 # Remark: bandindex in rasterio is 1-based instead of 0-based -> +1
                 logger.debug(f"Read image data from {image_band_filepath}")
@@ -771,14 +801,18 @@ def get_image_info(image_path) -> dict:
 
     image_info = {}
 
-    # First determine image format
+    # First determine general info of image
     image_path_noext, image_ext = os.path.splitext(image_path)
-    if image_ext.upper() == ".CARD":
+    _, image_basename_noext = os.path.split(image_path_noext)
+    image_basename_noext_split = image_basename_noext.split('_')
+    image_info['satellite'] = image_basename_noext_split[0]
+    
+    # Specific code per image type
+    if image_ext.upper() == '.CARD':
         
         # First extract and fill out some basic info
-        image_info["image_type"] = "CARD"
-        _, image_basename_noext = os.path.split(image_path_noext)
-        image_info["image_id"] = image_basename_noext
+        image_info['image_type'] = 'CARD'
+        image_info['image_id'] = image_basename_noext
         
         # Read info from the metadata file
         metadata_xml_filepath = os.path.join(image_path, 'metadata.xml')
@@ -789,13 +823,13 @@ def get_image_info(image_path) -> dict:
 
         try:            
             # Get the filename
-            image_info["productFilename"] = metadata_root.find('productFilename').text
+            image_info['filename'] = metadata_root.find('productFilename').text
 
             # Get the footprint
-            image_info["footprint"] = {}
+            image_info['footprint'] = {}
             footprint = metadata_root.find('footprint')
             poly = footprint.find("{http://www.opengis.net/gml}Polygon")
-            image_info["footprint"]["srsname"] = poly.attrib.get("srsName")
+            image_info['footprint']['srsname'] = poly.attrib.get('srsName')
             linear_ring = []
             #for coord in poly.findall("{http://www.opengis.net/gml}outerBoundaryIs/{http://www.opengis.net/gml}LinearRing/{http://www.opengis.net/gml}coord"):
             #    linear_ring.append((float(coord.findtext("{http://www.opengis.net/gml}X")),float(coord.findtext("{http://www.opengis.net/gml}Y"))))
@@ -807,7 +841,7 @@ def get_image_info(image_path) -> dict:
                 # TODO: add check if the projection is in degrees (latlon) or coordinates (xy) instead of hardcoded latlon
                 y, x = coord.split(',') 
                 linear_ring.append((float(x), float(y)))
-            image_info["footprint"]["shape"] = sh_polygon.Polygon(linear_ring)
+            image_info['footprint']['shape'] = sh_polygon.Polygon(linear_ring)
         except Exception as ex:
             raise Exception(f"Exception extracting info from {metadata_xml_filepath}") from ex
 
@@ -827,23 +861,31 @@ def get_image_info(image_path) -> dict:
                 manifest_root = manifest.getroot()
 
                 # Define namespaces...
-                ns = {"safe": "http://www.esa.int/safe/sentinel-1.0",
-                      "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
-                      "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
+                ns = {'safe': "http://www.esa.int/safe/sentinel-1.0",
+                      's1': "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
+                      's1sarl1': "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
 
                 logger.debug(f"Parse manifest info from {metadata_xml_filepath}")
-                image_info["transmitter_receiver_polarisation"] = []
+                image_info['transmitter_receiver_polarisation'] = []
                 for polarisation in manifest_root.findall("metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:transmitterReceiverPolarisation", ns):
-                    image_info["transmitter_receiver_polarisation"].append(polarisation.text)
-                image_info["instrument_mode"] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:platform/safe:instrument/safe:extension/s1sarl1:instrumentMode/s1sarl1:mode", ns).text
-                image_info["orbit_properties_pass"] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass", ns).text
+                    image_info['transmitter_receiver_polarisation'].append(polarisation.text)
+                image_info['instrument_mode'] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:platform/safe:instrument/safe:extension/s1sarl1:instrumentMode/s1sarl1:mode", ns).text
+                image_info['orbit_properties_pass'] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass", ns).text
 
                 # Now have a look in the files themselves to get band info,...
                 # TODO: probably cleaner/easier to read from metadata files...
-                image_datadirname = f"{image_basename_noext}.data"
+                image_basename_noext_nodate = image_basename_noext[:image_basename_noext.rfind('_', 0)]                               
+                image_datadirname = f"{image_basename_noext_nodate}.data"
                 image_datadir = os.path.join(image_path, image_datadirname)
                 band_filepaths = glob.glob(f"{image_datadir}{os.sep}*.img")
-                image_info["bands"] = {}
+
+                # If no files were found, error!
+                if len(band_filepaths) == 0:
+                    message = f"No image files found in {image_datadir}!"
+                    logger.error(message)
+                    raise Exception(message)
+
+                image_info['bands'] = {}
                 for i, band_filepath in enumerate(band_filepaths):
                     # Extract bound,... info from the first file only (they are all the same)
                     # TODO: in S2 they have a different resolution, so then I need to open each image?
@@ -885,8 +927,8 @@ def get_image_info(image_path) -> dict:
 
                 # Define namespaces...
                 ns = {"safe": "http://www.esa.int/safe/sentinel-1.0",
-                    "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
-                    "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
+                      "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
+                      "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
 
                 logger.debug(f"Parse manifest info from {metadata_xml_filepath}")
                 image_info["transmitter_receiver_polarisation"] = []
@@ -900,7 +942,8 @@ def get_image_info(image_path) -> dict:
                 # For coherence filename, remove extra .LCO1 extension + date
                 #image_datafilebasename, _ = os.path.splitext(image_basename_noext)
                 #image_datafilebasename = image_datafilebasename[:image_datafilebasename.rindex('_')]
-                image_datafilename = f"{image_basename_noext}_byte.tif"
+                image_basename_noext_nodate = image_basename_noext[:image_basename_noext.rfind('_', 0)]
+                image_datafilename = f"{image_basename_noext_nodate}_byte.tif"
                 image_datafilepath = os.path.join(image_path, image_datafilename)
                 
                 logger.debug(f"Read image metadata from {image_datafilepath}")            
@@ -934,8 +977,103 @@ def get_image_info(image_path) -> dict:
             logger.error(message)
             raise Exception(message)
 
+    elif image_ext.upper() == ".SAFE":
+        # This is a level 2 sentinel 2 file
+
+        # First extract and fill out some basic info
+        image_info["image_type"] = "CARD"
+        _, image_basename_noext = os.path.split(image_path_noext)
+        image_info["image_id"] = image_basename_noext
+
+        # Read info from the manifest.safe file
+        '''
+        manifest_xml_searchstring = os.path.join(image_path, f"*_manifest.safe")
+        manifest_xml_filepaths = glob.glob(manifest_xml_searchstring)
+
+        # We should only find one .safe file (at the moment)
+        nb_safefiles = len(manifest_xml_filepaths)
+        if nb_safefiles == 1:
+
+        # Now parse the metadata xml file
+        manifest_xml_filepath = manifest_xml_filepaths[0]
+        '''
+        metadata_xml_filepath = os.path.join(image_path, "MTD_MSIL2A.xml")
+        try:
+            metadata = ET.parse(metadata_xml_filepath)
+            metadata_root = metadata.getroot()
+
+            # Define namespaces...
+            #xsi:schemaLocation="https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd"
+            ns = {'n1': "https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd",
+                  'xsi': "http://www.w3.org/2001/XMLSchema-instance"}
+
+            logger.debug(f"Parse metadata info from {metadata_xml_filepath}")
+            image_info['Cloud_Coverage_Assessment'] = float(metadata_root.find("n1:Quality_Indicators_Info/Cloud_Coverage_Assessment", ns).text)
+            
+        except Exception as ex:
+            raise Exception(f"Exception extracting info from {metadata_xml_filepath}") from ex
+            
+        # Now have a look in the files themselves to get band info,...
+        # TODO: probably cleaner/easier to read from metadata files?
+        image_datadir = os.path.join(image_path, "GRANULE")
+        band_filepaths = glob.glob(f"{image_datadir}{os.sep}**{os.sep}*.jp2", recursive=True)
+
+        # If no files were found, error!
+        if len(band_filepaths) == 0:
+            message = f"No image files found in {image_datadir}!"
+            logger.error(message)
+            raise Exception(message)
+
+        image_info["bands"] = {}
+        for i, band_filepath in enumerate(band_filepaths):
+            band_filename = os.path.basename(band_filepath)
+            band_filename_noext, _ = os.path.splitext(band_filename)
+            band_filename_noext_split = band_filename_noext.split('_')
+
+            if len(band_filename_noext_split) == 4:
+                # IMG_DATA files
+                band = f"{band_filename_noext_split[2]}_{band_filename_noext_split[3]}"
+            elif len(band_filename_noext_split) == 3:
+                # QI_DATA files
+                band = band_filename_noext
+            else:
+                message = f"Filename of band doesn't have supported format: {band_filepath}"
+                logger.error(message)
+                raise Exception(message)
+
+            # Add specific info about the band
+            image_info['bands'][band] = {}
+            image_info['bands'][band]['filepath'] = band_filepath
+            image_info['bands'][band]['relative_filepath'] = band_filepath.replace(image_path, '')[1:]
+            image_info['bands'][band]['filename'] = band_filename
+            image_info['bands'][band]['bandindex'] = 0
+
+            # Extract bound,... info from the first file only (they are all the same)
+            logger.debug(f"Read image metadata from {band_filepath}")
+            with rasterio.open(band_filepath) as src:
+                #image_info['image_bounds'] = src.bounds
+                #image_info['image_affine'] = src.transform
+                image_info['bands'][band]['bounds'] = src.bounds
+                image_info['bands'][band]['affine'] = src.transform
+                image_info['bands'][band]['crs'] = str(src.crs)
+                image_info['bands'][band]['epsg'] = str(src.crs).upper().replace('EPSG:', '')
+                
+                # Store the crs also on image level, and check if all bands have the same crs 
+                if i == 0:
+                    image_info['image_bounds'] = image_info['bands'][band]['bounds']
+                    image_info['image_crs'] = image_info['bands'][band]['crs']
+                    image_info['image_epsg'] = image_info['bands'][band]['epsg']
+                else:
+                    if(image_info['image_crs'] != image_info['bands'][band]['crs'] 
+                       or image_info['image_epsg'] != image_info['bands'][band]['epsg']):
+                        message = f"Not all bands have the same crs for {image_info}"
+                        logger.error(message)
+                        raise Exception(message)
+                
+        logger.debug(f"Image metadata read: {image_info}")
+
     else:
-        message = f"Only .CARD image format currently supported!, not {image_path}"
+        message = f"Not a supported image format: {image_path}"
         logger.error(message)
         raise NotImplementedError(message)
     
