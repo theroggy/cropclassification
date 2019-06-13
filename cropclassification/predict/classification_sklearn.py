@@ -60,7 +60,10 @@ def train(df_train: pd.DataFrame,
     elif classifier_type_lower == 'multilayer_perceptron':
         hidden_layer_sizes = tuple(conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes'))
         max_iter = conf.classifier.getint('multilayer_perceptron_max_iter')
-        classifier = MLPClassifier(max_iter=max_iter, hidden_layer_sizes=hidden_layer_sizes)
+        learning_rate_init = conf.classifier.getfloat('multilayer_perceptron_learning_rate_init')
+        classifier = MLPClassifier(
+                max_iter=max_iter, hidden_layer_sizes=hidden_layer_sizes,
+                learning_rate_init=learning_rate_init)
     elif classifier_type_lower == 'svm':
         # cache_size=1000 (MB) should speed up training
         # probability=True is necessary to be able to use predict_proba
@@ -114,7 +117,7 @@ def predict_proba(df_input_parcel: pd.DataFrame,
     classifier = joblib.load(input_classifier_filepath)
     logger.info(f"Classifier has the following columns: {classifier.classes_}")
 
-    logger.info(f"Predict classes with probabilities: {len(df_input_parcel)} rows")
+    logger.info(f"Predict classes with probabilities: {len(df_input_parcel.index)} rows")
     class_proba = classifier.predict_proba(df_input_data)
     logger.info(f"Predict classes with probabilities ready")
 
