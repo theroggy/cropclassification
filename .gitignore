@@ -1,10 +1,12 @@
-
 client_secret.json
+client_secret_download-gee-data.json
 credentials.json
-*.pyc
 Old/
+*.pyc
 .spyproject/
 .spyproject/workspace.ini
-data_multicrop.py
+.vscode/
 /.vs
-client_secret_download-gee-data.json
+.vscode/.ropeproject/objectdb
+.vscode/.ropeproject/config.py
+config/local_overrule.ini
