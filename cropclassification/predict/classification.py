@@ -127,18 +127,23 @@ def predict(input_parcel_filepath: str,
             df_input_parcel_classification_data: pd.DataFrame = None):
     """ Predict the classes for the input data. """
 
-    # If force is False, and the output file doesn't exist yet, stop
+    # If force is False, and the output file exist already, return
     if(force is False
        and os.path.exists(output_predictions_filepath)):
         logger.warning(f"predict: predictions output file already exists and force is false, so stop: {output_predictions_filepath}")
         return
 
+    # Read the input parcels
     logger.info(f"Read input file: {input_parcel_filepath}")
     df_input_parcel = pdh.read_file(input_parcel_filepath,
                                     columns=[conf.columns['id'], conf.columns['class']])
     if df_input_parcel.index.name != conf.columns['id']:
         df_input_parcel.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read train file ready')
+
+    # For parcels of a class that should be ignored, don't predict
+    df_input_parcel = df_input_parcel.loc[~df_input_parcel[conf.columns['class']]
+                                           .isin(conf.marker.getlist('classes_to_ignore'))]
 
     # If the classification data isn't passed as dataframe, read it from the csv
     if df_input_parcel_classification_data is None:
@@ -148,7 +153,7 @@ def predict(input_parcel_filepath: str,
             df_input_parcel_classification_data.set_index(conf.columns['id'], inplace=True)
         logger.debug('Read classification data file ready')
 
-    # Prepare the data to send to prediction logic...
+    # Join the data to send to prediction logic...
     logger.info("Join train sample with the classification data")
     df_input_parcel_for_predict = df_input_parcel.join(df_input_parcel_classification_data, how='inner')
 

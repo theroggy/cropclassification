@@ -41,8 +41,7 @@ def run(markertype_to_calc: str,
         raise Exception(f"Input file input_model_to_use_filepath doesn't exist: {input_model_to_use_filepath}")
     
     # Determine the config files to load depending on the marker_type
-    markertype_to_calc_lower = markertype_to_calc.lower()
-    marker_ini = f"config/{markertype_to_calc_lower}.ini"
+    marker_ini = f"config/{markertype_to_calc.lower()}.ini"
     config_filepaths = ["config/general.ini",
                         marker_ini,
                         "config/local_overrule.ini"]
@@ -53,6 +52,7 @@ def run(markertype_to_calc: str,
     # Create run dir to be used for the results
     run_base_dir = conf.dirs['marker_base_dir']
     reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
+    reuse_last_run_dir_config = conf.dirs.getboolean('reuse_last_run_dir_config')
     run_dir = dir_helper.create_run_dir(run_base_dir, reuse_last_run_dir)
 
     # Main initialisation of the logging
@@ -60,10 +60,16 @@ def run(markertype_to_calc: str,
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
-    # Write the consolidated config as ini file again to the run dir
+    # If the config needs to be reused as well, load it, else write it
     config_used_filepath = os.path.join(run_dir, 'config_used.ini')
-    with open(config_used_filepath, 'w') as config_used_file:
-        conf.config.write(config_used_file)
+    if reuse_last_run_dir and reuse_last_run_dir_config:
+        config_filepaths.append(config_used_filepath)
+        logger.info(f"Run dir config needs to be reused, so {config_filepaths}")
+        conf.read_config(config_filepaths=config_filepaths, year=year)
+    else:
+        logger.info("Write config_used.ini, so it can be reused later on")
+        with open(config_used_filepath, 'w') as config_used_file:
+            conf.config.write(config_used_file)
 
     # Get some general config
     columndata_ext = conf.general['columndata_ext']
@@ -247,11 +253,14 @@ def run(markertype_to_calc: str,
         
     # Postprocess predictions
     parcel_predictions_all_filepath = os.path.join(
-            run_dir, f"{base_filename}_predict_all{output_ext}")        
+            run_dir, f"{base_filename}_predict_all{output_ext}")
+    parcel_predictions_all_output_filepath = os.path.join(
+            run_dir, f"{base_filename}_predict_all_output{output_ext}")
     class_post.calc_top3_and_consolidation(
             input_parcel_filepath=parcel_filepath,
             input_parcel_probabilities_filepath=parcel_predictions_proba_all_filepath,
-            output_predictions_filepath=parcel_predictions_all_filepath)
+            output_predictions_filepath=parcel_predictions_all_filepath,
+            output_predictions_output_filepath=parcel_predictions_all_output_filepath)
 
     # STEP 7: Report on the accuracy, incl. ground truth
     #-------------------------------------------------------------
@@ -266,7 +275,7 @@ def run(markertype_to_calc: str,
                     input_parcel_filepath=input_groundtruth_filepath,
                     input_parcel_filetype=input_parcel_filetype,
                     input_parcel_pixcount_filepath=parcel_pixcount_filepath,
-                    classtype_to_prepare=f"{classtype_to_prepare}_GROUNDTRUTH",
+                    classtype_to_prepare=conf.preprocess['classtype_to_prepare_groundtruth'],
                     output_parcel_filepath=groundtruth_filepath)
 
     # If we trained a model, there is a test prediction we want to report on

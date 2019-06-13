@@ -37,12 +37,14 @@ def read_config(config_filepaths: [],
     general = config['general']
     global marker
     marker = config['marker']
-    global columns
-    columns = config['columns']
-    global classifier
-    classifier = config['classifier']
     global preprocess
     preprocess = config['preprocess']
+    global classifier
+    classifier = config['classifier']
+    global postprocess
+    postprocess = config['postprocess']
+    global columns
+    columns = config['columns']
     global dirs
     dirs = config['dirs']
         
