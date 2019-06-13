@@ -65,7 +65,8 @@ def prepare_input(input_parcel_filepath: str,
             df_parceldata.drop(column, axis=1, inplace=True)
 
     logger.info(f"Write output to {output_parcel_filepath}")
-    if output_ext.lower() != '.shp':         # If extension is not .shp, write using pandas (=a lot faster!)
+    # If extension is not .shp, write using pandas (=a lot faster!)
+    if output_ext.lower() != '.shp': 
         pdh.to_file(df_parceldata, output_parcel_filepath)
     else:
         df_parceldata.to_file(output_parcel_filepath, index=False)
