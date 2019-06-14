@@ -28,7 +28,6 @@ column_BEFL_crop = 'GWSCOD_H'
 column_BEFL_crop_gt_verified = 'HOOFDTEELT_CTRL_COD'
 column_BEFL_crop_gt_unverified = 'HOOFDTEELT_CTRL_COD_ORIG'
 # BEFL specific columns we want keep 
-# Remark: they will be prefixed with ignore_column_prefix
 columns_BEFL_to_keep = [
         column_BEFL_earlylate, 
         column_BEFL_gesp_pm, 
@@ -195,11 +194,14 @@ def prepare_input_cropgroup(
     # Set the index
     classes_df.set_index(column_BEFL_cropcode, inplace=True, verify_integrity=True)
 
+    # Get only the columns in the classes_df that don't exist yet in parceldata_df
+    cols_to_join = classes_df.columns.difference(parceldata_df.columns) 
+
     # Join/merge the classname
     logger.info('Add the classes to the parceldata')
     parceldata_df = parceldata_df.merge(
-            classes_df, how='left', left_on=column_BEFL_cropcode, right_index=True, 
-            validate='many_to_one')
+            classes_df[cols_to_join], how='left', left_on=column_BEFL_cropcode,
+            right_index=True, validate='many_to_one')
 
     # Copy orig classname to classification classname
     parceldata_df.insert(
@@ -359,10 +361,13 @@ def prepare_input_landcover(
     # Set the index
     classes_df.set_index(column_BEFL_cropcode, inplace=True, verify_integrity=True)
 
+    # Get only the columns in the classes_df that don't exist yet in parceldata_df
+    cols_to_join = classes_df.columns.difference(parceldata_df.columns) 
+
     # Join/merge the classname
     logger.info('Add the classes to the parceldata')
     parceldata_df = parceldata_df.merge(
-            classes_df, how='left', left_on=column_BEFL_cropcode,
+            classes_df[cols_to_join], how='left', left_on=column_BEFL_cropcode,
             right_index=True, validate='many_to_one')
 
     # Copy orig classname to classification classname
