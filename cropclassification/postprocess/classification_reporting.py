@@ -64,18 +64,10 @@ def write_full_report(parcel_predictions_filepath: str,
        'GENERAL_ACCURACIES_TABLE': empty_string,
        'GENERAL_ACCURACIES_TEXT': empty_string,
        'GENERAL_ACCURACIES_DATA': empty_string,
-       'PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TEXT': empty_string,
-       'PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TABLE': empty_string,
-       'PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TEXT': empty_string,
-       'PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TABLE': empty_string,
        'CONFUSION_MATRICES_TABLE': empty_string,
        'CONFUSION_MATRICES_DATA': empty_string,
        'CONFUSION_MATRICES_CONSOLIDATED_TABLE': empty_string,
        'CONFUSION_MATRICES_CONSOLIDATED_DATA': empty_string,
-       'PREDICTION_QUALITY_OVERVIEW_TEXT': empty_string,
-       'PREDICTION_QUALITY_OVERVIEW_TABLE': empty_string,
-       'PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TEXT': empty_string,
-       'PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TABLE': empty_string,
        'PREDICTION_QUALITY_CONS_OVERVIEW_TEXT': empty_string,
        'PREDICTION_QUALITY_CONS_OVERVIEW_TABLE': empty_string,
        'PREDICTION_QUALITY_ALPHA_TEXT': empty_string,
@@ -227,47 +219,6 @@ def write_full_report(parcel_predictions_filepath: str,
         # Calculate detailed conclusions for the predictions
         logger.info("Calculate the detailed conclusions for the predictions")
 
-        '''
-        # TODO: these conclusions aren't really used, so can be removed after checking in once
-        #       not to loose the code if we want to add again anyway
-        # Write the conclusions for the standard predictions
-        _add_prediction_conclusion(in_df=df_predict,
-                            new_columnname=conf.columns['prediction_conclusion_detail'],
-                            prediction_column_to_use=conf.columns['prediction'],
-                            detailed=True)
-        message = f"Prediction conclusions overview, for {len(df_predict.index)} predicted cases:"
-        outputfile.write(f"\n{message}\n")
-        html_data['PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TEXT'] = message
-        
-        count_per_class = (df_predict.groupby(conf.columns['prediction_conclusion_detail'], as_index=False)
-                            .size().to_frame('count'))
-        values = 100*count_per_class['count']/count_per_class['count'].sum()
-        count_per_class.insert(loc=1, column='pct', value=values)
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            outputfile.write(f"\n{count_per_class}\n")
-            logger.info(f"{count_per_class}\n")
-            html_data['PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TABLE'] = count_per_class.to_html()
-
-        # Write the conclusions for the withdoubt predictions
-        _add_prediction_conclusion(in_df=df_predict,
-                            new_columnname=conf.columns['prediction_conclusion_detail_withdoubt'],
-                            prediction_column_to_use=conf.columns['prediction_withdoubt'],
-                            detailed=True)
-        message = f"Prediction conclusions with doubt overview, for {len(df_predict)} predicted cases:"
-        outputfile.write(f"\n{message}\n")
-        html_data['PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TEXT'] = message
-        
-        count_per_class = (df_predict.groupby(conf.columns['prediction_conclusion_detail_withdoubt'], as_index=False)
-                            .size().to_frame('count'))
-        values = 100*count_per_class['count']/count_per_class['count'].sum()
-        count_per_class.insert(loc=1, column='pct', value=values)
-        
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
-            outputfile.write(f"\n{count_per_class}\n")
-            logger.info(f"{count_per_class}\n")
-            html_data['PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TABLE'] = count_per_class.to_html()
-        '''
-
         # Write the conclusions for the consolidated predictions
         _add_prediction_conclusion(in_df=df_predict,
                                    new_columnname=conf.columns['prediction_conclusion_detail_cons'],
@@ -341,40 +292,6 @@ def write_full_report(parcel_predictions_filepath: str,
             # ******************************************************************
             # Calculate the conclusions based on ground truth
            
-            '''
-            # TODO: just do one commit not to loose the code, then throw away
-            # Calculate and write the general result for the standard predictions
-            _add_gt_conclusions(df_parcel_gt, conf.columns['prediction'])            
-            message = f"Prediction quality overview, for {len(df_parcel_gt.index)} predicted cases in ground truth:"
-            outputfile.write(f"\n{message}\n")
-            html_data['PREDICTION_QUALITY_OVERVIEW_TEXT'] = message
-            
-            count_per_class = (df_parcel_gt.groupby(f"gt_conclusion_{conf.columns['prediction']}", as_index=False)
-                               .size().to_frame('count'))
-            values = 100*count_per_class['count']/count_per_class['count'].sum()
-            count_per_class.insert(loc=1, column='pct', value=values)
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                outputfile.write(f"\n{count_per_class}\n")
-                logger.info(f"{count_per_class}\n")
-                html_data['PREDICTION_QUALITY_OVERVIEW_TABLE'] = count_per_class.to_html()
-
-            # Calculate and write the result for the withdoubt predictions
-            _add_gt_conclusions(df_parcel_gt, conf.columns['prediction_withdoubt'])
-            message = f"Prediction quality with doubt overview, for {len(df_parcel_gt.index)} predicted cases in ground truth:"
-            outputfile.write(f"\n{message}\n")
-            html_data['PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TEXT'] = message
-            
-            count_per_class = (df_parcel_gt.groupby(f"gt_conclusion_{conf.columns['prediction_withdoubt']}", as_index=False)
-                               .size().to_frame('count'))
-            values = 100*count_per_class['count']/count_per_class['count'].sum()
-            count_per_class.insert(loc=1, column='pct', value=values)
-            
-            with pd.option_context('display.max_rows', None, 'display.max_columns', None):                                
-                outputfile.write(f"\n{count_per_class}\n")
-                logger.info(f"{count_per_class}\n")
-                html_data['PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TABLE'] = count_per_class.to_html()
-            '''
-
             # Calculate and write the result for the consolidated predictions
             _add_gt_conclusions(df_parcel_gt, conf.columns['prediction_cons'])
             message = f"Prediction quality cons (doubt + not_enough_pixels) overview, for {len(df_parcel_gt.index)} predicted cases in ground truth:"
@@ -401,7 +318,7 @@ def write_full_report(parcel_predictions_filepath: str,
             alpha_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-OK_PRED-WRONG:ERROR_ALPHA'].index)
             alpha_error_denominator = (alpha_error_numerator 
                     + len(df_parcel_gt.loc[df_parcel_gt[columnname].isin(
-                            ['FARMER-WRONG_PRED-OK', 'FARMER-WRONG_PRED-NOK'])].index))
+                            ['FARMER-WRONG_PRED-OK', 'FARMER-WRONG_PRED-WRONG'])].index))
             if alpha_error_denominator > 0:
                 message = (f"Alpha error: {alpha_error_numerator}/{alpha_error_denominator} = "
                         + f"{(alpha_error_numerator/alpha_error_denominator):.02f}")
@@ -548,61 +465,70 @@ def _add_gt_conclusions(in_df,
 
     # Calculate gt_vs_input_column
     # If ground truth same as input class, farmer OK, unless it is an ignore class
-    in_df[gt_vs_input_column] = 'NOK'
+    in_df[gt_vs_input_column] = 'FARMER-WRONG'
     in_df.loc[(in_df[conf.columns['class_groundtruth_unverified']] == in_df[conf.columns['class_groundtruth_verified']]),
-                gt_vs_input_column] = 'OK'
+              gt_vs_input_column] = 'FARMER-OK'
     in_df.loc[(in_df[conf.columns['class_groundtruth_unverified']] == in_df[conf.columns['class_groundtruth_verified']])
-                & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
-                gt_vs_input_column] = 'IGNORE:VERIFIED=UNVERIFIED=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
-    in_df.loc[(in_df[gt_vs_input_column] == 'NOK')
-                & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
-                gt_vs_input_column] = 'IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
-    in_df.loc[(in_df[gt_vs_input_column] == 'NOK')
-                & (in_df[conf.columns['class_groundtruth_unverified']].isin(all_classes_to_ignore)),
-                gt_vs_input_column] = 'IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_unverified']].map(str)
+                    & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-OK:IGNORE:VERIFIED=UNVERIFIED=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
+    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-WRONG')
+                    & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
+    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-WRONG')
+                    & (in_df[conf.columns['class_groundtruth_unverified']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_unverified']].map(str)
 
     # Calculate gt_vs_prediction_column
     # If ground truth same as prediction, prediction OK 
     in_df[gt_vs_prediction_column] = 'UNDEFINED'
     in_df.loc[(in_df[prediction_column_to_use] == in_df[conf.columns['class_groundtruth_verified']]),
-                gt_vs_prediction_column] = 'OK'
+              gt_vs_prediction_column] = 'PRED-OK'
+    in_df.loc[(in_df[prediction_column_to_use] == in_df[conf.columns['class_groundtruth_verified']])
+                    & (in_df[prediction_column_to_use].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-OK:IGNORE:PREDICTION=VERIFIED=' + in_df[prediction_column_to_use].map(str)                
 
     # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
-    in_df.loc[in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore),
-                gt_vs_prediction_column] = 'IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
-    in_df.loc[in_df[conf.columns['class_groundtruth_unverified']].isin(all_classes_to_ignore),
-                gt_vs_prediction_column] = 'IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_unverified']].map(str)
-    
+    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
+    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class_groundtruth_unverified']].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_unverified']].map(str)
+    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-NONE:IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
+
     # If conclusion still UNDEFINED, check if doubt 
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
                     & (in_df[prediction_column_to_use].isin(conf.marker.getlist('classes_doubt'))),
-                gt_vs_prediction_column] = 'DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
+              gt_vs_prediction_column] = 'PRED-DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
 
     # If conclusion still UNDEFINED, it was wrong 
     in_df.loc[in_df[gt_vs_prediction_column] == 'UNDEFINED',
-                gt_vs_prediction_column] = 'NOK'
+              gt_vs_prediction_column] = 'PRED-WRONG'
 
     # Calculate gt_conclusion_column
     # Unverified class was correct  
     in_df[gt_conclusion_column] = 'UNDEFINED'
-    in_df.loc[(in_df[gt_vs_input_column] == 'OK')
-                    & (in_df[gt_vs_prediction_column] == 'NOK'),
-                gt_conclusion_column] = 'FARMER-OK_PRED-WRONG:ERROR_ALPHA'
-    in_df.loc[(in_df[gt_vs_input_column] == 'OK')
-                    & (in_df[gt_conclusion_column] == 'UNDEFINED'),
-                gt_conclusion_column] = 'FARMER-OK_PRED-' + in_df[gt_vs_prediction_column].map(str)
+    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-OK')
+                    & (in_df[gt_vs_prediction_column] == 'PRED-WRONG'),
+              gt_conclusion_column] = 'FARMER-OK_PRED-WRONG:ERROR_ALPHA'
+    in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
+                    & (in_df[gt_vs_input_column] == 'FARMER-OK'),
+                gt_conclusion_column] = 'FARMER-OK_' + in_df[gt_vs_prediction_column].map(str)
 
     # Unverified class was not correct
-    in_df.loc[(in_df[gt_vs_input_column] == 'NOK')
+    in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
+                    & (in_df[gt_vs_input_column] == 'FARMER-WRONG')
                     & (in_df[conf.columns['class_groundtruth_unverified']] == in_df[prediction_column_to_use]),
-                gt_conclusion_column] = 'FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA'
-    in_df.loc[(in_df[gt_vs_input_column] == 'NOK')
-                    & (in_df[gt_conclusion_column] == 'UNDEFINED'),
-                gt_conclusion_column] = 'FARMER-WRONG_PRED-' + in_df[gt_vs_prediction_column].map(str)
+              gt_conclusion_column] = 'FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA'
+    in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
+                    & (in_df[gt_vs_input_column] == 'FARMER-WRONG'),
+              gt_conclusion_column] = 'FARMER-WRONG_' + in_df[gt_vs_prediction_column].map(str)
     
     # Unverified or verified class was ignore
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED'),
-                gt_conclusion_column] = in_df[gt_vs_input_column].map(str)
+              gt_conclusion_column] = in_df[gt_vs_input_column].map(str)
                             
 def _get_alfa_errors_per_pixcount(df_predquality_pixcount,
                                   pred_quality_column: str,
