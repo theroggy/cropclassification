@@ -3,6 +3,7 @@
 Module with postprocessing functions on classification results.
 """
 
+import datetime
 import logging
 import os
 
@@ -71,35 +72,42 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
         # First add some aditional columns specific for the export
         pred_df['markercode'] = conf.marker['markertype']
         pred_df['run_id'] = conf.general['run_id']
+        today = datetime.date.today()
+        pred_df['cons_date'] = today
+        pred_df['modify_date'] = today
         logger.info("Write final output prediction data to file")
         pred_df.reset_index(inplace=True)
         pred_df = pred_df[conf.columns.getlist('output_columns')] 
         pdh.to_file(pred_df, output_predictions_output_filepath, index=False) 
 
-        # Write to insert statement as well 
-        # TODO: this is ugly temporary code, remove when not needed anymore!
-        output_predictions_output_sql_filepath = output_predictions_output_filepath + '.sql'
-        if(force is False
-            and os.path.exists(output_predictions_output_sql_filepath)):
-            logger.warning("calc_top3_and_consolidation: .sql output file exist and force is False!")
-        else:      
-            if conf.marker['markertype'] == 'LANDCOVER':
-                table_name = 'mon_marker_landcover'
-            elif conf.marker['markertype'] == 'CROPGROUP':
-                table_name = 'mon_marker_cropgroup'
-            else: 
-                table_name = None
-                logger.warning(f"Table unknown for marker type {conf.marker['markertype']}, so cannot write .sql file")
+        # Write oracle sqlldr file
+        if conf.marker['markertype'] in ['LANDCOVER', 'LANDCOVER_EARLY']:
+            table_name = 'mon_marker_landcover'
+            table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_landcover, "
+                          + "cons_status, cons_date date 'yyyy-mm-dd', landcover1, probability1, "
+                          + "landcover2, probability2, landcover3, probability3, "
+                          + "modify_date date 'yyyy-mm-dd'")
+        elif conf.marker['markertype'] in ['CROPGROUP', 'CROPGROUP_EARLY']:
+            table_name = 'mon_marker_cropgroup'
+            table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_cropgroup, "
+                          + "cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, probability1, "
+                          + "cropgroup2, probability2, cropgroup3, probability3, "
+                          + "modify_date date 'yyyy-mm-dd'")
+        else: 
+            table_name = None
+            logger.warning(f"Table unknown for marker type {conf.marker['markertype']}, so cannot write .ctl file")
 
-            if table_name is not None:
-                with open(output_predictions_output_sql_filepath, 'w') as sqlfile:
-                    logger.info("Write final output prediction data to .sql file")
-                    sqlfile.write("INSERT ALL\n")
-                    for _, row in pred_df.iterrows():
-                        sqlfile.write(f"\tINSERT INTO {table_name} (layer_id, prc_id, versienummer, markercode, run_id, cons_landcover, cons_status, cons_date, landcover1, probability1, landcover2, probability2, landcover3, probability3, modify_date) " 
-                                    + f"VALUES ({row['LAYER_ID']}, {row['PRC_ID']}, {row['VERSIENR']}, '{row['markercode']}', {row['run_id']}, '{row[conf.columns['prediction_cons']]}', '{row[conf.columns['prediction_cons_status']]}', sysdate, '{row[conf.columns['prediction']]}', {row['pred1_prob']}, '{row['pred2']}', {row['pred2_prob']}, '{row['pred3']}', {row['pred3_prob']}, sysdate)\n")
-                    sqlfile.write("SELECT 1 FROM DUAL;\n")  
-                    logger.info("Write final output prediction data to .sql file ready")
+        if table_name is not None:
+            with open(output_predictions_output_filepath + '.ctl', 'w') as ctlfile:
+                # SKIP=1 to skip the columns names line, the other ones to evade 
+                # more commits than needed
+                ctlfile.write("OPTIONS (SKIP=1, ROWS=10000, BINDSIZE=40000000, READSIZE=40000000)\n")     
+                ctlfile.write("LOAD DATA\n")
+                ctlfile.write(f"INFILE '{os.path.basename(output_predictions_output_filepath)}'  \"str '\\n'\"\n")
+                ctlfile.write(f"INSERT INTO TABLE {table_name} APPEND\n")
+                # A tab as seperator is apparently X'9'  
+                ctlfile.write("FIELDS TERMINATED BY X'9'\n")
+                ctlfile.write(f"({table_columns})\n")
 
 def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
 
