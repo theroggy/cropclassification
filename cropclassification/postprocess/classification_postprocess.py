@@ -169,7 +169,7 @@ def add_doubt_columns(pred_df: pd.DataFrame,
         pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
                         & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
                         & (pred_df['pred1_prob'].map(float) < 2.0 * pred_df['pred2_prob'].map(float)),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:TYPE1'
+                    conf.columns['prediction_withdoubt']] = 'DOUBT:PROBA1<2*PROBA2'
     
     # Calculate doubt for parcels with prediction != unverified input
     if doubt_pred_ne_input_proba1_st_thresshold > 0:
@@ -177,7 +177,7 @@ def add_doubt_columns(pred_df: pd.DataFrame,
                         & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
                         & (pred_df[conf.columns['prediction']] != pred_df[conf.columns['class']])
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_ne_input_proba1_st_thresshold),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:TYPE2'
+                    conf.columns['prediction_withdoubt']] = 'DOUBT:PRED<>INPUT-PROBA1<X'
 
     # Calculate doubt for parcels with prediction == unverified input
     if doubt_pred_eq_input_proba1_st_thresshold > 0:
@@ -185,7 +185,7 @@ def add_doubt_columns(pred_df: pd.DataFrame,
                         & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
                         & (pred_df[conf.columns['prediction']] == pred_df[conf.columns['class']])
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_eq_input_proba1_st_thresshold),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:TYPE3'
+                    conf.columns['prediction_withdoubt']] = 'DOUBT:PRED=INPUT-PROBA1<X'
 
     # If parcel was declared as grassland, and is classified as arable, set to doubt
     # Remark: those gave only false positives, so better set to doubt!
