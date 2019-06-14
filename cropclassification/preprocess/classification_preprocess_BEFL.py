@@ -298,21 +298,17 @@ def prepare_input_cropgroup_early(
             parceldata_df, column_BEFL_cropcode, column_output_class)
 
     # Set late crops to ignore
-    ignore_column_prefix = conf.columns['ignore_column_prefix']
-    column_BEFL_earlylate_prefixed = ignore_column_prefix + column_BEFL_earlylate
-    parceldata_df.loc[parceldata_df[column_BEFL_earlylate_prefixed] == 'MON_TEELTEN_LATE', 
+    parceldata_df.loc[parceldata_df[column_BEFL_earlylate] != 'MON_TEELTEN_VROEGE', 
                       column_output_class] = 'IGNORE_LATE_CROP'
     
     # Set new grass to ignore
-    column_BEFL_cropcode_prefixed = ignore_column_prefix + column_BEFL_cropcode
-    column_BEFL_status_perm_grass_prefixed = ignore_column_prefix + column_BEFL_status_perm_grass
-    if column_BEFL_status_perm_grass_prefixed in parceldata_df.columns: 
-        parceldata_df.loc[(parceldata_df[column_BEFL_cropcode_prefixed] == '60')
-                            & ((parceldata_df[column_BEFL_status_perm_grass_prefixed] == 'BG1')
-                                | (parceldata_df[column_BEFL_status_perm_grass_prefixed].isnull())), 
+    if column_BEFL_status_perm_grass in parceldata_df.columns: 
+        parceldata_df.loc[(parceldata_df[column_BEFL_cropcode] == '60')
+                            & ((parceldata_df[column_BEFL_status_perm_grass] == 'BG1')
+                                | (parceldata_df[column_BEFL_status_perm_grass].isnull())), 
                           column_output_class] = 'IGNORE_NEW_GRASSLAND'
     else:
-        logger.warning(f"Source file doesn't contain column {column_BEFL_status_perm_grass_prefixed}!")
+        logger.warning(f"Source file doesn't contain column {column_BEFL_status_perm_grass}!")
 
     return parceldata_df
 
@@ -415,22 +411,18 @@ def prepare_input_landcover_early(
     parceldata_df = prepare_input_landcover(
             parceldata_df, column_BEFL_cropcode, column_output_class)
 
-    # Set late crops to ignore
-    ignore_column_prefix = conf.columns['ignore_column_prefix']
-    column_BEFL_earlylate_prefixed = ignore_column_prefix + column_BEFL_earlylate
-    parceldata_df.loc[parceldata_df[column_BEFL_earlylate_prefixed].isin(['MON_TEELTEN_LATE']), 
-                                    column_output_class] = 'IGNORE_LATE_CROP'
+    # Set crops not in early crops to ignore
+    parceldata_df.loc[parceldata_df[column_BEFL_earlylate] != 'MON_TEELTEN_VROEGE', 
+                      column_output_class] = 'IGNORE_LATE_CROP'
 
     # Set new grass to ignore
-    column_BEFL_cropcode_prefixed = ignore_column_prefix + column_BEFL_cropcode
-    column_BEFL_status_perm_grass_prefixed = ignore_column_prefix + column_BEFL_status_perm_grass
-    if column_BEFL_status_perm_grass_prefixed in parceldata_df.columns:
-        parceldata_df.loc[(parceldata_df[column_BEFL_cropcode_prefixed] == '60')
-                            & ((parceldata_df[column_BEFL_status_perm_grass_prefixed] == 'BG1')
-                                | (parceldata_df[column_BEFL_status_perm_grass_prefixed].isnull())), 
-                        column_output_class] = 'IGNORE_NEW_GRASSLAND'
+    if column_BEFL_status_perm_grass in parceldata_df.columns:
+        parceldata_df.loc[(parceldata_df[column_BEFL_cropcode] == '60')
+                            & ((parceldata_df[column_BEFL_status_perm_grass] == 'BG1')
+                                | (parceldata_df[column_BEFL_status_perm_grass].isnull())), 
+                          column_output_class] = 'IGNORE_NEW_GRASSLAND'
     else:
-        logger.warning(f"Source file doesn't contain column {column_BEFL_status_perm_grass_prefixed}, so new grassland cannot be ignored!")
+        logger.warning(f"Source file doesn't contain column {column_BEFL_status_perm_grass}, so new grassland cannot be ignored!")
                       
     return parceldata_df
 
