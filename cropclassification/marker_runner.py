@@ -62,10 +62,15 @@ def run(markertype_to_calc: str,
 
     # If the config needs to be reused as well, load it, else write it
     config_used_filepath = os.path.join(run_dir, 'config_used.ini')
-    if reuse_last_run_dir and reuse_last_run_dir_config:
+    if(reuse_last_run_dir 
+       and reuse_last_run_dir_config
+       and os.path.exists(run_dir)):
         config_filepaths.append(config_used_filepath)
         logger.info(f"Run dir config needs to be reused, so {config_filepaths}")
         conf.read_config(config_filepaths=config_filepaths, year=year)
+        logger.info("Write new config_used.ini, because some parameters might have been added")
+        with open(config_used_filepath, 'w') as config_used_file:
+            conf.config.write(config_used_file)
     else:
         logger.info("Write config_used.ini, so it can be reused later on")
         with open(config_used_filepath, 'w') as config_used_file:
