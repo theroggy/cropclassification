@@ -164,14 +164,14 @@ def add_doubt_columns(pred_df: pd.DataFrame,
     # Init with the standard prediction 
     pred_df[conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
 
-    # Calculate doubt for parcels with prediction != unverified input
+    # Apply doubt for parcels with prediction != unverified input
     if doubt_proba1_st_2_x_proba2 is True:
         pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
                         & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
                         & (pred_df['pred1_prob'].map(float) < 2.0 * pred_df['pred2_prob'].map(float)),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PROBA1<2*PROBA2'
     
-    # Calculate doubt for parcels with prediction != unverified input
+    # Apply doubt for parcels with prediction != unverified input
     if doubt_pred_ne_input_proba1_st_thresshold > 0:
         pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
                         & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
@@ -179,7 +179,7 @@ def add_doubt_columns(pred_df: pd.DataFrame,
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_ne_input_proba1_st_thresshold),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PRED<>INPUT-PROBA1<X'
 
-    # Calculate doubt for parcels with prediction == unverified input
+    # Apply doubt for parcels with prediction == unverified input
     if doubt_pred_eq_input_proba1_st_thresshold > 0:
         pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
                         & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
@@ -187,17 +187,32 @@ def add_doubt_columns(pred_df: pd.DataFrame,
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_eq_input_proba1_st_thresshold),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PRED=INPUT-PROBA1<X'
 
-    # If parcel was declared as grassland, and is classified as arable, set to doubt
-    # Remark: those gave only false positives, so better set to doubt!
-    pred_df.loc[(pred_df[conf.columns['class']] == 'MON_LC_GRASSES')
-                    & (pred_df[conf.columns['prediction_withdoubt']] == 'MON_LC_ARABLE'),
-                conf.columns['prediction_withdoubt']] = 'DOUBT:GRASS->ARABLE'
+    # Apply some extra, marker-specific doubt algorythms
+    if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER_EARLY'):
+        logger.info("Apply some marker-specific doubt algorythms")
+        # If parcel was declared as grassland, and is classified as arable, set to doubt
+        # Remark: those gave only false positives for LANDCOVER marker
+        pred_df.loc[(pred_df[conf.columns['class']] == 'MON_LC_GRASSES')
+                        & (pred_df[conf.columns['prediction_withdoubt']] == 'MON_LC_ARABLE'),
+                    conf.columns['prediction_withdoubt']] = 'DOUBT:GRASS->ARABLE'
 
-    # If parcel was declared as fallow, and is classified as something else, set to doubt
-    # Remark: those gave 50% false positives, so better set to doubt!
-    pred_df.loc[(pred_df[conf.columns['class']] == 'MON_LC_FALLOW')
-                    & (~pred_df[conf.columns['prediction_withdoubt']].isin(['MON_LC_FALLOW', 'DOUBT'])),
-                conf.columns['prediction_withdoubt']] = 'DOUBT:FALLOW-UNCONFIRMED'
+        # If parcel was declared as fallow, and is classified as something else, set to doubt
+        # Remark: those gave 50% false positives for marker LANDCOVER
+        pred_df.loc[(~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
+                        & (pred_df[conf.columns['class']] == 'MON_LC_FALLOW')
+                        & (pred_df[conf.columns['prediction_withdoubt']] != 'MON_LC_FALLOW'),
+                    conf.columns['prediction_withdoubt']] = 'DOUBT:FALLOW-UNCONFIRMED'
+        
+        if conf.marker['markertype'] == 'LANDCOVER_EARLY':
+            # If parcel was declared as winter grain, but is not classified as MON_LC_ARABLE: doubt
+            # Remark: those gave > 50% false positives for marker LANDCOVER_EARLY
+            pred_df.loc[(~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
+                            & (pred_df[conf.columns['crop_declared']].isin(['311', '321', '331']))
+                            & (pred_df[conf.columns['prediction_withdoubt']] != 'MON_LC_ARABLE'),
+                        conf.columns['prediction_withdoubt']] = 'DOUBT:GRAIN-UNCONFIRMED'
+
+    elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
+        logger.info("Apply some marker-specific doubt algorythms")
 
     # Add a column with the prediction status... and all parcels in df_top3 got a prediction
     pred_df[conf.columns['prediction_status']] = 'OK'

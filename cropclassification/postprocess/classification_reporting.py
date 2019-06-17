@@ -433,7 +433,10 @@ def _add_prediction_conclusion(in_df,
                   new_columnname] = 'IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
         # If conclusion still UNDEFINED, check if doubt 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                    & (in_df[prediction_column_to_use].isin(conf.marker.getlist('classes_doubt'))),
+                    & (in_df[prediction_column_to_use].str.startswith('DOUBT')),
+                  new_columnname] = 'DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[prediction_column_to_use] == 'NODATA'),
                   new_columnname] = 'DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
     else:
         # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
@@ -441,7 +444,10 @@ def _add_prediction_conclusion(in_df,
                   new_columnname] = 'IGNORE'
         # If conclusion still UNDEFINED, check if doubt 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                    & (in_df[prediction_column_to_use].isin(conf.marker.getlist('classes_doubt'))),
+                    & (in_df[prediction_column_to_use].str.startswith('DOUBT')),
+                  new_columnname] = 'DOUBT'
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[prediction_column_to_use] == 'NODATA'),
                   new_columnname] = 'DOUBT'
 
     # If conclusion still UNDEFINED, check if prediction equals the input class 
@@ -500,8 +506,11 @@ def _add_gt_conclusions(in_df,
 
     # If conclusion still UNDEFINED, check if doubt 
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
-                    & (in_df[prediction_column_to_use].isin(conf.marker.getlist('classes_doubt'))),
+                    & (in_df[prediction_column_to_use].str.startswith('DOUBT')),
               gt_vs_prediction_column] = 'PRED-DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
+    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
+                    & (in_df[prediction_column_to_use] == 'NODATA'),
+              gt_vs_prediction_column] = 'PRED-DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)              
 
     # If conclusion still UNDEFINED, it was wrong 
     in_df.loc[in_df[gt_vs_prediction_column] == 'UNDEFINED',
