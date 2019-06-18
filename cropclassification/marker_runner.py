@@ -220,7 +220,8 @@ def run(markertype_to_calc: str,
                 balancing_strategy=balancing_strategy)
 
         # Train the classifier and output predictions
-        classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + "_classifier.pkl"
+        classifier_ext = conf.classifier['classifier_ext']
+        classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + f"_classifier{classifier_ext}"
         parcel_predictions_proba_test_filepath = os.path.join(
                 run_dir, f"{base_filename}_predict_proba_test{rowdata_ext}")
         classification.train_test_predict(
