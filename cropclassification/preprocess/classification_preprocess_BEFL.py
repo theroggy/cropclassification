@@ -25,6 +25,7 @@ column_BEFL_gesp_pm = 'GESP_PM'              # Gespecialiseerde productiemethode
 column_BEFL_gis_area = 'GRAF_OPP'            # GIS Area
 column_BEFL_status_perm_grass = 'STAT_BGV'   # Status permanent grassland
 column_BEFL_crop = 'GWSCOD_H'
+column_BEFL_crop_declared = 'GWSCOD_H_A'
 column_BEFL_crop_gt_verified = 'HOOFDTEELT_CTRL_COD'
 column_BEFL_crop_gt_unverified = 'HOOFDTEELT_CTRL_COD_ORIG'
 # BEFL specific columns we want keep 
@@ -35,7 +36,8 @@ columns_BEFL_to_keep = [
         column_BEFL_status_perm_grass,
         column_BEFL_crop_gt_verified,
         column_BEFL_crop_gt_unverified,
-        column_BEFL_crop]
+        column_BEFL_crop,
+        column_BEFL_crop_declared]
 
 #-------------------------------------------------------------
 # The real work
