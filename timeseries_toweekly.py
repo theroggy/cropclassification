@@ -12,7 +12,11 @@ import os
 import pandas as pd
 import numpy as np
 
-import global_settings as gs
+# Import local stuff
+import cropclassification.helpers.pandas_helper as pdh
+import cropclassification.helpers.config_helper as conf
+
+#import global_settings as gs
 
 
 #-------------------------------------------------------------
@@ -32,7 +36,7 @@ def get_monday(input_date):
     This function gets the first monday before the date provided.
     She is being used to adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
       Inputformaat: %Y-%m-%d
-      outputformaat: %Y_%W_%w vb 2018_5_1 -  maandag van week 5 van 2018.
+      outputformaat: %Y_%W_%w vb 2018_5_1 -  2018 - week 5 - monday.
     """
     #logger.info('get_monday')
 
@@ -59,9 +63,7 @@ def decompose_filename(input_name):
     parseddate = datetime.datetime.strptime(filedate, '%Y%m%d') 
 
     # Get the week #
-    #parseddate = datetime.datetime.strptime(filedate, '%Y%m%d')
     fileweek = int(parseddate.strftime('%W'))
-
 
     # Get the band #
     fileband = param_values[19] # to do : hier wordt uitgegaan dat dit steeds 19e deel is maar is niet steeds zo ...? 
@@ -85,10 +87,10 @@ def decompose_filename(input_name):
 # Start
 #-------------------------------------------------------------
 def calculate_weekly_data(input_filepath: str,
-                          input_start_date: str,   #formaat: %Y-%m-%d
-                          input_stop_date: str,    #formaat: %Y-%m-%d
-                          input_band: str,         #VV of VH                #marina VRAAG: moet beide ook mogelijk zijn?
-                          input_orbit: str,        #ASC of DESC             #marina VRAAG: moet beide ook mogelijk zijn?
+                          #input_start_date: str,   # %Y-%m-%d
+                          #input_stop_date: str,    # %Y-%m-%d
+                          input_band: str,         # VV of VH                #marina VRAAG: moet beide ook mogelijk zijn?
+                          input_orbit: str,        # ASC of DESC             #marina VRAAG: moet beide ook mogelijk zijn?
                           output_filepath: str
                           ):
     """
@@ -101,8 +103,18 @@ def calculate_weekly_data(input_filepath: str,
     # Init
     country_code = 'BEFL'
 
-    # to do : jaar afleiden uit input_start_date
-    year = 2018  #2019
+    config_filepaths = ["config/general.ini",
+                        "config/landcover.ini",
+                        "config/local_overrule.ini"]
+
+    # Read the configuration files
+    conf.read_config(config_filepaths, year=2018)
+
+    start_date_str = conf.marker['start_date_str']
+    end_date_str = conf.marker['end_date_str']
+
+    year = start_date_str.split("-")[0] 
+    
 
     # to do : paden afleiden uit ini file - moeten dan niet meer worden meegegeven als parameter
    
@@ -132,8 +144,8 @@ def calculate_weekly_data(input_filepath: str,
     logger.info('start- & stopdates, bands')
     
     # Start- en stopdatum omzetten naar maandagen
-    start_date = get_monday(input_start_date) # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = get_monday(input_stop_date) 
+    start_date = get_monday(start_date_str) # output: vb 2018_2_1 - maandag van week 2 van 2018
+    end_date = get_monday(end_date_str) 
     start_week = int(datetime.datetime.strftime(start_date , '%W'))
     end_week = int(datetime.datetime.strftime(end_date , '%W'))
     start_date_monday = start_date.strftime('%Y-%m-%d') # terug omzetten naar Y/M/D
@@ -156,7 +168,7 @@ def calculate_weekly_data(input_filepath: str,
         
         # Loop all weekfiles
         df_result = None
-        # numberfiles = None
+        numberfiles = None
         for countfiles, weekfile in enumerate(weekfiles_list):
             
             # Read the file - columns : code_obj,count,max,mean,min,p25,p50,p75,std,band
@@ -164,32 +176,21 @@ def calculate_weekly_data(input_filepath: str,
             df_in = pd.read_csv(os.path.join(input_filepath, f"{weekfile}.csv"), 
                                 usecols=['CODE_OBJ', 'count', 'max', 'mean', 'min', 'std'],
                                 index_col='CODE_OBJ')  
-            '''print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            print(df_in.max.isnull())
-
-            if df_in.max.isnull() :
-                numberfiles = 0
-            else:    
-                numberfiles = 1
-
-            df_in[numberfiles] = 
-            print(numberfiles)
-
-            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')'''
 
             # rename columns - add unique number                   
             df_in.rename(columns={'count': 'count'+str(countfiles+1), 'max': 'max'+str(countfiles+1), 
                                   'mean': 'mean'+str(countfiles+1), 'min': 'min'+str(countfiles+1),
                                   'std': 'std'+str(countfiles+1)}, inplace=True)
+            #df_in.insert('filecount')
             
             # Create 1 dataframe for all weekfiles - one row for each code_obj - using concat (code_obj = index)
             if df_result is None:
                 df_result = df_in
+                
             else:
                 df_result = pd.concat([df_result, df_in], axis=1, sort=False) 
-                df_result.count
-        
-        
+       
+
         # Calculate max, mean, min, ...
         logger.info('Calculate max, mean, min, ...')
 
@@ -199,17 +200,14 @@ def calculate_weekly_data(input_filepath: str,
         mincolumnstouse = []
         stdcolumnstouse = []
 
-        for j in range (1, countfiles+1):
+        for j in range (1, countfiles+2):
             countcolumnstouse.append(f"count{j}")
             maxcolumnstouse.append(f"max{j}")
             meancolumnstouse.append(f"mean{j}")
             mincolumnstouse.append(f"min{j}")
             stdcolumnstouse.append(f"std{j}")
 
-        # 
-        # df_result['NumberFiles'] = df_result[maxcolumnstouse].isna.sum(axis=1)
-
-
+   
         # Get the date of the monday of week i
         week_i_monday = datetime.datetime.strptime(str(year) + '_' + str(i) + '_1', '%Y_%W_%w')
         date_week_i_monday = week_i_monday.strftime('%Y-%m-%d') 
@@ -235,33 +233,23 @@ def calculate_weekly_data(input_filepath: str,
         df_result[f"{NewColumnName}_std"] = np.nanmean(df_result[stdcolumnstouse], axis=1)
 
         # Number of Files used
-        #df_result[f"{NewColumnName}_countfiles"] = df_result.isna().sum()
-        #print(df_result.isna(axis=1).sum())
-        #for i in range(0,5) : #range(len(df_result.index()) :
-            #print("Nan in row ", i , " : " ,  df_result.iloc[i].isnull().sum())
-
-
-
-        # marina : to to : 
-        #      aantal bestanden bijhouden per object --> niet lege !
+        df_result['UsedFiles'] = df_result[maxcolumnstouse].count(axis=1)
 
         
         # New file Name
         # vb BEFL2018_bufm0_weekly_2018-03-26_S1AscDesc
         # for temp. files use parquet in stead of csv 
         # TO DO : buffer en soort sensor nog mee opnemen in de naam
-        newfilename = f"{country_code}{year}_bufm0_weekly_{date_week_i_monday}_{input_band}_{input_orbit}.parquet"
+        newfilename = f"{country_code}{year}_bufm0_weekly_{date_week_i_monday}_{input_band}_{input_orbit}.csv" #parquet"
         dest_filepath = os.path.join(output_filepath, newfilename)
 
         logger.info('write new file: '+newfilename)
-        # wegschrijven naar nieuw bestand
         columnstouse = [f"{NewColumnName}_count", f"{NewColumnName}_max", f"{NewColumnName}_mean", f"{NewColumnName}_min", 
-                        f"{NewColumnName}_std"] 
+                        f"{NewColumnName}_std", "UsedFiles"] 
         
         perceel_info_weekly_df = df_result[columnstouse]
 
-        perceel_info_weekly_df.to_csv(dest_filepath, index_label='CODE_OBJ')
-        #perceel_info_weekly_df.to_parquet(dest_filepath, index_label='CODE_OBJ')
+        pdh.to_file(perceel_info_weekly_df, dest_filepath, index=True)
         
         logger.info('-THE END-')
 
@@ -300,11 +288,15 @@ if __name__ == "__main__":
     # onderaan functie aanroepen met params om te testen/runnen
     #-------------------------------------------------------------
     input_filepath = 'X:\\Monitoring\\Markers\\playground\\_algemeen\\timeseries_dias'
-    input_start_date = '2018-01-15'
-    input_stop_date = '2018-02-15'
     input_band = 'VV'
     input_orbit = 'ASC'
     output_filepath = 'X:\\Monitoring\\Markers\\playground\\market\\output'
     
-    calculate_weekly_data(input_filepath, input_start_date , input_stop_date, input_band, input_orbit, output_filepath)
-    
+    config_filepaths = ["config/general.ini",
+                        "config/landcover.ini",
+                        "config/local_overrule.ini"]
+
+    # Read the configuration files
+    conf.read_config(config_filepaths, year=2018)
+
+    calculate_weekly_data(input_filepath, input_band, input_orbit, output_filepath)
