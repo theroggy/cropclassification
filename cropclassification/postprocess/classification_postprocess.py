@@ -84,15 +84,15 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
         if conf.marker['markertype'] in ['LANDCOVER', 'LANDCOVER_EARLY']:
             table_name = 'mon_marker_landcover'
             table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_landcover, "
-                          + "cons_status, cons_date date 'yyyy-mm-dd', landcover1, probability1, "
-                          + "landcover2, probability2, landcover3, probability3, "
-                          + "modify_date date 'yyyy-mm-dd'")
+                             + "cons_status, cons_date date 'yyyy-mm-dd', landcover1, probability1, "
+                             + "landcover2, probability2, landcover3, probability3, "
+                             + "modify_date date 'yyyy-mm-dd'")
         elif conf.marker['markertype'] in ['CROPGROUP', 'CROPGROUP_EARLY']:
             table_name = 'mon_marker_cropgroup'
             table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_cropgroup, "
-                          + "cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, probability1, "
-                          + "cropgroup2, probability2, cropgroup3, probability3, "
-                          + "modify_date date 'yyyy-mm-dd'")
+                             + "cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, probability1, "
+                             + "cropgroup2, probability2, cropgroup3, probability3, "
+                             + "modify_date date 'yyyy-mm-dd'")
         else: 
             table_name = None
             logger.warning(f"Table unknown for marker type {conf.marker['markertype']}, so cannot write .ctl file")
@@ -162,27 +162,34 @@ def add_doubt_columns(pred_df: pd.DataFrame,
     doubt_pred_eq_input_proba1_st_thresshold = conf.postprocess.getfloat('doubt_pred_eq_input_proba1_st_thresshold')
 
     # Init with the standard prediction 
-    pred_df[conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
+    pred_df[conf.columns['prediction_withdoubt']] = 'UNDEFINED'
 
-    # Apply doubt for parcels with prediction != unverified input
+    # NODATA and ignore classes need to be retained, so apply them first
+    pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
+                    & (pred_df[conf.columns['prediction']] == 'NODATA')
+                    & (pred_df[conf.columns['class']].isin(classes_to_ignore)),
+                conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
+
+    # Apply doubt for parcels with a low percentage of probability -> = doubt!
     if doubt_proba1_st_2_x_proba2 is True:
-        pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
-                        & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
+        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
                         & (pred_df['pred1_prob'].map(float) < 2.0 * pred_df['pred2_prob'].map(float)),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PROBA1<2*PROBA2'
     
     # Apply doubt for parcels with prediction != unverified input
     if doubt_pred_ne_input_proba1_st_thresshold > 0:
-        pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
-                        & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
+        if doubt_pred_ne_input_proba1_st_thresshold > 1:
+            raise Exception(f"doubt_pred_ne_input_proba1_st_thresshold should be float from 0 till 1, not {doubt_pred_ne_input_proba1_st_thresshold}")
+        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
                         & (pred_df[conf.columns['prediction']] != pred_df[conf.columns['class']])
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_ne_input_proba1_st_thresshold),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PRED<>INPUT-PROBA1<X'
 
     # Apply doubt for parcels with prediction == unverified input
     if doubt_pred_eq_input_proba1_st_thresshold > 0:
-        pred_df.loc[(pred_df[conf.columns['prediction']] != 'NODATA')
-                        & (~pred_df[conf.columns['class']].isin(classes_to_ignore))
+        if doubt_pred_eq_input_proba1_st_thresshold > 1:
+            raise Exception(f"doubt_pred_ne_input_proba1_st_thresshold should be float from 0 till 1, not {doubt_pred_eq_input_proba1_st_thresshold}")
+        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
                         & (pred_df[conf.columns['prediction']] == pred_df[conf.columns['class']])
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_eq_input_proba1_st_thresshold),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PRED=INPUT-PROBA1<X'
@@ -192,27 +199,34 @@ def add_doubt_columns(pred_df: pd.DataFrame,
         logger.info("Apply some marker-specific doubt algorythms")
         # If parcel was declared as grassland, and is classified as arable, set to doubt
         # Remark: those gave only false positives for LANDCOVER marker
-        pred_df.loc[(pred_df[conf.columns['class']] == 'MON_LC_GRASSES')
-                        & (pred_df[conf.columns['prediction_withdoubt']] == 'MON_LC_ARABLE'),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:GRASS->ARABLE'
+        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
+                        & (pred_df[conf.columns['class']] == 'MON_LC_GRASSES')
+                        & (pred_df[conf.columns['prediction']] == 'MON_LC_ARABLE'),
+                    conf.columns['prediction_withdoubt']] = 'DOUBT:GRASS-SEEN-AS-ARABLE'
 
         # If parcel was declared as fallow, and is classified as something else, set to doubt
         # Remark: those gave 50% false positives for marker LANDCOVER
-        pred_df.loc[(~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
+        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
+                        & (~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
                         & (pred_df[conf.columns['class']] == 'MON_LC_FALLOW')
-                        & (pred_df[conf.columns['prediction_withdoubt']] != 'MON_LC_FALLOW'),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:FALLOW-UNCONFIRMED'
+                        & (pred_df[conf.columns['prediction']] != 'MON_LC_FALLOW'),
+                    conf.columns['prediction_withdoubt']] = 'DOUBT_RISK:FALLOW-UNCONFIRMED'
         
         if conf.marker['markertype'] == 'LANDCOVER_EARLY':
             # If parcel was declared as winter grain, but is not classified as MON_LC_ARABLE: doubt
             # Remark: those gave > 50% false positives for marker LANDCOVER_EARLY
-            pred_df.loc[(~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
+            pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
+                            & (~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
                             & (pred_df[conf.columns['crop_declared']].isin(['311', '321', '331']))
-                            & (pred_df[conf.columns['prediction_withdoubt']] != 'MON_LC_ARABLE'),
-                        conf.columns['prediction_withdoubt']] = 'DOUBT:GRAIN-UNCONFIRMED'
+                            & (pred_df[conf.columns['prediction']] != 'MON_LC_ARABLE'),
+                        conf.columns['prediction_withdoubt']] = 'DOUBT_RISK:GRAIN-UNCONFIRMED'
 
     elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
         logger.info("Apply some marker-specific doubt algorythms")
+
+    # Finally, predictions that have not been defined yet, get the original prediction      
+    pred_df.loc[pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED',
+                conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
 
     # Add a column with the prediction status... and all parcels in df_top3 got a prediction
     pred_df[conf.columns['prediction_status']] = 'OK'
