@@ -25,14 +25,12 @@ def main():
     # Specify the date range:
     year = 2018
     month_start = 3
-    month_stop = 9
+    month_stop = 8
 
     # Read the configuration files
     conf.read_config(config_filepaths, year=year)
 
     # Get the general output dir
-    base_dir = conf.dirs['base_dir']
-    input_dir = conf.dirs['input_dir']
     input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
     timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
 
@@ -66,14 +64,21 @@ def main():
     geofile_ext = conf.general['geofile_ext']
 
     # Input features file depends on the year
-    input_features_filename = "Prc_BEFL_2018_2019-05-02_bufm5.shp"
+    if year == 2017:
+        input_features_filename = "Prc_BEFL_2017_2019-06-14_bufm5.shp"
+    elif year == 2018:
+        input_features_filename = "Prc_BEFL_2018_2019-06-14_bufm5.shp"
+    elif year == 2019:
+        input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
+    else:
+        raise Exception(f"Not a valid year: {year}")
     input_features_filepath = os.path.join(input_preprocessed_dir, input_features_filename)
     
     # Init output dir 
     if not test:
-        output_basedir = os.path.join(base_dir, "output")
+        output_basedir = timeseries_per_image_dir
     else:
-        output_basedir = os.path.join(base_dir, "output_test")
+        output_basedir = timeseries_per_image_dir + '_test'
         logger.info(f"As we are testing, use test output basedir: {output_basedir}")
     input_features_filename_noext = os.path.splitext(input_features_filename)[0]
     output_dir = os.path.join(output_basedir, input_features_filename_noext)
@@ -103,11 +108,6 @@ def main():
     # Start calculation
     """
 
-    if test:
-        stop_on_error = True
-    else:
-        stop_on_error = False
-
     # Process S1 images
     # -------------------------------   
     input_image_filepaths = []
@@ -130,8 +130,7 @@ def main():
                        bands=['VV', 'VH'],
                        output_dir=output_dir,
                        temp_dir=temp_dir,
-                       log_dir=log_dir,
-                       stop_on_error=stop_on_error)
+                       log_dir=log_dir)
 
     # Process S2 images
     # -------------------------------
@@ -151,10 +150,9 @@ def main():
                        id_column=conf.columns['id'],
                        image_paths=input_image_filepaths,
                        bands=['B02_10m', 'B03_10m', 'B04_10m', 'B08_10m', 'SCL_20m'],
-                       output_dir=timeseries_per_image_dir,
+                       output_dir=output_dir,
                        temp_dir=temp_dir,
-                       log_dir=log_dir,
-                       stop_on_error=stop_on_error)
+                       log_dir=log_dir)
 
 if __name__ == '__main__':
     main()

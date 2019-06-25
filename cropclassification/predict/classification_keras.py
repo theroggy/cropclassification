@@ -100,24 +100,35 @@ def train(train_df: pd.DataFrame,
     test_classes_df = keras.utils.to_categorical(test_classes_df, len(classes_dict))
 
     # Get some config from the config file
-    hidden_layer_sizes = tuple(conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes'))
+    hidden_layer_sizes = conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes')
+    if len(hidden_layer_sizes) == 0:
+        raise Exception("Having no hidden layers is currently not supported")
     max_iter = conf.classifier.getint('multilayer_perceptron_max_iter')
     learning_rate_init = conf.classifier.getfloat('multilayer_perceptron_learning_rate_init')
     
     # Create neural network
     model = keras.models.Sequential()
-    model.add(keras.layers.Dense(100, activation='relu', input_shape=(len(train_data_df.columns),)))
-    model.add(keras.layers.Dense(100, activation='relu'))
-    model.add(keras.layers.Dense(len(classes_dict), activation='softmax'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    # Create the hidden layers as specified in config
+    for i, hidden_layer_size in enumerate(hidden_layer_sizes):
+        # For the first layer, the input size needs to be specified
+        if i == 0:
+            model.add(keras.layers.Dense(hidden_layer_size, activation='relu', input_shape=(len(train_data_df.columns),)))
+        else:
+            model.add(keras.layers.Dense(hidden_layer_size, activation='relu'))
 
+    # Add the final layer that will produce the outputs
+    model.add(keras.layers.Dense(len(classes_dict), activation='softmax'))
+
+    # Prepare model for training + train!
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    
     logger.info(f"Start fitting classifier:\n{model.summary()}")
     earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, verbose=0, mode='min')
     mcp_save = keras.callbacks.ModelCheckpoint(
             output_classifier_filepath, save_best_only=True, monitor='val_loss', mode='min')
     reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(
             monitor='val_loss', factor=0.2, patience=15, verbose=1, epsilon=1e-4, mode='min')
-    hist = model.fit(train_data_df, train_classes_df, batch_size=32, epochs=1000, 
+    hist = model.fit(train_data_df, train_classes_df, batch_size=128, epochs=1000, 
                      callbacks=[earlyStopping, mcp_save, reduce_lr_loss],
                      validation_data=(test_data_df, test_classes_df))
 

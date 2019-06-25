@@ -8,6 +8,7 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 
 import logging
 import os
+import shutil
 
 import pandas as pd
 import geopandas as gpd
@@ -44,7 +45,8 @@ columns_BEFL_to_keep = [
 #-------------------------------------------------------------
 
 def prepare_input(input_parcel_filepath: str,
-                  classtype_to_prepare: str):
+                  classtype_to_prepare: str,
+                  output_dir: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -72,6 +74,12 @@ def prepare_input(input_parcel_filepath: str,
         message = f"Column {conf.columns['id']} not found in input parcel file: {input_parcel_filepath}. Make sure the column is present or change the column name in global_constants.py"
         logger.critical(message)
         raise Exception(message)
+
+    # Copy the refe file to the run dir, so we always keep knowing which refe was used
+    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
+    if not os.path.exists(input_classes_filepath):
+        raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
+    shutil.copy(input_classes_filepath, output_dir)
 
     # Now start prepare 
     if classtype_to_prepare == 'CROPGROUP':
@@ -209,15 +217,18 @@ def prepare_input_cropgroup(
     parceldata_df.insert(
             loc=0, column=column_output_class, value=parceldata_df[conf.columns['class_orig']])
     
+    # For rows with no class, set to UNKNOWN
+    parceldata_df.fillna(value={column_output_class: 'UNKNOWN'}, inplace=True) 
+
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if column_BEFL_gesp_pm in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'SGM']), 
-                          column_output_class] = 'SERRES'
+                          column_output_class] = 'MON_STAL_SER'
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['PLA', 'PLO', 'NPO']), 
-                          column_output_class] = 'TIJDELIJKE_OVERK'
+                          column_output_class] = 'MON_STAL_SER'
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'LOO', 
-                          column_output_class] = 'MON_STAL'           # Een loods is hetzelfde als een stal...
+                          column_output_class] = 'MON_STAL_SER'           # Een loods is hetzelfde als een stal...
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CON', 
                           column_output_class] = 'MON_CONTAINERS'     # Containers, niet op volle grond...
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
@@ -226,9 +237,9 @@ def prepare_input_cropgroup(
         logger.warning(f"The column {column_BEFL_gesp_pm} doesn't exist, so this part of the code was skipped!")
 
     # Some extra cleanup: classes starting with 'nvt' or empty ones
-    logger.info("Set classes that are still empty, not specific enough or that contain to little values to 'UNKNOWN'")
-    parceldata_df.loc[parceldata_df[column_output_class].str.startswith('nvt', na=True), 
-                      column_output_class] = 'UNKNOWN'
+    #logger.info("Set classes that are still empty, not specific enough or that contain to little values to 'UNKNOWN'")
+    #parceldata_df.loc[parceldata_df[column_output_class].str.startswith('nvt', na=True), 
+    #                  column_output_class] = 'UNKNOWN'
 
     # 'MON_ANDERE_SUBSID_GEWASSEN': very low classification rate (< 1%), as it is a group with several very different classes in it
     # 'MON_AARDBEIEN': low classification rate (~10%), as many parcel actually are temporary greenhouses but aren't correctly applied
@@ -239,20 +250,20 @@ def prepare_input_cropgroup(
     # 'MON_RAAPACHTIGEN': 25% correct classifications: rest spread over many other classes
     # 'MON_STRUIK': 10%
     #    TODO: nakijken, wss opsplitsen of toevoegen aan MON_BOOMKWEEK???
-    classes_badresults = ['MON_ANDERE_SUBSID_GEWASSEN', 'MON_AARDBEIEN', 'MON_BRAAK', 'MON_KLAVER', 
-                          'MON_MENGSEL', 'MON_POEL', 'MON_RAAPACHTIGEN', 'MON_STRUIK']
-    parceldata_df.loc[parceldata_df[column_output_class].isin(classes_badresults), 
-                      column_output_class] = 'UNKNOWN'
+    #classes_badresults = ['MON_ANDERE_SUBSID_GEWASSEN', 'MON_AARDBEIEN', 'MON_BRAAK', 'MON_KLAVER', 
+    #                      'MON_MENGSEL', 'MON_POEL', 'MON_RAAPACHTIGEN', 'MON_STRUIK']
+    #parceldata_df.loc[parceldata_df[column_output_class].isin(classes_badresults), 
+    #                  column_output_class] = 'UNKNOWN'
 
     # MON_BONEN en MON_WIKKEN have omongst each other a very large percentage of false
     # positives/negatives, so they seem very similar... lets create a class that combines both
-    parceldata_df.loc[parceldata_df[column_output_class].isin(['MON_BONEN', 'MON_WIKKEN']), 
-                      column_output_class] = 'MON_BONEN_WIKKEN'
+    #parceldata_df.loc[parceldata_df[column_output_class].isin(['MON_BONEN', 'MON_WIKKEN']), 
+    #                  column_output_class] = 'MON_BONEN_WIKKEN'
 
     # MON_BOOM includes now also the growing new plants/trees, which is too differenct from grown
     # trees -> put growing new trees is seperate group
-    parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['9602', '9603', '9604', '9560']), 
-                      column_output_class] = 'MON_BOOMKWEEK'
+    #parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['9602', '9603', '9604', '9560']), 
+    #                  column_output_class] = 'MON_BOOMKWEEK'
 
     # 'MON_FRUIT': has a good accuracy (91%), but also has as much false positives (115% -> mainly
     #              'MON_GRASSEN' that are (mis)classified as 'MON_FRUIT')
@@ -261,13 +272,8 @@ def prepare_input_cropgroup(
     # MON_FRUIT and MON_BOOM are permanent anyway, so not mandatory that they are checked in
     # monitoring process.
     # Conclusion: put MON_BOOM and MON_FRUIT to IGNORE_DIFFICULT_PERMANENT_CLASS
-    parceldata_df.loc[parceldata_df[column_output_class].isin(['MON_BOOM', 'MON_FRUIT']), 
-                      column_output_class] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
-
-    # Put MON_STAL, SERRES en TIJDELIJKE OVERK together, too many misclassifiactions amongst
-    # each other
-    parceldata_df.loc[parceldata_df[column_output_class].isin(['MON_STAL', 'SERRES', 'TIJDELIJKE_OVERK']), 
-                      column_output_class] = 'MON_STAL_SER'
+    #parceldata_df.loc[parceldata_df[column_output_class].isin(['MON_BOOM', 'MON_FRUIT']), 
+    #                  column_output_class] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
     for _, row in parceldata_df.groupby(column_output_class).size().reset_index(name='count').iterrows():

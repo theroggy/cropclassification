@@ -64,7 +64,8 @@ def run(markertype_to_calc: str,
     config_used_filepath = os.path.join(run_dir, 'config_used.ini')
     if(reuse_last_run_dir 
        and reuse_last_run_dir_config
-       and os.path.exists(run_dir)):
+       and os.path.exists(run_dir)
+       and os.path.exists(config_used_filepath)):
         config_filepaths.append(config_used_filepath)
         logger.info(f"Run dir config needs to be reused, so {config_filepaths}")
         conf.read_config(config_filepaths=config_filepaths, year=year)
@@ -135,8 +136,12 @@ def run(markertype_to_calc: str,
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(
             input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}{geofile_ext}")
-    imagedata_input_parcel_4326_filepath = os.path.join(
-            input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326{geofile_ext}")
+    
+    # If using google earth engine, prepare the file as .shp in WGS84 for upload 
+    imagedata_input_parcel_4326_filepath = None
+    if True:
+        imagedata_input_parcel_4326_filepath = os.path.join(
+                input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326.shp")
     ts_pre.prepare_input(
             input_parcel_filepath=input_parcel_filepath,
             output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath,

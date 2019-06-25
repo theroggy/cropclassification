@@ -40,8 +40,10 @@ def prepare_input(input_parcel_filepath: str,
         return
 
     if input_parcel_filetype == 'BEFL':
+        output_dir, _ = os.path.split(output_parcel_filepath)
         df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath,
-                                           classtype_to_prepare=classtype_to_prepare)
+                                           classtype_to_prepare=classtype_to_prepare,
+                                           output_dir=output_dir)
     else:
         message = f"Unknown value for parameter input_parcel_filetype: {input_parcel_filetype}"
         logger.critical(message)

@@ -111,10 +111,17 @@ def write_full_report(parcel_predictions_filepath: str,
                                    new_columnname=conf.columns['prediction_conclusion_cons'],
                                    prediction_column_to_use=conf.columns['prediction_cons'],
                                    detailed=False)
-        message = f"Prediction conclusions cons (doubt + not_enough_pixels) overview, for {len(df_predict.index)} predicted cases:"
+
+        # Get the number of 'unimportant' ignore parcels and report them here
+        df_predict_unimportant = df_predict[df_predict[conf.columns['prediction_conclusion_cons']] == 'IGNORE_UNIMPORTANT']
+        # Now they can be removed for the rest of the reportings... 
+        df_predict = df_predict[df_predict[conf.columns['prediction_conclusion_cons']] != 'IGNORE_UNIMPORTANT']
+
+        message = (f"Prediction conclusions cons general overview, for {len(df_predict.index)} predicted cases."
+                   + f"The {len(df_predict_unimportant.index)} IGNORE_UNIMPORTANT parcels are excluded from the reporting!")
         outputfile.write(f"\n{message}\n")
         html_data['GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT'] = message
-        
+                
         count_per_class = (df_predict.groupby(conf.columns['prediction_conclusion_cons'], as_index=False)
                            .size().to_frame('count'))
         values = 100*count_per_class['count']/count_per_class['count'].sum()
@@ -133,21 +140,24 @@ def write_full_report(parcel_predictions_filepath: str,
         overall_accuracies_list = []
 
         # Calculate overall accuracies for all parcels
-        oa = skmetrics.accuracy_score(df_predict[conf.columns['class']],
-                                      df_predict[conf.columns['prediction']],
-                                      normalize=True,
-                                      sample_weight=None) * 100
-        overall_accuracies_list.append({'parcels': 'All', 
-                                        'prediction_type': 'standard', 
-                                        'accuracy': oa})
+        try:
+            oa = skmetrics.accuracy_score(df_predict[conf.columns['class']],
+                                        df_predict[conf.columns['prediction']],
+                                        normalize=True,
+                                        sample_weight=None) * 100
+            overall_accuracies_list.append({'parcels': 'All', 
+                                            'prediction_type': 'standard', 
+                                            'accuracy': oa})
 
-        oa = skmetrics.accuracy_score(df_predict[conf.columns['class']],
-                                      df_predict[conf.columns['prediction_cons']],
-                                      normalize=True,
-                                      sample_weight=None) * 100
-        overall_accuracies_list.append({'parcels': 'All', 
-                                        'prediction_type': 'consolidated', 
-                                        'accuracy': oa})
+            oa = skmetrics.accuracy_score(df_predict[conf.columns['class']],
+                                        df_predict[conf.columns['prediction_cons']],
+                                        normalize=True,
+                                        sample_weight=None) * 100
+            overall_accuracies_list.append({'parcels': 'All', 
+                                            'prediction_type': 'consolidated', 
+                                            'accuracy': oa})
+        except:
+            logger.exception("Error calculating overall accuracies!")
 
         # Calculate while ignoring the classes to be ignored...
         df_predict_accuracy_no_ignore = df_predict[
@@ -419,17 +429,23 @@ def _add_prediction_conclusion(in_df,
     REMARK: calculating it like this, using native pandas operations, is 300 times faster than
             using DataFrame.apply() with a function!!!
     """
-    # Add the new column with a fixed value first 
-    in_df[new_columnname] = 'UNDEFINED'
-
-    # Get a list of the classes to ignore
+    # Get a lists of the classes to ignore
     all_classes_to_ignore = (conf.marker.getlist('classes_to_ignore_for_train') 
                              + conf.marker.getlist('classes_to_ignore'))
+    classes_to_ignore_unimportant = conf.marker.getlist('classes_to_ignore_unimportant') 
 
+    # Add the new column with a fixed value first 
+    in_df[new_columnname] = 'UNDEFINED'    
+    
     # Some conclusions are different is detailed info is asked...
     if detailed == True:
+        # The classes that are defined as unimportant
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[conf.columns['class']].isin(classes_to_ignore_unimportant)),
+                  new_columnname] = 'IGNORE_UNIMPORTANT:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
         # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
-        in_df.loc[in_df[conf.columns['class']].isin(all_classes_to_ignore),
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
                   new_columnname] = 'IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
         # If conclusion still UNDEFINED, check if doubt 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
@@ -439,8 +455,13 @@ def _add_prediction_conclusion(in_df,
                     & (in_df[prediction_column_to_use] == 'NODATA'),
                   new_columnname] = 'DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)
     else:
+        # The classes that are defined as unimportant
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[conf.columns['class']].isin(classes_to_ignore_unimportant)),
+                  new_columnname] = 'IGNORE_UNIMPORTANT'
         # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
-        in_df.loc[in_df[conf.columns['class']].isin(all_classes_to_ignore),
+        in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
+                    & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
                   new_columnname] = 'IGNORE'
         # If conclusion still UNDEFINED, check if doubt 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')

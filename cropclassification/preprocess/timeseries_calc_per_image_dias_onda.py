@@ -45,8 +45,7 @@ def calc_stats(features_filepath: str,
                output_dir: str,
                temp_dir: str,
                log_dir: str,
-               force: bool = False,
-               stop_on_error: bool = False):
+               force: bool = False):
     """
     Calculate the statistics.
     """
@@ -74,6 +73,8 @@ def calc_stats(features_filepath: str,
         image_paths.sort()
         start_time = datetime.now()
         nb_todo = len(image_paths)
+        nb_errors_max = 10
+        nb_errors = 0
 
         image_dict = {}
         calc_stats_batch_dict = {}
@@ -95,10 +96,16 @@ def calc_stats(features_filepath: str,
                     nb_todo -= 1
                     continue
 
-                # if sentinel2 and cloud coverage too high... skip
+                # If sentinel2 and cloud coverage too high... skip
                 max_cloudcover_pct = 5
                 if image_info['satellite'].startswith('S2') and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct:
                     logger.info(f"SKIP image, Cloud_Coverage_Assessment: {image_info['Cloud_Coverage_Assessment']:0.2f} > {max_cloudcover_pct} for {image_path}")
+                    nb_todo -= 1
+                    continue
+
+                # If sentinel1 and wrong productTimelinessCategory, skip: we only want 1 type to evade images used twice
+                if image_info['satellite'].startswith('S1') and image_info['productTimelinessCategory'] != 'Fast-24h':
+                    logger.info(f"SKIP image, productTimelinessCategory should be 'Fast-24h', but is: {image_info['productTimelinessCategory']} for {image_path}")
                     nb_todo -= 1
                     continue
 
@@ -127,14 +134,14 @@ def calc_stats(features_filepath: str,
                     # Check if the output file exists already
                     if os.path.exists(output_band_filepath):
                         if force == False:
-                            logger.info(f"Output file for band exists already {output_band_filepath}")
+                            logger.debug(f"Output file for band exists already {output_band_filepath}")
                             bands_done += 1
                         else:
                             os.remove(output_band_filepath)
 
                 # If all bands already processed, skip image...
                 if len(bands) == bands_done:
-                    logger.info(f"Output files for all bands exist already, so skip {output_base_filepath}")
+                    logger.info(f"SKIP image: output files for all bands exist already for {output_base_filepath}")
                     nb_todo -= 1
                     continue
 
@@ -210,7 +217,8 @@ def calc_stats(features_filepath: str,
                     image['status'] = 'IMAGE_CALC_BUSY'
                     image['calc_starttime'] = datetime.now()
 
-                    # Now loop through all prepared feature batches to start the statistics calculation for each  
+                    # Now loop through all prepared feature batches to start the statistics calculation for each
+                    logger.info(f"Start statistics calculation for {image_path}")  
                     for features_batch in image['feature_batches']:
                         start_time_batch = datetime.now()
                         future = pool.submit(calc_stats_image_gdf, 
@@ -232,7 +240,8 @@ def calc_stats(features_filepath: str,
                 except Exception as ex:
                     message = f"Exception getting result of prepare_calc for {image}"
                     logger.exception(message)
-                    if stop_on_error:
+                    nb_errors += 1
+                    if nb_errors > nb_errors_max:
                         raise Exception(message) from ex
 
             # Loop through the completed calculations
@@ -257,7 +266,8 @@ def calc_stats(features_filepath: str,
                     except Exception as ex:
                         message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info}"
                         logger.exception(message)
-                        if stop_on_error:
+                        nb_errors += 1
+                        if nb_errors > nb_errors_max:
                             raise Exception(message) from ex 
 
             # Loop over all image_paths that are busy being calculated to check if there are still calc stats batches busy
@@ -819,6 +829,7 @@ def get_image_info(image_path) -> dict:
     # Specific code per image type
     if image_ext.upper() == '.CARD':
         
+        # This is a sentinel 1 image (GRD or coherence)
         # First extract and fill out some basic info
         image_info['image_type'] = 'CARD'
         image_info['image_id'] = image_basename_noext
@@ -858,7 +869,7 @@ def get_image_info(image_path) -> dict:
         manifest_xml_searchstring = os.path.join(image_path, f"*_manifest.safe")
         manifest_xml_filepaths = glob.glob(manifest_xml_searchstring)
 
-        # We should only find one .safe file (at the moment)
+        # The number of .safe indicates whether it is a GRD or a Coherence image
         nb_safefiles = len(manifest_xml_filepaths)
         if nb_safefiles == 1:
 
@@ -878,6 +889,8 @@ def get_image_info(image_path) -> dict:
                 image_info['transmitter_receiver_polarisation'] = []
                 for polarisation in manifest_root.findall("metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:transmitterReceiverPolarisation", ns):
                     image_info['transmitter_receiver_polarisation'].append(polarisation.text)
+                image_info['productTimelinessCategory'] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:productTimelinessCategory", ns).text
+
                 image_info['instrument_mode'] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:platform/safe:instrument/safe:extension/s1sarl1:instrumentMode/s1sarl1:mode", ns).text
                 image_info['orbit_properties_pass'] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass", ns).text
 
@@ -899,13 +912,13 @@ def get_image_info(image_path) -> dict:
                     # Extract bound,... info from the first file only (they are all the same)
                     # TODO: in S2 they have a different resolution, so then I need to open each image?
                     if i == 0:
-                        logger.debug(f"Read image metadata from {band_filepath}")
+                        #logger.debug(f"Read image metadata from {band_filepath}")
                         with rasterio.open(band_filepath) as src:
                             image_info['image_bounds'] = src.bounds
                             image_info['image_affine'] = src.transform
                             image_info['image_crs'] = str(src.crs)
                             image_info['image_epsg'] = image_info['image_crs'].upper().replace('EPSG:', '')
-                        logger.debug(f"Image metadata read: {image_info}")
+                        #logger.debug(f"Image metadata read: {image_info}")
                     band_filename = os.path.basename(band_filepath)
                     if band_filename == "Gamma0_VH.img":
                         band = 'VH'
@@ -939,7 +952,7 @@ def get_image_info(image_path) -> dict:
                       "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
                       "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
 
-                logger.debug(f"Parse manifest info from {metadata_xml_filepath}")
+                #logger.debug(f"Parse manifest info from {metadata_xml_filepath}")
                 image_info["transmitter_receiver_polarisation"] = []
                 for polarisation in manifest_root.findall("metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:transmitterReceiverPolarisation", ns):
                     image_info["transmitter_receiver_polarisation"].append(polarisation.text)
@@ -955,13 +968,13 @@ def get_image_info(image_path) -> dict:
                 image_datafilename = f"{image_basename_noext_nodate}_byte.tif"
                 image_datafilepath = os.path.join(image_path, image_datafilename)
                 
-                logger.debug(f"Read image metadata from {image_datafilepath}")            
+                #logger.debug(f"Read image metadata from {image_datafilepath}")            
                 with rasterio.open(image_datafilepath) as src:
                     image_info['image_bounds'] = src.bounds
                     image_info['image_affine'] = src.transform
                     image_info['image_crs'] = str(src.crs)
                     image_info['image_epsg'] = image_info['image_crs'].upper().replace('EPSG:', '')
-                logger.debug(f"Image metadata read: {image_info}")
+                #logger.debug(f"Image metadata read: {image_info}")
 
                 # Add specific info about the bands
                 image_info["bands"] = {}
@@ -1016,7 +1029,7 @@ def get_image_info(image_path) -> dict:
             ns = {'n1': "https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd",
                   'xsi': "http://www.w3.org/2001/XMLSchema-instance"}
 
-            logger.debug(f"Parse metadata info from {metadata_xml_filepath}")
+            #logger.debug(f"Parse metadata info from {metadata_xml_filepath}")
             image_info['Cloud_Coverage_Assessment'] = float(metadata_root.find("n1:Quality_Indicators_Info/Cloud_Coverage_Assessment", ns).text)
             
         except Exception as ex:
