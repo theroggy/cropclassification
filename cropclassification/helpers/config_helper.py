@@ -37,6 +37,8 @@ def read_config(config_filepaths: [],
     general = config['general']
     global marker
     marker = config['marker']
+    global timeseries
+    timeseries = config['timeseries']
     global preprocess
     preprocess = config['preprocess']
     global classifier
