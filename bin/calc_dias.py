@@ -103,16 +103,7 @@ def main():
     # Start calculation
     """
 
-<<<<<<< Updated upstream
-    if test:
-        stop_on_error = True
-    else:
-        stop_on_error = False
-
-    # Process S1 images
-=======
     # Process S1 GRD images
->>>>>>> Stashed changes
     # -------------------------------   
     input_image_filepaths = []
     for i in range(month_start, month_stop):
@@ -136,8 +127,7 @@ def main():
                        bands=['VV', 'VH'],
                        output_dir=output_dir,
                        temp_dir=temp_dir,
-                       log_dir=log_dir,
-                       stop_on_error=stop_on_error)
+                       log_dir=log_dir)
 
     # Process S2 images
     # -------------------------------
@@ -158,8 +148,7 @@ def main():
                        bands=['B02_10m', 'B03_10m', 'B04_10m', 'B08_10m', 'SCL_20m'],
                        output_dir=timeseries_per_image_dir,
                        temp_dir=temp_dir,
-                       log_dir=log_dir,
-                       stop_on_error=stop_on_error)
+                       log_dir=log_dir)
 
     # Process S1 Coherence images
     # -------------------------------   
