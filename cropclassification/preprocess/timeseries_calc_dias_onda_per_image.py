@@ -725,13 +725,16 @@ def calc_stats_image_gdf(features_gdf,
                     affine=image_data[band]['transform'], prefix="", nodata=0, categorical=True)
             features_stats_df = pd.DataFrame(features_stats)
 
-            # Drop the columns with "OK" pixels and sum the numbers of remaining columns
+            # Drop columns with "OK" pixels, sum values of remaining "NOK" columns
             features_stats_df.drop(['2.0', '4.0', '5.0', '6.0', '7.0', '10.0'], errors='ignore')
             new_column_name = 'nb_bad_pixels'
             features_stats_df[new_column_name] = features_stats_df.sum(axis=1)
 
-            # Join original id column with statistics
+            # Join original id column with the calculated values
             features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
+
+            # Only keep the id and bad pixels column
+            features_stats_df = features_stats_df[[id_column, new_column_name]]
         else:
             # Calculate statistics
             logger.info(f"Calculate zonal statistics for band {band} on {len(features_gdf.index)} features")

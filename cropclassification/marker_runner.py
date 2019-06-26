@@ -8,7 +8,7 @@ import logging
 import os
 
 import cropclassification.preprocess.timeseries_calc_preprocess as ts_pre
-import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
+import cropclassification.preprocess.timeseries_calc as ts_calc
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.preprocess.classification_preprocess as class_pre
 import cropclassification.predict.classification as classification
@@ -158,14 +158,13 @@ def run(markertype_to_calc: str,
     #      changed if another implementation is used
     #    - the upload to gee as an asset is not implemented, because it needs a 
     #      google cloud account, so upload needs to be done manually
-    input_parcel_filepath_gee = f"{conf.dirs['gee']}{imagedata_input_parcel_filename_noext}"
-    ts_calc_gee.calc_timeseries_data(input_parcel_filepath=input_parcel_filepath_gee,
-                                     input_country_code=country_code,
-                                     start_date_str=start_date_str,
-                                     end_date_str=end_date_str,
-                                     sensordata_to_get=sensordata_to_use,
-                                     base_filename=base_filename,
-                                     dest_data_dir=timeseries_periodic_dir)
+    ts_calc.calc_timeseries_data(input_parcel_filepath=imagedata_input_parcel_filepath,
+                                 input_country_code=country_code,
+                                 start_date_str=start_date_str,
+                                 end_date_str=end_date_str,
+                                 sensordata_to_get=sensordata_to_use,
+                                 base_filename=base_filename,
+                                 dest_data_dir=timeseries_periodic_dir)
 
     # STEP 3: Preprocess all data needed for the classification
     #-------------------------------------------------------------

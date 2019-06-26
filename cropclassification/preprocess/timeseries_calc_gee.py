@@ -322,6 +322,12 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
     if not os.path.exists(dest_data_dir_todownload):
         os.mkdir(dest_data_dir_todownload)
 
+
+    # Prepare filepath as it is available on gee
+    input_parcel_filename = os.path.basename(input_parcel_filepath)
+    input_parcel_filename_noext = os.path.splitext(input_parcel_filename)
+    input_parcel_filepath_gee = f"{conf.dirs['gee']}{input_parcel_filename_noext}"
+
     # Initialize connection to server
     ee.Initialize()
 
@@ -373,9 +379,9 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
 #    end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
 
     # Prepare the input vector data we want to add timeseries info to...
-    input_parcels = ee.FeatureCollection(input_parcel_filepath)
+    input_parcels = ee.FeatureCollection(input_parcel_filepath_gee)
 
-    logging.info(f'Create sentinel timeseries from {start_date} till {end_date} for parcel in file {input_parcel_filepath}')
+    logging.info(f'Create sentinel timeseries from {start_date} till {end_date} for parcel in file {input_parcel_filepath_gee}')
 
     # Add some columns with feature info, to be able to eg. filter only polygons...
 #    def add_feature_info(feature):

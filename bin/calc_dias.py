@@ -108,22 +108,24 @@ def main():
     # Start calculation
     """
 
-    # Process S1 images
+    # Process S1 GRD images
     # -------------------------------   
     input_image_filepaths = []
     for i in range(month_start, month_stop):
         input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1TC/{year}/{i:02d}/*/*.CARD"
         input_image_filepaths.extend(glob.glob(input_image_searchstr))
-        #input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1CO/2018/{i:02d}/*/*.CARD"
-        #input_image_filepaths.extend(glob.glob(input_image_searchstr))  
-    logger.info(f"Found {len(input_image_filepaths)} images to process")
+    logger.info(f"Found {len(input_image_filepaths)} S1 GRD images to process")
 
     if test:
         # Take only the x first images found while testing
-        input_image_filepaths = input_image_filepaths[:10]
-        logger.info(f"As we are only testing, process only {len(input_image_filepaths)} first images")
+        
+        #input_image_filepaths = input_image_filepaths[:10]
+        input_image_filepaths = []
+        input_image_filepaths.append("/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2018/04/09/S1A_IW_GRDH_1SDV_20180409T054153_20180409T054218_021386_024D13_D824_Orb_RBN_RTN_Cal_TC_20190612T171437.L1TC.CARD")
+        input_image_filepaths.append("/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2018/04/22/S1A_IW_GRDH_1SDV_20180422T173236_20180422T173301_021583_025328_99D1_Orb_RBN_RTN_Cal_TC_20190612T171441.L1TC.CARD")        
 
-    logger.info(f"Start processing S1 images")
+        logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
+
     calc_ts.calc_stats(features_filepath=input_features_filepath,
                        id_column=conf.columns['id'],
                        image_paths=input_image_filepaths,
@@ -138,18 +140,38 @@ def main():
     for i in range(month_start, month_stop):
         input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S2*/L2A/{year}/{i:02d}/*/*.SAFE"
         input_image_filepaths.extend(glob.glob(input_image_searchstr))    
-    logger.info(f"Found {len(input_image_filepaths)} images to process")
+    logger.info(f"Found {len(input_image_filepaths)} S2 images to process")
 
     if test:
         # Take only the x first images found while testing
         input_image_filepaths = input_image_filepaths[:10]
-        logger.info(f"As we are only testing, process only {len(input_image_filepaths)} first images")
+        logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
 
-    logger.info(f"Start processing S2 images")
     calc_ts.calc_stats(features_filepath=input_features_filepath,
                        id_column=conf.columns['id'],
                        image_paths=input_image_filepaths,
                        bands=['B02_10m', 'B03_10m', 'B04_10m', 'B08_10m', 'SCL_20m'],
+                       output_dir=output_dir,
+                       temp_dir=temp_dir,
+                       log_dir=log_dir)
+
+    # Process S1 Coherence images
+    # -------------------------------   
+    input_image_filepaths = []
+    for i in range(month_start, month_stop):
+        input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1CO/{year}/{i:02d}/*/*.CARD"
+        input_image_filepaths.extend(glob.glob(input_image_searchstr))  
+    logger.info(f"Found {len(input_image_filepaths)} S1 Coherence images to process")
+
+    if test:
+        # Take only the x first images found while testing
+        input_image_filepaths = input_image_filepaths[:10]
+        logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
+
+    calc_ts.calc_stats(features_filepath=input_features_filepath,
+                       id_column=conf.columns['id'],
+                       image_paths=input_image_filepaths,
+                       bands=['VV', 'VH'],
                        output_dir=output_dir,
                        temp_dir=temp_dir,
                        log_dir=log_dir)
