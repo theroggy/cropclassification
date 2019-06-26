@@ -40,18 +40,8 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h1>DETAILED RESULTS</h1>
+                <h1>DETAILED RESULTS ON PREDICTIONS</h1>
                 <h2>REPORTING ON PREDICTION DETAILED CONCLUSIONS</h2>
-                <p>$PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_OVERVIEW_TABLE</div>
-                    <br />
-                </div>
-                <p>$PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_WITHDOUBT_OVERVIEW_TABLE</div>
-                    <br />
-                </div>
                 <p>$PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TEXT</p>
                 <div class="row">
                     <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TABLE</div>
@@ -81,30 +71,25 @@
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h2>REPORTING ON PREDICTION QUALITY BASED ON GROUND TRUTH</h2>
-                <p>$PREDICTION_QUALITY_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_QUALITY_OVERVIEW_TABLE</div>
-                    <br />
-                </div>
-                <p>$PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TEXT</p>
-                <div class="row">
-                    <div class="col-md-6">$PREDICTION_QUALITY_WITHDOUBT_OVERVIEW_TABLE</div>
-                    <br />
-                </div>                
+                <h1>REPORTING BASED ON GROUND TRUTH</h1>
+                <h2>GENERAL: ALPHA AND BETA ERROR</h2>
+                <p>$PREDICTION_QUALITY_ALPHA_TEXT</p>
+                <p>$PREDICTION_QUALITY_BETA_TEXT</p>
+                <h2>DETAILED</h2>
                 <p>$PREDICTION_QUALITY_CONS_OVERVIEW_TEXT</p>
                 <div class="row">
                     <div class="col-md-6">$PREDICTION_QUALITY_CONS_OVERVIEW_TABLE</div>
                     <br />
                 </div>
-                <p>$PREDICTION_QUALITY_ALPHA_ERROR_TEXT</p>
+                <h2>DETAILED PER PIXCOUNT</h2>
+                <p>$PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT</p>
                 <div class="row">
-                    <div class="col-md-12">$PREDICTION_QUALITY_ALPHA_ERROR_TABLE</div>
+                    <div class="col-md-12">$PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE</div>
                     <br />
                 </div>
             </div>
         </div>
-
+        PREDICTION_QUALITY_BETA_TEXT
     </div>
     <script type="text/javascript">
         var general_acuracies_data = $GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA;

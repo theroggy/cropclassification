@@ -41,8 +41,7 @@ def run(markertype_to_calc: str,
         raise Exception(f"Input file input_model_to_use_filepath doesn't exist: {input_model_to_use_filepath}")
     
     # Determine the config files to load depending on the marker_type
-    markertype_to_calc_lower = markertype_to_calc.lower()
-    marker_ini = f"config/{markertype_to_calc_lower}.ini"
+    marker_ini = f"config/{markertype_to_calc.lower()}.ini"
     config_filepaths = ["config/general.ini",
                         marker_ini,
                         "config/local_overrule.ini"]
@@ -53,6 +52,7 @@ def run(markertype_to_calc: str,
     # Create run dir to be used for the results
     run_base_dir = conf.dirs['marker_base_dir']
     reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
+    reuse_last_run_dir_config = conf.dirs.getboolean('reuse_last_run_dir_config')
     run_dir = dir_helper.create_run_dir(run_base_dir, reuse_last_run_dir)
 
     # Main initialisation of the logging
@@ -60,10 +60,22 @@ def run(markertype_to_calc: str,
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
-    # Write the consolidated config as ini file again to the run dir
+    # If the config needs to be reused as well, load it, else write it
     config_used_filepath = os.path.join(run_dir, 'config_used.ini')
-    with open(config_used_filepath, 'w') as config_used_file:
-        conf.config.write(config_used_file)
+    if(reuse_last_run_dir 
+       and reuse_last_run_dir_config
+       and os.path.exists(run_dir)
+       and os.path.exists(config_used_filepath)):
+        config_filepaths.append(config_used_filepath)
+        logger.info(f"Run dir config needs to be reused, so {config_filepaths}")
+        conf.read_config(config_filepaths=config_filepaths, year=year)
+        logger.info("Write new config_used.ini, because some parameters might have been added")
+        with open(config_used_filepath, 'w') as config_used_file:
+            conf.config.write(config_used_file)
+    else:
+        logger.info("Write config_used.ini, so it can be reused later on")
+        with open(config_used_filepath, 'w') as config_used_file:
+            conf.config.write(config_used_file)
 
     # Get some general config
     columndata_ext = conf.general['columndata_ext']
@@ -75,11 +87,15 @@ def run(markertype_to_calc: str,
     base_dir = conf.dirs['base_dir']
     input_dir = conf.dirs['input_dir']
     input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
-    imagedata_dir = conf.dirs['imagedata_dir']
+    timeseries_periodic_dir = conf.dirs['timeseries_periodic_dir']
+    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
 
     # Prepare input filepaths
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
-    input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
+    if input_groundtruth_filename is not None:
+        input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
+    else:
+        input_groundtruth_filepath = None
 
     # Settings for preprocessing the inputdata
     classtype_to_prepare = conf.preprocess['classtype_to_prepare']
@@ -95,7 +111,7 @@ def run(markertype_to_calc: str,
     parceldata_aggregations_to_use = conf.marker.getlist('parceldata_aggregations_to_use')
 
     # Create the dir's if they don't exist yet...
-    for dir in [base_dir, imagedata_dir, run_base_dir, run_dir]:
+    for dir in [base_dir, timeseries_periodic_dir, run_base_dir, run_dir]:
         if dir and not os.path.exists(dir):
             os.mkdir(dir)
 
@@ -120,8 +136,12 @@ def run(markertype_to_calc: str,
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(
             input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}{geofile_ext}")
-    imagedata_input_parcel_4326_filepath = os.path.join(
-            input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326{geofile_ext}")
+    
+    # If using google earth engine, prepare the file as .shp in WGS84 for upload 
+    imagedata_input_parcel_4326_filepath = None
+    if True:
+        imagedata_input_parcel_4326_filepath = os.path.join(
+                input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326.shp")
     ts_pre.prepare_input(
             input_parcel_filepath=input_parcel_filepath,
             output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath,
@@ -145,7 +165,7 @@ def run(markertype_to_calc: str,
                                      end_date_str=end_date_str,
                                      sensordata_to_get=sensordata_to_use,
                                      base_filename=base_filename,
-                                     dest_data_dir=imagedata_dir)
+                                     dest_data_dir=timeseries_periodic_dir)
 
     # STEP 3: Preprocess all data needed for the classification
     #-------------------------------------------------------------
@@ -164,7 +184,7 @@ def run(markertype_to_calc: str,
     parcel_filepath = os.path.join(
             run_dir, f"{input_parcel_filename_noext}_parcel{columndata_ext}")
     parcel_pixcount_filepath = os.path.join(
-            imagedata_dir, f"{base_filename}_pixcount{columndata_ext}")
+            timeseries_periodic_dir, f"{base_filename}_pixcount{columndata_ext}")
     class_pre.prepare_input(input_parcel_filepath=input_parcel_nogeo_filepath,
                             input_parcel_filetype=input_parcel_filetype,
                             input_parcel_pixcount_filepath=parcel_pixcount_filepath,
@@ -175,7 +195,7 @@ def run(markertype_to_calc: str,
     parcel_classification_data_filepath = os.path.join(
             run_dir, f"{base_filename}_parcel_classdata{rowdata_ext}")
     ts.collect_and_prepare_timeseries_data(
-            imagedata_dir=imagedata_dir,
+            timeseries_dir=timeseries_periodic_dir,
             base_filename=base_filename,
             output_filepath=parcel_classification_data_filepath,
             start_date_str=start_date_str,
@@ -205,7 +225,8 @@ def run(markertype_to_calc: str,
                 balancing_strategy=balancing_strategy)
 
         # Train the classifier and output predictions
-        classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + "_classifier.pkl"
+        classifier_ext = conf.classifier['classifier_ext']
+        classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + f"_classifier{classifier_ext}"
         parcel_predictions_proba_test_filepath = os.path.join(
                 run_dir, f"{base_filename}_predict_proba_test{rowdata_ext}")
         classification.train_test_predict(
@@ -243,11 +264,14 @@ def run(markertype_to_calc: str,
         
     # Postprocess predictions
     parcel_predictions_all_filepath = os.path.join(
-            run_dir, f"{base_filename}_predict_all{output_ext}")        
+            run_dir, f"{base_filename}_predict_all{output_ext}")
+    parcel_predictions_all_output_filepath = os.path.join(
+            run_dir, f"{base_filename}_predict_all_output{output_ext}")
     class_post.calc_top3_and_consolidation(
             input_parcel_filepath=parcel_filepath,
             input_parcel_probabilities_filepath=parcel_predictions_proba_all_filepath,
-            output_predictions_filepath=parcel_predictions_all_filepath)
+            output_predictions_filepath=parcel_predictions_all_filepath,
+            output_predictions_output_filepath=parcel_predictions_all_output_filepath)
 
     # STEP 7: Report on the accuracy, incl. ground truth
     #-------------------------------------------------------------
@@ -262,7 +286,7 @@ def run(markertype_to_calc: str,
                     input_parcel_filepath=input_groundtruth_filepath,
                     input_parcel_filetype=input_parcel_filetype,
                     input_parcel_pixcount_filepath=parcel_pixcount_filepath,
-                    classtype_to_prepare=f"{classtype_to_prepare}_GROUNDTRUTH",
+                    classtype_to_prepare=conf.preprocess['classtype_to_prepare_groundtruth'],
                     output_parcel_filepath=groundtruth_filepath)
 
     # If we trained a model, there is a test prediction we want to report on

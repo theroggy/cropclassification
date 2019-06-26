@@ -115,26 +115,22 @@ def prepare_input(input_parcel_filepath: str,
     parceldata_buf_poly = parceldata_buf_notempty[parceldata_buf_notempty[conf.columns['geom']]
                                                   .geom_type.isin(['Polygon', 'MultiPolygon'])]
 
-    # Removeall columns except ID
+    # Removeall columns except ID and write to file
     for column in parceldata_buf_poly.columns:
         if column not in [conf.columns['id'], conf.columns['geom']]:
             parceldata_buf_poly.drop(column, axis=1, inplace=True)
     logger.debug(f"parcel that are (multi)polygons, shape: {parceldata_buf_poly.shape}")
+    logger.info(f"Write buffered features to {output_imagedata_parcel_input_filepath}")
+    geofile_util.to_file(parceldata_buf_poly, output_imagedata_parcel_input_filepath)
 
-    # Check crs of the input file.  is WGS84 (epsg:4326), if not, create reprojected version as well.
-    if output_imagedata_parcel_input_4326_filepath is not None:            
+    # If WGS84 (epsg:4326) output path provided, create reprojected version as well.
+    if(output_imagedata_parcel_input_4326_filepath is not None
+       and not os.path.exists(output_imagedata_parcel_input_4326_filepath)):            
         target_epsg = 4326
         logger.info(f"Reproject features from {parceldata_buf_poly.crs} to epsg:{target_epsg}")
         parceldata_buf_poly_4326 = parceldata_buf_poly.to_crs(epsg=target_epsg)
         logger.info(f"Write reprojected features to {output_imagedata_parcel_input_4326_filepath}")
-        parceldata_buf_poly_4326.to_file(output_imagedata_parcel_input_4326_filepath)
-
-    logger.info(f"Write buffered features to {output_imagedata_parcel_input_filepath}")
-    parceldata_buf_poly.to_file(output_imagedata_parcel_input_filepath)
-
-    # If the needed to be created... it didn't exist yet and so it needs to be uploaded manually
-    # to gee as an asset...
-    raise Exception(f"The parcel file needs to be uploaded to GEE manually as an asset: {output_imagedata_parcel_input_filepath}")
+        geofile_util.to_file(parceldata_buf_poly_4326, output_imagedata_parcel_input_4326_filepath)
 
 # If the script is run directly...
 if __name__ == "__main__":

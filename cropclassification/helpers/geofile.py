@@ -10,7 +10,8 @@ import geopandas as gpd
 
 def read_file(filepath: str,
               layer: str = 'default',
-              columns: [] = None) -> gpd.GeoDataFrame:
+              columns: [] = None,
+              bbox = None) -> gpd.GeoDataFrame:
     """
     Reads a file to a pandas dataframe. The fileformat is detected based on the filepath extension.
 
@@ -20,9 +21,9 @@ def read_file(filepath: str,
 
     ext_lower = ext.lower()
     if ext_lower == '.shp':
-        return gpd.read_file(filepath)
+        return gpd.read_file(filepath, bbox=bbox)
     elif ext_lower == '.gpkg':
-        return gpd.read_file(filepath, layer=layer)
+        return gpd.read_file(filepath, layer=layer, bbox=bbox)
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
 
