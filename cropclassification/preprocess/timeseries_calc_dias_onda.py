@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-This is a temporary script file.
-
-@author: Marina De Ketelaere
+Calculates periodic timeseries for input parcels.
 """
 
 import datetime
 import logging
 import glob
 import os
+
 import pandas as pd
 import numpy as np
 
@@ -16,21 +15,16 @@ import numpy as np
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.helpers.config_helper as conf
 
-#import global_settings as gs
-
-
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-
 #-------------------------------------------------------------
 # Helpfunctions
 #-------------------------------------------------------------
 
-# 
 def get_monday(input_date):
     """
     This function gets the first monday before the date provided.
@@ -257,46 +251,4 @@ def calculate_weekly_data(input_filepath: str,
 
 # If the script is run directly...
 if __name__ == "__main__":
-
-    log_dir = "X:\\Monitoring\\Markers\\playground\\_algemeen\\timeseries_dias\\log"
-    if os.path.exists(log_dir) is False:
-        os.makedirs(log_dir)
-
-    # Set the general maximum log level...
-    logger.setLevel(logging.INFO)
-    for handler in logger.handlers:
-        handler.flush()
-        handler.close()
-
-    # Remove all handlers and add the ones I want again, so a new log file is created for each run
-    # Remark: the function removehandler doesn't seem to work?
-    logger.handlers = []
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # ch.setFormatter(logging.Formatter('%(levelname)s|%(name)s|%(message)s'))
-    ch.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s'))
-    logger.addHandler(ch)
-
-    log_filepath = os.path.join(log_dir, f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}_class_maincrop.log")
-    fh = logging.FileHandler(filename=log_filepath)
-    fh.setLevel(logging.INFO)
-    fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s'))
-    logger.addHandler(fh)
-
-    #-------------------------------------------------------------
-    # onderaan functie aanroepen met params om te testen/runnen
-    #-------------------------------------------------------------
-    input_filepath = 'X:\\Monitoring\\Markers\\playground\\_algemeen\\timeseries_dias'
-    input_band = 'VV'
-    input_orbit = 'ASC'
-    output_filepath = 'X:\\Monitoring\\Markers\\playground\\market\\output'
-    
-    config_filepaths = ["config/general.ini",
-                        "config/landcover.ini",
-                        "config/local_overrule.ini"]
-
-    # Read the configuration files
-    conf.read_config(config_filepaths, year=2018)
-
-    calculate_weekly_data(input_filepath, input_band, input_orbit, output_filepath)
+    raise Exception("Not implemented")
