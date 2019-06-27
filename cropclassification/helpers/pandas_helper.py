@@ -9,6 +9,7 @@ import pandas as pd
 import sqlite3
 
 def read_file(filepath: str,
+              table_name: str = 'info',
               columns: [] = None) -> pd.DataFrame:
     """
     Reads a file to a pandas dataframe. The fileformat is detected based on the filepath extension.
@@ -20,30 +21,39 @@ def read_file(filepath: str,
     ext_lower = ext.lower()
     if ext_lower == '.csv':
         try:
-            data_read_df = pd.read_csv(filepath, low_memory=False)
+            data_read_df = pd.read_csv(filepath, usecols=columns, low_memory=False)
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
-            data_read_df = pd.read_csv(filepath, low_memory=False, encoding='ANSI')
+            data_read_df = pd.read_csv(filepath, usecols=columns, low_memory=False, encoding='ANSI')
         return data_read_df
     elif ext_lower == '.tsv':
         try:
-            data_read_df = pd.read_csv(filepath, sep='\t', low_memory=False)
+            data_read_df = pd.read_csv(filepath, usecols=columns, sep='\t', low_memory=False)
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
-            data_read_df = pd.read_csv(filepath, sep='\t', low_memory=False, encoding='ANSI')
+            data_read_df = pd.read_csv(filepath, usecols=columns, sep='\t', low_memory=False, encoding='ANSI')
         return data_read_df
     elif ext_lower == '.parquet':
         return pd.read_parquet(filepath, columns=columns)
     elif ext_lower == '.sqlite':
         sql_db = sqlite3.connect(filepath)
-        data_read_df = pd.read_sql_query("select * from default", sql_db)
-        sql_db.close()
+        if columns is None:
+            cols_to_select = '*'
+        else:
+            cols_to_select = ', '.join(columns)
+        try:
+            data_read_df = pd.read_sql_query(f"select {cols_to_select} from {table_name}", sql_db)
+        except Exception as ex:
+            raise Exception(f"Error reading data from {filepath}") from ex
+        finally:
+            sql_db.close()
         return data_read_df
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
 
 def to_file(df: pd.DataFrame,
             filepath: str,
+            table_name: str = 'info',
             index: bool = True,
             append: bool = False):
     """
@@ -73,7 +83,7 @@ def to_file(df: pd.DataFrame,
         if_exists = 'fail'
         if append:
             if_exists = 'append' 
-        df.to_sql(name='default', con=sql_db, if_exists=if_exists)
+        df.to_sql(name=table_name, con=sql_db, if_exists=if_exists, index=index)
         sql_db.close()
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
