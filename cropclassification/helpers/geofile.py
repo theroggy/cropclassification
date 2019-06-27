@@ -9,7 +9,7 @@ import fiona
 import geopandas as gpd
 
 def read_file(filepath: str,
-              layer: str = 'default',
+              layer: str = 'info',
               columns: [] = None,
               bbox = None) -> gpd.GeoDataFrame:
     """
@@ -29,7 +29,7 @@ def read_file(filepath: str,
 
 def to_file(gdf: gpd.GeoDataFrame,
             filepath: str,
-            layer: str = 'default',
+            layer: str = 'info',
             index: bool = True):
     """
     Reads a pandas dataframe to file. The fileformat is detected based on the filepath extension.
