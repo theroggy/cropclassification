@@ -89,7 +89,7 @@ def write_full_report(parcel_predictions_filepath: str,
 
         logger.info(f"{dict(conf.marker)}")
         parameter_list = [['marker', key, value] for key, value in conf.marker.items()]
-        parameter_list += [['timeseries', key, value] for key, value in conf.preprocess.items()]
+        parameter_list += [['timeseries', key, value] for key, value in conf.timeseries.items()]
         parameter_list += [['preprocess', key, value] for key, value in conf.preprocess.items()]
         parameter_list += [['classifier', key, value] for key, value in conf.classifier.items()]
         parameter_list += [['postprocess', key, value] for key, value in conf.postprocess.items()]
