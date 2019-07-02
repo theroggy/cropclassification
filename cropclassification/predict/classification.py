@@ -8,8 +8,6 @@ import os
 
 import pandas as pd
 
-import cropclassification.predict.classification_sklearn as class_core_sklearn
-import cropclassification.predict.classification_keras as class_core_keras
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
@@ -56,8 +54,7 @@ def train_test_predict(input_parcel_train_filepath: str,
 
     # Read the classification data from the csv so we can pass it on to the other functione to improve performance...
     logger.info(f"Read classification data file: {input_parcel_classification_data_filepath}")
-    df_input_parcel_classification_data = pdh.read_file(input_parcel_classification_data_filepath)
-    
+    df_input_parcel_classification_data = pdh.read_file(input_parcel_classification_data_filepath)    
     if df_input_parcel_classification_data.index.name != conf.columns['id']: 
         df_input_parcel_classification_data.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read classification data file ready')
@@ -134,11 +131,13 @@ def train(input_parcel_train_filepath: str,
 
     # Train
     if conf.classifier['classifier_type'].lower() == 'keras_multilayer_perceptron':
+        import cropclassification.predict.classification_keras as class_core_keras
         class_core_keras.train(
                 train_df=train_df, 
                 test_df=test_df,
                 output_classifier_filepath=output_classifier_filepath)
     else:
+        import cropclassification.predict.classification_sklearn as class_core_sklearn
         class_core_sklearn.train(
                 train_df=train_df, 
                 output_classifier_filepath=output_classifier_filepath)
@@ -178,16 +177,18 @@ def predict(input_parcel_filepath: str,
         logger.debug('Read classification data file ready')
 
     # Join the data to send to prediction logic...
-    logger.info("Join train sample with the classification data")
+    logger.info("Join input parcels with the classification data")
     input_parcel_for_predict_df = input_parcel_df.join(input_parcel_classification_data_df, how='inner')
 
     # Predict!
     if conf.classifier['classifier_type'].lower() == 'keras_multilayer_perceptron':
+        import cropclassification.predict.classification_keras as class_core_keras
         class_core_keras.predict_proba(
                 parcel_df=input_parcel_for_predict_df,
                 classifier_filepath=input_classifier_filepath,
                 output_parcel_predictions_filepath=output_predictions_filepath)
     else:
+        import cropclassification.predict.classification_sklearn as class_core_sklearn
         class_core_sklearn.predict_proba(
                 parcel_df=input_parcel_for_predict_df,
                 classifier_filepath=input_classifier_filepath,

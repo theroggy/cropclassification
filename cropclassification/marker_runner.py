@@ -7,16 +7,15 @@ import datetime
 import logging
 import os
 
-import cropclassification.preprocess.timeseries_calc_preprocess as ts_pre
-import cropclassification.preprocess.timeseries_calc as ts_calc
+import cropclassification.helpers.config_helper as conf 
+import cropclassification.helpers.dir_helper as dir_helper
+import cropclassification.helpers.log_helper as log_helper
+import cropclassification.preprocess.timeseries_util as ts_util
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.preprocess.classification_preprocess as class_pre
 import cropclassification.predict.classification as classification
 import cropclassification.postprocess.classification_postprocess as class_post
 import cropclassification.postprocess.classification_reporting as class_report
-import cropclassification.helpers.dir_helper as dir_helper
-import cropclassification.helpers.log_helper as log_helper
-import cropclassification.helpers.config_helper as conf 
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -128,24 +127,16 @@ def run(markertype_to_calc: str,
     #-------------------------------------------------------------
 
     # Prepare the input data for optimal image data extraction:
-    #    1) reproject to projection used in GEE: EPSG:4326
-    #    2) apply a negative buffer on the parcel to evade mixels
-    #    3) remove features that became null because of buffer
+    #    1) apply a negative buffer on the parcel to evade mixels
+    #    2) remove features that became null because of buffer
     input_parcel_nogeo_filepath = os.path.join(
             input_preprocessed_dir, f"{input_parcel_filename_noext}{columndata_ext}")
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(
             input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}{geofile_ext}")
-    
-    # If using google earth engine, prepare the file as .shp in WGS84 for upload 
-    imagedata_input_parcel_4326_filepath = None
-    if True:
-        imagedata_input_parcel_4326_filepath = os.path.join(
-                input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}_4326.shp")
-    ts_pre.prepare_input(
+    ts_util.prepare_input(
             input_parcel_filepath=input_parcel_filepath,
             output_imagedata_parcel_input_filepath=imagedata_input_parcel_filepath,
-            output_imagedata_parcel_input_4326_filepath=imagedata_input_parcel_4326_filepath,
             output_parcel_nogeo_filepath=input_parcel_nogeo_filepath)
 
     # STEP 2: Get the timeseries data needed for the classification
@@ -158,13 +149,14 @@ def run(markertype_to_calc: str,
     #      changed if another implementation is used
     #    - the upload to gee as an asset is not implemented, because it needs a 
     #      google cloud account, so upload needs to be done manually
-    ts_calc.calc_timeseries_data(input_parcel_filepath=imagedata_input_parcel_filepath,
-                                 input_country_code=country_code,
-                                 start_date_str=start_date_str,
-                                 end_date_str=end_date_str,
-                                 sensordata_to_get=sensordata_to_use,
-                                 base_filename=base_filename,
-                                 dest_data_dir=timeseries_periodic_dir)
+    ts.calc_timeseries_data(
+            input_parcel_filepath=imagedata_input_parcel_filepath,
+            input_country_code=country_code,
+            start_date_str=start_date_str,
+            end_date_str=end_date_str,
+            sensordata_to_get=sensordata_to_use,
+            base_filename=base_filename,
+            dest_data_dir=timeseries_periodic_dir)
 
     # STEP 3: Preprocess all data needed for the classification
     #-------------------------------------------------------------
@@ -194,12 +186,13 @@ def run(markertype_to_calc: str,
     parcel_classification_data_filepath = os.path.join(
             run_dir, f"{base_filename}_parcel_classdata{rowdata_ext}")
     ts.collect_and_prepare_timeseries_data(
+            input_parcel_filepath=input_parcel_nogeo_filepath,
             timeseries_dir=timeseries_periodic_dir,
             base_filename=base_filename,
             output_filepath=parcel_classification_data_filepath,
             start_date_str=start_date_str,
             end_date_str=end_date_str,
-            min_fraction_data_in_column=0.9,
+            min_fraction_data_in_column=0.90,
             sensordata_to_use=sensordata_to_use,
             parceldata_aggregations_to_use=parceldata_aggregations_to_use)
 

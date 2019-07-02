@@ -53,6 +53,7 @@ def train(train_df: pd.DataFrame,
     # Prepare and check some input + init some variables
     output_classifier_filepath_noext, output_ext = os.path.splitext(output_classifier_filepath)
     output_classifier_classes_filepath = output_classifier_filepath_noext + '_classes.txt'
+    output_classifier_datacolumns_filepath = output_classifier_filepath_noext + '_datacolumns.txt'
 
     if output_ext.lower() != '.hdf5':
         message = f"Keras only supports saving in extension .hdf5, not in {output_ext}"
@@ -80,14 +81,18 @@ def train(train_df: pd.DataFrame,
     train_classes_df = train_df[column_class]
     cols_to_keep = train_df.columns.difference([conf.columns['id'], column_class])
     train_data_df = train_df[cols_to_keep]
+    train_data_df.sort_index(axis=1, inplace=True)
 
     test_classes_df = test_df[column_class]
     cols_to_keep = test_df.columns.difference([conf.columns['id'], column_class])
     test_data_df = test_df[cols_to_keep]
-    
+    test_data_df.sort_index(axis=1, inplace=True)
+
     logger.info(f"Train file processed and rows with missing data removed, data shape: {train_data_df.shape}, labels shape: {train_classes_df.shape}")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        logger.info(f"Resulting Columns for training data: {train_data_df.columns}")
+        logger.info(f"Resulting Columns for training data: {list(train_data_df.columns)}")
+    with open(output_classifier_datacolumns_filepath, "w") as file:
+        file.write(str(list(train_data_df.columns)))
 
     classifier_type_lower = conf.classifier['classifier_type'].lower()
     if classifier_type_lower != 'keras_multilayer_perceptron':
@@ -164,6 +169,7 @@ def predict_proba(parcel_df: pd.DataFrame,
     parcel_classes_df = parcel_df[column_class]
     cols_to_keep = parcel_df.columns.difference([conf.columns['id'], column_class])
     parcel_data_df = parcel_df[cols_to_keep]
+    parcel_data_df.sort_index(axis=1, inplace=True)
 
     logger.info(f"Input predict file processed and rows with missing data removed, data shape: {parcel_data_df.shape}, labels shape: {parcel_classes_df.shape}")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
@@ -183,7 +189,8 @@ def predict_proba(parcel_df: pd.DataFrame,
     cols = [conf.columns['id'], column_class]
     cols.extend(classes_dict)
     df_proba = pd.DataFrame(id_class_proba, columns=cols)
-
+    df_proba.set_index(keys=conf.columns['id'], inplace=True)
+    
     # If output path provided, write results
     if output_parcel_predictions_filepath:
         pdh.to_file(df_proba, output_parcel_predictions_filepath)
