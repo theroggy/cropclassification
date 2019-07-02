@@ -10,14 +10,17 @@ import io
 import logging
 import math
 import multiprocessing
+import numpy as np
 import os
 import shutil
-import signal    # To catch CTRL-C explicitly
+import signal    # To catch CTRL-C explicitly and kill children
 import sys
 import time
 
+from affine import Affine
 import geopandas as gpd
 import pandas as pd
+import psutil    # To catch CTRL-C explicitly and kill children
 import rasterio
 from rasterio import windows
 from rasterstats import zonal_stats
@@ -31,12 +34,7 @@ from cropclassification.helpers import geofile
 # General init
 logger = logging.getLogger(__name__)
 
-# Add handler for CTRL-C so it also works when parallel processes are running.
-def signal_handler(sig, frame):
-        print('You pressed Ctrl+C!')
-        sys.exit(0)
 #signal.signal(signal.SIGINT, signal.default_int_handler)
-signal.signal(signal.SIGINT, signal_handler)
 
 def calc_stats(features_filepath: str,
                id_column: str,
@@ -80,264 +78,284 @@ def calc_stats(features_filepath: str,
         calc_stats_batch_dict = {}
         nb_done_total = 0
         i = 0
-        while True:
 
-            # If not all images aren't processed/processing yet
-            if i < len(image_paths):    
+        try:
+            while True:
 
-                # Get more detailed info about the image
-                image_path = image_paths[i]
-                i += 1
-                try:
-                    image_info = get_image_info(image_path)
-                except Exception as ex:
-                    # If not possible to get info for image, log and skip it
-                    logger.exception(f"SKIP image, because error getting info for {image_path}: {ex}")
-                    nb_todo -= 1
-                    continue
+                # If not all images aren't processed/processing yet
+                if i < len(image_paths):    
 
-                # If sentinel2 and cloud coverage too high... skip
-                max_cloudcover_pct = 5
-                if image_info['satellite'].startswith('S2') and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct:
-                    logger.info(f"SKIP image, Cloud_Coverage_Assessment: {image_info['Cloud_Coverage_Assessment']:0.2f} > {max_cloudcover_pct} for {image_path}")
-                    nb_todo -= 1
-                    continue
-
-                # If sentinel1 and wrong productTimelinessCategory, skip: we only want 1 type to evade images used twice
-                if image_info['satellite'].startswith('S1') and image_info['productTimelinessCategory'] != 'Fast-24h':
-                    logger.info(f"SKIP image, productTimelinessCategory should be 'Fast-24h', but is: {image_info['productTimelinessCategory']} for {image_path}")
-                    nb_todo -= 1
-                    continue
-
-                # Create base output filename
-                orbit = None
-                if image_info['satellite'].startswith('S1'):
-                    orbit = image_info['orbit_properties_pass']    
-                output_base_filepath = get_output_filepath(
-                        features_filepath, image_path, output_dir, orbit, band=None)
-                output_base_dir, output_base_filename = os.path.split(output_base_filepath)
-                output_base_busy_filepath = f"{output_base_dir}{os.sep}BUSY_{output_base_filename}"
-
-                # Check for which bands there is a valid output file already
-                bands_done = 0
-                for band in bands:
-                    # Prepare the output filepaths...
-                    output_band_filepath = get_output_filepath(
-                            features_filepath, image_path, output_dir, orbit, band)
-                    output_band_dir, output_band_filename = os.path.split(output_band_filepath)
-                    output_band_busy_filepath = f"{output_band_dir}{os.sep}BUSY_{output_band_filename}"
-
-                    # If a busy output file exists, remove it, otherwise we can get double data in it...
-                    if os.path.exists(output_band_busy_filepath):
-                        os.remove(output_band_busy_filepath)
-
-                    # Check if the output file exists already
-                    if os.path.exists(output_band_filepath):
-                        if force == False:
-                            logger.debug(f"Output file for band exists already {output_band_filepath}")
-                            bands_done += 1
-                        else:
-                            os.remove(output_band_filepath)
-
-                # If all bands already processed, skip image...
-                if len(bands) == bands_done:
-                    logger.info(f"SKIP image: output files for all bands exist already for {output_base_filepath}")
-                    nb_todo -= 1
-                    continue
-
-                # Always make sure there are nb_parallel_max prepare_calc's active
-                nb_busy = 0
-                for image_path_tmp in image_dict:
-                    if image_dict[image_path_tmp]['status'] == 'IMAGE_PREPARE_CALC_BUSY':
-                        nb_busy += 1
-                if nb_busy < nb_parallel_max:
-                    logger.debug(f"nb_busy: {nb_busy}, nb_parallel_max: {nb_parallel_max}, so nb_busy < nb_parallel_max")          
-                    # Start the prepare processing assync
-                    # TODO: possibly it is cleaner to do this per band...
-                    future = pool.submit(prepare_calc, 
-                                         features_filepath,
-                                         id_column,
-                                         image_path,
-                                         output_base_filepath,
-                                         temp_dir,
-                                         log_dir,
-                                         nb_parallel_max)
-                    image_dict[image_path] = {'features_filepath': features_filepath,
-                                              'prepare_calc_future': future, 
-                                              'image_info': image_info,
-                                              'prepare_calc_starttime': datetime.now(),
-                                              'output_base_filepath': output_base_filepath,
-                                              'output_base_busy_filepath': output_base_busy_filepath,
-                                              'status': 'IMAGE_PREPARE_CALC_BUSY'}
-                    
-                    # Jump to next image to start the prepare_calc for it...
-                    continue
-
-            # Loop through the images to find which are ready... to start the real calculations...
-            for image_path in image_dict:
-                
-                # Get all info that is available in the dict with futures for the one that has now completed
-                image = image_dict[image_path]
-                    
-                # If the status isn't PREPARE_CALC_BUSY or if the prepare_calc is still running, go to next...
-                if(image['status'] != 'IMAGE_PREPARE_CALC_BUSY' 
-                   or image['prepare_calc_future'].running()):
-                    continue
-
-                # Extract the result from the preparation
-                try:
-                    # Get the result from the completed  prepare_inputs
-                    prepare_calc_result = image['prepare_calc_future'].result()
-
-                    # If nb_features to be treated is 0... create (empty) output files and continue with next...
-                    if prepare_calc_result['nb_features_to_calc_total'] == 0:
-                        for band in bands:
-                            # Prepare the output filepath...
-                            orbit = None
-                            if image['image_info']['satellite'].startswith('S1'):
-                                orbit = image['image_info']['orbit_properties_pass']
-                            output_band_filepath = get_output_filepath(
-                                    features_filepath, image_path, output_dir, orbit, band)
-                            logger.info(f"No features found overlapping image, just create done file: {output_band_filepath}")
-
-                            # Create output file
-                            create_file_atomic(output_band_filepath)
-                            image['status'] = 'IMAGE_CALC_DONE'
-
-                        # Jump to next image
+                    # Get more detailed info about the image
+                    image_path = image_paths[i]
+                    i += 1
+                    try:
+                        image_info = get_image_info(image_path)
+                    except Exception as ex:
+                        # If not possible to get info for image, log and skip it
+                        logger.exception(f"SKIP image, because error getting info for {image_path}: {ex}")
+                        nb_todo -= 1
                         continue
 
-                    # Add info about the result of the prepare_calc to the image info...
-                    image['image_prepared_path'] = prepare_calc_result['image_prepared_path']
-                    image['feature_batches'] = prepare_calc_result['feature_batches']
-                    image['nb_features_to_calc_total'] = prepare_calc_result['nb_features_to_calc_total']
-                    image['temp_features_dir'] = prepare_calc_result['temp_features_dir']
+                    # If sentinel2 and cloud coverage too high... skip
+                    max_cloudcover_pct = 10
+                    if image_info['satellite'].startswith('S2') and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct:
+                        logger.info(f"SKIP image, Cloud_Coverage_Assessment: {image_info['Cloud_Coverage_Assessment']:0.2f} > {max_cloudcover_pct} for {image_path}")
+                        nb_todo -= 1
+                        continue
 
-                    # Set status to calc_is_busy so we know calculation is busy...
-                    image['status'] = 'IMAGE_CALC_BUSY'
-                    image['calc_starttime'] = datetime.now()
+                    # If sentinel1 and wrong productTimelinessCategory, skip: we only want 1 type to evade images used twice
+                    if image_info['satellite'].startswith('S1') and image_info['productTimelinessCategory'] != 'Fast-24h':
+                        logger.info(f"SKIP image, productTimelinessCategory should be 'Fast-24h', but is: {image_info['productTimelinessCategory']} for {image_path}")
+                        nb_todo -= 1
+                        continue
 
-                    # Now loop through all prepared feature batches to start the statistics calculation for each
-                    logger.info(f"Start statistics calculation for {image_path}")  
-                    for features_batch in image['feature_batches']:
-                        start_time_batch = datetime.now()
-                        future = pool.submit(calc_stats_image_gdf, 
-                                             features_batch['filepath'],
-                                             id_column,
-                                             image['image_prepared_path'],
-                                             bands,
-                                             image['output_base_busy_filepath'],
-                                             log_dir,
-                                             start_time_batch)
-                        calc_stats_batch_dict[features_batch['filepath']] = {
-                                'calc_stats_future': future,
-                                'image_path': image_path,
-                                'image_prepared_path': image['image_prepared_path'], 
-                                'start_time_batch': start_time_batch,
-                                'nb_items_batch': features_batch['nb_items'],
-                                'status': 'BATCH_CALC_BUSY'}
+                    # Create base output filename
+                    orbit = None
+                    if image_info['satellite'].startswith('S1'):
+                        orbit = image_info['orbit_properties_pass']    
+                    output_base_filepath = get_output_filepath(
+                            features_filepath, image_path, output_dir, orbit, band=None)
+                    output_base_dir, output_base_filename = os.path.split(output_base_filepath)
+                    output_base_busy_filepath = f"{output_base_dir}{os.sep}BUSY_{output_base_filename}"
 
-                except Exception as ex:
-                    message = f"Exception getting result of prepare_calc for {image}"
-                    logger.exception(message)
-                    nb_errors += 1
-                    if nb_errors > nb_errors_max:
-                        raise Exception(message) from ex
+                    # Check for which bands there is a valid output file already
+                    bands_done = 0
+                    for band in bands:
+                        # Prepare the output filepaths...
+                        output_band_filepath = get_output_filepath(
+                                features_filepath, image_path, output_dir, orbit, band)
+                        output_band_dir, output_band_filename = os.path.split(output_band_filepath)
+                        output_band_busy_filepath = f"{output_band_dir}{os.sep}BUSY_{output_band_filename}"
 
-            # Loop through the completed calculations
-            for calc_stats_batch_id in calc_stats_batch_dict:
-                # Get some info about the future that has now completed
-                calc_stats_batch_info = calc_stats_batch_dict[calc_stats_batch_id]
-                
-                # If not processed yet, but it is done, get the results
-                if(calc_stats_batch_info['status'] == 'BATCH_CALC_BUSY' 
-                   and calc_stats_batch_info['calc_stats_future'].done() is True):
+                        # If a busy output file exists, remove it, otherwise we can get double data in it...
+                        if os.path.exists(output_band_busy_filepath):
+                            os.remove(output_band_busy_filepath)
 
-                    try:
-                        # Get the result
-                        result = calc_stats_batch_info['calc_stats_future'].result()
-                        if not result:
-                            raise Exception("Returned False?")
+                        # Check if the output file exists already
+                        if os.path.exists(output_band_filepath):
+                            if force == False:
+                                logger.debug(f"Output file for band exists already {output_band_filepath}")
+                                bands_done += 1
+                            else:
+                                os.remove(output_band_filepath)
+
+                    # If all bands already processed, skip image...
+                    if len(bands) == bands_done:
+                        logger.info(f"SKIP image: output files for all bands exist already for {output_base_filepath}")
+                        nb_todo -= 1
+                        continue
+
+                    # Always make sure there are nb_parallel_max prepare_calc's active
+                    nb_busy = 0
+                    for image_path_tmp in image_dict:
+                        if image_dict[image_path_tmp]['status'] == 'IMAGE_PREPARE_CALC_BUSY':
+                            nb_busy += 1
+                    if nb_busy < nb_parallel_max:
+                        logger.debug(f"nb_busy: {nb_busy}, nb_parallel_max: {nb_parallel_max}, so nb_busy < nb_parallel_max")          
+                        # Start the prepare processing assync
+                        # TODO: possibly it is cleaner to do this per band...
+                        future = pool.submit(prepare_calc, 
+                                            features_filepath,
+                                            id_column,
+                                            image_path,
+                                            output_base_filepath,
+                                            temp_dir,
+                                            log_dir,
+                                            nb_parallel_max)
+                        image_dict[image_path] = {'features_filepath': features_filepath,
+                                                'prepare_calc_future': future, 
+                                                'image_info': image_info,
+                                                'prepare_calc_starttime': datetime.now(),
+                                                'output_base_filepath': output_base_filepath,
+                                                'output_base_busy_filepath': output_base_busy_filepath,
+                                                'status': 'IMAGE_PREPARE_CALC_BUSY'}
                         
-                        # Set the processed flag to True
-                        calc_stats_batch_info['status'] = 'BATCH_CALC_DONE'
-                        logger.debug(f"Ready processing batch of {calc_stats_batch_info['nb_items_batch']} for features image: {calc_stats_batch_info['image_path']}")
+                        # Jump to next image to start the prepare_calc for it...
+                        continue
+
+                # Loop through the images to find which are ready... to start the real calculations...
+                for image_path in image_dict:
+                    
+                    # Get all info that is available in the dict with futures for the one that has now completed
+                    image = image_dict[image_path]
+                        
+                    # If the status isn't PREPARE_CALC_BUSY or if the prepare_calc is still running, go to next...
+                    if(image['status'] != 'IMAGE_PREPARE_CALC_BUSY' 
+                    or image['prepare_calc_future'].running()):
+                        continue
+
+                    # Extract the result from the preparation
+                    try:
+                        # Get the result from the completed  prepare_inputs
+                        prepare_calc_result = image['prepare_calc_future'].result()
+
+                        # If nb_features to be treated is 0... create (empty) output files and continue with next...
+                        if prepare_calc_result['nb_features_to_calc_total'] == 0:
+                            for band in bands:
+                                # Prepare the output filepath...
+                                orbit = None
+                                if image['image_info']['satellite'].startswith('S1'):
+                                    orbit = image['image_info']['orbit_properties_pass']
+                                output_band_filepath = get_output_filepath(
+                                        features_filepath, image_path, output_dir, orbit, band)
+
+                                # Create output file
+                                logger.info(f"No features found overlapping image, just create done file: {output_band_filepath}")                                
+                                create_file_atomic(output_band_filepath)
+                                image['status'] = 'IMAGE_CALC_DONE'
+
+                            # Jump to next image
+                            continue
+
+                        # Add info about the result of the prepare_calc to the image info...
+                        image['image_prepared_path'] = prepare_calc_result['image_prepared_path']
+                        image['feature_batches'] = prepare_calc_result['feature_batches']
+                        image['nb_features_to_calc_total'] = prepare_calc_result['nb_features_to_calc_total']
+                        image['temp_features_dir'] = prepare_calc_result['temp_features_dir']
+
+                        # Set status to calc_is_busy so we know calculation is busy...
+                        image['status'] = 'IMAGE_CALC_BUSY'
+                        image['calc_starttime'] = datetime.now()
+
+                        # Now loop through all prepared feature batches to start the statistics calculation for each
+                        logger.info(f"Start statistics calculation for {image_path}")  
+                        for features_batch in image['feature_batches']:
+                            start_time_batch = datetime.now()
+                            future = pool.submit(calc_stats_image_gdf, 
+                                                features_batch['filepath'],
+                                                id_column,
+                                                image['image_prepared_path'],
+                                                bands,
+                                                image['output_base_busy_filepath'],
+                                                log_dir,
+                                                start_time_batch)
+                            calc_stats_batch_dict[features_batch['filepath']] = {
+                                    'calc_stats_future': future,
+                                    'image_path': image_path,
+                                    'image_prepared_path': image['image_prepared_path'], 
+                                    'start_time_batch': start_time_batch,
+                                    'nb_items_batch': features_batch['nb_items'],
+                                    'status': 'BATCH_CALC_BUSY'}
 
                     except Exception as ex:
-                        message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info}"
+                        message = f"Exception getting result of prepare_calc for {image}"
                         logger.exception(message)
                         nb_errors += 1
                         if nb_errors > nb_errors_max:
-                            raise Exception(message) from ex 
+                            raise Exception(message) from ex
 
-            # Loop over all image_paths that are busy being calculated to check if there are still calc stats batches busy
-            for image_path in image_dict:
-
-                # If the image is busy being calculated...
-                image = image_dict[image_path]
-                if image['status'] == 'IMAGE_CALC_BUSY':
-
-                    # Check if there are still batches busy for this image...
-                    batches_busy = False
-                    for calc_stats_batch_id in calc_stats_batch_dict:
-                        if(calc_stats_batch_dict[calc_stats_batch_id]['image_path'] == image_path 
-                           and calc_stats_batch_dict[calc_stats_batch_id]['status'] == 'BATCH_CALC_BUSY'):
-                            batches_busy = True
-                            break
+                # Loop through the completed calculations
+                for calc_stats_batch_id in calc_stats_batch_dict:
+                    # Get some info about the future that has now completed
+                    calc_stats_batch_info = calc_stats_batch_dict[calc_stats_batch_id]
                     
-                    # If no batches are busy anymore for the file_path... cleanup.
-                    if batches_busy == False:
-                        # If all batches are done, the image is done...
-                        image['status'] = 'IMAGE_CALC_DONE'
-                
-                        # If the preprocessing created a temp image file, clean it up...
-                        image_prepared_path = image['image_prepared_path']
-                        if image_prepared_path != image_path:
-                            logger.info(f"Remove local temp image copy: {image_prepared_path}")
-                            if os.path.isdir(image_prepared_path):           
-                                shutil.rmtree(image_prepared_path, ignore_errors=True)
-                            else:
-                                os.remove(image_prepared_path)
+                    # If not processed yet, but it is done, get the results
+                    if(calc_stats_batch_info['status'] == 'BATCH_CALC_BUSY' 
+                    and calc_stats_batch_info['calc_stats_future'].done() is True):
 
-                        # If the preprocessing created temp pickle files with features, clean them up...
-                        shutil.rmtree(image['temp_features_dir'], ignore_errors=True)
-
-                        # Rename the (completed) output files
-                        output_base_filepath_noext, output_base_ext = os.path.splitext(image['output_base_filepath'])
-                        output_base_busy_filepath_noext, output_base_busy_ext = os.path.splitext(image['output_base_busy_filepath'])
-                        for band in bands:
-                            # TODO: creating the output filepaths should probably be cleaner centralised...
-                            output_band_busy_filepath = f"{output_base_busy_filepath_noext}_{band}{output_base_busy_ext}"
-                            output_band_filepath = f"{output_base_filepath_noext}_{band}{output_base_ext}"
-
-                            # Rename the output file, so it isn't "BUSY" anymore...
-                            if os.path.exists(output_band_busy_filepath):
-                                os.rename(output_band_busy_filepath, output_band_filepath)
+                        try:
+                            # Get the result
+                            result = calc_stats_batch_info['calc_stats_future'].result()
+                            if not result:
+                                raise Exception("Returned False?")
                             
-                        # Log the progress and prediction speed
-                        logger.info(f"Ready processing image: {image_path}")
-                        nb_done_latestbatch = 1
-                        nb_done_total += nb_done_latestbatch
-                        progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image['calc_starttime'])
-                        logger.info(progress_msg)
+                            # Set the processed flag to True
+                            calc_stats_batch_info['status'] = 'BATCH_CALC_DONE'
+                            logger.debug(f"Ready processing batch of {calc_stats_batch_info['nb_items_batch']} for features image: {calc_stats_batch_info['image_path']}")
 
-            # If all images have been started, loop over all images to check if they are all done
-            if i == len(image_paths):
-                all_done = True
-                for image_path in image_paths:
-                    if(image_path in image_dict
-                       and image_dict[image_path]['status'] != 'IMAGE_CALC_DONE'):
-                        all_done = False
-                        break
-            else:
-                all_done = False
+                        except Exception as ex:
+                            message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info}"
+                            logger.exception(message)
+                            nb_errors += 1
+                            if nb_errors > nb_errors_max:
+                                raise Exception(message) from ex 
 
-            # If no processing is needed, or if all processing is ready, stop the never ending loop...
-            if len(image_dict) == 0 or all_done is True:
-                break 
-            else:
-                # Sleep before starting next iteration...
-                time.sleep(0.1)
+                # Loop over all image_paths that are busy being calculated to check if there are still calc stats batches busy
+                for image_path in image_dict:
+
+                    # If the image is busy being calculated...
+                    image = image_dict[image_path]
+                    if image['status'] == 'IMAGE_CALC_BUSY':
+
+                        # Check if there are still batches busy for this image...
+                        batches_busy = False
+                        for calc_stats_batch_id in calc_stats_batch_dict:
+                            if(calc_stats_batch_dict[calc_stats_batch_id]['image_path'] == image_path 
+                            and calc_stats_batch_dict[calc_stats_batch_id]['status'] == 'BATCH_CALC_BUSY'):
+                                batches_busy = True
+                                break
+                        
+                        # If no batches are busy anymore for the file_path... cleanup.
+                        if batches_busy == False:
+                            # If all batches are done, the image is done...
+                            image['status'] = 'IMAGE_CALC_DONE'
+                    
+                            # If the preprocessing created a temp image file, clean it up...
+                            image_prepared_path = image['image_prepared_path']
+                            if image_prepared_path != image_path:
+                                logger.info(f"Remove local temp image copy: {image_prepared_path}")
+                                if os.path.isdir(image_prepared_path):           
+                                    shutil.rmtree(image_prepared_path, ignore_errors=True)
+                                else:
+                                    os.remove(image_prepared_path)
+
+                            # If the preprocessing created temp pickle files with features, clean them up...
+                            shutil.rmtree(image['temp_features_dir'], ignore_errors=True)
+
+                            # Rename the (completed) output files
+                            output_base_filepath_noext, output_base_ext = os.path.splitext(image['output_base_filepath'])
+                            output_base_busy_filepath_noext, output_base_busy_ext = os.path.splitext(image['output_base_busy_filepath'])
+                            for band in bands:
+                                # TODO: creating the output filepaths should probably be cleaner centralised...
+                                output_band_busy_filepath = f"{output_base_busy_filepath_noext}_{band}{output_base_busy_ext}"
+                                output_band_filepath = f"{output_base_filepath_noext}_{band}{output_base_ext}"
+
+                                # If BUSY output file exists, rename it
+                                if os.path.exists(output_band_busy_filepath):
+                                    os.rename(output_band_busy_filepath, output_band_filepath)
+                                else:
+                                    # If BUSY output file soesn't exist, create empty file
+                                    logger.info(f"No features found overlapping image after processing, create done file: {output_band_filepath}")
+                                    create_file_atomic(output_band_filepath)
+
+                            # Log the progress and prediction speed
+                            logger.info(f"Ready processing image: {image_path}")
+                            nb_done_latestbatch = 1
+                            nb_done_total += nb_done_latestbatch
+                            progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image['calc_starttime'])
+                            logger.info(progress_msg)
+
+                # If all images have been started, loop over all images to check if they are all done
+                if i == len(image_paths):
+                    all_done = True
+                    for image_path in image_paths:
+                        if(image_path in image_dict
+                        and image_dict[image_path]['status'] != 'IMAGE_CALC_DONE'):
+                            all_done = False
+                            break
+                else:
+                    all_done = False
+
+                # If no processing is needed, or if all processing is ready, stop the never ending loop...
+                if len(image_dict) == 0 or all_done is True:
+                    break 
+                else:
+                    # Sleep before starting next iteration...
+                    time.sleep(0.1)
+
+        except KeyboardInterrupt:
+            # If CTRL+C is used, shut down pool and kill children
+            print('You pressed Ctrl+C')
+            print('Worker processes are being stopped, followed by exit!')
+
+            # Stop process pool + kill children + exit
+            pool.shutdown(wait=False)
+            parent = psutil.Process(os.getpid())
+            children = parent.children(recursive=True)
+            for process_pid in children:
+                print(f"Kill child with pid {process_pid}")
+                process_pid.send_signal(signal.SIGTERM)
+            sys.exit()
 
         logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
 
@@ -502,14 +520,14 @@ def prepare_calc(features_filepath,
     for i, features_gdf_batch in enumerate(features_gdf_batches):
         batch_info = {}
         pickle_filepath = os.path.join(temp_features_dir, f"{i}.pkl")
-        logger.info(f"Write pkl of {len(features_gdf_batch)} features: {pickle_filepath}")
+        logger.info(f"Write pkl of {len(features_gdf_batch.index)} features: {pickle_filepath}")
         try:
             features_gdf_batch.to_pickle(pickle_filepath)
         except Exception as ex:
-            logger.error(f"Exception writing pickle: {pickle_filepath}: {ex}")
+            logger.exception(f"Exception writing pickle: {pickle_filepath}")
             raise 
         batch_info["filepath"] = pickle_filepath
-        batch_info["nb_items"] = len(features_gdf_batch)
+        batch_info["nb_items"] = len(features_gdf_batch.index)
         ret_val["feature_batches"].append(batch_info)
 
     # Ready... return
@@ -702,70 +720,98 @@ def calc_stats_image_gdf(features_gdf,
 
     # Reset index, otherwise the concat later one gives wrong results
     features_gdf.reset_index(inplace=True)
+    output_base_filepath_noext, output_ext = os.path.splitext(output_base_filepath)
 
-    # Get the image data   
-    image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=bands, pixel_buffer=1)
-    
+    # If the image has a quality band, check that one first so parcels with
+    # bad pixels can be removed as the data can't be trusted anyway
+    quality_band = 'SCL-20m'
+    if quality_band in bands:
+        # Specific for Scene Classification (SCL) band, interprete already
+        # Folowing values are considered "bad":
+        #   -> 0 (no_data), 1 (saturated or defective), 3 (cloud shadows),
+        #      8: (cloud, medium proba), 9 (cloud, high proba), 11 (snow)
+        # These are considered "OK":
+        #   -> 2 (dark area pixels), 4 (vegetation), 5 (not_vegetated),
+        #      6 (water), 7 (unclassified), 10 (thin cirrus)
+        # List of classes: https://usermanual.readthedocs.io/en/latest/pages/ProductGuide.html#quality-indicator-bands
+        
+        # Get the image data and calculate
+        logger.info(f"Calculate categorical counts for band {quality_band} on {len(features_gdf.index)} features")
+        image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=[quality_band], pixel_buffer=1)
+        features_stats = zonal_stats(features_gdf, image_data[quality_band]['data'], 
+                affine=image_data[quality_band]['transform'], prefix="", nodata=0, categorical=True)
+        features_stats_df = pd.DataFrame(features_stats)
+        features_stats_df.fillna(value=0, inplace=True)
+
+        # Define which columns contain good pixels and which don't
+        bad_pixels_cols = ['0.0', '1.0', '3.0', '8.0', '9.0', '11.0']
+        all_cols = ['0.0', '1.0', '2.0', '3.0', '4.0', '5.0', 
+                    '6.0', '7.0', '8.0', '9.0', '10.0', '11.0']
+
+        # Make sure the dataframe contains columns for all possible values 
+        for i, col in enumerate(all_cols):
+            if col in features_stats_df.columns:
+                # Cast to int, otherwise is float
+                features_stats_df[col] = features_stats_df[col].astype('int32')
+            else:
+                features_stats_df.insert(loc=i, column=col, value=0)
+
+        # Add bad pixels column 
+        nb_bad_pixels_column = "nb_bad_pixels"
+        features_stats_df[nb_bad_pixels_column] = features_stats_df[bad_pixels_cols].sum(axis=1)
+        
+        # Add index and write to file
+        features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
+        output_band_filepath = f"{output_base_filepath_noext}_{quality_band}{output_ext}"
+        logger.info(f"Write data for {len(features_stats_df.index)} parcels found to {output_band_filepath}")
+        pdh.to_file(features_stats_df, output_band_filepath, index=False, append=True)
+
+        # Use the nb_bad_pixels column to filter only parcels without bad pixels
+        features_gdf.insert(loc=0, column=nb_bad_pixels_column, value=features_stats_df[nb_bad_pixels_column])
+        features_gdf = features_gdf.loc[features_gdf[nb_bad_pixels_column] == 0]
+        features_gdf.drop(columns=[nb_bad_pixels_column], inplace=True)
+
+        # Check if there are still features to be calculated
+        if len(features_gdf.index) == 0:
+            logger.info(f"After checking quality band, no more features to be calculated, so stop")
+            return True
+
     # Loop over image bands
     #image_id = os.path.basename(image_path)
-    for band in image_data:
-
-        # Extract info from band
-        if band == 'SCL_20m':
-            # Specific for Scene Classification (SCL) band, interprete already
-            # Folowing values are considered "bad":
-            #   -> 0 (no_data), 1 (saturated or defective), 3 (cloud shadows),
-            #      8: (cloud, medium proba), 9 (cloud, high proba), 11 (snow)
-            # These are considered "OK":
-            #   -> 2 (dark area pixels), 4 (vegetation), 5 (not_vegetated),
-            #      6 (water), 7 (unclassified), 10 (thin cirrus)
-            # List of classes: https://usermanual.readthedocs.io/en/latest/pages/ProductGuide.html#quality-indicator-bands
-            logger.info(f"Calculate categorical counts for band {band} on {len(features_gdf.index)} features")
-            features_stats = zonal_stats(features_gdf, image_data[band]['data'], 
-                    affine=image_data[band]['transform'], prefix="", nodata=0, categorical=True)
-            features_stats_df = pd.DataFrame(features_stats)
-
-            # Drop columns with "OK" pixels, sum values of remaining "NOK" columns
-            features_stats_df.drop(['2.0', '4.0', '5.0', '6.0', '7.0', '10.0'], errors='ignore')
-            new_column_name = 'nb_bad_pixels'
-            features_stats_df[new_column_name] = features_stats_df.sum(axis=1)
-
-            # Join original id column with the calculated values
-            features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
-
-            # Only keep the id and bad pixels column
-            features_stats_df = features_stats_df[[id_column, new_column_name]]
+    for band in bands:
+        if band == 'SCL-20m':
+            # Skip the quality band, used it already
+            continue
         else:
-            # Calculate statistics
+            # Get the image data and calculate statistics
+            logger.info(f"Read band {band}")
+            image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=[band], pixel_buffer=1)
+            
+            # Double the resolution of the image
+            image_data_up = image_data[band]['data'].repeat(2, axis=0).repeat(2, axis=1)
+            affine_up = image_data[band]['transform'] * Affine.scale(0.5)
+            #logger.debug(f"affine: {image_data[band]['transform']}, scale: {Affine.scale(0.5)}, affine_up: {affine_up}")
+            
             logger.info(f"Calculate zonal statistics for band {band} on {len(features_gdf.index)} features")
-            features_stats = zonal_stats(features_gdf, image_data[band]['data'], 
-                    affine=image_data[band]['transform'], prefix="", nodata=0, 
-                    stats=['count', 'mean', 'std', 'min', 'max', 'percentile_25', 'percentile_50', 'percentile_75'])
+            features_stats = zonal_stats(features_gdf, image_data_up, 
+                    affine=affine_up, prefix="", nodata=0, all_touched=True,
+                    stats=['count', 'mean', 'std', 'min', 'max'])
             features_stats_df = pd.DataFrame(features_stats)
 
             # Add original id column to statistics dataframe
             features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
-            features_stats_df.rename(index=str, inplace=True,
-                    columns={'percentile_25':'p25', 'percentile_50':'p50', 'percentile_75':'p75'})
-
-        """
-        # If data is found, write it to file
-        if len(features_stats_df.index) == 0:
-            logger.info(f"No data found, before dropna")
-            continue
-        """
-
+            features_stats_df['count'] = features_stats_df['count'].divide(4)
+            
         # Remove rows with empty data
         features_stats_df.dropna(inplace=True)
         if len(features_stats_df.index) == 0:
             logger.info(f"No data found for band {band}, so no use to process other bands")
             return True
 
-        output_base_filepath_noext, output_ext = os.path.splitext(output_base_filepath)
+        features_stats_df.set_index(id_column, inplace=True)
         output_band_filepath = f"{output_base_filepath_noext}_{band}{output_ext}"
         logger.info(f"Write data for {len(features_stats_df.index)} parcels found to {output_band_filepath}")
-
-        pdh.to_file(features_stats_df, output_band_filepath, index=False, append=True)
+        pdh.to_file(features_stats_df, output_band_filepath, append=True)
 
     return True
 
@@ -787,13 +833,14 @@ def get_image_data(image_path,
         bounds: the bounds to be read, in coordinates in the projection of the image
         bands: list of bands to be read, eg. "VV", "VH",... 
         pixel_buffer: number to pixels to take as buffer around the bounds provided in pixels
+        db_to_natural: if the image data is in dB, convert it to natural values
     """
     # Get info about the image
     image_info = get_image_info(image_path)
 
     # Now get the data
     image_data = {}              # Dict for the transforms and the data per band
-    if image_info['image_type'] == 'CARD':
+    if image_info['image_type'] in ('CARD', 'SAFE'):
         # Loop over bands and get data
         for band in bands:
             band_relative_filepath = image_info['bands'][band]['relative_filepath']
@@ -811,9 +858,13 @@ def get_image_data(image_path,
                 # Remark: bandindex in rasterio is 1-based instead of 0-based -> +1
                 logger.debug(f"Read image data from {image_band_filepath}")
                 image_data[band]['data'] = src.read(band_index+1, window=window_to_read)
+
+                # If dB data should be converted to natural + the image band data is in dB
+                #if db_to_natural is True and image_info['bands'][band]['is_db'] is True:
+                #    image_data[band]['data'] = np.power(10, np.divide(image_data[band]['data'], 10))
                 logger.info(f"Image data read")
     else:
-        message = f"Only .CARD image format currently supported!, not {image_path}"
+        message = f"Format currently not supported: {image_path}"
         logger.error(message)
         raise NotImplementedError(message)
 
@@ -913,7 +964,6 @@ def get_image_info(image_path) -> dict:
                 image_info['bands'] = {}
                 for i, band_filepath in enumerate(band_filepaths):
                     # Extract bound,... info from the first file only (they are all the same)
-                    # TODO: in S2 they have a different resolution, so then I need to open each image?
                     if i == 0:
                         #logger.debug(f"Read image metadata from {band_filepath}")
                         with rasterio.open(band_filepath) as src:
@@ -959,6 +1009,7 @@ def get_image_info(image_path) -> dict:
                 image_info["transmitter_receiver_polarisation"] = []
                 for polarisation in manifest_root.findall("metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:transmitterReceiverPolarisation", ns):
                     image_info["transmitter_receiver_polarisation"].append(polarisation.text)
+                image_info['productTimelinessCategory'] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:productTimelinessCategory", ns).text
                 image_info["instrument_mode"] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:platform/safe:instrument/safe:extension/s1sarl1:instrumentMode/s1sarl1:mode", ns).text
                 image_info["orbit_properties_pass"] = manifest_root.find("metadataSection/metadataObject/metadataWrap/xmlData/safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass", ns).text
 
@@ -1006,7 +1057,7 @@ def get_image_info(image_path) -> dict:
         # This is a level 2 sentinel 2 file
 
         # First extract and fill out some basic info
-        image_info["image_type"] = "CARD"
+        image_info["image_type"] = "SAFE"
         _, image_basename_noext = os.path.split(image_path_noext)
         image_info["image_id"] = image_basename_noext
 
@@ -1057,10 +1108,10 @@ def get_image_info(image_path) -> dict:
 
             if len(band_filename_noext_split) == 4:
                 # IMG_DATA files
-                band = f"{band_filename_noext_split[2]}_{band_filename_noext_split[3]}"
+                band = f"{band_filename_noext_split[2]}-{band_filename_noext_split[3]}"
             elif len(band_filename_noext_split) == 5:
                 # IMG_DATA files
-                band = f"{band_filename_noext_split[3]}_{band_filename_noext_split[4]}"
+                band = f"{band_filename_noext_split[3]}-{band_filename_noext_split[4]}"
             elif len(band_filename_noext_split) == 3:
                 # QI_DATA files
                 band = band_filename_noext
@@ -1076,11 +1127,9 @@ def get_image_info(image_path) -> dict:
             image_info['bands'][band]['filename'] = band_filename
             image_info['bands'][band]['bandindex'] = 0
 
-            # Extract bound,... info from the first file only (they are all the same)
+            # Extract bound,... info 
             logger.debug(f"Read image metadata from {band_filepath}")
             with rasterio.open(band_filepath) as src:
-                #image_info['image_bounds'] = src.bounds
-                #image_info['image_affine'] = src.transform
                 image_info['bands'][band]['bounds'] = src.bounds
                 image_info['bands'][band]['affine'] = src.transform
                 image_info['bands'][band]['crs'] = str(src.crs)
