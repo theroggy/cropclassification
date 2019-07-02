@@ -34,15 +34,18 @@ def to_file(gdf: gpd.GeoDataFrame,
     """
     Reads a pandas dataframe to file. The fileformat is detected based on the filepath extension.
 
-    # TODO: think about if possible/how to support  adding optional parameter and pass them to next function, example encoding, float_format,...
+    # TODO: think about if possible/how to support adding optional parameter and pass them to next 
+    # function, example encoding, float_format,...
     """
     _, ext = os.path.splitext(filepath)
 
     ext_lower = ext.lower()
     if ext_lower == '.shp':
+        if index is True:
+            gdf = gdf.reset_index(inplace=False)
         gdf.to_file(filepath)
     elif ext_lower == '.gpkg':
-        gdf.to_file(filepath, layer=layer, driver="GPKG")
+        gdf.to_file(filepath, layer=layer, driver="GPKG", index=index)
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
         
