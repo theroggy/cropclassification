@@ -307,6 +307,8 @@ def create_train_test_sample(input_parcel_filepath: str,
 
     # Write to output files
     logger.info('Write the output files')
+    df_train.set_index(conf.columns['id'], inplace=True)
+    df_test.set_index(conf.columns['id'], inplace=True)
     pdh.to_file(df_train, output_parcel_train_filepath)    # The ID column is the index...
     pdh.to_file(df_test, output_parcel_test_filepath)      # The ID column is the index...
 
