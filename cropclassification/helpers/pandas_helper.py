@@ -16,6 +16,8 @@ def read_file(filepath: str,
 
     # TODO: think about if possible/how to support  adding optional parameter and pass them to next function, example encoding, float_format,...
     """
+    if columns is not None and type(columns) is not list:
+        raise Exception(f"Parameter columns should be list, but is {type(columns)}")
     _, ext = os.path.splitext(filepath)
 
     ext_lower = ext.lower()
@@ -77,13 +79,15 @@ def to_file(df: pd.DataFrame,
             raise Exception("Append is not supported for parquet files")
         df.to_parquet(filepath, index=index)
     elif ext_lower == '.sqlite':
-        #if append is False and os.path.exists(filepath):
-        #    os.remove(filepath)
-        sql_db = sqlite3.connect(filepath)
         if_exists = 'fail'
         if append:
-            if_exists = 'append' 
-        df.to_sql(name=table_name, con=sql_db, if_exists=if_exists, index=index)
+            if_exists = 'append'
+        elif os.path.exists(filepath):
+            os.remove(filepath)
+
+        sql_db = sqlite3.connect(filepath)
+        df.to_sql(name=table_name, con=sql_db, if_exists=if_exists, index=index, 
+                  chunksize=50000)
         sql_db.close()
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
