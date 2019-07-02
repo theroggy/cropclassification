@@ -194,6 +194,7 @@ def add_doubt_columns(pred_df: pd.DataFrame,
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_eq_input_proba1_st_thresshold),
                     conf.columns['prediction_withdoubt']] = 'DOUBT:PRED=INPUT-PROBA1<X'
 
+    """
     # Apply some extra, marker-specific doubt algorythms
     if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER_EARLY'):
         logger.info("Apply some marker-specific doubt algorythms")
@@ -223,7 +224,8 @@ def add_doubt_columns(pred_df: pd.DataFrame,
 
     elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
         logger.info("Apply some marker-specific doubt algorythms")
-
+    """
+    
     # Finally, predictions that have not been defined yet, get the original prediction      
     pred_df.loc[pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED',
                 conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
