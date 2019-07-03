@@ -49,10 +49,11 @@ def run(markertype_to_calc: str,
     conf.read_config(config_filepaths, year=year)
 
     # Create run dir to be used for the results
-    run_base_dir = conf.dirs['marker_base_dir']
     reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
     reuse_last_run_dir_config = conf.dirs.getboolean('reuse_last_run_dir_config')
-    run_dir = dir_helper.create_run_dir(run_base_dir, reuse_last_run_dir)
+    run_dir = dir_helper.create_run_dir(conf.dirs['marker_base_dir'], reuse_last_run_dir)
+    if not os.path.exists(run_dir):
+        os.makedirs(run_dir)
 
     # Main initialisation of the logging
     logger = log_helper.main_log_init(run_dir, __name__)      
@@ -76,49 +77,25 @@ def run(markertype_to_calc: str,
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
 
-    # Get some general config
-    columndata_ext = conf.general['columndata_ext']
-    rowdata_ext = conf.general['rowdata_ext']
-    output_ext = conf.general['output_ext']
-    geofile_ext = conf.general['geofile_ext']
-
-    # Get some more specific info
-    base_dir = conf.dirs['base_dir']
-    input_dir = conf.dirs['input_dir']
-    input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
-    timeseries_periodic_dir = conf.dirs['timeseries_periodic_dir']
-    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
-
     # Prepare input filepaths
+    input_dir = conf.dirs['input_dir']    
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
     if input_groundtruth_filename is not None:
         input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
     else:
         input_groundtruth_filepath = None
 
-    # Settings for preprocessing the inputdata
-    classtype_to_prepare = conf.preprocess['classtype_to_prepare']
-    balancing_strategy = conf.marker['balancing_strategy']
-    buffer = conf.marker.getint('buffer')
-    input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
-
-    # The data to use to do the classification
-    base_filename = f"{input_parcel_filename_noext}_bufm{buffer}_weekly"
-    start_date_str = conf.marker['start_date_str']
-    end_date_str = conf.marker['end_date_str']
-    sensordata_to_use = conf.marker.getlist('sensordata_to_use')
-    parceldata_aggregations_to_use = conf.marker.getlist('parceldata_aggregations_to_use')
-
-    # Create the dir's if they don't exist yet...
-    for dir in [base_dir, timeseries_periodic_dir, run_base_dir, run_dir]:
-        if dir and not os.path.exists(dir):
-            os.mkdir(dir)
-
     # Check if the necessary input files exist...
     if not os.path.exists(input_parcel_filepath):
         message = f"The parcel input file doesn't exist, so STOP: {input_parcel_filepath}"
         logger.critical(message)
         raise Exception(message)
+
+    # Get some general config
+    columndata_ext = conf.general['columndata_ext']
+    rowdata_ext = conf.general['rowdata_ext']
+    output_ext = conf.general['output_ext']
+    geofile_ext = conf.general['geofile_ext']
        
     #-------------------------------------------------------------
     # The real work
@@ -129,6 +106,9 @@ def run(markertype_to_calc: str,
     # Prepare the input data for optimal image data extraction:
     #    1) apply a negative buffer on the parcel to evade mixels
     #    2) remove features that became null because of buffer
+    input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
+    input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
+    buffer = conf.marker.getint('buffer')       
     input_parcel_nogeo_filepath = os.path.join(
             input_preprocessed_dir, f"{input_parcel_filename_noext}{columndata_ext}")
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
@@ -142,13 +122,14 @@ def run(markertype_to_calc: str,
     # STEP 2: Get the timeseries data needed for the classification
     #-------------------------------------------------------------
     # Get the time series data (S1 and S2) to be used for the classification 
-    # Result: data is put in csv files in imagedata_dir, in one csv file per 
+    # Result: data is put in files in timeseries_periodic_dir, in one file per 
     #         date/period
-    # Remarks:
-    #    - the path to the imput data is specific for gee... so will need to be 
-    #      changed if another implementation is used
-    #    - the upload to gee as an asset is not implemented, because it needs a 
-    #      google cloud account, so upload needs to be done manually
+    timeseries_periodic_dir = conf.dirs['timeseries_periodic_dir']
+    start_date_str = conf.marker['start_date_str']
+    end_date_str = conf.marker['end_date_str']
+    sensordata_to_use = conf.marker.getlist('sensordata_to_use')
+    parceldata_aggregations_to_use = conf.marker.getlist('parceldata_aggregations_to_use')
+    base_filename = f"{input_parcel_filename_noext}_bufm{buffer}_weekly"
     ts.calc_timeseries_data(
             input_parcel_filepath=imagedata_input_parcel_filepath,
             input_country_code=country_code,
@@ -163,7 +144,7 @@ def run(markertype_to_calc: str,
     # Prepare the basic input file with the classes that will be classified to.
     # Remarks:
     #    - this is typically specific for the input dataset and result wanted!!!
-    #    - the result is/should be a csv file with the following columns
+    #    - the result is/should be a file with the following columns
     #           - id (=global_settings.id_column): unique ID for each parcel
     #           - classname (=global_settings.class_column): the class that must 
     #             be classified to.
@@ -172,15 +153,17 @@ def run(markertype_to_calc: str,
     #           - pixcount (=global_settings.pixcount_s1s2_column):  
     #             the number of S1/S2 pixels in the parcel.
     #             Is -1 if the parcel doesn't have any S1/S2 data.
+    classtype_to_prepare = conf.preprocess['classtype_to_prepare']
     parcel_filepath = os.path.join(
             run_dir, f"{input_parcel_filename_noext}_parcel{columndata_ext}")
     parcel_pixcount_filepath = os.path.join(
             timeseries_periodic_dir, f"{base_filename}_pixcount{columndata_ext}")
-    class_pre.prepare_input(input_parcel_filepath=input_parcel_nogeo_filepath,
-                            input_parcel_filetype=input_parcel_filetype,
-                            input_parcel_pixcount_filepath=parcel_pixcount_filepath,
-                            classtype_to_prepare=classtype_to_prepare,
-                            output_parcel_filepath=parcel_filepath)
+    class_pre.prepare_input(
+            input_parcel_filepath=input_parcel_nogeo_filepath,
+            input_parcel_filetype=input_parcel_filetype,
+            input_parcel_pixcount_filepath=parcel_pixcount_filepath,
+            classtype_to_prepare=classtype_to_prepare,
+            output_parcel_filepath=parcel_filepath)
 
     # Collect all data needed to do the classification in one input file
     parcel_classification_data_filepath = os.path.join(
@@ -205,6 +188,7 @@ def run(markertype_to_calc: str,
 
         # Create the training sample...
         # Remark: this creates a list of representative test parcel + a list of (candidate) training parcel
+        balancing_strategy = conf.marker['balancing_strategy']
         parcel_train_filepath = os.path.join(run_dir, 
                 f"{base_filename}_parcel_train{columndata_ext}")
         parcel_test_filepath = os.path.join(
@@ -297,3 +281,4 @@ def run(markertype_to_calc: str,
             parcel_ground_truth_filepath=groundtruth_filepath)
 
     logging.shutdown()
+    

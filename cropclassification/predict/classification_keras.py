@@ -157,7 +157,7 @@ def predict_proba(parcel_df: pd.DataFrame,
     parcel_df.reset_index(inplace=True)
     if(conf.columns['id'] not in parcel_df.columns
        or column_class not in parcel_df.columns):
-        message = f"Columns {conf.columns['id']} and {column_class} are mandatory for input parameter df_input!"
+        message = f"Columns {conf.columns['id']} and {column_class} are mandatory for input parameter parcel_df!"
         logger.critical(message)
         raise Exception(message)
 
@@ -188,14 +188,14 @@ def predict_proba(parcel_df: pd.DataFrame,
     id_class_proba = np.concatenate([parcel_df[[conf.columns['id'], column_class]].values, class_proba], axis=1)
     cols = [conf.columns['id'], column_class]
     cols.extend(classes_dict)
-    df_proba = pd.DataFrame(id_class_proba, columns=cols)
-    df_proba.set_index(keys=conf.columns['id'], inplace=True)
+    proba_df = pd.DataFrame(id_class_proba, columns=cols)
+    proba_df.set_index(keys=conf.columns['id'], inplace=True)
     
     # If output path provided, write results
     if output_parcel_predictions_filepath:
-        pdh.to_file(df_proba, output_parcel_predictions_filepath)
+        pdh.to_file(proba_df, output_parcel_predictions_filepath)
 
-    return df_proba
+    return proba_df
 
 # If the script is run directly...
 if __name__ == "__main__":

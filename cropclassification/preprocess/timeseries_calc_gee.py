@@ -32,6 +32,7 @@ import googleapiclient
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.preprocess.timeseries_util as ts_util
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.geofile_util as geofile_util
 import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
@@ -58,9 +59,11 @@ def calc_timeseries_data(input_parcel_filepath: str,
         data_to_get: an array with data you want to be calculated: check out the constants starting
                      with DATA_TO_GET... for the options.
     """
-    # Check some variables...
+    ##### Check and init some stuff #####
     if sensordata_to_get is None:
         raise Exception("sensordata_to_get cannot be None")
+    if not os.path.exists(dest_data_dir):
+        os.mkdir(dest_data_dir)
 
     # To have a good precision, the vector input must be uploaded to gee in WGS84!
     input_preprocessed_dir = conf.dirs('input_preprocessed_dir')
@@ -78,7 +81,8 @@ def calc_timeseries_data(input_parcel_filepath: str,
         logger.info(f"Write reprojected features to {input_parcel_4326_filepath}")
         geofile_util.to_file(input_parcel_4326_gdf, input_parcel_4326_filepath)
 
-    # Start calculation of the timeseries on gee
+    ##### Start calculation of the timeseries on gee #####
+
     logger.info("Start create_sentinel_timeseries_info")
     # On windows machines there seems to be an issue with gee. The following error is very common,
     # probably because there are too many sockets created in a short time... and the cleanup
@@ -281,29 +285,29 @@ def clean_gee_downloaded_csv(csv_file: str,
 
             # Sample 100 rows of data to determine dtypes, so floats can be read as float32 instead of the 
             # default float64. Writing those to eg. parquet is a lot more efficiënt.
-            df_test = pd.read_csv(csv_file, nrows=100)
-            float_cols = [c for c in df_test if df_test[c].dtype == "float64"]
+            test_df = pd.read_csv(csv_file, nrows=100)
+            float_cols = [c for c in test_df if test_df[c].dtype == "float64"]
             float32_cols = {c: np.float32 for c in float_cols}
 
             # Now read entire file
-            df_in = pd.read_csv(csv_file, engine='c', dtype=float32_cols)
+            data_read_df = pd.read_csv(csv_file, engine='c', dtype=float32_cols)
             
             # Drop unnecessary gee specific columns...
-            for column in df_in.columns:
+            for column in data_read_df.columns:
                 if column in ['system:index', '.geo']:
-                    df_in.drop(column, axis=1, inplace=True)
+                    data_read_df.drop(column, axis=1, inplace=True)
                 elif column == 'count':
                     logger.info(f"Rename count column to {conf.columns['pixcount_s1s2']}")
-                    df_in.rename(columns={'count': conf.columns['pixcount_s1s2']}, inplace=True)
+                    data_read_df.rename(columns={'count': conf.columns['pixcount_s1s2']}, inplace=True)
 
             # Set the id column as index
-            df_in.set_index(conf.columns['id'], inplace=True)
+            data_read_df.set_index(conf.columns['id'], inplace=True)
 
             # If there are data columns, write to output file
-            if len(df_in.columns) > 0:
+            if len(data_read_df.columns) > 0:
                 # Replace the original file by the cleaned one
                 logger.info(f"Write the file with the gee specific columns removed to a new file: {output_file}")
-                pdh.to_file(df_in, output_file, index=True)
+                pdh.to_file(data_read_df, output_file, index=True)
             else:
                 logger.warning(f"No data columns found in file {csv_file}, so return!!!")
                 return            

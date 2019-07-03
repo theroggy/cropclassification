@@ -32,7 +32,7 @@ def train(train_df: pd.DataFrame,
     Train a classifier and output the trained classifier to the output file.
 
     Args
-        df_train: pandas DataFrame containing the train data. Columns:
+        train_df: pandas DataFrame containing the train data. Columns:
             * global_settings.id_column: the id of the parcel
             * global_settings.class_column: the class of the parcel
             * ... all columns that will be used as classification data
@@ -101,7 +101,7 @@ def predict_proba(parcel_df: pd.DataFrame,
     parcel_df.reset_index(inplace=True)
     if(conf.columns['id'] not in parcel_df.columns
        or conf.columns['class'] not in parcel_df.columns):
-        message = f"Columns {conf.columns['id']} and {conf.columns['class']} are mandatory for input parameter df_input!"
+        message = f"Columns {conf.columns['id']} and {conf.columns['class']} are mandatory for input parameter parcel_df!"
         logger.critical(message)
         raise Exception(message)
 

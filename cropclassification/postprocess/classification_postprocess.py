@@ -230,7 +230,7 @@ def add_doubt_columns(pred_df: pd.DataFrame,
     pred_df.loc[pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED',
                 conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
 
-    # Add a column with the prediction status... and all parcels in df_top3 got a prediction
+    # Add a column with the prediction status... and all parcels in pred_df got a prediction
     pred_df[conf.columns['prediction_status']] = 'OK'
     pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT')),
                 conf.columns['prediction_status']] = 'DOUBT'

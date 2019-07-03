@@ -7,6 +7,7 @@ Script to create timeseries data per parcel of
 """
 
 import logging
+import os
 
 # Import local stuff
 import cropclassification.helpers.config_helper as conf
@@ -45,14 +46,14 @@ def calc_timeseries_data(
     Raises:
         Exception: [description]
     """
-    # Check some variables...
+    # Check and init some variables...
     if sensordata_to_get is None:
         raise Exception("sensordata_to_get cannot be None")
-
-    # Init some variables
-    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
+    if not os.path.exists(dest_data_dir):
+        os.mkdir(dest_data_dir)
 
     # TODO: start calculation of per image data on DIAS
+    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
 
     # Now all image data is available per image, calculate periodic data
     ts_util.calculate_periodic_data(

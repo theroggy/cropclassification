@@ -54,9 +54,9 @@ def train_test_predict(input_parcel_train_filepath: str,
 
     # Read the classification data from the csv so we can pass it on to the other functione to improve performance...
     logger.info(f"Read classification data file: {input_parcel_classification_data_filepath}")
-    df_input_parcel_classification_data = pdh.read_file(input_parcel_classification_data_filepath)    
-    if df_input_parcel_classification_data.index.name != conf.columns['id']: 
-        df_input_parcel_classification_data.set_index(conf.columns['id'], inplace=True)
+    input_parcel_classification_data_df = pdh.read_file(input_parcel_classification_data_filepath)    
+    if input_parcel_classification_data_df.index.name != conf.columns['id']: 
+        input_parcel_classification_data_df.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read classification data file ready')
 
     # Train the classification
@@ -65,7 +65,7 @@ def train_test_predict(input_parcel_train_filepath: str,
           input_parcel_classification_data_filepath=input_parcel_classification_data_filepath,
           output_classifier_filepath=output_classifier_filepath,
           force=force,
-          input_parcel_classification_data_df=df_input_parcel_classification_data)
+          input_parcel_classification_data_df=input_parcel_classification_data_df)
 
     # Predict the test parcels
     predict(input_parcel_filepath=input_parcel_test_filepath,
@@ -73,7 +73,7 @@ def train_test_predict(input_parcel_train_filepath: str,
             input_classifier_filepath=output_classifier_filepath,
             output_predictions_filepath=output_predictions_test_filepath,
             force=force,
-            input_parcel_classification_data_df=df_input_parcel_classification_data)
+            input_parcel_classification_data_df=input_parcel_classification_data_df)
 
     # Predict all parcels
     predict(input_parcel_filepath=input_parcel_all_filepath,
@@ -81,7 +81,7 @@ def train_test_predict(input_parcel_train_filepath: str,
             input_classifier_filepath=output_classifier_filepath,
             output_predictions_filepath=output_predictions_all_filepath,
             force=force,
-            input_parcel_classification_data_df=df_input_parcel_classification_data)
+            input_parcel_classification_data_df=input_parcel_classification_data_df)
 
 def train(input_parcel_train_filepath: str,
           input_parcel_test_filepath: str,
@@ -113,7 +113,7 @@ def train(input_parcel_train_filepath: str,
         train_df.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read train file ready')
 
-    # Join the columns of df_classification_data that aren't yet in df_train
+    # Join the columns of input_parcel_classification_data_df that aren't yet in train_df
     logger.info("Join train sample with the classification data")
     train_df = (train_df.join(input_parcel_classification_data_df, how='inner'))
 
@@ -125,7 +125,7 @@ def train(input_parcel_train_filepath: str,
         test_df.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read test file ready')
 
-    # Join the columns of df_classification_data that aren't yet in df_train
+    # Join the columns of input_parcel_classification_data_df that aren't yet in test_df
     logger.info("Join test sample with the classification data")
     test_df = (test_df.join(input_parcel_classification_data_df, how='inner'))
 
