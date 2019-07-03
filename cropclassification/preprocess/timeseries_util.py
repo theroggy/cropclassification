@@ -140,7 +140,7 @@ def calculate_periodic_data(
             start_date_str: str,   
             end_date_str: str,    
             sensordata_to_get: [],       
-            output_dir: str,
+            dest_data_dir: str,
             force: bool = False):
     """
     This function creates a file that is a weekly summarize of timeseries images from DIAS.
@@ -155,7 +155,7 @@ def calculate_periodic_data(
         end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on the 
                 periods wanted.
         sensordata_to_get ([]): 
-        output_dir (str): [description]
+        dest_data_dir (str): [description]
         force (bool, optional): [description]. Defaults to False.
     """
     logger.info('calculate_periodic_data')
@@ -176,9 +176,9 @@ def calculate_periodic_data(
     # Prepare output dir
     test = False
     if test is True:
-        output_dir += "_test"
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        dest_data_dir += "_test"
+    if not os.path.exists(dest_data_dir):
+        os.mkdir(dest_data_dir)
     
     # Create Dataframe with all files with their info
     logger.debug('Create Dataframe with all files and their properties')
@@ -230,7 +230,7 @@ def calculate_periodic_data(
 
         # There should also be one pixcount file
         pixcount_filename = f"{input_parcels_filename_noext}_weekly_pixcount{output_ext}"
-        pixcount_filepath = os.path.join(output_dir, pixcount_filename)
+        pixcount_filepath = os.path.join(dest_data_dir, pixcount_filename)
 
         # For each week
         start_week = int(datetime.strftime(start_date , '%W'))
@@ -243,7 +243,7 @@ def calculate_periodic_data(
             # New file name
             period_date_str_long = period_date.strftime('%Y-%m-%d') 
             period_data_filename = f"{input_parcels_filename_noext}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
-            period_data_filepath = os.path.join(output_dir, period_data_filename)
+            period_data_filepath = os.path.join(dest_data_dir, period_data_filename)
 
             # Check if output file exists already
             if os.path.exists(period_data_filepath):
@@ -433,3 +433,4 @@ def get_monday(input_date):
 # If the script is run directly...
 if __name__ == "__main__":
     raise Exception("Not implemented")
+    

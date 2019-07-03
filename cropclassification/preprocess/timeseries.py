@@ -47,6 +47,8 @@ def calc_timeseries_data(input_parcel_filepath: str,
     # Check some variables...
     if sensordata_to_get is None:
         raise Exception("sensordata_to_get cannot be None")
+    if not os.path.exists(dest_data_dir):
+        os.makedirs(dest_data_dir)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
     start_date = ts_util.get_monday(start_date_str) # output: vb 2018_2_1 - maandag van week 2 van 2018
@@ -56,8 +58,8 @@ def calc_timeseries_data(input_parcel_filepath: str,
 
     timeseries_calc_type = conf.timeseries['timeseries_calc_type']
     if timeseries_calc_type == 'gee':
+        # Start!
         import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
-
         return ts_calc_gee.calc_timeseries_data(
                 input_parcel_filepath=input_parcel_filepath,
                 input_country_code=input_country_code,
@@ -67,15 +69,18 @@ def calc_timeseries_data(input_parcel_filepath: str,
                 base_filename=base_filename,
                 dest_data_dir=dest_data_dir)
     elif timeseries_calc_type == 'onda':
-        import cropclassification.preprocess.timeseries_calc_dias_onda as ts_calc_dias_onda
+        # Start!
+        # TODO: start calculation of per image data on DIAS
+        #import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as ts_calc
+        timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
 
-        return ts_calc_dias_onda.calc_timeseries_data(
+        # Now all image data is available per image, calculate periodic data
+        return ts_util.calculate_periodic_data(
                 input_parcel_filepath=input_parcel_filepath,
-                input_country_code=input_country_code,
+                input_base_dir=timeseries_per_image_dir,
                 start_date_str=start_date_str,
                 end_date_str=end_date_str,
-                sensordata_to_get=sensordata_to_get,
-                base_filename=base_filename,
+                sensordata_to_get=sensordata_to_get,  
                 dest_data_dir=dest_data_dir)
     else:
         message = f"Unsupported timeseries calculation type: {timeseries_calc_type}"
@@ -99,6 +104,8 @@ def collect_and_prepare_timeseries_data(
 
     # Some constants to choose which type of data to use in the marker.
     # Remark: the string needs to be the same as the end of the name of the columns in the csv files!
+    # TODO: I'm not really happy with both a list in the ini file + here... not sure what the 
+    #       cleanest solution is though...
     PARCELDATA_AGGRAGATION_MEAN = conf.general['PARCELDATA_AGGRAGATION_MEAN']      # Mean value of the pixels values in a parcel.
     PARCELDATA_AGGRAGATION_STDDEV = conf.general['PARCELDATA_AGGRAGATION_STDDEV']  # std dev of the values of the pixels in a parcel
 
@@ -223,9 +230,9 @@ def collect_and_prepare_timeseries_data(
         result_df = result_df[result_df.isnull().sum(axis=1) <= max_number_null]
 
     # For rows with some null values, set them to 0
-    #result_df.fillna(0, inplace=True)
-    # TODO: it is more logical to interpolate only between the different types of data:
-    # S1_VV, S1_VH, ASC?, DESC?, S2?
+    # TODO: first rough test of using interpolation doesn't give a difference, maybe better if
+    #       smarter interpolation is used (= only between the different types of data: 
+    #       S1_GRD_VV, S1_GRD_VH, S1_COH_VV, S1_COH_VH, ASC?, DESC?, S2
     #result_df.interpolate(inplace=True)
     result_df.fillna(0, inplace=True)
     
