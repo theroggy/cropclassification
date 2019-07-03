@@ -172,6 +172,10 @@ def calc_stats(features_filepath: str,
                         
                         # Jump to next image to start the prepare_calc for it...
                         continue
+                    else:
+                        # There are already enough prepare's busy, reset i so this image is
+                        # tried again in the next loop...
+                        i -= 1
 
                 # Loop through the images to find which are ready... to start the real calculations...
                 for image_path in image_dict:
