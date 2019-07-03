@@ -326,10 +326,10 @@ def write_full_report(parcel_predictions_filepath: str,
             # ******************************************************************            
             # Pct Alpha errors=alpha errors/(alpha errors + real errors)  
             columnname = f"gt_conclusion_{conf.columns['prediction_cons']}"
-            alpha_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-OK_PRED-WRONG:ERROR_ALPHA'].index)
+            alpha_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA'].index)
             alpha_error_denominator = (alpha_error_numerator 
                     + len(df_parcel_gt.loc[df_parcel_gt[columnname].isin(
-                            ['FARMER-WRONG_PRED-OK', 'FARMER-WRONG_PRED-WRONG'])].index))
+                            ['FARMER-WRONG_PRED-CORRECT', 'FARMER-WRONG_PRED-WRONG'])].index))
             if alpha_error_denominator > 0:
                 message = (f"Alpha error: {alpha_error_numerator}/{alpha_error_denominator} = "
                         + f"{(alpha_error_numerator/alpha_error_denominator):.02f}")
@@ -366,7 +366,7 @@ def write_full_report(parcel_predictions_filepath: str,
                 df_per_pixcount = _get_alfa_errors_per_pixcount(
                         df_predquality_pixcount=df_parcel_gt,
                         pred_quality_column=f"gt_conclusion_{conf.columns['prediction_withdoubt']}",
-                        error_alpha_code='FARMER-OK_PRED-WRONG:ERROR_ALPHA')
+                        error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
                 df_per_pixcount.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_pixcount}\n")
@@ -494,34 +494,34 @@ def _add_gt_conclusions(in_df,
     # Calculate gt_vs_input_column
     # If ground truth same as input class, farmer OK, unless it is an ignore class
     in_df[gt_vs_input_column] = 'FARMER-WRONG'
-    in_df.loc[(in_df[conf.columns['class_groundtruth_unverified']] == in_df[conf.columns['class_groundtruth_verified']]),
-              gt_vs_input_column] = 'FARMER-OK'
-    in_df.loc[(in_df[conf.columns['class_groundtruth_unverified']] == in_df[conf.columns['class_groundtruth_verified']])
-                    & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
-              gt_vs_input_column] = 'FARMER-OK:IGNORE:VERIFIED=UNVERIFIED=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
+    in_df.loc[(in_df[conf.columns['class_declared']] == in_df[conf.columns['class_groundtruth']]),
+              gt_vs_input_column] = 'FARMER-CORRECT'
+    in_df.loc[(in_df[conf.columns['class_declared']] == in_df[conf.columns['class_groundtruth']])
+                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-CORRECT:IGNORE:VERIFIED=UNVERIFIED=' + in_df[conf.columns['class_groundtruth']].map(str)
     in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-WRONG')
-                    & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
-              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
+                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth']].map(str)
     in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-WRONG')
-                    & (in_df[conf.columns['class_groundtruth_unverified']].isin(all_classes_to_ignore)),
-              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_unverified']].map(str)
+                    & (in_df[conf.columns['class_declared']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_declared']].map(str)
 
     # Calculate gt_vs_prediction_column
     # If ground truth same as prediction, prediction OK 
     in_df[gt_vs_prediction_column] = 'UNDEFINED'
-    in_df.loc[(in_df[prediction_column_to_use] == in_df[conf.columns['class_groundtruth_verified']]),
-              gt_vs_prediction_column] = 'PRED-OK'
-    in_df.loc[(in_df[prediction_column_to_use] == in_df[conf.columns['class_groundtruth_verified']])
+    in_df.loc[(in_df[prediction_column_to_use] == in_df[conf.columns['class_groundtruth']]),
+              gt_vs_prediction_column] = 'PRED-CORRECT'
+    in_df.loc[(in_df[prediction_column_to_use] == in_df[conf.columns['class_groundtruth']])
                     & (in_df[prediction_column_to_use].isin(all_classes_to_ignore)),
-              gt_vs_prediction_column] = 'PRED-OK:IGNORE:PREDICTION=VERIFIED=' + in_df[prediction_column_to_use].map(str)                
+              gt_vs_prediction_column] = 'PRED-CORRECT:IGNORE:PREDICTION=GROUNDTRUTH=' + in_df[prediction_column_to_use].map(str)                
 
     # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
-                    & (in_df[conf.columns['class_groundtruth_verified']].isin(all_classes_to_ignore)),
-              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_verified']].map(str)
+                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:GROUNDTRUTH=' + in_df[conf.columns['class_groundtruth']].map(str)
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
-                    & (in_df[conf.columns['class_groundtruth_unverified']].isin(all_classes_to_ignore)),
-              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth_unverified']].map(str)
+                    & (in_df[conf.columns['class_declared']].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:DECLARED=' + in_df[conf.columns['class_declared']].map(str)
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
                     & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
               gt_vs_prediction_column] = 'PRED-NONE:IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
@@ -541,17 +541,17 @@ def _add_gt_conclusions(in_df,
     # Calculate gt_conclusion_column
     # Unverified class was correct  
     in_df[gt_conclusion_column] = 'UNDEFINED'
-    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-OK')
+    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-CORRECT')
                     & (in_df[gt_vs_prediction_column] == 'PRED-WRONG'),
-              gt_conclusion_column] = 'FARMER-OK_PRED-WRONG:ERROR_ALPHA'
+              gt_conclusion_column] = 'FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA'
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
-                    & (in_df[gt_vs_input_column] == 'FARMER-OK'),
-                gt_conclusion_column] = 'FARMER-OK_' + in_df[gt_vs_prediction_column].map(str)
+                    & (in_df[gt_vs_input_column] == 'FARMER-CORRECT'),
+                gt_conclusion_column] = 'FARMER-CORRECT_' + in_df[gt_vs_prediction_column].map(str)
 
     # Unverified class was not correct
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
                     & (in_df[gt_vs_input_column] == 'FARMER-WRONG')
-                    & (in_df[conf.columns['class_groundtruth_unverified']] == in_df[prediction_column_to_use]),
+                    & (in_df[conf.columns['class_declared']] == in_df[prediction_column_to_use]),
               gt_conclusion_column] = 'FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA'
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
                     & (in_df[gt_vs_input_column] == 'FARMER-WRONG'),

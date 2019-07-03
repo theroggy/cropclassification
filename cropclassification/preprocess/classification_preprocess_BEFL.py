@@ -83,75 +83,75 @@ def prepare_input(input_parcel_filepath: str,
 
     # Now start prepare 
     if classtype_to_prepare == 'CROPGROUP':
+        parceldata_df = prepare_input_cropgroup(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_declared,
+                column_output_class=conf.columns['class_declared'])
         return prepare_input_cropgroup(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'])
     elif classtype_to_prepare == 'CROPGROUP_GROUNDTRUTH':
-        parceldata_df = prepare_input_cropgroup(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth_verified'])
         return prepare_input_cropgroup(
                 parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_unverified,
-                column_output_class=conf.columns['class_groundtruth_unverified'])
-    if classtype_to_prepare == 'CROPGROUP_EARLY':
+                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+                column_output_class=conf.columns['class_groundtruth'])
+    elif classtype_to_prepare == 'CROPGROUP_EARLY':
+        parceldata_df = prepare_input_cropgroup_early(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_declared,
+                column_output_class=conf.columns['class_declared'])
         return prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'])
     elif classtype_to_prepare == 'CROPGROUP_EARLY_GROUNDTRUTH':
-        parceldata_df = prepare_input_cropgroup_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth_verified'])
         return prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_unverified,
-                column_output_class=conf.columns['class_groundtruth_unverified'])
+                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+                column_output_class=conf.columns['class_groundtruth'])
     elif classtype_to_prepare == 'LANDCOVER':
+        parceldata_df = prepare_input_landcover(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_declared,
+                column_output_class=conf.columns['class_declared'])
         return prepare_input_landcover(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'])
     elif classtype_to_prepare == 'LANDCOVER_GROUNDTRUTH':
-        parceldata_df = prepare_input_landcover(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth_verified'])
         return prepare_input_landcover(
                 parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_unverified,
-                column_output_class=conf.columns['class_groundtruth_unverified'])  
+                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+                column_output_class=conf.columns['class_groundtruth'])
     elif classtype_to_prepare == 'LANDCOVER_EARLY':
+        parceldata_df = prepare_input_landcover_early(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_declared,
+                column_output_class=conf.columns['class_declared'])
         return prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'])
     elif classtype_to_prepare == 'LANDCOVER_EARLY_GROUNDTRUTH':
-        parceldata_df = prepare_input_landcover_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth_verified'])
         return prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_unverified,
-                column_output_class=conf.columns['class_groundtruth_unverified'])  
+                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+                column_output_class=conf.columns['class_groundtruth'])
     elif classtype_to_prepare == 'POPULAR_CROP':
+        parceldata_df = prepare_input_most_popular_crop(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_declared,
+                column_output_class=conf.columns['class_declared'])
         return prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
-                column_output_class=conf.columns['class'])      
+                column_output_class=conf.columns['class'])
     elif classtype_to_prepare == 'POPULAR_CROP_GROUNDTRUTH':
-        parceldata_df = prepare_input_most_popular_crop(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth_verified'])
         return prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
-                column_BEFL_cropcode=column_BEFL_crop_gt_unverified,
-                column_output_class=conf.columns['class_groundtruth_unverified'])
+                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+                column_output_class=conf.columns['class_groundtruth'])
     else:
         message = f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
         logger.fatal(message)
@@ -193,11 +193,12 @@ def prepare_input_cropgroup(
     classes_df[column_BEFL_cropcode] = classes_df['CROPCODE'].astype('unicode')
 
     # Map column with the classname to orig classname
-    classes_df[conf.columns['class_orig']] = classes_df['MON_CROPGROUP']
+    column_output_class_orig = conf.columns['class'] + '_orig'
+    classes_df[column_output_class_orig] = classes_df['MON_CROPGROUP']
 
     # Remove unneeded columns
     for column in classes_df.columns:
-        if(column not in [conf.columns['class_orig'], column_BEFL_cropcode]
+        if(column not in [column_output_class_orig, column_BEFL_cropcode]
            and column not in columns_BEFL_to_keep):
             classes_df.drop(column, axis=1, inplace=True)
 
@@ -215,7 +216,7 @@ def prepare_input_cropgroup(
 
     # Copy orig classname to classification classname
     parceldata_df.insert(
-            loc=0, column=column_output_class, value=parceldata_df[conf.columns['class_orig']])
+            loc=0, column=column_output_class, value=parceldata_df[column_output_class_orig])
     
     # For rows with no class, set to UNKNOWN
     parceldata_df.fillna(value={column_output_class: 'UNKNOWN'}, inplace=True) 
@@ -285,8 +286,8 @@ def prepare_input_cropgroup(
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
         if(column not in [column_output_class, conf.columns['id'], 
-                          conf.columns['class_groundtruth_verified'], 
-                          conf.columns['class_groundtruth_unverified']]
+                          conf.columns['class_groundtruth'], 
+                          conf.columns['class_declared']]
              and column not in conf.preprocess.getlist('extra_export_columns')
              and column not in columns_BEFL_to_keep):
             parceldata_df.drop(column, axis=1, inplace=True)
@@ -358,11 +359,12 @@ def prepare_input_landcover(
     classes_df[column_BEFL_cropcode] = classes_df['CROPCODE'].astype('unicode')
 
     # Map column MON_group to orig classname
-    classes_df[conf.columns['class_orig']] = classes_df['MON_LC_GROUP']
+    column_output_class_orig = column_output_class + '_orig'
+    classes_df[column_output_class_orig] = classes_df['MON_LC_GROUP']
 
     # Remove unneeded columns
     for column in classes_df.columns:
-        if(column not in [conf.columns['class_orig'], column_BEFL_cropcode]
+        if(column not in [column_output_class_orig, column_BEFL_cropcode]
            and column not in columns_BEFL_to_keep):
             classes_df.drop(column, axis=1, inplace=True)
 
@@ -380,7 +382,7 @@ def prepare_input_landcover(
 
     # Copy orig classname to classification classname
     parceldata_df.insert(loc=0, column=column_output_class, 
-                         value=parceldata_df[conf.columns['class_orig']])
+                         value=parceldata_df[column_output_class_orig])
 
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if column_BEFL_gesp_pm in parceldata_df.columns:
@@ -402,8 +404,8 @@ def prepare_input_landcover(
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
         if(column not in [column_output_class, conf.columns['id'], 
-                          conf.columns['class_groundtruth_verified'], 
-                          conf.columns['class_groundtruth_unverified']]
+                          conf.columns['class_groundtruth'], 
+                          conf.columns['class_declared']]
              and column not in conf.preprocess.getlist('extra_export_columns')
              and column not in columns_BEFL_to_keep):
             parceldata_df.drop(column, axis=1, inplace=True)
@@ -463,7 +465,7 @@ def prepare_input_most_popular_crop(
     parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['901', '904']), column_output_class] = 'Potatoes'         # Potatoes
     parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['311', '36']), column_output_class] = 'WinterWheat'       # Winter wheat of spelt
     parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['91']), column_output_class] = 'SugarBeat'               # Sugar beat
-    parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['321']), columncolumn_output_class_class] = 'WinterBarley'           # Winter barley
+    parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['321']), column_output_class] = 'WinterBarley'           # Winter barley
     parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['71']), column_output_class] = 'FodderBeat'              # Fodder beat
 
     # Some extra cleanup: classes starting with 'nvt' or empty ones
