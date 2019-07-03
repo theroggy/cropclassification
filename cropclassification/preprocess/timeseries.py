@@ -91,7 +91,6 @@ def collect_and_prepare_timeseries_data(
         end_date_str: str,
         sensordata_to_use: List[str],
         parceldata_aggregations_to_use: List[str],
-        min_fraction_data_in_column: float,
         force: bool = False):
     """
     Collect all timeseries data to use for the classification and prepare it by applying
@@ -154,8 +153,9 @@ def collect_and_prepare_timeseries_data(
         data_read_df = pdh.read_file(curr_filepath)
         nb_data_read = len(data_read_df.index)
         fraction_data_available = nb_data_read/nb_input_parcels
-        if fraction_data_available < min_fraction_data_in_column:
-            logger.info(f"SKIP: only data for {fraction_data_available} of parcels, should be > {min_fraction_data_in_column}: {curr_filepath}")
+        min_fraction_parcels_with_data = conf.timeseries.getfloat('min_fraction_parcels_with_data')
+        if fraction_data_available < min_fraction_parcels_with_data:
+            logger.info(f"SKIP: only data for {fraction_data_available} of parcels, should be > {min_fraction_parcels_with_data}: {curr_filepath}")
             continue
 
         # Start processing the file
@@ -183,15 +183,15 @@ def collect_and_prepare_timeseries_data(
 
             # Check if the column contains data for enough parcels
             fraction_input_data = 1-(data_read_df[column].isnull().sum()/nb_input_parcels)
-            if fraction_input_data < min_fraction_data_in_column:
+            if fraction_input_data < min_fraction_parcels_with_data:
                 # If the number of nan values for the column > x %, drop column
-                logger.warn(f"Drop column as it contains only {fraction_input_data} real data compared to input (= not nan) which is < {min_fraction_data_in_column}!: {column}")
+                logger.warn(f"Drop column as it contains only {fraction_input_data} real data compared to input (= not nan) which is < {min_fraction_parcels_with_data}!: {column}")
                 data_read_df.drop(column, axis=1, inplace=True)
             """
             fraction_real_data = 1-(data_read_df[column].isnull().sum()/len(data_read_df[column]))
-            if fraction_real_data < min_fraction_data_in_column:
+            if fraction_real_data < min_fraction_parcels_with_data:
                 # If the number of nan values for the column > x %, drop column
-                logger.warn(f"Drop column as it contains only {fraction_real_data} real data (= not nan) which is < {min_fraction_data_in_column}!: {column}")
+                logger.warn(f"Drop column as it contains only {fraction_real_data} real data (= not nan) which is < {min_fraction_parcels_with_data}!: {column}")
                 data_read_df.drop(column, axis=1, inplace=True)
             """
 

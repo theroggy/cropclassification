@@ -192,7 +192,6 @@ def run(markertype_to_calc: str,
             output_filepath=parcel_classification_data_filepath,
             start_date_str=start_date_str,
             end_date_str=end_date_str,
-            min_fraction_data_in_column=0.90,
             sensordata_to_use=sensordata_to_use,
             parceldata_aggregations_to_use=parceldata_aggregations_to_use)
 
