@@ -732,6 +732,7 @@ def calc_stats_image_gdf(features_gdf,
     # If the image has a quality band, check that one first so parcels with
     # bad pixels can be removed as the data can't be trusted anyway
     quality_band = 'SCL-20m'
+    features_total_bounds = features_gdf.total_bounds
     if quality_band in bands:
         # Specific for Scene Classification (SCL) band, interprete already
         # Folowing values are considered "bad":
@@ -744,24 +745,29 @@ def calc_stats_image_gdf(features_gdf,
         
         # Get the image data and calculate
         logger.info(f"Calculate categorical counts for band {quality_band} on {len(features_gdf.index)} features")
-        image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=[quality_band], pixel_buffer=1)
+        category_map = {0.0: 'nodata', 1.0: 'saturated', 2.0: 'dark', 3.0: 'cloud_shadow',
+                        4.0: 'vegetation', 5.0: 'not_vegetated', 6.0: 'water', 7.0: 'unclassified',
+                        8.0: 'cloud_mediumproba', 9.0: 'cloud_highproba', 10: 'cloud_thincirrus', 
+                        11.0: 'snow'}
+        # Define which columns contain good pixels and which don't
+        bad_pixels_cols = ['nodata', 'saturated', 'dark', 'snow',
+                           'cloud_mediumproba', 'cloud_highproba']
+        image_data = get_image_data(
+                image_path, bounds=features_total_bounds, bands=[quality_band], pixel_buffer=1)
         features_stats = zonal_stats(features_gdf, image_data[quality_band]['data'], 
-                affine=image_data[quality_band]['transform'], prefix="", nodata=0, categorical=True)
+                affine=image_data[quality_band]['transform'], prefix="", nodata=0, 
+                categorical=True,category_map=category_map)
         features_stats_df = pd.DataFrame(features_stats)
         features_stats_df.fillna(value=0, inplace=True)
 
-        # Define which columns contain good pixels and which don't
-        bad_pixels_cols = ['0.0', '1.0', '3.0', '8.0', '9.0', '11.0']
-        all_cols = ['0.0', '1.0', '2.0', '3.0', '4.0', '5.0', 
-                    '6.0', '7.0', '8.0', '9.0', '10.0', '11.0']
-
         # Make sure the dataframe contains columns for all possible values 
-        for i, col in enumerate(all_cols):
-            if col in features_stats_df.columns:
+        for i, category_key in enumerate(category_map):
+            category_column = category_map[category_key]
+            if category_column in features_stats_df.columns:
                 # Cast to int, otherwise is float
-                features_stats_df[col] = features_stats_df[col].astype('int32')
+                features_stats_df[category_column] = features_stats_df[category_column].astype('int32')
             else:
-                features_stats_df.insert(loc=i, column=col, value=0)
+                features_stats_df.insert(loc=i, column=category_column, value=0)
 
         # Add bad pixels column 
         nb_bad_pixels_column = "nb_bad_pixels"
@@ -784,6 +790,7 @@ def calc_stats_image_gdf(features_gdf,
             return True
 
     # Loop over image bands
+    features_total_bounds = features_gdf.total_bounds
     for band in bands:
         # The quality band is already treated, so skip it here
         if band == 'SCL-20m':
