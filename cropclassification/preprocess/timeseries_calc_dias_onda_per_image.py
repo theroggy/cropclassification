@@ -727,8 +727,8 @@ def calc_stats_image_gdf(features_gdf,
         features_gdf = pd.read_pickle(features_gdf_pkl_filepath)
         logger.info(f"Read pickle with {len(features_gdf.index)} features ready")
 
-    # Reset index, otherwise the concat later one gives wrong results
-    features_gdf.reset_index(inplace=True)
+
+
     output_base_filepath_noext, output_ext = os.path.splitext(output_base_filepath)
 
     # If the image has a quality band, check that one first so parcels with
@@ -756,6 +756,9 @@ def calc_stats_image_gdf(features_gdf,
                            'cloud_mediumproba', 'cloud_highproba']
         image_data = get_image_data(
                 image_path, bounds=features_total_bounds, bands=[quality_band], pixel_buffer=1)
+        # Before zonal_stats, do reset_index so index is "clean", otherwise the concat/insert/... 
+        # later on gives wrong results
+        features_gdf.reset_index(drop=True, inplace=True)
         features_stats = zonal_stats(features_gdf, image_data[quality_band]['data'], 
                 affine=image_data[quality_band]['transform'], prefix="", nodata=0, 
                 categorical=True,category_map=category_map)
@@ -811,6 +814,9 @@ def calc_stats_image_gdf(features_gdf,
         affine_upsampled = image_data[band]['transform'] * Affine.scale(1/upsample_factor)
 
         logger.info(f"Calculate zonal statistics for band {band} on {len(features_gdf.index)} features")
+        # Before zonal_stats, do reset_index so index is "clean", otherwise the concat/insert/... 
+        # later on gives wrong results
+        features_gdf.reset_index(drop=True, inplace=True)
         features_stats = zonal_stats(features_gdf, image_data_upsampled, 
                 affine=affine_upsampled, prefix="", nodata=0, all_touched=True,
                 stats=['count', 'mean', 'std', 'min', 'max'])
