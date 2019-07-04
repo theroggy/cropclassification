@@ -281,11 +281,21 @@ def calculate_periodic_data(
                     image_data_df.set_index(id_column, inplace=True)
                     image_data_df.index.name = id_column
 
+                    # Remove rows with nan values
+                    nb_before_dropna = len(image_data_df.index)
+                    image_data_df.dropna(inplace=True)
+                    nb_after_dropna = len(image_data_df.index)
+                    if nb_after_dropna != nb_before_dropna:
+                        logger.warning(f"Before dropna: {nb_before_dropna}, after: {nb_after_dropna} for file {imagedata_filepath}")
+                    if nb_after_dropna == 0:
+                        continue
+                        
                     # Rename columns so column names stay unique
                     for statistic_column in statistic_columns_dict:
                         new_column_name = statistic_column + str(j+1)
                         image_data_df.rename(columns={statistic_column: new_column_name},
                                              inplace=True)
+                        image_data_df[new_column_name] = image_data_df[new_column_name].astype(float)
                         statistic_columns_dict[statistic_column].append(new_column_name)
                                             
                     # Create 1 dataframe for all weekfiles - one row for each code_obj - using concat (code_obj = index)
