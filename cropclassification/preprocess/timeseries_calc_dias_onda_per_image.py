@@ -34,17 +34,16 @@ from cropclassification.helpers import geofile
 # General init
 logger = logging.getLogger(__name__)
 
-#signal.signal(signal.SIGINT, signal.default_int_handler)
-
-def calc_stats(features_filepath: str,
-               id_column: str,
-               image_paths: str,
-               bands: [],
-               output_dir: str,
-               temp_dir: str,
-               log_dir: str,
-               max_cloudcover_pct: float = -1,
-               force: bool = False):
+def calc_stats_per_image(
+        features_filepath: str,
+        id_column: str,
+        image_paths: str,
+        bands: [],
+        output_dir: str,
+        temp_dir: str,
+        log_dir: str,
+        max_cloudcover_pct: float = -1,
+        force: bool = False):
     """
     Calculate the statistics.
     """
@@ -81,14 +80,22 @@ def calc_stats(features_filepath: str,
         i = 0
 
         try:
+            # Keep looping. At the end of the loop there are checks when to
+            # break out of the loop...
             while True:
 
-                # If not all images aren't processed/processing yet
-                if i < len(image_paths):    
+                ##### Start preparation for calculation on next image + features combo #####
 
-                    # Get more detailed info about the image
+                # If not all images aren't prepared for processing yet, and there aren't too 
+                # many busy yet, prepare the next one 
+                if(i < len(image_paths) 
+                        and len(filter_on_status(image_dict, 'IMAGE_PREPARE_CALC_BUSY')) < nb_parallel_max):
+
+                    # Not too many busy preparing, so get next image_path to start prepare on
                     image_path = image_paths[i]
                     i += 1
+
+                    # Get more detailed info about the image
                     try:
                         image_info = get_image_info(image_path)
                     except:
@@ -100,8 +107,8 @@ def calc_stats(features_filepath: str,
 
                     # If sentinel2 and cloud coverage too high... skip
                     if(max_cloudcover_pct >= 0 
-                       and image_info['satellite'].startswith('S2') 
-                       and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct):
+                            and image_info['satellite'].startswith('S2') 
+                            and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct):
                         logger.info(f"SKIP image, Cloud_Coverage_Assessment: {image_info['Cloud_Coverage_Assessment']:0.2f} > {max_cloudcover_pct} for {image_path}")
                         nb_todo -= 1
                         continue
@@ -116,7 +123,7 @@ def calc_stats(features_filepath: str,
                     orbit = None
                     if image_info['satellite'].startswith('S1'):
                         orbit = image_info['orbit_properties_pass']    
-                    output_base_filepath = get_output_filepath(
+                    output_base_filepath = format_output_filepath(
                             features_filepath, image_path, output_dir, orbit, band=None)
                     output_base_dir, output_base_filename = os.path.split(output_base_filepath)
                     output_base_busy_filepath = f"{output_base_dir}{os.sep}BUSY_{output_base_filename}"
@@ -125,7 +132,7 @@ def calc_stats(features_filepath: str,
                     bands_done = 0
                     for band in bands:
                         # Prepare the output filepaths...
-                        output_band_filepath = get_output_filepath(
+                        output_band_filepath = format_output_filepath(
                                 features_filepath, image_path, output_dir, orbit, band)
                         output_band_dir, output_band_filename = os.path.split(output_band_filepath)
                         output_band_busy_filepath = f"{output_band_dir}{os.sep}BUSY_{output_band_filename}"
@@ -148,47 +155,35 @@ def calc_stats(features_filepath: str,
                         nb_todo -= 1
                         continue
 
-                    # Always make sure there are maximum nb_parallel_max prepare_calc's active
-                    nb_busy = 0
-                    for image_path_tmp in image_dict:
-                        if image_dict[image_path_tmp]['status'] == 'IMAGE_PREPARE_CALC_BUSY':
-                            nb_busy += 1
-                    if nb_busy < nb_parallel_max:
-                        logger.debug(f"nb_busy: {nb_busy}, nb_parallel_max: {nb_parallel_max}, so nb_busy < nb_parallel_max")          
-                        # Start the prepare processing assync
-                        # TODO: possibly it is cleaner to do this per band...
-                        future = pool.submit(prepare_calc, 
-                                            features_filepath,
-                                            id_column,
-                                            image_path,
-                                            output_base_filepath,
-                                            temp_dir,
-                                            log_dir,
-                                            nb_parallel_max)
-                        image_dict[image_path] = {'features_filepath': features_filepath,
-                                                'prepare_calc_future': future, 
-                                                'image_info': image_info,
-                                                'prepare_calc_starttime': datetime.now(),
-                                                'output_base_filepath': output_base_filepath,
-                                                'output_base_busy_filepath': output_base_busy_filepath,
-                                                'status': 'IMAGE_PREPARE_CALC_BUSY'}
-                        
-                        # Jump to next image to start the prepare_calc for it...
-                        continue
-                    else:
-                        # There are already enough prepare's busy, reset i so this image is
-                        # tried again in the next loop...
-                        i -= 1
-
-                # Loop through the images to find which are ready... to start the real calculations...
-                for image_path in image_dict:
+                    # Start the prepare processing assync
+                    # TODO: possibly it is cleaner to do this per band...
+                    future = pool.submit(prepare_calc, 
+                                        features_filepath,
+                                        id_column,
+                                        image_path,
+                                        output_base_filepath,
+                                        temp_dir,
+                                        log_dir,
+                                        nb_parallel_max)
+                    image_dict[image_path] = {'features_filepath': features_filepath,
+                                            'prepare_calc_future': future, 
+                                            'image_info': image_info,
+                                            'prepare_calc_starttime': datetime.now(),
+                                            'output_base_filepath': output_base_filepath,
+                                            'output_base_busy_filepath': output_base_busy_filepath,
+                                            'status': 'IMAGE_PREPARE_CALC_BUSY'}
                     
-                    # Get all info that is available in the dict with futures for the one that has now completed
+                    # Jump to next image to start the prepare_calc for it...
+                    continue
+
+                ##### For images busy preparing: if ready: start real calculation in batches #####
+
+                # Loop through the busy preparations
+                for image_path in filter_on_status(image_dict, 'IMAGE_PREPARE_CALC_BUSY'):
+                    
+                    # If still running, go to next
                     image = image_dict[image_path]
-                        
-                    # If the status isn't PREPARE_CALC_BUSY or if the prepare_calc is still running, go to next...
-                    if(image['status'] != 'IMAGE_PREPARE_CALC_BUSY' 
-                    or image['prepare_calc_future'].running()):
+                    if image['prepare_calc_future'].running():
                         continue
 
                     # Extract the result from the preparation
@@ -203,7 +198,7 @@ def calc_stats(features_filepath: str,
                                 orbit = None
                                 if image['image_info']['satellite'].startswith('S1'):
                                     orbit = image['image_info']['orbit_properties_pass']
-                                output_band_filepath = get_output_filepath(
+                                output_band_filepath = format_output_filepath(
                                         features_filepath, image_path, output_dir, orbit, band)
 
                                 # Create output file
@@ -251,104 +246,104 @@ def calc_stats(features_filepath: str,
                         if nb_errors > nb_errors_max:
                             raise Exception(message) from ex
 
-                # Loop through the completed calculations
-                for calc_stats_batch_id in calc_stats_batch_dict:
-                    # Get some info about the future that has now completed
+                ##### For batches with calc busy, check if ready #####
+
+                # Loop through the busy batche calculations
+                for calc_stats_batch_id in filter_on_status(calc_stats_batch_dict, 'BATCH_CALC_BUSY'):
+                    
+                    # If it is not done yet, continue
                     calc_stats_batch_info = calc_stats_batch_dict[calc_stats_batch_id]
-                    
-                    # If not processed yet, but it is done, get the results
-                    if(calc_stats_batch_info['status'] == 'BATCH_CALC_BUSY' 
-                       and calc_stats_batch_info['calc_stats_future'].done() is True):
+                    if calc_stats_batch_info['calc_stats_future'].done() is False:
+                        continue
 
-                        try:
-                            # Get the result
-                            result = calc_stats_batch_info['calc_stats_future'].result()
-                            if not result:
-                                raise Exception("Returned False?")
-                            
-                            # Set the processed flag to True
-                            calc_stats_batch_info['status'] = 'BATCH_CALC_DONE'
-                            logger.debug(f"Ready processing batch of {calc_stats_batch_info['nb_items_batch']} for features image: {calc_stats_batch_info['image_path']}")
-
-                        except Exception as ex:
-                            message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info}"
-                            logger.exception(message)
-                            nb_errors += 1
-                            if nb_errors > nb_errors_max:
-                                raise Exception(message) from ex 
-
-                # Loop over all image_paths that are busy being calculated to check if there are still calc stats batches busy
-                for image_path in image_dict:
-
-                    # If the image is busy being calculated...
-                    image = image_dict[image_path]
-                    if image['status'] == 'IMAGE_CALC_BUSY':
-
-                        # Check if there are still batches busy for this image...
-                        batches_busy = False
-                        for calc_stats_batch_id in calc_stats_batch_dict:
-                            if(calc_stats_batch_dict[calc_stats_batch_id]['image_path'] == image_path 
-                            and calc_stats_batch_dict[calc_stats_batch_id]['status'] == 'BATCH_CALC_BUSY'):
-                                batches_busy = True
-                                break
+                    try:
+                        # Get the result
+                        result = calc_stats_batch_info['calc_stats_future'].result()
+                        if not result:
+                            raise Exception("Returned False?")
                         
-                        # If no batches are busy anymore for the file_path... cleanup.
-                        if batches_busy == False:
-                            # If all batches are done, the image is done...
-                            image['status'] = 'IMAGE_CALC_DONE'
+                        # Set the processed flag to True
+                        calc_stats_batch_info['status'] = 'BATCH_CALC_DONE'
+                        logger.debug(f"Ready processing batch of {calc_stats_batch_info['nb_items_batch']} for features image: {calc_stats_batch_info['image_path']}")
+
+                    except Exception as ex:
+                        message = f"Exception getting result of calc_stats_image_gdf for {calc_stats_batch_info}"
+                        logger.exception(message)
+                        nb_errors += 1
+                        if nb_errors > nb_errors_max:
+                            raise Exception(message) from ex 
+
+                ##### For images with calc busy, check if they are ready #####
+
+                # Loop through busy image calculations
+                for image_path in filter_on_status(image_dict, 'IMAGE_CALC_BUSY'):
+                
+                    # If there are still batches busy for this image, continue to next image
+                    batches_busy = False
+                    for calc_stats_batch_id in filter_on_status(calc_stats_batch_dict, 'BATCH_CALC_BUSY'):
+                        if calc_stats_batch_dict[calc_stats_batch_id]['image_path'] == image_path:
+                            batches_busy = True
+                            break
+                    if batches_busy == True:
+                        continue
                     
-                            # If the preprocessing created a temp image file, clean it up...
-                            image_prepared_path = image['image_prepared_path']
-                            if image_prepared_path != image_path:
-                                logger.info(f"Remove local temp image copy: {image_prepared_path}")
-                                if os.path.isdir(image_prepared_path):           
-                                    shutil.rmtree(image_prepared_path, ignore_errors=True)
-                                else:
-                                    os.remove(image_prepared_path)
+                    # All batches are done, so the image is done
+                    image = image_dict[image_path]
+                    image['status'] = 'IMAGE_CALC_DONE'
+            
+                    # If the preprocessing created a temp image file, clean it up
+                    image_prepared_path = image['image_prepared_path']
+                    if image_prepared_path != image_path:
+                        logger.info(f"Remove local temp image copy: {image_prepared_path}")
+                        if os.path.isdir(image_prepared_path):           
+                            shutil.rmtree(image_prepared_path, ignore_errors=True)
+                        else:
+                            os.remove(image_prepared_path)
 
-                            # If the preprocessing created temp pickle files with features, clean them up...
-                            shutil.rmtree(image['temp_features_dir'], ignore_errors=True)
+                    # If the preprocessing created temp pickle files with features, clean them up
+                    shutil.rmtree(image['temp_features_dir'], ignore_errors=True)
 
-                            # Rename the (completed) output files
-                            output_base_filepath_noext, output_base_ext = os.path.splitext(image['output_base_filepath'])
-                            output_base_busy_filepath_noext, output_base_busy_ext = os.path.splitext(image['output_base_busy_filepath'])
-                            for band in bands:
-                                # TODO: creating the output filepaths should probably be cleaner centralised...
-                                output_band_busy_filepath = f"{output_base_busy_filepath_noext}_{band}{output_base_busy_ext}"
-                                output_band_filepath = f"{output_base_filepath_noext}_{band}{output_base_ext}"
+                    # Rename the (completed) output files
+                    output_base_filepath_noext, output_base_ext = os.path.splitext(image['output_base_filepath'])
+                    output_base_busy_filepath_noext, output_base_busy_ext = os.path.splitext(image['output_base_busy_filepath'])
+                    for band in bands:
+                        # TODO: creating the output filepaths should probably be cleaner centralised
+                        output_band_busy_filepath = f"{output_base_busy_filepath_noext}_{band}{output_base_busy_ext}"
+                        output_band_filepath = f"{output_base_filepath_noext}_{band}{output_base_ext}"
 
-                                # If BUSY output file exists, rename it
-                                if os.path.exists(output_band_busy_filepath):
-                                    os.rename(output_band_busy_filepath, output_band_filepath)
-                                else:
-                                    # If BUSY output file doesn't exist, create empty file
-                                    logger.info(f"No features found overlapping image after processing, create done file: {output_band_filepath}")
-                                    create_file_atomic(output_band_filepath)
+                        # If BUSY output file exists, rename it
+                        if os.path.exists(output_band_busy_filepath):
+                            os.rename(output_band_busy_filepath, output_band_filepath)
+                        else:
+                            # If BUSY output file doesn't exist, create empty file
+                            logger.info(f"No features found overlapping image after processing, create done file: {output_band_filepath}")
+                            create_file_atomic(output_band_filepath)
 
-                            # Log the progress and prediction speed
-                            logger.info(f"Ready processing image: {image_path}")
-                            nb_done_latestbatch = 1
-                            nb_done_total += nb_done_latestbatch
-                            progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image['calc_starttime'])
-                            logger.info(progress_msg)
+                    # Log the progress and prediction speed
+                    logger.info(f"Ready processing image: {image_path}")
+                    nb_done_latestbatch = 1
+                    nb_done_total += nb_done_latestbatch
+                    progress_msg = format_progress_message(
+                            nb_todo, nb_done_total, nb_done_latestbatch, 
+                            start_time, image['calc_starttime'])
+                    logger.info(progress_msg)
 
-                # If all images have been started, check if there are still images busy in dict 
-                all_done = False
-                if i == len(image_paths):
-                    all_done = True
-                    for image_path in image_dict:
-                        if image_dict[image_path]['status'] != 'IMAGE_CALC_DONE':
-                            all_done = False
-                            break   
+                ##### Check if we are completely ready #####
 
-                # If no processing is needed, or if all processing is ready, stop the never ending loop...
-                if len(image_dict) == 0 or all_done is True:
-                    if nb_errors > 0:
-                        raise Exception(f"Ready processing, but there were {nb_errors} errors!")
-                    break 
-                else:
-                    # Sleep before starting next iteration...
-                    time.sleep(0.1)
+                # This is the case if:
+                #     - no processing is needed (= empty image_dict)
+                #     - OR if all processing is started + is done (= status IMAGE_CALC_DONE)
+                if(len(image_dict) == 0
+                   or (i == len(image_paths)
+                       and len(image_dict) == len(filter_on_status(image_dict, 'IMAGE_CALC_DONE')))):                   
+                    if nb_errors == 0:
+                        # Ready, so jump out of unending while loop
+                        break 
+                    else:
+                        raise Exception(f"Ready processing, but there were {nb_errors} errors!")                       
+
+                # Some sleep before starting next iteration...
+                time.sleep(0.1)
 
         except KeyboardInterrupt:
             # If CTRL+C is used, shut down pool and kill children
@@ -368,11 +363,23 @@ def calc_stats(features_filepath: str,
 
         logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
 
-def get_output_filepath(features_filepath: str, 
-                        image_path: str,
-                        output_dir: str,
-                        orbit_properties_pass: str,
-                        band: str):
+def filter_on_status(dict: dict,
+                     status_to_check: str) -> []:
+    """ 
+    Function to check the number of images that are being prepared for processing
+    """
+    keys_with_status = []
+    for key in dict:
+        if dict[key]['status'] == status_to_check:
+            keys_with_status.append(key)
+    return keys_with_status
+
+def format_output_filepath(
+        features_filepath: str, 
+        image_path: str,
+        output_dir: str,
+        orbit_properties_pass: str,
+        band: str):
     """
     Prepare the output filepath.
     """
@@ -409,11 +416,12 @@ def get_output_filepath(features_filepath: str,
     output_filepath = f"{output_filepath_noext}.sqlite"
     return output_filepath
 
-def get_progress_message(nb_todo: int, 
-                         nb_done_total: int, 
-                         nb_done_latestbatch: int, 
-                         start_time: datetime, 
-                         start_time_latestbatch: datetime) -> str:   
+def format_progress_message(
+        nb_todo: int, 
+        nb_done_total: int, 
+        nb_done_latestbatch: int, 
+        start_time: datetime, 
+        start_time_latestbatch: datetime) -> str:   
     """
     Returns a progress message based on the input.
 
@@ -533,8 +541,7 @@ def prepare_calc(features_filepath,
         try:
             features_gdf_batch.to_pickle(pickle_filepath)
         except Exception as ex:
-            logger.exception(f"Exception writing pickle: {pickle_filepath}")
-            raise 
+            raise Exception(f"Exception writing pickle: {pickle_filepath}") from ex
         batch_info["filepath"] = pickle_filepath
         batch_info["nb_items"] = len(features_gdf_batch.index)
         ret_val["feature_batches"].append(batch_info)
@@ -562,7 +569,7 @@ def load_features_file(features_filepath: str,
     """
     # Load parcel input file and preprocess it: remove excess columns + reproject if needed.
     # By convention, the features filename should end on the projection... so extract epsg from filename
-    features_filepath_noext, ext = os.path.splitext(features_filepath)
+    features_filepath_noext, _ = os.path.splitext(features_filepath)
     if features_filepath_noext.find('_') != -1:
         splitted = features_filepath_noext.split('_')
         features_epsg = splitted[len(splitted)-1]
@@ -692,13 +699,14 @@ def load_features_file(features_filepath: str,
     # Ready, so return result...
     return features_gdf
 
-def calc_stats_image_gdf(features_gdf,
-                         id_column: str,
-                         image_path: str,
-                         bands: [],
-                         output_base_filepath: str,
-                         log_dir: str,
-                         future_start_time = None) -> bool:
+def calc_stats_image_gdf(
+        features_gdf,
+        id_column: str,
+        image_path: str,
+        bands: [],
+        output_base_filepath: str,
+        log_dir: str,
+        future_start_time = None) -> bool:
     """
 
     Returns True if succesfully completed.
@@ -727,14 +735,13 @@ def calc_stats_image_gdf(features_gdf,
         features_gdf = pd.read_pickle(features_gdf_pkl_filepath)
         logger.info(f"Read pickle with {len(features_gdf.index)} features ready")
 
-
-
+    # Init some variables
+    quality_band = 'SCL-20m'
+    features_total_bounds = features_gdf.total_bounds
     output_base_filepath_noext, output_ext = os.path.splitext(output_base_filepath)
 
     # If the image has a quality band, check that one first so parcels with
     # bad pixels can be removed as the data can't be trusted anyway
-    quality_band = 'SCL-20m'
-    features_total_bounds = features_gdf.total_bounds
     if quality_band in bands:
         # Specific for Scene Classification (SCL) band, interprete already
         # Folowing values are considered "bad":

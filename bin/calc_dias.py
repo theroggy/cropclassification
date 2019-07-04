@@ -127,13 +127,14 @@ def main():
 
             logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
 
-        calc_ts.calc_stats(features_filepath=input_features_filepath,
-                        id_column=conf.columns['id'],
-                        image_paths=input_image_filepaths,
-                        bands=['VV', 'VH'],
-                        output_dir=output_dir,
-                        temp_dir=temp_dir,
-                        log_dir=log_dir)
+        calc_ts.calc_stats_per_image(
+                features_filepath=input_features_filepath,
+                id_column=conf.columns['id'],
+                image_paths=input_image_filepaths,
+                bands=['VV', 'VH'],
+                output_dir=output_dir,
+                temp_dir=temp_dir,
+                log_dir=log_dir)
 
         ##### Process S2 images #####
         input_image_filepaths = []
@@ -149,14 +150,15 @@ def main():
 
         # TODO: refactor underlying code so the SCL band is used regardless of it being passed here
         max_cloudcover_pct = conf.timeseries.getfloat('max_cloudcover_pct')
-        calc_ts.calc_stats(features_filepath=input_features_filepath,
-                        id_column=conf.columns['id'],
-                        image_paths=input_image_filepaths,
-                        bands=['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'SCL-20m'],
-                        output_dir=output_dir,
-                        temp_dir=temp_dir,
-                        log_dir=log_dir,
-                        max_cloudcover_pct=max_cloudcover_pct)
+        calc_ts.calc_stats_per_image(
+                features_filepath=input_features_filepath,
+                id_column=conf.columns['id'],
+                image_paths=input_image_filepaths,
+                bands=['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'SCL-20m'],
+                output_dir=output_dir,
+                temp_dir=temp_dir,
+                log_dir=log_dir,
+                max_cloudcover_pct=max_cloudcover_pct)
 
         ##### Process S1 Coherence images #####   
         input_image_filepaths = []
@@ -170,13 +172,13 @@ def main():
             input_image_filepaths = input_image_filepaths[:10]
             logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
 
-        calc_ts.calc_stats(features_filepath=input_features_filepath,
-                        id_column=conf.columns['id'],
-                        image_paths=input_image_filepaths,
-                        bands=['VV', 'VH'],
-                        output_dir=output_dir,
-                        temp_dir=temp_dir,
-                        log_dir=log_dir)
+        calc_ts.calc_stats_per_image(features_filepath=input_features_filepath,
+                id_column=conf.columns['id'],
+                image_paths=input_image_filepaths,
+                bands=['VV', 'VH'],
+                output_dir=output_dir,
+                temp_dir=temp_dir,
+                log_dir=log_dir)
 
 if __name__ == '__main__':
     main()
