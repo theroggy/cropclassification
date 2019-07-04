@@ -52,7 +52,7 @@ def main():
             end_date_str=f"{year}-08-15",
             #sensordata_to_get=conf.marker.getlist('sensordata_to_use'),
             sensordata_to_get=['SENSORDATA_S1_COHERENCE'],
-            output_dir=timeseries_periodic_dir,
+            dest_data_dir=timeseries_periodic_dir,
             force=False)
 
 if __name__ == '__main__':
