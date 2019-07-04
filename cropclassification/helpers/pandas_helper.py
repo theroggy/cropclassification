@@ -38,12 +38,12 @@ def read_file(filepath: str,
     elif ext_lower == '.parquet':
         return pd.read_parquet(filepath, columns=columns)
     elif ext_lower == '.sqlite':
-        sql_db = sqlite3.connect(filepath)
-        if columns is None:
-            cols_to_select = '*'
-        else:
-            cols_to_select = ', '.join(columns)
         try:
+            sql_db = sqlite3.connect(filepath)
+            if columns is None:
+                cols_to_select = '*'
+            else:
+                cols_to_select = ', '.join(columns)
             data_read_df = pd.read_sql_query(f"select {cols_to_select} from {table_name}", sql_db)
         except Exception as ex:
             raise Exception(f"Error reading data from {filepath}") from ex
@@ -84,10 +84,13 @@ def to_file(df: pd.DataFrame,
             if_exists = 'append'
         elif os.path.exists(filepath):
             os.remove(filepath)
-
-        sql_db = sqlite3.connect(filepath)
-        df.to_sql(name=table_name, con=sql_db, if_exists=if_exists, index=index, 
-                  chunksize=50000)
-        sql_db.close()
+        try:
+            sql_db = sqlite3.connect(filepath)
+            df.to_sql(name=table_name, con=sql_db, if_exists=if_exists, 
+                      index=index, chunksize=50000)
+        except Exception as ex:
+            raise Exception(f"Error in to_file to file {filepath}") from ex
+        finally:
+            sql_db.close()
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
