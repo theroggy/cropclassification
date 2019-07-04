@@ -69,9 +69,8 @@ def main():
             input_features_filename = "Prc_BEFL_2017_2019-06-14_bufm5.shp"
         elif year == 2018:
             input_features_filename = "Prc_BEFL_2018_2019-06-14_bufm5.shp"
-            #input_features_filename = "Prc_BEFL_2018_2019-06-14_bufm4.shp"
         elif year == 2019:
-            input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
+            #input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
             input_features_filename = "Prc_BEFL_2019_2019-07-02_bufm5.shp"
         else:
             raise Exception(f"Not a valid year: {year}")
@@ -149,13 +148,15 @@ def main():
             logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
 
         # TODO: refactor underlying code so the SCL band is used regardless of it being passed here
+        max_cloudcover_pct = conf.timeseries.getfloat('max_cloudcover_pct')
         calc_ts.calc_stats(features_filepath=input_features_filepath,
                         id_column=conf.columns['id'],
                         image_paths=input_image_filepaths,
                         bands=['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'SCL-20m'],
                         output_dir=output_dir,
                         temp_dir=temp_dir,
-                        log_dir=log_dir)
+                        log_dir=log_dir,
+                        max_cloudcover_pct=max_cloudcover_pct)
 
         ##### Process S1 Coherence images #####   
         input_image_filepaths = []

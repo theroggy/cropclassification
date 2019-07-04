@@ -43,6 +43,7 @@ def calc_stats(features_filepath: str,
                output_dir: str,
                temp_dir: str,
                log_dir: str,
+               max_cloudcover_pct: float = -1,
                force: bool = False):
     """
     Calculate the statistics.
@@ -98,8 +99,9 @@ def calc_stats(features_filepath: str,
                         continue
 
                     # If sentinel2 and cloud coverage too high... skip
-                    max_cloudcover_pct = 10
-                    if image_info['satellite'].startswith('S2') and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct:
+                    if(max_cloudcover_pct >= 0 
+                       and image_info['satellite'].startswith('S2') 
+                       and image_info['Cloud_Coverage_Assessment'] > max_cloudcover_pct):
                         logger.info(f"SKIP image, Cloud_Coverage_Assessment: {image_info['Cloud_Coverage_Assessment']:0.2f} > {max_cloudcover_pct} for {image_path}")
                         nb_todo -= 1
                         continue
