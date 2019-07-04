@@ -45,7 +45,7 @@ def to_file(gdf: gpd.GeoDataFrame,
             gdf = gdf.reset_index(inplace=False)
         gdf.to_file(filepath)
     elif ext_lower == '.gpkg':
-        gdf.to_file(filepath, layer=layer, driver="GPKG", index=index)
+        gdf.to_file(filepath, layer=layer, driver="GPKG")
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
         
