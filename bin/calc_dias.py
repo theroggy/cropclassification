@@ -58,12 +58,6 @@ def main():
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
 
-        # Get some general config
-        columndata_ext = conf.general['columndata_ext']
-        rowdata_ext = conf.general['rowdata_ext']
-        output_ext = conf.general['output_ext']
-        geofile_ext = conf.general['geofile_ext']
-
         # Input features file depends on the year
         if year == 2017:
             input_features_filename = "Prc_BEFL_2017_2019-06-14_bufm5.shp"
