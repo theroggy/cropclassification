@@ -39,6 +39,7 @@ def read_file(filepath: str,
         return pd.read_parquet(filepath, columns=columns)
     elif ext_lower == '.sqlite':
         try:
+            sql_db = None
             sql_db = sqlite3.connect(filepath)
             if columns is None:
                 cols_to_select = '*'
@@ -48,7 +49,8 @@ def read_file(filepath: str,
         except Exception as ex:
             raise Exception(f"Error reading data from {filepath}") from ex
         finally:
-            sql_db.close()
+            if sql_db is not None:
+                sql_db.close()
         return data_read_df
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
@@ -85,12 +87,14 @@ def to_file(df: pd.DataFrame,
         elif os.path.exists(filepath):
             os.remove(filepath)
         try:
+            sql_db = None
             sql_db = sqlite3.connect(filepath)
             df.to_sql(name=table_name, con=sql_db, if_exists=if_exists, 
                       index=index, chunksize=50000)
         except Exception as ex:
             raise Exception(f"Error in to_file to file {filepath}") from ex
         finally:
-            sql_db.close()
+            if sql_db is not None:
+                sql_db.close()
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
