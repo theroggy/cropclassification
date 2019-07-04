@@ -784,31 +784,33 @@ def calc_stats_image_gdf(features_gdf,
             return True
 
     # Loop over image bands
-    #image_id = os.path.basename(image_path)
     for band in bands:
+        # The quality band is already treated, so skip it here
         if band == 'SCL-20m':
-            # Skip the quality band, used it already
             continue
-        else:
-            # Get the image data and calculate statistics
-            logger.info(f"Read band {band}")
-            image_data = get_image_data(image_path, bounds=features_gdf.total_bounds, bands=[band], pixel_buffer=1)
-            
-            # Double the resolution of the image
-            image_data_up = image_data[band]['data'].repeat(2, axis=0).repeat(2, axis=1)
-            affine_up = image_data[band]['transform'] * Affine.scale(0.5)
-            #logger.debug(f"affine: {image_data[band]['transform']}, scale: {Affine.scale(0.5)}, affine_up: {affine_up}")
-            
-            logger.info(f"Calculate zonal statistics for band {band} on {len(features_gdf.index)} features")
-            features_stats = zonal_stats(features_gdf, image_data_up, 
-                    affine=affine_up, prefix="", nodata=0, all_touched=True,
-                    stats=['count', 'mean', 'std', 'min', 'max'])
-            features_stats_df = pd.DataFrame(features_stats)
 
-            # Add original id column to statistics dataframe
-            features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
-            features_stats_df['count'] = features_stats_df['count'].divide(4)
-            
+        # Get the image data and calculate statistics
+        logger.info(f"Read band {band} for bounds {features_total_bounds}")
+        image_data = get_image_data(
+                image_path, bounds=features_total_bounds, bands=[band], pixel_buffer=1)
+        
+        # Upsample the image to double resolution, so we can use all_touched=True without 
+        # introducing big errors due to mixels
+        upsample_factor = 2
+        image_data_upsampled = (image_data[band]['data'].repeat(upsample_factor, axis=0)
+                                                        .repeat(upsample_factor, axis=1))
+        affine_upsampled = image_data[band]['transform'] * Affine.scale(1/upsample_factor)
+
+        logger.info(f"Calculate zonal statistics for band {band} on {len(features_gdf.index)} features")
+        features_stats = zonal_stats(features_gdf, image_data_upsampled, 
+                affine=affine_upsampled, prefix="", nodata=0, all_touched=True,
+                stats=['count', 'mean', 'std', 'min', 'max'])
+        features_stats_df = pd.DataFrame(features_stats)
+        features_stats_df['count'] = features_stats_df['count'].divide(upsample_factor*2)
+
+        # Add original id column to statistics dataframe
+        features_stats_df.insert(loc=0, column=id_column, value=features_gdf[id_column])
+
         # Remove rows with empty data
         features_stats_df.dropna(inplace=True)
         if len(features_stats_df.index) == 0:
