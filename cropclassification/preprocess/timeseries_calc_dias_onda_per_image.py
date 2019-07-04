@@ -90,9 +90,10 @@ def calc_stats(features_filepath: str,
                     i += 1
                     try:
                         image_info = get_image_info(image_path)
-                    except Exception as ex:
+                    except:
                         # If not possible to get info for image, log and skip it
-                        logger.exception(f"SKIP image, because error getting info for {image_path}: {ex}")
+                        nb_errors += 1 
+                        logger.exception(f"SKIP image, because error getting info for {image_path}")
                         nb_todo -= 1
                         continue
 
@@ -145,7 +146,7 @@ def calc_stats(features_filepath: str,
                         nb_todo -= 1
                         continue
 
-                    # Always make sure there are nb_parallel_max prepare_calc's active
+                    # Always make sure there are maximum nb_parallel_max prepare_calc's active
                     nb_busy = 0
                     for image_path_tmp in image_dict:
                         if image_dict[image_path_tmp]['status'] == 'IMAGE_PREPARE_CALC_BUSY':
@@ -255,7 +256,7 @@ def calc_stats(features_filepath: str,
                     
                     # If not processed yet, but it is done, get the results
                     if(calc_stats_batch_info['status'] == 'BATCH_CALC_BUSY' 
-                    and calc_stats_batch_info['calc_stats_future'].done() is True):
+                       and calc_stats_batch_info['calc_stats_future'].done() is True):
 
                         try:
                             # Get the result
@@ -318,7 +319,7 @@ def calc_stats(features_filepath: str,
                                 if os.path.exists(output_band_busy_filepath):
                                     os.rename(output_band_busy_filepath, output_band_filepath)
                                 else:
-                                    # If BUSY output file soesn't exist, create empty file
+                                    # If BUSY output file doesn't exist, create empty file
                                     logger.info(f"No features found overlapping image after processing, create done file: {output_band_filepath}")
                                     create_file_atomic(output_band_filepath)
 
@@ -329,19 +330,19 @@ def calc_stats(features_filepath: str,
                             progress_msg = get_progress_message(nb_todo, nb_done_total, nb_done_latestbatch, start_time, image['calc_starttime'])
                             logger.info(progress_msg)
 
-                # If all images have been started, loop over all images to check if they are all done
+                # If all images have been started, check if there are still images busy in dict 
+                all_done = False
                 if i == len(image_paths):
                     all_done = True
-                    for image_path in image_paths:
-                        if(image_path in image_dict
-                        and image_dict[image_path]['status'] != 'IMAGE_CALC_DONE'):
+                    for image_path in image_dict:
+                        if image_dict[image_path]['status'] != 'IMAGE_CALC_DONE':
                             all_done = False
-                            break
-                else:
-                    all_done = False
+                            break   
 
                 # If no processing is needed, or if all processing is ready, stop the never ending loop...
                 if len(image_dict) == 0 or all_done is True:
+                    if nb_errors > 0:
+                        raise Exception(f"Ready processing, but there were {nb_errors} errors!")
                     break 
                 else:
                     # Sleep before starting next iteration...
@@ -353,13 +354,15 @@ def calc_stats(features_filepath: str,
             print('Worker processes are being stopped, followed by exit!')
 
             # Stop process pool + kill children + exit
-            pool.shutdown(wait=False)
-            parent = psutil.Process(os.getpid())
-            children = parent.children(recursive=True)
-            for process_pid in children:
-                print(f"Kill child with pid {process_pid}")
-                process_pid.send_signal(signal.SIGTERM)
-            sys.exit()
+            try:
+                pool.shutdown(wait=False)
+                parent = psutil.Process(os.getpid())
+                children = parent.children(recursive=True)
+                for process_pid in children:
+                    print(f"Kill child with pid {process_pid}")
+                    process_pid.send_signal(signal.SIGTERM)
+            finally:
+                sys.exit(1)
 
         logger.info(f"Time taken to calculate data for {nb_todo} images: {(datetime.now()-start_time).total_seconds()} sec")
 
@@ -774,7 +777,7 @@ def calc_stats_image_gdf(features_gdf,
         features_gdf.insert(loc=0, column=nb_bad_pixels_column, value=features_stats_df[nb_bad_pixels_column])
         features_gdf = features_gdf.loc[features_gdf[nb_bad_pixels_column] == 0]
         features_gdf.drop(columns=[nb_bad_pixels_column], inplace=True)
-
+        
         # Check if there are still features to be calculated
         if len(features_gdf.index) == 0:
             logger.info(f"After checking quality band, no more features to be calculated, so stop")
@@ -811,7 +814,6 @@ def calc_stats_image_gdf(features_gdf,
         if len(features_stats_df.index) == 0:
             logger.info(f"No data found for band {band}, so no use to process other bands")
             return True
-
         features_stats_df.set_index(id_column, inplace=True)
         output_band_filepath = f"{output_base_filepath_noext}_{band}{output_ext}"
         logger.info(f"Write data for {len(features_stats_df.index)} parcels found to {output_band_filepath}")
@@ -837,7 +839,6 @@ def get_image_data(image_path,
         bounds: the bounds to be read, in coordinates in the projection of the image
         bands: list of bands to be read, eg. "VV", "VH",... 
         pixel_buffer: number to pixels to take as buffer around the bounds provided in pixels
-        db_to_natural: if the image data is in dB, convert it to natural values
     """
     # Get info about the image
     image_info = get_image_info(image_path)
@@ -1207,7 +1208,16 @@ def projected_bounds_to_window(projected_bounds,
     
     # Ready... prepare to return...
     window_to_read = rasterio.windows.Window(col_off, row_off, width, height)
-    logger.debug(f"window_to_read_raw: {window_to_read_raw}, window_to_read: {window_to_read}, image_pixel_width: {image_pixel_width}, image_pixel_height: {image_pixel_height}, file transform: {image_transform}")
+
+    # Debug info
+    """
+    bounds_to_read = rasterio.windows.bounds(window_to_read, image_transform)
+    logger.debug(f"projected_bounds: {projected_bounds}, "
+                + f"window_to_read_raw: {window_to_read_raw}, window_to_read: {window_to_read}, " 
+                + f"image_pixel_width: {image_pixel_width}, image_pixel_height: {image_pixel_height}, "
+                + f"file transform: {image_transform}, bounds_to_read: {bounds_to_read}")
+    """
+
     return window_to_read
 
 def create_file_atomic(filename):
