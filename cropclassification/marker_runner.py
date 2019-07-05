@@ -92,8 +92,7 @@ def run(markertype_to_calc: str,
         raise Exception(message)
 
     # Get some general config
-    columndata_ext = conf.general['columndata_ext']
-    rowdata_ext = conf.general['rowdata_ext']
+    data_ext = conf.general['data_ext']
     output_ext = conf.general['output_ext']
     geofile_ext = conf.general['geofile_ext']
        
@@ -110,7 +109,7 @@ def run(markertype_to_calc: str,
     input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
     buffer = conf.marker.getint('buffer')       
     input_parcel_nogeo_filepath = os.path.join(
-            input_preprocessed_dir, f"{input_parcel_filename_noext}{columndata_ext}")
+            input_preprocessed_dir, f"{input_parcel_filename_noext}{data_ext}")
     imagedata_input_parcel_filename_noext = f"{input_parcel_filename_noext}_bufm{buffer}"
     imagedata_input_parcel_filepath = os.path.join(
             input_preprocessed_dir, f"{imagedata_input_parcel_filename_noext}{geofile_ext}")
@@ -155,9 +154,9 @@ def run(markertype_to_calc: str,
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess['classtype_to_prepare']
     parcel_filepath = os.path.join(
-            run_dir, f"{input_parcel_filename_noext}_parcel{columndata_ext}")
+            run_dir, f"{input_parcel_filename_noext}_parcel{data_ext}")
     parcel_pixcount_filepath = os.path.join(
-            timeseries_periodic_dir, f"{base_filename}_pixcount{columndata_ext}")
+            timeseries_periodic_dir, f"{base_filename}_pixcount{data_ext}")
     class_pre.prepare_input(
             input_parcel_filepath=input_parcel_nogeo_filepath,
             input_parcel_filetype=input_parcel_filetype,
@@ -167,7 +166,7 @@ def run(markertype_to_calc: str,
 
     # Collect all data needed to do the classification in one input file
     parcel_classification_data_filepath = os.path.join(
-            run_dir, f"{base_filename}_parcel_classdata{rowdata_ext}")
+            run_dir, f"{base_filename}_parcel_classdata{data_ext}")
     ts.collect_and_prepare_timeseries_data(
             input_parcel_filepath=input_parcel_nogeo_filepath,
             timeseries_dir=timeseries_periodic_dir,
@@ -181,7 +180,7 @@ def run(markertype_to_calc: str,
     # STEP 4: Train and test if necessary... and predict
     #-------------------------------------------------------------
     parcel_predictions_proba_all_filepath = os.path.join(
-            run_dir, f"{base_filename}_predict_proba_all{rowdata_ext}")
+            run_dir, f"{base_filename}_predict_proba_all{data_ext}")
 
     # if there is no model to use specified, train one!
     if input_model_to_use_filepath is None:
@@ -190,9 +189,9 @@ def run(markertype_to_calc: str,
         # Remark: this creates a list of representative test parcel + a list of (candidate) training parcel
         balancing_strategy = conf.marker['balancing_strategy']
         parcel_train_filepath = os.path.join(run_dir, 
-                f"{base_filename}_parcel_train{columndata_ext}")
+                f"{base_filename}_parcel_train{data_ext}")
         parcel_test_filepath = os.path.join(
-                run_dir, f"{base_filename}_parcel_test{columndata_ext}")
+                run_dir, f"{base_filename}_parcel_test{data_ext}")
         class_pre.create_train_test_sample(
                 input_parcel_filepath=parcel_filepath,
                 output_parcel_train_filepath=parcel_train_filepath,
@@ -203,7 +202,7 @@ def run(markertype_to_calc: str,
         classifier_ext = conf.classifier['classifier_ext']
         classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + f"_classifier{classifier_ext}"
         parcel_predictions_proba_test_filepath = os.path.join(
-                run_dir, f"{base_filename}_predict_proba_test{rowdata_ext}")
+                run_dir, f"{base_filename}_predict_proba_test{data_ext}")
         classification.train_test_predict(
                 input_parcel_train_filepath=parcel_train_filepath,
                 input_parcel_test_filepath=parcel_test_filepath,
@@ -231,7 +230,7 @@ def run(markertype_to_calc: str,
     # If it was necessary to train, there will be a test prediction... so postprocess it
     if input_model_to_use_filepath is None:
         parcel_predictions_test_filepath = os.path.join(
-                run_dir, f"{base_filename}_predict_test{output_ext}")
+                run_dir, f"{base_filename}_predict_test{data_ext}")
         class_post.calc_top3_and_consolidation(
                 input_parcel_filepath=parcel_test_filepath,
                 input_parcel_probabilities_filepath=parcel_predictions_proba_test_filepath,
@@ -239,7 +238,7 @@ def run(markertype_to_calc: str,
         
     # Postprocess predictions
     parcel_predictions_all_filepath = os.path.join(
-            run_dir, f"{base_filename}_predict_all{output_ext}")
+            run_dir, f"{base_filename}_predict_all{data_ext}")
     parcel_predictions_all_output_filepath = os.path.join(
             run_dir, f"{base_filename}_predict_all_output{output_ext}")
     class_post.calc_top3_and_consolidation(
