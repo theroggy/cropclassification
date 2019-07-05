@@ -120,7 +120,7 @@ def train(input_parcel_train_filepath: str,
     # Read the test/validation data
     logger.info(f"Read test file: {input_parcel_test_filepath}")
     test_df = pdh.read_file(input_parcel_test_filepath, 
-                             columns=[conf.columns['id'], conf.columns['class']])
+                            columns=[conf.columns['id'], conf.columns['class']])
     if test_df.index.name != conf.columns['id']:
         test_df.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read test file ready')
@@ -159,13 +159,13 @@ def predict(input_parcel_filepath: str,
     # Read the input parcels
     logger.info(f"Read input file: {input_parcel_filepath}")
     input_parcel_df = pdh.read_file(input_parcel_filepath,
-                                    columns=[conf.columns['id'], conf.columns['class']])
+            columns=[conf.columns['id'], conf.columns['class'], conf.columns['class_declared']])
     if input_parcel_df.index.name != conf.columns['id']:
         input_parcel_df.set_index(conf.columns['id'], inplace=True)
     logger.debug('Read train file ready')
 
     # For parcels of a class that should be ignored, don't predict
-    input_parcel_df = input_parcel_df.loc[~input_parcel_df[conf.columns['class']]
+    input_parcel_df = input_parcel_df.loc[~input_parcel_df[conf.columns['class_declared']]
                                            .isin(conf.marker.getlist('classes_to_ignore'))]
 
     # If the classification data isn't passed as dataframe, read it from the csv

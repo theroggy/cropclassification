@@ -154,6 +154,7 @@ def predict_proba(parcel_df: pd.DataFrame,
 
     # Some basic checks that input is ok
     column_class = conf.columns['class']
+    column_class_declared = conf.columns['class_declared']
     parcel_df.reset_index(inplace=True)
     if(conf.columns['id'] not in parcel_df.columns
        or column_class not in parcel_df.columns):
@@ -163,7 +164,8 @@ def predict_proba(parcel_df: pd.DataFrame,
 
     # Now do final preparation for the classification
     parcel_classes_df = parcel_df[column_class]
-    cols_to_keep = parcel_df.columns.difference([conf.columns['id'], column_class])
+    cols_to_keep = parcel_df.columns.difference(
+            [conf.columns['id'], column_class, column_class_declared])
     parcel_data_df = parcel_df[cols_to_keep]
     parcel_data_df.sort_index(axis=1, inplace=True)
 
@@ -192,8 +194,10 @@ def predict_proba(parcel_df: pd.DataFrame,
     classifier_classes_filepath = classifier_filepath_noext + '_classes.txt'
     with open(classifier_classes_filepath, "r") as file:
         classes_dict = eval(file.readline())
-    id_class_proba = np.concatenate([parcel_df[[conf.columns['id'], column_class]].values, class_proba], axis=1)
-    cols = [conf.columns['id'], column_class]
+    id_class_proba = np.concatenate(
+            [parcel_df[[conf.columns['id'], column_class, column_class_declared]].values, 
+             class_proba], axis=1)
+    cols = [conf.columns['id'], column_class, column_class_declared]
     cols.extend(classes_dict)
     proba_df = pd.DataFrame(id_class_proba, columns=cols)
     proba_df.set_index(keys=conf.columns['id'], inplace=True)

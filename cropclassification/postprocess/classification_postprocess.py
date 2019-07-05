@@ -29,7 +29,11 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
                                 output_predictions_filepath: str,
                                 output_predictions_output_filepath: str = None,
                                 force: bool = False):
-    """Calculate the top3 prediction and a consolidation prediction.
+    """
+    Calculate the top3 prediction and a consolidation prediction.
+
+    Remark: in this logic the declared crop/class (class_declared) is used, as we want to compare 
+    with the declaration of the farmer, rather than taking into account corrections already.
     
     Args:
         input_parcel_filepath (str): [description]
@@ -61,9 +65,30 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
     cols_to_join = top3_df.columns.difference(input_parcel_df.columns)
     pred_df = input_parcel_df.join(top3_df[cols_to_join], how='left')
 
-    add_doubt_columns(pred_df, classified_classes=proba_df.columns.to_list())
+    # The parcels added by the join don't have a prediction yet, so apply it
+    # For the ignore classes, set the prediction to the ignore type
+    classes_to_ignore = conf.marker.getlist('classes_to_ignore')
+    pred_df.loc[pred_df[conf.columns['class_declared']].isin(classes_to_ignore), 
+                'pred1'] = pred_df[conf.columns['class_declared']]
+    # For all other parcels without prediction there must have been no data 
+    # available for a classification, so set prediction to NODATA
+    pred_df['pred1'].fillna('NODATA', inplace=True)
+     
+    # Add doubt columns
+    add_doubt_column(pred_df=pred_df, 
+                     new_pred_column=conf.columns['prediction_cons'],
+                     apply_doubt_min_nb_pixels=True)
+    add_doubt_column(pred_df=pred_df, 
+                     new_pred_column=conf.columns['prediction_full_alpha'],
+                     apply_doubt_min_nb_pixels=True,
+                     apply_doubt_marker_specific=True)
 
-    logger.info("Write final prediction data to file")
+    # Calculate the status of the consolidated prediction (OK=usable, NOK=not)
+    pred_df.loc[pred_df[conf.columns['prediction_cons']].isin(proba_df.columns.to_list()), 
+                conf.columns['prediction_cons_status']] = 'OK'
+    pred_df[conf.columns['prediction_cons_status']].fillna('NOK', inplace=True)    
+
+    logger.info("Write full prediction data to file")
     pdh.to_file(pred_df, output_predictions_filepath)
 
     # Create final output file with the most important info
@@ -133,128 +158,118 @@ def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
     top3_pred = np.concatenate([top3_pred_classes, top3_pred_values], axis=1)
     # Concatenate the ids, the classes and the top3 predictions
     id_class_top3 = np.concatenate(
-            [proba_df[[conf.columns['id'], conf.columns['class']]].values, top3_pred], axis=1)
+            [proba_df[[conf.columns['id'], conf.columns['class_declared']]].values, top3_pred], axis=1)
 
     # Convert to dataframe
     top3_df = pd.DataFrame(id_class_top3,
-                           columns=[conf.columns['id'], conf.columns['class'],
-                                    conf.columns['prediction'], 'pred2', 'pred3',
+                           columns=[conf.columns['id'], conf.columns['class_declared'],
+                                    'pred1', 'pred2', 'pred3',
                                     'pred1_prob', 'pred2_prob', 'pred3_prob'])
 
     return top3_df
 
-def add_doubt_columns(pred_df: pd.DataFrame,
-                      classified_classes: []):
-
-    # For the ignore classes, set the prediction to the ignore type
-    classes_to_ignore = conf.marker.getlist('classes_to_ignore')
-    pred_df.loc[pred_df[conf.columns['class']].isin(classes_to_ignore), 
-                [conf.columns['prediction']]] = pred_df[conf.columns['class']]
-
-    # For all other parcels without prediction there must have been no data 
-    # available for a classification, so set prediction to NODATA
-    pred_df[conf.columns['prediction']].fillna('NODATA', inplace=True)
-    logger.debug(f"Columns of pred_df: {pred_df.columns}")
+def add_doubt_column(pred_df: pd.DataFrame,
+                     new_pred_column: str,
+                     apply_doubt_marker_specific: bool = False,
+                     apply_doubt_min_nb_pixels: bool = False):
 
     # Calculate predictions with doubt column
+    classes_to_ignore = conf.marker.getlist('classes_to_ignore')
     doubt_proba1_st_2_x_proba2 = conf.postprocess.getboolean('doubt_proba1_st_2_x_proba2')
     doubt_pred_ne_input_proba1_st_thresshold = conf.postprocess.getfloat('doubt_pred_ne_input_proba1_st_thresshold')
     doubt_pred_eq_input_proba1_st_thresshold = conf.postprocess.getfloat('doubt_pred_eq_input_proba1_st_thresshold')
 
     # Init with the standard prediction 
-    pred_df[conf.columns['prediction_withdoubt']] = 'UNDEFINED'
+    pred_df[new_pred_column] = 'UNDEFINED'
 
-    # NODATA and ignore classes need to be retained, so apply them first
-    pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
-                    & (pred_df[conf.columns['prediction']] == 'NODATA')
-                    & (pred_df[conf.columns['class']].isin(classes_to_ignore)),
-                conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
+    # If NODATA OR ignore class, retained those from pred1
+    pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                    & ((pred_df['pred1'] == 'NODATA')
+                            | (pred_df[conf.columns['class_declared']].isin(classes_to_ignore))),
+                new_pred_column] = pred_df['pred1']
 
     # Apply doubt for parcels with a low percentage of probability -> = doubt!
     if doubt_proba1_st_2_x_proba2 is True:
-        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
+        pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
                         & (pred_df['pred1_prob'].map(float) < 2.0 * pred_df['pred2_prob'].map(float)),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:PROBA1<2*PROBA2'
+                    new_pred_column] = 'DOUBT:PROBA1<2*PROBA2'
     
     # Apply doubt for parcels with prediction != unverified input
     if doubt_pred_ne_input_proba1_st_thresshold > 0:
         if doubt_pred_ne_input_proba1_st_thresshold > 1:
             raise Exception(f"doubt_pred_ne_input_proba1_st_thresshold should be float from 0 till 1, not {doubt_pred_ne_input_proba1_st_thresshold}")
-        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
-                        & (pred_df[conf.columns['prediction']] != pred_df[conf.columns['class']])
+        pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                        & (pred_df['pred1'] != pred_df[conf.columns['class_declared']])
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_ne_input_proba1_st_thresshold),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:PRED<>INPUT-PROBA1<X'
+                    new_pred_column] = 'DOUBT:PRED<>INPUT-PROBA1<X'
 
     # Apply doubt for parcels with prediction == unverified input
     if doubt_pred_eq_input_proba1_st_thresshold > 0:
         if doubt_pred_eq_input_proba1_st_thresshold > 1:
             raise Exception(f"doubt_pred_ne_input_proba1_st_thresshold should be float from 0 till 1, not {doubt_pred_eq_input_proba1_st_thresshold}")
-        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
-                        & (pred_df[conf.columns['prediction']] == pred_df[conf.columns['class']])
+        pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                        & (pred_df['pred1'] == pred_df[conf.columns['class_declared']])
                         & (pred_df['pred1_prob'].map(float) < doubt_pred_eq_input_proba1_st_thresshold),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:PRED=INPUT-PROBA1<X'
+                    new_pred_column] = 'DOUBT:PRED=INPUT-PROBA1<X'
 
-    """
-    # Apply some extra, marker-specific doubt algorythms
-    if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER_EARLY'):
-        logger.info("Apply some marker-specific doubt algorythms")
-        # If parcel was declared as grassland, and is classified as arable, set to doubt
-        # Remark: those gave only false positives for LANDCOVER marker
-        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
-                        & (pred_df[conf.columns['class']] == 'MON_LC_GRASSES')
-                        & (pred_df[conf.columns['prediction']] == 'MON_LC_ARABLE'),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT:GRASS-SEEN-AS-ARABLE'
+    # Marker specific doubt
+    if apply_doubt_marker_specific is True:
+        # Apply some extra, marker-specific doubt algorythms
+        if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER_EARLY'):
+            logger.info("Apply some marker-specific doubt algorythms")
+            # If parcel was declared as grassland, and is classified as arable, set to doubt
+            # Remark: those gave 50% false positives for LANDCOVER marker
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (pred_df[conf.columns['class_declared']] == 'MON_LC_GRASSES')
+                            & (pred_df['pred1'] == 'MON_LC_ARABLE'),
+                        new_pred_column] = 'DOUBT_RISK:GRASS-SEEN-AS-ARABLE'
 
-        # If parcel was declared as fallow, and is classified as something else, set to doubt
-        # Remark: those gave 50% false positives for marker LANDCOVER
-        pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
-                        & (~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
-                        & (pred_df[conf.columns['class']] == 'MON_LC_FALLOW')
-                        & (pred_df[conf.columns['prediction']] != 'MON_LC_FALLOW'),
-                    conf.columns['prediction_withdoubt']] = 'DOUBT_RISK:FALLOW-UNCONFIRMED'
-        
-        if conf.marker['markertype'] == 'LANDCOVER_EARLY':
-            # If parcel was declared as winter grain, but is not classified as MON_LC_ARABLE: doubt
-            # Remark: those gave > 50% false positives for marker LANDCOVER_EARLY
-            pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED')
-                            & (~pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT'))
-                            & (pred_df[conf.columns['crop_declared']].isin(['311', '321', '331']))
-                            & (pred_df[conf.columns['prediction']] != 'MON_LC_ARABLE'),
-                        conf.columns['prediction_withdoubt']] = 'DOUBT_RISK:GRAIN-UNCONFIRMED'
+            # If parcel was declared as fallow, and is classified as something else, set to doubt
+            # Remark: those gave 50% false positives for marker LANDCOVER
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (pred_df[conf.columns['class_declared']] == 'MON_LC_FALLOW')
+                            & (pred_df['pred1'] != 'MON_LC_FALLOW'),
+                        new_pred_column] = 'DOUBT_RISK:FALLOW-UNCONFIRMED'
+            
+            # If parcel was declared as grain, but is not classified as MON_LC_ARABLE: doubt
+            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            #         - gave 33 % false positives for marker LANDCOVER
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (pred_df[conf.columns['crop_declared']].isin(['311', '321', '322', '331']))
+                            & (pred_df['pred1'] != 'MON_LC_ARABLE'),
+                        new_pred_column] = 'DOUBT_RISK:GRAIN-UNCONFIRMED'
 
-    elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
-        logger.info("Apply some marker-specific doubt algorythms")
-    """
-    
-    # Finally, predictions that have not been defined yet, get the original prediction      
-    pred_df.loc[pred_df[conf.columns['prediction_withdoubt']] == 'UNDEFINED',
-                conf.columns['prediction_withdoubt']] = pred_df[conf.columns['prediction']]
+            # If parcel was declared as on of the following fabaceae, but is not 
+            # classified as such: doubt
+            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            #         - gave 33-50% false positives for marker LANDCOVER
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (pred_df[conf.columns['crop_declared']].isin(['721', '722', '732', '831', '931', '8410']))
+                            & (pred_df['pred1'] != 'MON_LC_FABACEAE'),
+                        new_pred_column] = 'DOUBT_RISK:DIFF-FABACEAE-UNCONFIRMED'
 
-    # Add a column with the prediction status... and all parcels in pred_df got a prediction
-    pred_df[conf.columns['prediction_status']] = 'OK'
-    pred_df.loc[(pred_df[conf.columns['prediction_withdoubt']].str.startswith('DOUBT')),
-                conf.columns['prediction_status']] = 'DOUBT'
-    pred_df.loc[(pred_df[conf.columns['prediction']] == 'NODATA'),
-                conf.columns['prediction_status']] = 'NODATA'                
-                
-    # Calculate consolidated prediction: accuracy with few pixels is lower
-    pred_df[conf.columns['prediction_cons']] = pred_df[conf.columns['prediction_withdoubt']]
-    pred_df.loc[(pred_df[conf.columns['pixcount_s1s2']] <= conf.marker.getint('min_nb_pixels'))
-                    & (pred_df[conf.columns['prediction_status']] != 'NODATA')
-                    & (pred_df[conf.columns['prediction_status']] != 'DOUBT'),
-                conf.columns['prediction_cons']] = 'DOUBT:NOT_ENOUGH_PIXELS'
-    pred_df.loc[(pred_df[conf.columns['pixcount_s1s2']] <= conf.marker.getint('min_nb_pixels'))
-                    & (pred_df[conf.columns['prediction_status']] != 'NODATA')
-                    & (pred_df[conf.columns['prediction_status']] != 'DOUBT'),
-                conf.columns['prediction_status']] = 'DOUBT'
+            # If parcel was declared as 'other herbs', but is not confirmed as MON_LC_ARABLE 
+            # classified as such: doubt
+            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            #         - gave 33-50% false positives for marker LANDCOVER
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (pred_df[conf.columns['crop_declared']].isin(['956']))
+                            & (pred_df['pred1'] != 'MON_LC_ARABLE'),
+                        new_pred_column] = 'DOUBT:HERBS-UNCONFIRMED'
 
-    # Set the prediction status for classes that should be ignored
-    pred_df.loc[pred_df[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore_for_train')), 
-                [conf.columns['prediction_status']]] = 'UNKNOWN'
-    pred_df.loc[pred_df[conf.columns['class']].isin(conf.marker.getlist('classes_to_ignore')), 
-                [conf.columns['prediction_status']]] = pred_df[conf.columns['class']]
+        elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
+            logger.info("Apply some marker-specific doubt algorythms")
 
-    # Calculate the status of the consolidated prediction (OK=usable, NOK: not)
-    pred_df.loc[pred_df[conf.columns['prediction_cons']].isin(classified_classes), 
-                conf.columns['prediction_cons_status']] = 'OK'
-    pred_df[conf.columns['prediction_cons_status']].fillna('NOK', inplace=True)    
+    # Accuracy with few pixels might be lower, so set those to doubt
+    if apply_doubt_min_nb_pixels is True:
+        pred_df.loc[(pred_df[conf.columns['pixcount_s1s2']] <= conf.marker.getint('min_nb_pixels'))
+                        & (~pred_df[new_pred_column].str.startswith('DOUBT')),
+                    new_pred_column] = 'DOUBT:NOT_ENOUGH_PIXELS'
+
+    # Finally, predictions that have no value yet, get the original prediction      
+    pred_df.loc[pred_df[new_pred_column] == 'UNDEFINED',
+                new_pred_column] = pred_df['pred1']
