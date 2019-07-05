@@ -161,10 +161,6 @@ def predict_proba(parcel_df: pd.DataFrame,
         logger.critical(message)
         raise Exception(message)
 
-    # Prepare some variables
-    classifier_filepath_noext, ext = os.path.splitext(classifier_filepath)
-    classifier_classes_filepath = classifier_filepath_noext + '_classes.txt'
-
     # Now do final preparation for the classification
     parcel_classes_df = parcel_df[column_class]
     cols_to_keep = parcel_df.columns.difference([conf.columns['id'], column_class])
@@ -172,6 +168,15 @@ def predict_proba(parcel_df: pd.DataFrame,
     parcel_data_df.sort_index(axis=1, inplace=True)
 
     logger.info(f"Input predict file processed and rows with missing data removed, data shape: {parcel_data_df.shape}, labels shape: {parcel_classes_df.shape}")
+
+    # Check of the input data columns match the columns needed for the neural net
+    classifier_filepath_noext, _ = os.path.splitext(classifier_filepath)
+    classifier_datacolumns_filepath = classifier_filepath_noext + '_datacolumns.txt'
+    with open(classifier_datacolumns_filepath, "r") as file:
+        classifier_datacolumns = eval(file.readline())
+    if classifier_datacolumns != list(parcel_data_df.columns):
+        raise Exception(f"Input datacolumns for predict don't match needed columns for neural net: \ninput: {parcel_data_df.columns}, \nneeded: {classifier_datacolumns}" )
+
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         logger.info(f"Resulting Columns for predicting data: {parcel_data_df.columns}")
 
@@ -182,7 +187,9 @@ def predict_proba(parcel_df: pd.DataFrame,
     logger.info(f"Predict classes with probabilities ready")
 
     # Convert probabilities to dataframe, combine with input data and write to file
-    # Load the classes
+    # Load the classes from the classes file
+    classifier_filepath_noext, _ = os.path.splitext(classifier_filepath)
+    classifier_classes_filepath = classifier_filepath_noext + '_classes.txt'
     with open(classifier_classes_filepath, "r") as file:
         classes_dict = eval(file.readline())
     id_class_proba = np.concatenate([parcel_df[[conf.columns['id'], column_class]].values, class_proba], axis=1)
