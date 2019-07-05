@@ -237,17 +237,17 @@ def add_doubt_column(pred_df: pd.DataFrame,
             #         - gave 33 % false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
                             & (~pred_df[new_pred_column].str.startswith('DOUBT'))
-                            & (pred_df[conf.columns['crop_declared']].isin(['311', '321', '322', '331']))
+                            & (pred_df[conf.columns['crop_declared']].isin(['311', '321', '322', '331', '342', '639']))
                             & (pred_df['pred1'] != 'MON_LC_ARABLE'),
                         new_pred_column] = 'DOUBT_RISK:GRAIN-UNCONFIRMED'
 
             # If parcel was declared as on of the following fabaceae, but is not 
             # classified as such: doubt
             # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
-            #         - gave 33-50% false positives for marker LANDCOVER
+            #         - gave 33-100% false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
                             & (~pred_df[new_pred_column].str.startswith('DOUBT'))
-                            & (pred_df[conf.columns['crop_declared']].isin(['721', '722', '732', '831', '931', '8410']))
+                            & (pred_df[conf.columns['crop_declared']].isin(['43', '52', '721', '722', '731', '732', '831', '931', '8410']))
                             & (pred_df['pred1'] != 'MON_LC_FABACEAE'),
                         new_pred_column] = 'DOUBT_RISK:DIFF-FABACEAE-UNCONFIRMED'
 
@@ -257,7 +257,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
             #         - gave 33-50% false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
                             & (~pred_df[new_pred_column].str.startswith('DOUBT'))
-                            & (pred_df[conf.columns['crop_declared']].isin(['956']))
+                            & (pred_df[conf.columns['crop_declared']].isin(['956', '957', '9831']))
                             & (pred_df['pred1'] != 'MON_LC_ARABLE'),
                         new_pred_column] = 'DOUBT:HERBS-UNCONFIRMED'
 
