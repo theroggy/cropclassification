@@ -128,11 +128,11 @@ def train(train_df: pd.DataFrame,
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     
     logger.info(f"Start fitting classifier:\n{model.summary()}")
-    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, verbose=0, mode='min')
+    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=100, verbose=0, mode='min')
     mcp_save = keras.callbacks.ModelCheckpoint(
             output_classifier_filepath, save_best_only=True, monitor='val_loss', mode='min')
     reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(
-            monitor='val_loss', factor=0.2, patience=15, verbose=1, epsilon=1e-4, mode='min')
+            monitor='val_loss', factor=0.2, patience=30, verbose=1, epsilon=1e-4, mode='min')
     hist = model.fit(train_data_df, train_classes_df, batch_size=128, epochs=1000, 
                      callbacks=[earlyStopping, mcp_save, reduce_lr_loss],
                      validation_data=(test_data_df, test_classes_df))
