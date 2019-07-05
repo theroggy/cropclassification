@@ -8,3 +8,5 @@ Old/
 data_multicrop.py
 /.vs
 client_secret_download-gee-data.json
+config/local_overrule.ini
+config/local_overrule_linux.ini
