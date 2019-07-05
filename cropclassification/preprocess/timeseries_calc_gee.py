@@ -270,7 +270,7 @@ def clean_gee_downloaded_csv(csv_file: str,
     try:
         # Prepare output filename
         file_noext, _ = os.path.splitext(csv_file)
-        output_file = f"{file_noext}{conf.general['columndata_ext']}"
+        output_file = f"{file_noext}{conf.general['data_ext']}"
 
         # Check if output file exists already even though it is different from input file
         if output_file != csv_file and os.path.exists(output_file):

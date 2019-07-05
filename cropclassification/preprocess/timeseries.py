@@ -132,13 +132,13 @@ def collect_and_prepare_timeseries_data(
     logger.setLevel(logging.DEBUG)
 
     # Loop over all input timeseries data to find the data we really need
-    columndata_ext = conf.general['columndata_ext']
-    filepath_start = os.path.join(timeseries_dir, f"{base_filename}_{start_date_str}{columndata_ext}")
-    filepath_end = os.path.join(timeseries_dir, f"{base_filename}_{end_date_str}{columndata_ext}")
+    data_ext = conf.general['data_ext']
+    filepath_start = os.path.join(timeseries_dir, f"{base_filename}_{start_date_str}{data_ext}")
+    filepath_end = os.path.join(timeseries_dir, f"{base_filename}_{end_date_str}{data_ext}")
     logger.debug(f'filepath_start_date: {filepath_start}')
     logger.debug(f'filepath_end_date: {filepath_end}')
 
-    ts_data_files = glob.glob(os.path.join(timeseries_dir, f"{base_filename}_*{columndata_ext}"))
+    ts_data_files = glob.glob(os.path.join(timeseries_dir, f"{base_filename}_*{data_ext}"))
     for curr_filepath in sorted(ts_data_files):
 
         # Only process data that is of the right sensor types
