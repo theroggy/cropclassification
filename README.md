@@ -26,7 +26,7 @@ following steps:
       ```
       2. Install the dependencies for the crop classification scripts:
       ```
-      conda install --channel conda-forge earthengine-api google-api-python-client scikit-learn rasterio rasterstats geopandas
+      conda install --channel conda-forge earthengine-api google-api-python-client scikit-learn keras tensorflow rasterio rasterstats geopandas pyarrow
       ```
       3. Possibly you need to install your computer now, especially if it was the first time you installed anaconda/geopandas
       4. Start the anaconda terminal window again and activate the environment

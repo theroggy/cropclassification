@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Monitoring visualize results</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.2.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>PARAMETERS USED</h1>
+                <p>$PARAMETERS_USED_TEXT</p>
+                <div class="row">
+                    <div class="col-md-4">$PARAMETERS_USED_TABLE</div>
+                </div>
+                <br />
+            </div>
+        </div>                 
+        <div class="row">
+            <div class="col-md-12">
+                <h1>GENERAL RESULTS</h1>
+                <h2>GENERAL CONCLUSIONS</h2>
+                <p>$GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-4">$GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TABLE</div>
+                    <div class="col-md-6"><div id="chart_general_accuracies" style="height:300px;"></div></div>
+                </div>
+                <br />
+                <h2>OVERALL ACCURACIES</h2>
+                <p>$OVERALL_ACCURACIES_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$OVERALL_ACCURACIES_TABLE</div>
+                    <br />
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <h1>DETAILED RESULTS ON PREDICTIONS</h1>
+                <h2>REPORTING ON PREDICTION DETAILED CONCLUSIONS</h2>
+                <p>$PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <p>$PREDICTION_CONCLUSION_DETAIL_FULL_ALPHA_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_CONCLUSION_DETAIL_FULL_ALPHA_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+            </div>
+        </div>           
+        <div class="row">
+            <div class="col-md-12">
+                <h2>CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS</h2>
+                <div>
+                    <p>Extended confusion matrix of the predictions: Rows: true/input classes, columns: predicted classes</p>
+                    <div id="chart_confusion_matrices" style="height: 2000px"></div>
+                    <button class="toggle-button">Show all data</button>
+                    <div class="toggle-visible" style="display:none;">$CONFUSION_MATRICES_TABLE</div>
+                    <br />
+                </div>
+                <hr />
+                <div>
+                    <p>Extended confusion matrix of the consolidated predictions: Rows: true/input classes, columns: predicted classes</p>
+                    <div id="chart_confusion_matrices_consolidated" style="height: 2000px"></div>
+                    <button class="toggle-button">Show all data</button>
+                    <div class="toggle-visible" style="display:none;">$CONFUSION_MATRICES_CONSOLIDATED_TABLE</div>
+                    <br />
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <h1>REPORTING BASED ON GROUND TRUTH</h1>
+                <h2>GENERAL: ALPHA AND BETA ERROR</h2>
+                <p>$PREDICTION_QUALITY_ALPHA_TEXT</p>
+                <p>$PREDICTION_QUALITY_BETA_TEXT</p>
+                <h2>DETAILED</h2>
+                <p>$PREDICTION_QUALITY_CONS_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_QUALITY_CONS_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <p>$PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TEXT</p>
+                <div class="row">
+                    <div class="col-md-6">$PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE</div>
+                    <br />
+                </div>
+                <h2>DETAILED PER PIXCOUNT</h2>
+                <p>$PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT</p>
+                <div class="row">
+                    <div class="col-md-12">$PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE</div>
+                    <br />
+                </div>
+            </div>
+        </div>
+        PREDICTION_QUALITY_BETA_TEXT
+    </div>
+    <script type="text/javascript">
+        var general_acuracies_data = $GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA;
+        var confusion_matrices_data = $CONFUSION_MATRICES_DATA;
+        var confusion_matrices_consolidated_data = $CONFUSION_MATRICES_CONSOLIDATED_DATA;
+    </script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.1.0/echarts-en.min.js"></script>
+    <script type="text/javascript" src="c:\\Projects\\Projects_GITHUB\\cropclassification\\cropclassification\\postprocess\\html_rapport_script.js"></script>
+    <script type="text/javascript">
+      if (typeof IS_LOCAL_DEV === 'undefined') {
+        var tag = document.createElement('script');
+        tag.src = 'X:\\Monitoring\\Markers\\Prd\\html_rapport_script.js';
+        document.getElementsByTagName('body')[0].appendChild(tag);
+      }
+    </script>
+</body>
+</html>
