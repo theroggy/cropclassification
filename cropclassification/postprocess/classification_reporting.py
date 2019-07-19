@@ -76,7 +76,12 @@ def write_full_report(parcel_predictions_filepath: str,
        'PREDICTION_QUALITY_ALPHA_TEXT': empty_string,
        'PREDICTION_QUALITY_BETA_TEXT': empty_string,
        'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE': empty_string
+       'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE': empty_string,
+        #marina       
+       'PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TEXT': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TABLE': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE': empty_string
     }
     
     # Build and write report...
@@ -103,6 +108,7 @@ def write_full_report(parcel_predictions_filepath: str,
             logger.info(f"{parameters_used_df}\n")
             html_data['PARAMETERS_USED_TABLE'] = parameters_used_df.to_html(index=False) 
               
+        outputfile.write("\n")
         outputfile.write("************************************************************\n")
         outputfile.write("**************** RECAP OF GENERAL RESULTS ******************\n")
         outputfile.write("************************************************************\n")
@@ -140,6 +146,7 @@ def write_full_report(parcel_predictions_filepath: str,
             html_data['GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA'] = count_per_class.to_dict()
 
         # Output general accuracies
+        outputfile.write("\n")
         outputfile.write("************************************************************\n")
         outputfile.write("*                   OVERALL ACCURACIES                     *\n")
         outputfile.write("************************************************************\n")
@@ -276,6 +283,7 @@ def write_full_report(parcel_predictions_filepath: str,
             logger.info(f"{count_per_class}\n")
             html_data['PREDICTION_CONCLUSION_DETAIL_FULL_ALPHA_OVERVIEW_TABLE'] = count_per_class.to_html()
 
+        outputfile.write("\n")
         outputfile.write("************************************************************\n")
         outputfile.write("*     CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS      *\n")
         outputfile.write("************************************************************\n")
@@ -438,17 +446,74 @@ def write_full_report(parcel_predictions_filepath: str,
                         new_pred_column='pred_cons_no_min_pix',
                         apply_doubt_marker_specific=True)
                 _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_min_pix')
-            
-                df_per_pixcount = _get_alfa_errors_per_pixcount(
-                        df_predquality_pixcount=df_parcel_gt,
-                        pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
-                        error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
-                df_per_pixcount.dropna(inplace=True)
+                            
+                #marina
+                #df_per_pixcount = _get_alfa_errors_per_pixcount(
+                df_per_column = _get_alfa_errors_per_column(groupbycolumn=conf.columns['pixcount_s1s2'],
+                                                            df_predquality=df_parcel_gt,
+                                                            pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
+                                                            error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
+                df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
-                    outputfile.write(f"\n{df_per_pixcount}\n")
-                    logger.info(f"{df_per_pixcount}\n")
-                    html_data['PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE'] = df_per_pixcount.to_html()
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE'] = df_per_column.to_html()
+                    
                         
+            #marina - kopie
+            # If cropclass is available, write the number of ALFA errors per cropclass (for the prediction with doubt)
+            if conf.columns['class'] in df_parcel_gt.columns:
+                # Get data, drop empty lines and write
+                message = f"Number of ERROR_ALFA parcels for the 'prediction full alpha without NOT_ENOUGH_PIX' per cropclass for the ground truth parcels:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TEXT'] = message
+                
+                # To get the number of alpha errors per cropclass, we also need alpha errors
+                # also for parcels that had not_enough_pixels, so we need prediction_withdoubt
+                # If they don't exist, calculate
+                class_postpr.add_doubt_column(
+                        pred_df=df_parcel_gt, 
+                        new_pred_column='pred_cons_no_min_pix',
+                        apply_doubt_marker_specific=True)
+                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_min_pix')
+                            
+                df_per_column = _get_alfa_errors_per_column(groupbycolumn=conf.columns['class'],
+                                                            df_predquality=df_parcel_gt,
+                                                            pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
+                                                            error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
+                df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TABLE'] = df_per_column.to_html()
+                
+            #marina - kopie
+            # If probability is available, write the number of ALFA errors per probability (for the prediction with doubt)
+            if conf.columns['prediction_full_alpha'] in df_parcel_gt.columns:
+                # Get data, drop empty lines and write
+                message = f"Number of ERROR_ALFA parcels for the 'prediction full alpha without NOT_ENOUGH_PIX' per probability for the ground truth parcels:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT'] = message
+                
+                # To get the number of alpha errors per cropclass, we also need alpha errors
+                # also for parcels that had not_enough_pixels, so we need prediction_withdoubt
+                # If they don't exist, calculate
+                class_postpr.add_doubt_column(
+                        pred_df=df_parcel_gt, 
+                        new_pred_column='pred_cons_no_min_pix',
+                        apply_doubt_marker_specific=True)
+                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_min_pix')
+                            
+                df_per_column = _get_alfa_errors_per_column(groupbycolumn=conf.columns['prediction_full_alpha'],
+                                                            df_predquality=df_parcel_gt,
+                                                            pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
+                                                            error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
+                df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE'] = df_per_column.to_html()
+                
     with open(output_report_txt.replace('.txt', '.html'), 'w') as outputfile:           
         html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
         src = Template(html_template_file)
@@ -637,6 +702,7 @@ def _add_gt_conclusions(in_df,
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED'),
               gt_conclusion_column] = in_df[gt_vs_input_column].map(str)
                             
+# Marina : mag weg 
 def _get_alfa_errors_per_pixcount(df_predquality_pixcount,
                                   pred_quality_column: str,
                                   error_alpha_code: str):
@@ -677,6 +743,49 @@ def _get_alfa_errors_per_pixcount(df_predquality_pixcount,
     df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_all_cumulative', value=values)
 
     return df_alfa_per_pixcount
+
+# Marina : new - bijgewerkte versie van _get_alfa_errors_per_pixcount
+def _get_alfa_errors_per_column(groupbycolumn: str,
+                                df_predquality,
+                                pred_quality_column: str,
+                                error_alpha_code: str):
+    """ Returns a dataset with detailed information about the number of alfa errors per column that was passed on"""
+
+    # Calculate the number of parcels per column, the cumulative sum + the pct of all
+    df_predquality_count = (df_predquality.groupby(groupbycolumn, as_index=False)
+                             .size().to_frame('count_all'))
+    values = df_predquality_count['count_all'].cumsum(axis=0)
+    df_predquality_count.insert(loc=len(df_predquality_count.columns),
+                                 column='count_all_cumulative',
+                                 value=values)
+    values = (100 * df_predquality_count['count_all_cumulative']
+              / df_predquality_count['count_all'].sum())
+    df_predquality_count.insert(loc=len(df_predquality_count.columns),
+                                 column='pct_all_cumulative',
+                                 value=values)
+
+    # Now calculate the number of alfa errors per column
+    df_alfa_error = df_predquality[
+            df_predquality[pred_quality_column] == error_alpha_code]
+    df_alfa_per_column = (df_alfa_error.groupby(groupbycolumn, as_index=False)
+                            .size().to_frame('count_error_alfa'))
+
+    # Join them together, and calculate the alfa error percentages
+    df_alfa_per_column = df_predquality_count.join(df_alfa_per_column, how='left')
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
+                                column='count_error_alfa_cumulative',
+                                value=df_alfa_per_column['count_error_alfa'].cumsum(axis=0))
+                                
+    values = 100 * df_alfa_per_column['count_error_alfa'] / df_alfa_per_column['count_all']
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_all', value=values)
+                                
+    values = (100 * df_alfa_per_column['count_error_alfa_cumulative'] / df_alfa_per_column['count_error_alfa'].sum())
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_alfa_cumulative', value=values)
+
+    values = (100 * df_alfa_per_column['count_error_alfa_cumulative'] / df_alfa_per_column['count_all'].sum())
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_all_cumulative', value=values)
+
+    return df_alfa_per_column
 
 def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
                            output_report_txt: str,

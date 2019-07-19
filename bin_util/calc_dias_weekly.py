@@ -39,7 +39,8 @@ def main():
     elif year == 2018:
         input_features_filename = "Prc_BEFL_2018_2019-06-14_bufm5.shp"
     elif year == 2019:
-        input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
+        #input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
+        input_features_filename = "Prc_BEFL_2019_2019-07-02_bufm5.shp"
     else:
         raise Exception(f"Not a valid year: {year}")
 
