@@ -276,7 +276,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
     # Accuracy with few pixels might be lower, so set those to doubt
     if apply_doubt_min_nb_pixels is True:
-        pred_df.loc[(pred_df[conf.columns['pixcount_s1s2']] <= conf.marker.getint('min_nb_pixels'))
+        pred_df.loc[(pred_df[conf.columns['pixcount_s1s2']] < conf.marker.getfloat('min_nb_pixels'))
                         & (~pred_df[new_pred_column].str.startswith('DOUBT')),
                     new_pred_column] = 'DOUBT:NOT_ENOUGH_PIXELS'
 
