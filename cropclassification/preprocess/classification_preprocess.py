@@ -5,6 +5,7 @@ Module with helper functions to preprocess the data to use for the classificatio
 
 import logging
 import os
+import shutil
 
 import pandas as pd
 
@@ -27,6 +28,7 @@ def prepare_input(input_parcel_filepath: str,
                   input_parcel_filetype: str,
                   input_parcel_pixcount_filepath: str,
                   classtype_to_prepare: str,
+                  classes_refe_filepath: str,
                   output_parcel_filepath: str,
                   force: bool = False):
     """
@@ -39,10 +41,19 @@ def prepare_input(input_parcel_filepath: str,
         logger.warning(f"prepare_input: output file already exists and force == False, so stop: {output_parcel_filepath}")
         return
 
+    # If it exists, copy the refe file to the run dir, so we always keep knowing which refe was used
+    output_dir, _ = os.path.split(output_parcel_filepath)
+    if classes_refe_filepath is not None:
+        shutil.copy(classes_refe_filepath, output_dir)        
+
     if input_parcel_filetype == 'BEFL':
-        output_dir, _ = os.path.split(output_parcel_filepath)
+        # classes_refe_filepath must exist for BEFL!
+        if not os.path.exists(classes_refe_filepath):
+            raise Exception(f"Input classes file doesn't exist: {classes_refe_filepath}")
+        
         df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath,
                                            classtype_to_prepare=classtype_to_prepare,
+                                           classes_refe_filepath=classes_refe_filepath,
                                            output_dir=output_dir)
     else:
         message = f"Unknown value for parameter input_parcel_filetype: {input_parcel_filetype}"
@@ -58,6 +69,7 @@ def prepare_input(input_parcel_filepath: str,
 
     df_parceldata.set_index(conf.columns['id'], inplace=True)
     df_parceldata = df_parceldata.join(df_pixcount[conf.columns['pixcount_s1s2']], how='left')
+    df_parceldata[conf.columns['pixcount_s1s2']].fillna(value=0, inplace=True)
 
     # Export result to file
     output_ext = os.path.splitext(output_parcel_filepath)[1]

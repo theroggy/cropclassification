@@ -34,6 +34,7 @@ def run_jobs():
         input_parcel_filetype = job_config['job']['input_parcel_filetype']
         year = job_config['job'].getint('year')
         country_code = job_config['job']['country_code']
+        classes_refe_filename = job_config['job']['classes_refe_filename']
         input_groundtruth_filename = job_config['job']['input_groundtruth_filename']
         input_model_to_use_relativepath = job_config['job']['input_model_to_use_relativepath']
         if input_model_to_use_relativepath is not None:
@@ -48,6 +49,7 @@ def run_jobs():
                 input_parcel_filetype=input_parcel_filetype,
                 country_code=country_code,
                 year=year,
+                classes_refe_filename=classes_refe_filename,
                 input_groundtruth_filename=input_groundtruth_filename,
                 input_model_to_use_filepath=input_model_to_use_filepath)
 

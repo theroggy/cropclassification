@@ -25,14 +25,26 @@ def run(markertype_to_calc: str,
         input_parcel_filetype: str,
         country_code: str,
         year: int,
+        classes_refe_filename: str,
         input_groundtruth_filename: str,
         input_model_to_use_filepath: str):
     """
     Runs a marker for an input file. If no input model to use is specified,
     a new one will be trained.
-
-    Args
-
+    
+    Args:
+        markertype_to_calc (str): [description]
+        input_parcel_filename (str): [description]
+        input_parcel_filetype (str): [description]
+        country_code (str): [description]
+        year (int): [description]
+        classes_refe_filename (str): [description]
+        input_groundtruth_filename (str): [description]
+        input_model_to_use_filepath (str): [description]
+    
+    Raises:
+        Exception: [description]
+        Exception: [description]
     """
 
     # If a model to use is specified, check if it exists...
@@ -78,18 +90,22 @@ def run(markertype_to_calc: str,
             conf.config.write(config_used_file)
 
     # Prepare input filepaths
-    input_dir = conf.dirs['input_dir']    
+    input_dir = conf.dirs['input_dir']
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
     if input_groundtruth_filename is not None:
         input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
     else:
         input_groundtruth_filepath = None
+    
+    refe_dir = conf.dirs['refe_dir']
+    classes_refe_filepath = os.path.join(refe_dir, classes_refe_filename)
 
     # Check if the necessary input files exist...
-    if not os.path.exists(input_parcel_filepath):
-        message = f"The parcel input file doesn't exist, so STOP: {input_parcel_filepath}"
-        logger.critical(message)
-        raise Exception(message)
+    for path in [classes_refe_filepath, input_parcel_filepath]:
+        if path is not None and not os.path.exists(path):
+            message = f"Input file doesn't exist, so STOP: {path}"
+            logger.critical(message)
+            raise Exception(message)
 
     # Get some general config
     data_ext = conf.general['data_ext']
@@ -144,12 +160,12 @@ def run(markertype_to_calc: str,
     # Remarks:
     #    - this is typically specific for the input dataset and result wanted!!!
     #    - the result is/should be a file with the following columns
-    #           - id (=global_settings.id_column): unique ID for each parcel
-    #           - classname (=global_settings.class_column): the class that must 
+    #           - id (=id_column): unique ID for each parcel
+    #           - classname (=class_column): the class that must 
     #             be classified to.
     #             Remarks: - if in classes_to_ignore_for_train, class won't be used for training
     #                      - if in classes_to_ignore, the class will be ignored
-    #           - pixcount (=global_settings.pixcount_s1s2_column):  
+    #           - pixcount:  
     #             the number of S1/S2 pixels in the parcel.
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess['classtype_to_prepare']
@@ -162,6 +178,7 @@ def run(markertype_to_calc: str,
             input_parcel_filetype=input_parcel_filetype,
             input_parcel_pixcount_filepath=parcel_pixcount_filepath,
             classtype_to_prepare=classtype_to_prepare,
+            classes_refe_filepath=classes_refe_filepath,
             output_parcel_filepath=parcel_filepath)
 
     # Collect all data needed to do the classification in one input file
@@ -261,6 +278,7 @@ def run(markertype_to_calc: str,
                     input_parcel_filetype=input_parcel_filetype,
                     input_parcel_pixcount_filepath=parcel_pixcount_filepath,
                     classtype_to_prepare=conf.preprocess['classtype_to_prepare_groundtruth'],
+                    classes_refe_filepath=classes_refe_filepath,
                     output_parcel_filepath=groundtruth_filepath)
 
     # If we trained a model, there is a test prediction we want to report on
