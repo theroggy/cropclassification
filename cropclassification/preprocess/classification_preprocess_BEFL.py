@@ -397,9 +397,10 @@ def prepare_input_landcover(
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if column_BEFL_gesp_pm in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
-        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'PLA', 'PLO']), 
-                          column_output_class] = 'MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS'
-        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SGM', 'NPO', 'LOO', 'CON']), 
+        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'PLA', 'PLO', 'SGM', 'NPO', 'LOO']), 
+                          column_output_class] = 'MON_LC_OVERK_LOO'
+        # Containers
+        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['CON']), 
                           column_output_class] = 'MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS_NS'
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
         #parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
