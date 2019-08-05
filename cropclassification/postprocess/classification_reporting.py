@@ -77,11 +77,20 @@ def write_full_report(parcel_predictions_filepath: str,
        'PREDICTION_QUALITY_BETA_TEXT': empty_string,
        'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT': empty_string,
        'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE': empty_string,
-        #marina       
-       'PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TABLE': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_CROP_TEXT': empty_string,
+       'PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE': empty_string,       
        'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE': empty_string
+       'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TEXT': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_CLASS_TEXT': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_CLASS_TABLE': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_CROP_TEXT': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_CROP_TABLE': empty_string,       
+       'PREDICTION_QUALITY_BETA_PER_PROBABILITY_TEXT': empty_string,
+       'PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE': empty_string
     }
     
     # Build and write report...
@@ -377,143 +386,280 @@ def write_full_report(parcel_predictions_filepath: str,
             # ******************************************************************            
             # Pct Alpha errors=alpha errors/(alpha errors + real errors)  
             columnname = f"gt_conclusion_{conf.columns['prediction_cons']}"
-            alpha_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA'].index)
-            alpha_error_denominator = (alpha_error_numerator 
+            alpha_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA'].index)
+            alpha_denominator = (alpha_numerator 
                     + len(df_parcel_gt.loc[df_parcel_gt[columnname].isin(
                             ['FARMER-WRONG_PRED-CORRECT', 'FARMER-WRONG_PRED-WRONG'])].index))
-            if alpha_error_denominator > 0:
-                message = (f"Alpha error for cons: {alpha_error_numerator}/{alpha_error_denominator} = "
-                        + f"{(alpha_error_numerator/alpha_error_denominator):.02f}")
+            if alpha_denominator > 0:
+                message = (f"Alpha error for cons: {alpha_numerator}/{alpha_denominator} = "
+                        + f"{(alpha_numerator/alpha_denominator):.02f}")
             else:
-                message = f"Alpha error for cons: {alpha_error_numerator}/{alpha_error_denominator} = ?"
+                message = f"Alpha error for cons: {alpha_numerator}/{alpha_denominator} = ?"
 
             outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_ALPHA_TEXT'] = message
 
-            beta_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA'].index)
-            beta_error_denominator = (beta_error_numerator 
+            beta_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA'].index)
+            beta_denominator = (beta_numerator 
                     + len(df_parcel_gt.loc[df_parcel_gt[columnname].str.startswith('FARMER-WRONG_PRED-')].index))
-            if beta_error_denominator > 0:
-                message = (f"Beta error for cons: {beta_error_numerator}/{beta_error_denominator} = "
-                           + f"{(beta_error_numerator/beta_error_denominator):.02f}")
+            if beta_denominator > 0:
+                message = (f"Beta error for cons: {beta_numerator}/{beta_denominator} = "
+                           + f"{(beta_numerator/beta_denominator):.02f}")
             else:
-                message = f"Beta error for cons: {beta_error_numerator}/{beta_error_denominator} = ?"
+                message = f"Beta error for cons: {beta_numerator}/{beta_denominator} = ?"
 
             outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_BETA_TEXT'] = message
 
             # Alpha and beta error statistics based on CONS prediction
             # ******************************************************************            
-            # Pct Alpha errors=alpha errors/(alpha errors + real errors)  
+            # Pct ALPHA errors=alpha errors/(alpha errors + real errors)
+            alpha_numerator_columns = ['FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA']
+            alpha_denominator_columns = ['FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA', 
+                                         'FARMER-WRONG_PRED-CORRECT', 'FARMER-WRONG_PRED-WRONG']
             columnname = f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
-            alpha_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA'].index)
-            alpha_error_denominator = (alpha_error_numerator 
-                    + len(df_parcel_gt.loc[df_parcel_gt[columnname].isin(
-                            ['FARMER-WRONG_PRED-CORRECT', 'FARMER-WRONG_PRED-WRONG'])].index))
-            if alpha_error_denominator > 0:
-                message = (f"Alpha error full: {alpha_error_numerator}/{alpha_error_denominator} = "
-                        + f"{(alpha_error_numerator/alpha_error_denominator):.02f}")
+            alpha_numerator = len(
+                    df_parcel_gt.loc[df_parcel_gt[columnname].isin(alpha_numerator_columns)].index)
+            alpha_denominator = len(
+                    df_parcel_gt.loc[df_parcel_gt[columnname].isin(alpha_denominator_columns)].index)
+            if alpha_denominator > 0:
+                message = (f"Alpha error full: {alpha_numerator}/{alpha_denominator} = "
+                        + f"{(alpha_numerator/alpha_denominator):.02f}")
             else:
-                message = f"Alpha error full: {alpha_error_numerator}/{alpha_error_denominator} = ?"
+                message = f"Alpha error full: {alpha_numerator}/{alpha_denominator} = ?"
 
             outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_ALPHA_TEXT'] += '<br/>' + message
 
-            beta_error_numerator = len(df_parcel_gt.loc[df_parcel_gt[columnname] == 'FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA'].index)
-            beta_error_denominator = (beta_error_numerator 
-                    + len(df_parcel_gt.loc[df_parcel_gt[columnname].str.startswith('FARMER-WRONG_PRED-')].index))
-            if beta_error_denominator > 0:
-                message = (f"Beta error full: {beta_error_numerator}/{beta_error_denominator} = "
-                           + f"{(beta_error_numerator/beta_error_denominator):.02f}")
+            # Pct BETA errors=beta errors/(beta errors + real wrong farmer declarations)
+            beta_numerator_columns = ['FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA']
+            beta_denominator_columns = df_parcel_gt[columnname].loc[
+                    df_parcel_gt[columnname].str.startswith('FARMER-WRONG_PRED-')].unique()
+            beta_numerator = len(
+                    df_parcel_gt.loc[df_parcel_gt[columnname].isin(beta_numerator_columns)].index)
+            beta_denominator = len(
+                    df_parcel_gt.loc[df_parcel_gt[columnname].isin(beta_denominator_columns)].index)
+            if beta_denominator > 0:
+                message = (f"Beta error full: {beta_numerator}/{beta_denominator} = "
+                           + f"{(beta_numerator/beta_denominator):.02f}")
             else:
-                message = f"Beta error full: {beta_error_numerator}/{beta_error_denominator} = ?"
+                message = f"Beta error full: {beta_numerator}/{beta_denominator} = ?"
 
             outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_BETA_TEXT'] += '<br/>' + message
 
+            # Some more detailed reports for alpha and beta errors
+            # ******************************************************************            
+            
             # If the pixcount is available, write the number of ALFA errors per pixcount (for the prediction with doubt)
+            pred_quality_full_doubt_column = f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
             if conf.columns['pixcount_s1s2'] in df_parcel_gt.columns:
-                # Get data, drop empty lines and write
-                message = f"Number of ERROR_ALFA parcels for the 'prediction full alpha without NOT_ENOUGH_PIX' per pixcount for the ground truth parcels:"
+                # ALPHA errors 
+                message = f"Number of ERROR_ALFA parcels per pixcount for the ground truth parcels without applying doubt based on pixcount:"
                 outputfile.write(f"\n{message}\n")            
                 html_data['PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT'] = message
-                
-                # To get the number of alpha errors per pixcount, we also need alpha errors
-                # also for parcels that had not_enough_pixels, so we need prediction_withdoubt
-                # If they don't exist, calculate
+
+                # For pixcount report, use error conclusions without min_nb_pixels
                 class_postpr.add_doubt_column(
                         pred_df=df_parcel_gt, 
                         new_pred_column='pred_cons_no_min_pix',
+                        apply_doubt_pct_proba=True,
+                        apply_doubt_min_nb_pixels=False,
                         apply_doubt_marker_specific=True)
                 _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_min_pix')
-                            
-                #marina
-                #df_per_pixcount = _get_alfa_errors_per_pixcount(
-                df_per_column = _get_alfa_errors_per_column(groupbycolumn=conf.columns['pixcount_s1s2'],
-                                                            df_predquality=df_parcel_gt,
-                                                            pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
-                                                            error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
-                df_per_column.dropna(inplace=True)
+                
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_" + "pred_cons_no_min_pix"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn=conf.columns['pixcount_s1s2'],
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=alpha_numerator_columns,
+                        error_codes_denominator=alpha_denominator_columns)
+                #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data['PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE'] = df_per_column.to_html()
-                    
-                        
-            #marina - kopie
-            # If cropclass is available, write the number of ALFA errors per cropclass (for the prediction with doubt)
-            if conf.columns['class'] in df_parcel_gt.columns:
-                # Get data, drop empty lines and write
-                message = f"Number of ERROR_ALFA parcels for the 'prediction full alpha without NOT_ENOUGH_PIX' per cropclass for the ground truth parcels:"
+
+                # BETA errors 
+                message = f"Number of ERROR_BETA parcels per pixcount for the ground truth parcels without applying doubt based on pixcount:"
                 outputfile.write(f"\n{message}\n")            
-                html_data['PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TEXT'] = message
+                html_data['PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TEXT'] = message
                 
-                # To get the number of alpha errors per cropclass, we also need alpha errors
-                # also for parcels that had not_enough_pixels, so we need prediction_withdoubt
-                # If they don't exist, calculate
-                class_postpr.add_doubt_column(
-                        pred_df=df_parcel_gt, 
-                        new_pred_column='pred_cons_no_min_pix',
-                        apply_doubt_marker_specific=True)
-                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_min_pix')
-                            
-                df_per_column = _get_alfa_errors_per_column(groupbycolumn=conf.columns['class'],
-                                                            df_predquality=df_parcel_gt,
-                                                            pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
-                                                            error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
-                df_per_column.dropna(inplace=True)
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_" + "pred_cons_no_min_pix"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn=conf.columns['pixcount_s1s2'],
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=beta_numerator_columns,
+                        error_codes_denominator=beta_denominator_columns)
+                #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data['PREDICTION_QUALITY_ALPHA_PER_CROPCLASS_TABLE'] = df_per_column.to_html()
-                
-            #marina - kopie
-            # If probability is available, write the number of ALFA errors per probability (for the prediction with doubt)
-            if conf.columns['prediction_full_alpha'] in df_parcel_gt.columns:
-                # Get data, drop empty lines and write
-                message = f"Number of ERROR_ALFA parcels for the 'prediction full alpha without NOT_ENOUGH_PIX' per probability for the ground truth parcels:"
+                    html_data['PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE'] = df_per_column.to_html()
+                    
+            # If cropclass is available, write the number of ALFA errors per cropclass (for the prediction with doubt)
+            if conf.columns['class_declared'] in df_parcel_gt.columns:
+                # ALPHA errors 
+                message = f"Number of ERROR_ALFA parcels per declared cropclass for the ground truth parcels without applying crop/class based doubt:"
                 outputfile.write(f"\n{message}\n")            
-                html_data['PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT'] = message
-                
-                # To get the number of alpha errors per cropclass, we also need alpha errors
-                # also for parcels that had not_enough_pixels, so we need prediction_withdoubt
-                # If they don't exist, calculate
+                html_data['PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT'] = message
+
+                # For class report, use error conclusions without marker specific stuff
                 class_postpr.add_doubt_column(
                         pred_df=df_parcel_gt, 
-                        new_pred_column='pred_cons_no_min_pix',
+                        new_pred_column='pred_cons_no_marker_specific',
+                        apply_doubt_pct_proba=True,
+                        apply_doubt_min_nb_pixels=True,
+                        apply_doubt_marker_specific=False)
+                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_marker_specific')
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_pred_cons_no_marker_specific"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn=conf.columns['class_declared'],
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=alpha_numerator_columns,
+                        error_codes_denominator=alpha_denominator_columns)
+                #df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE'] = df_per_column.to_html()
+                
+                # BETA errors 
+                message = f"Number of ERROR_BETA parcels per declared cropclass for the ground truth parcels without applying crop/class based doubt:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_BETA_PER_CLASS_TEXT'] = message
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_pred_cons_no_marker_specific"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn=conf.columns['class_declared'],
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=beta_numerator_columns,
+                        error_codes_denominator=beta_denominator_columns)
+                #df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_BETA_PER_CLASS_TABLE'] = df_per_column.to_html()
+
+            # If crop is available, write the number of ALFA errors per cropclass (for the prediction with doubt)
+            if conf.columns['crop_declared'] in df_parcel_gt.columns:
+                # ALPHA errors 
+                message = f"Number of ERROR_ALPHA parcels per declared crop for the ground truth parcels, without applying marker specific doubt:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_ALPHA_PER_CROP_TEXT'] = message
+
+                # For crop report, use error conclusions without marker specific stuff
+                class_postpr.add_doubt_column(
+                        pred_df=df_parcel_gt, 
+                        new_pred_column='pred_cons_no_marker_specific',
+                        apply_doubt_pct_proba=True,
+                        apply_doubt_min_nb_pixels=True,
+                        apply_doubt_marker_specific=False)
+                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_marker_specific')
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_pred_cons_no_marker_specific"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn=conf.columns['crop_declared'],
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=alpha_numerator_columns,
+                        error_codes_denominator=alpha_denominator_columns)
+                #df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE'] = df_per_column.to_html()
+
+                # BETA errors 
+                message = f"Number of ERROR_BETA parcels per declared crop for the ground truth parcels, without applying marker specific doubt:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_BETA_PER_CROP_TEXT'] = message
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_pred_cons_no_marker_specific"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn=conf.columns['crop_declared'],
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=beta_numerator_columns,
+                        error_codes_denominator=beta_denominator_columns)
+                #df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_BETA_PER_CROP_TABLE'] = df_per_column.to_html()
+
+            # If probability is available, write the number of ALFA errors per probability (for the prediction with doubt)
+            if 'pred1_prob' in df_parcel_gt.columns:
+                # ALPHA errors 
+                message = f"Number of ERROR_ALFA parcels per % probability for the ground truth parcels, without doubt based on probability:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT'] = message
+
+                # For pixcount report, use error conclusions without doubt reasons
+                # that use the pct probability + round the probabilities
+                class_postpr.add_doubt_column(
+                        pred_df=df_parcel_gt, 
+                        new_pred_column='pred_cons_no_pct_prob',
+                        apply_doubt_pct_proba=False,
+                        apply_doubt_min_nb_pixels=True,
                         apply_doubt_marker_specific=True)
-                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_min_pix')
-                            
-                df_per_column = _get_alfa_errors_per_column(groupbycolumn=conf.columns['prediction_full_alpha'],
-                                                            df_predquality=df_parcel_gt,
-                                                            pred_quality_column="gt_conclusion_" + "pred_cons_no_min_pix",
-                                                            error_alpha_code='FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA')
-                df_per_column.dropna(inplace=True)
+                _add_gt_conclusions(df_parcel_gt, 'pred_cons_no_pct_prob')
+                df_parcel_gt['pred1_prob_rounded'] = df_parcel_gt['pred1_prob'].round(2)
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_" + "pred_cons_no_pct_prob"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn='pred1_prob_rounded',
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=alpha_numerator_columns,
+                        error_codes_denominator=alpha_denominator_columns,
+                        ascending=False)
+                #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data['PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE'] = df_per_column.to_html()
-                
+
+                # BETA errors 
+                message = f"Number of ERROR_BETA parcels per % probability for the ground truth parcels, without doubt based on probability:"
+                outputfile.write(f"\n{message}\n")            
+                html_data['PREDICTION_QUALITY_BETA_PER_PROBABILITY_TEXT'] = message
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_" + "pred_cons_no_pct_prob"
+                df_per_column = _get_errors_per_column(
+                        groupbycolumn='pred1_prob_rounded',
+                        df_predquality=df_parcel_gt,
+                        pred_quality_column=pred_quality_column,
+                        pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                        error_codes_numerator=beta_numerator_columns,
+                        error_codes_denominator=beta_denominator_columns,
+                        ascending=False)
+                #df_per_column.dropna(inplace=True)
+                with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data['PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE'] = df_per_column.to_html()
+
     with open(output_report_txt.replace('.txt', '.html'), 'w') as outputfile:           
         html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
         src = Template(html_template_file)
@@ -579,15 +725,15 @@ def _add_prediction_conclusion(in_df,
     # Add the new column with a fixed value first 
     in_df[new_columnname] = 'UNDEFINED'    
     
-    # Some conclusions are different is detailed info is asked...
+    # Some conclusions are different if detailed info is asked...
     if detailed == True:
         # The classes that are defined as unimportant
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                    & (in_df[conf.columns['class']].isin(classes_to_ignore_unimportant)),
+                    & (in_df[conf.columns['class_declared']].isin(classes_to_ignore_unimportant)),
                   new_columnname] = 'IGNORE_UNIMPORTANT:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
         # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                    & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
+                    & (in_df[conf.columns['class_declared']].isin(all_classes_to_ignore)),
                   new_columnname] = 'IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
         # If conclusion still UNDEFINED, check if doubt 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
@@ -599,11 +745,11 @@ def _add_prediction_conclusion(in_df,
     else:
         # The classes that are defined as unimportant
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                    & (in_df[conf.columns['class']].isin(classes_to_ignore_unimportant)),
+                    & (in_df[conf.columns['class_declared']].isin(classes_to_ignore_unimportant)),
                   new_columnname] = 'IGNORE_UNIMPORTANT'
         # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                    & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
+                    & (in_df[conf.columns['class_declared']].isin(all_classes_to_ignore)),
                   new_columnname] = 'IGNORE'
         # If conclusion still UNDEFINED, check if doubt 
         in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
@@ -615,7 +761,7 @@ def _add_prediction_conclusion(in_df,
 
     # If conclusion still UNDEFINED, check if prediction equals the input class 
     in_df.loc[(in_df[new_columnname] == 'UNDEFINED')
-                & (in_df[conf.columns['class']] == in_df[prediction_column_to_use]),
+                & (in_df[conf.columns['class_declared']] == in_df[prediction_column_to_use]),
               new_columnname] = 'OK:PREDICTION=INPUT_CLASS'
     # If conclusion still UNDEFINED, prediction is different from input 
     in_df.loc[in_df[new_columnname] == 'UNDEFINED',
@@ -634,18 +780,24 @@ def _add_gt_conclusions(in_df,
 
     # Calculate gt_vs_input_column
     # If ground truth same as input class, farmer OK, unless it is an ignore class
-    in_df[gt_vs_input_column] = 'FARMER-WRONG'
-    in_df.loc[(in_df[conf.columns['class_declared']] == in_df[conf.columns['class_groundtruth']]),
+    in_df[gt_vs_input_column] = 'UNDEFINED'
+    in_df.loc[(in_df[gt_vs_input_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class_declared']] == in_df[conf.columns['class_groundtruth']])
+                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-CORRECT:IGNORE:DECLARED=GROUNDTRUTH=' + in_df[conf.columns['class_groundtruth']].map(str)
+    in_df.loc[(in_df[gt_vs_input_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class_declared']] == in_df[conf.columns['class_groundtruth']]),
               gt_vs_input_column] = 'FARMER-CORRECT'
-    in_df.loc[(in_df[conf.columns['class_declared']] == in_df[conf.columns['class_groundtruth']])
-                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
-              gt_vs_input_column] = 'FARMER-CORRECT:IGNORE:VERIFIED=UNVERIFIED=' + in_df[conf.columns['class_groundtruth']].map(str)
-    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-WRONG')
-                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
-              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:VERIFIEDCLASSNAME=' + in_df[conf.columns['class_groundtruth']].map(str)
-    in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-WRONG')
+    in_df.loc[(in_df[gt_vs_input_column] == 'UNDEFINED')
                     & (in_df[conf.columns['class_declared']].isin(all_classes_to_ignore)),
-              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:UNVERIFIEDCLASSNAME=' + in_df[conf.columns['class_declared']].map(str)
+              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:DECLARED=' + in_df[conf.columns['class_declared']].map(str)
+    in_df.loc[(in_df[gt_vs_input_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
+              gt_vs_input_column] = 'FARMER-WRONG:IGNORE:GROUNDTRUTH=' + in_df[conf.columns['class_groundtruth']].map(str)
+
+    # If conclusion still UNDEFINED, farmer was simply wrong 
+    in_df.loc[in_df[gt_vs_input_column] == 'UNDEFINED',
+              gt_vs_input_column] = 'FARMER-WRONG'
 
     # Calculate gt_vs_prediction_column
     # If ground truth same as prediction, prediction OK 
@@ -656,16 +808,10 @@ def _add_gt_conclusions(in_df,
                     & (in_df[prediction_column_to_use].isin(all_classes_to_ignore)),
               gt_vs_prediction_column] = 'PRED-CORRECT:IGNORE:PREDICTION=GROUNDTRUTH=' + in_df[prediction_column_to_use].map(str)                
 
-    # Parcels that were ignored for trainig and/or prediction, get an ignore conclusion
-    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
-                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
-              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:GROUNDTRUTH=' + in_df[conf.columns['class_groundtruth']].map(str)
+    # If declared class in ignored for trainig and/or prediction: an ignore conclusion
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
                     & (in_df[conf.columns['class_declared']].isin(all_classes_to_ignore)),
               gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:DECLARED=' + in_df[conf.columns['class_declared']].map(str)
-    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
-                    & (in_df[conf.columns['class']].isin(all_classes_to_ignore)),
-              gt_vs_prediction_column] = 'PRED-NONE:IGNORE:INPUTCLASSNAME=' + in_df[conf.columns['class']].map(str)
 
     # If conclusion still UNDEFINED, check if doubt 
     in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
@@ -675,12 +821,17 @@ def _add_gt_conclusions(in_df,
                     & (in_df[prediction_column_to_use] == 'NODATA'),
               gt_vs_prediction_column] = 'PRED-DOUBT:REASON=' + in_df[prediction_column_to_use].map(str)              
 
+    # If groundtruth class in ignored for trainig and/or prediction: an ignore conclusion
+    in_df.loc[(in_df[gt_vs_prediction_column] == 'UNDEFINED')
+                    & (in_df[conf.columns['class_groundtruth']].isin(all_classes_to_ignore)),
+              gt_vs_prediction_column] = 'PRED-WRONG:IGNORE:GROUNDTRUTH=' + in_df[conf.columns['class_groundtruth']].map(str)
+
     # If conclusion still UNDEFINED, it was wrong 
     in_df.loc[in_df[gt_vs_prediction_column] == 'UNDEFINED',
               gt_vs_prediction_column] = 'PRED-WRONG'
 
     # Calculate gt_conclusion_column
-    # Unverified class was correct  
+    # Declared class was correct  
     in_df[gt_conclusion_column] = 'UNDEFINED'
     in_df.loc[(in_df[gt_vs_input_column] == 'FARMER-CORRECT')
                     & (in_df[gt_vs_prediction_column] == 'PRED-WRONG'),
@@ -689,7 +840,7 @@ def _add_gt_conclusions(in_df,
                     & (in_df[gt_vs_input_column] == 'FARMER-CORRECT'),
                 gt_conclusion_column] = 'FARMER-CORRECT_' + in_df[gt_vs_prediction_column].map(str)
 
-    # Unverified class was not correct
+    # Declared class was not correct
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED')
                     & (in_df[gt_vs_input_column] == 'FARMER-WRONG')
                     & (in_df[conf.columns['class_declared']] == in_df[prediction_column_to_use]),
@@ -698,83 +849,59 @@ def _add_gt_conclusions(in_df,
                     & (in_df[gt_vs_input_column] == 'FARMER-WRONG'),
               gt_conclusion_column] = 'FARMER-WRONG_' + in_df[gt_vs_prediction_column].map(str)
     
-    # Unverified or verified class was ignore
+    # Declared or groundtruth class was ignore
     in_df.loc[(in_df[gt_conclusion_column] == 'UNDEFINED'),
               gt_conclusion_column] = in_df[gt_vs_input_column].map(str)
-                            
-# Marina : mag weg 
-def _get_alfa_errors_per_pixcount(df_predquality_pixcount,
-                                  pred_quality_column: str,
-                                  error_alpha_code: str):
-    """ Returns a dataset with detailed information about the number of alfa errors per pixcount """
-
-    # Calculate the number of parcels per pixcount, the cumulative sum + the pct of all
-    df_count_per_pixcount = (df_predquality_pixcount.groupby(conf.columns['pixcount_s1s2'], as_index=False)
-                             .size().to_frame('count_all'))
-    values = df_count_per_pixcount['count_all'].cumsum(axis=0)
-    df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns),
-                                 column='count_all_cumulative',
-                                 value=values)
-    values = (100 * df_count_per_pixcount['count_all_cumulative']
-              / df_count_per_pixcount['count_all'].sum())
-    df_count_per_pixcount.insert(loc=len(df_count_per_pixcount.columns),
-                                 column='pct_all_cumulative',
-                                 value=values)
-
-    # Now calculate the number of alfa errors per pixcount
-    df_alfa_error = df_predquality_pixcount[
-            df_predquality_pixcount[pred_quality_column] == error_alpha_code]
-    df_alfa_per_pixcount = (df_alfa_error.groupby(conf.columns['pixcount_s1s2'], as_index=False)
-                            .size().to_frame('count_error_alfa'))
-
-    # Join them together, and calculate the alfa error percentages
-    df_alfa_per_pixcount = df_count_per_pixcount.join(df_alfa_per_pixcount, how='left')
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns),
-                                column='count_error_alfa_cumulative',
-                                value=df_alfa_per_pixcount['count_error_alfa'].cumsum(axis=0))
-                                
-    values = 100 * df_alfa_per_pixcount['count_error_alfa'] / df_alfa_per_pixcount['count_all']
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_all', value=values)
-                                
-    values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative'] / df_alfa_per_pixcount['count_error_alfa'].sum())
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_alfa_cumulative', value=values)
-
-    values = (100 * df_alfa_per_pixcount['count_error_alfa_cumulative'] / df_alfa_per_pixcount['count_all'].sum())
-    df_alfa_per_pixcount.insert(loc=len(df_alfa_per_pixcount.columns), column='pct_error_alfa_of_all_cumulative', value=values)
-
-    return df_alfa_per_pixcount
-
-# Marina : new - bijgewerkte versie van _get_alfa_errors_per_pixcount
-def _get_alfa_errors_per_column(groupbycolumn: str,
-                                df_predquality,
-                                pred_quality_column: str,
-                                error_alpha_code: str):
+         
+def _get_errors_per_column(
+            groupbycolumn: str,
+            df_predquality,
+            pred_quality_column: str,
+            pred_quality_full_doubt_column: str,
+            error_codes_numerator: [],
+            error_codes_denominator: [],
+            ascending: bool = True):
     """ Returns a dataset with detailed information about the number of alfa errors per column that was passed on"""
 
-    # Calculate the number of parcels per column, the cumulative sum + the pct of all
-    df_predquality_count = (df_predquality.groupby(groupbycolumn, as_index=False)
-                             .size().to_frame('count_all'))
+    # First filter on the parcels we need to calculate the pct alpha errors
+    df_predquality_filtered = df_predquality[
+            df_predquality[pred_quality_column].isin(error_codes_denominator)]
+
+    # Calculate the number of parcels per groupbycolumn, the cumulative sum + the pct of all
+    df_predquality_count = (df_predquality_filtered.groupby(groupbycolumn, as_index=False)
+                            .size().to_frame('count_all'))
+    df_predquality_count.sort_index(ascending=ascending, inplace=True)
     values = df_predquality_count['count_all'].cumsum(axis=0)
     df_predquality_count.insert(loc=len(df_predquality_count.columns),
-                                 column='count_all_cumulative',
-                                 value=values)
+                                column='count_all_cumulative',
+                                value=values)
     values = (100 * df_predquality_count['count_all_cumulative']
               / df_predquality_count['count_all'].sum())
     df_predquality_count.insert(loc=len(df_predquality_count.columns),
-                                 column='pct_all_cumulative',
-                                 value=values)
+                                column='pct_all_cumulative',
+                                value=values)
 
-    # Now calculate the number of alfa errors per column
-    df_alfa_error = df_predquality[
-            df_predquality[pred_quality_column] == error_alpha_code]
+    # Now calculate the number of alfa errors per groupbycolumn
+    df_alfa_error = df_predquality_filtered[
+            df_predquality_filtered[pred_quality_column].isin(error_codes_numerator)]
     df_alfa_per_column = (df_alfa_error.groupby(groupbycolumn, as_index=False)
-                            .size().to_frame('count_error_alfa'))
+                          .size().to_frame('count_error_alfa'))
+    df_alfa_per_column.sort_index(ascending=ascending, inplace=True)                         
 
-    # Join them together, and calculate the alfa error percentages
+    # Now calculate the number of alfa errors with full doubt per groupbycolumn 
+    df_alfa_error_full_doubt = df_predquality_filtered[
+            df_predquality_filtered[pred_quality_full_doubt_column].isin(error_codes_numerator)]
+    df_alfa_full_doubt_per_column = (df_alfa_error_full_doubt.groupby(groupbycolumn, as_index=False)
+                                     .size().to_frame('count_error_alfa_full_doubt'))
+
+    # Join everything together
     df_alfa_per_column = df_predquality_count.join(df_alfa_per_column, how='left')
+    df_alfa_per_column = df_alfa_per_column.join(df_alfa_full_doubt_per_column, how='left')
+
+    # Finally calculate all alfa error percentages
     df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
-                                column='count_error_alfa_cumulative',
-                                value=df_alfa_per_column['count_error_alfa'].cumsum(axis=0))
+                              column='count_error_alfa_cumulative',
+                              value=df_alfa_per_column['count_error_alfa'].cumsum(axis=0))
                                 
     values = 100 * df_alfa_per_column['count_error_alfa'] / df_alfa_per_column['count_all']
     df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_all', value=values)
