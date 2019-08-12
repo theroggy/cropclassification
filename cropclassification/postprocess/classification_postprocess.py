@@ -275,9 +275,17 @@ def add_doubt_column(pred_df: pd.DataFrame,
             #         - gave 33-100% false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
                             & (~pred_df[new_pred_column].str.startswith('DOUBT'))
-                            & (pred_df[conf.columns['crop_declared']].isin(['43', '52', '721', '722', '731', '732', '831', '931', '8410']))
+                            & (pred_df[conf.columns['crop_declared']].isin(['43', '51', '52', '721', '722', '731', '732', '831', '931', '8410']))
                             & (pred_df['pred1'] != 'MON_LC_FABACEAE'),
                         new_pred_column] = 'DOUBT_RISK:FABACEAE-UNCONFIRMED'
+
+            # If parcel was declared as some arable crops, and is classified as fabaceae, set to doubt
+            # Remark: those gave 100% false positives for marker LANDCOVER
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (pred_df[conf.columns['crop_declared']].isin(['9534']))
+                            & (pred_df['pred1'] == 'MON_LC_FABACEAE'),
+                        new_pred_column] = 'DOUBT:ARABLE-SEEN-AS-FABACEAE'
 
             # If parcel was declared as 'other herbs' or 'flowers', but is not confirmed as
             # MON_LC_ARABLE classified as such: doubt
