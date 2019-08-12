@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def train(train_df: pd.DataFrame,
-          output_classifier_filepath: str):
+          output_classifier_basefilepath: str) -> str:
     """
     Train a classifier and output the trained classifier to the output file.
 
@@ -36,8 +36,9 @@ def train(train_df: pd.DataFrame,
             * global_settings.id_column: the id of the parcel
             * global_settings.class_column: the class of the parcel
             * ... all columns that will be used as classification data
-        output_classifier_filepath: the filepath where the classifier can be written
+        output_classifier_basefilepath: the filepath where the classifier can be written
     """
+    output_classifier_filepath = output_classifier_basefilepath
 
     # Split the input dataframe in one with the train classes and one with the train data
     train_classes_df = train_df[conf.columns['class']]
@@ -80,8 +81,11 @@ def train(train_df: pd.DataFrame,
     # Write the learned model to a file...
     logger.info(f"Write the learned model file to {output_classifier_filepath}")
     joblib.dump(classifier, output_classifier_filepath)
+    
+    return output_classifier_filepath
 
 def predict_proba(parcel_df: pd.DataFrame,
+                  classifier_basefilepath: str,
                   classifier_filepath: str,
                   output_parcel_predictions_filepath: str) -> pd.DataFrame:
     """

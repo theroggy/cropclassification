@@ -10,6 +10,7 @@ import os
 import cropclassification.helpers.config_helper as conf 
 import cropclassification.helpers.dir_helper as dir_helper
 import cropclassification.helpers.log_helper as log_helper
+import cropclassification.helpers.model_helper as mh
 import cropclassification.preprocess.timeseries_util as ts_util
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.preprocess.classification_preprocess as class_pre
@@ -50,7 +51,7 @@ def run(markertype_to_calc: str,
     # If a model to use is specified, check if it exists...
     if input_model_to_use_filepath is not None and not os.path.exists(input_model_to_use_filepath):
         raise Exception(f"Input file input_model_to_use_filepath doesn't exist: {input_model_to_use_filepath}")
-    
+
     # Determine the config files to load depending on the marker_type
     marker_ini = f"config/{markertype_to_calc.lower()}.ini"
     config_filepaths = ["config/general.ini",
@@ -88,7 +89,7 @@ def run(markertype_to_calc: str,
         logger.info("Write config_used.ini, so it can be reused later on")
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
-
+        
     # Prepare input filepaths
     input_dir = conf.dirs['input_dir']
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
@@ -198,7 +199,15 @@ def run(markertype_to_calc: str,
     #-------------------------------------------------------------
     parcel_predictions_proba_all_filepath = os.path.join(
             run_dir, f"{base_filename}_predict_proba_all{data_ext}")
+    classifier_ext = conf.classifier['classifier_ext']
+    classifier_basefilepath = os.path.join(run_dir, f"{markertype_to_calc}_01_mlp{classifier_ext}")    
 
+    # Check if a model exists already
+    if input_model_to_use_filepath is None:
+        best_model = mh.get_best_model(run_dir, acc_metric_mode='min')
+        if best_model is not None:
+            input_model_to_use_filepath = best_model['filepath']
+            
     # if there is no model to use specified, train one!
     if input_model_to_use_filepath is None:
 
@@ -216,8 +225,6 @@ def run(markertype_to_calc: str,
                 balancing_strategy=balancing_strategy)
 
         # Train the classifier and output predictions
-        classifier_ext = conf.classifier['classifier_ext']
-        classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + f"_classifier{classifier_ext}"
         parcel_predictions_proba_test_filepath = os.path.join(
                 run_dir, f"{base_filename}_predict_proba_test{data_ext}")
         classification.train_test_predict(
@@ -225,7 +232,7 @@ def run(markertype_to_calc: str,
                 input_parcel_test_filepath=parcel_test_filepath,
                 input_parcel_all_filepath=parcel_filepath,
                 input_parcel_classification_data_filepath=parcel_classification_data_filepath,
-                output_classifier_filepath=classifier_filepath,
+                output_classifier_basefilepath=classifier_basefilepath,
                 output_predictions_test_filepath=parcel_predictions_proba_test_filepath,
                 output_predictions_all_filepath=parcel_predictions_proba_all_filepath)
     else:
@@ -233,6 +240,7 @@ def run(markertype_to_calc: str,
         classification.predict(
                 input_parcel_filepath=parcel_filepath,
                 input_parcel_classification_data_filepath=parcel_classification_data_filepath,
+                input_classifier_basefilepath=classifier_basefilepath,
                 input_classifier_filepath=input_model_to_use_filepath,
                 output_predictions_filepath=parcel_predictions_proba_all_filepath)
 

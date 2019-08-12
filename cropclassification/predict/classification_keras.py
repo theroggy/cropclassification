@@ -13,6 +13,7 @@ import pandas as pd
 import tensorflow as tf
 
 import cropclassification.helpers.config_helper as conf
+import cropclassification.helpers.model_helper as mh
 import cropclassification.helpers.pandas_helper as pdh
 
 #-------------------------------------------------------------
@@ -37,7 +38,7 @@ K.set_session(session)
 
 def train(train_df: pd.DataFrame,
           test_df: pd.DataFrame,
-          output_classifier_filepath: str):
+          output_classifier_basefilepath: str) -> str:
     """
     Train a classifier and output the trained classifier to the output file.
 
@@ -51,9 +52,11 @@ def train(train_df: pd.DataFrame,
     """
 
     # Prepare and check some input + init some variables
-    output_classifier_filepath_noext, output_ext = os.path.splitext(output_classifier_filepath)
-    output_classifier_classes_filepath = output_classifier_filepath_noext + '_classes.txt'
-    output_classifier_datacolumns_filepath = output_classifier_filepath_noext + '_datacolumns.txt'
+    output_classifier_filepath_noext, output_ext = os.path.splitext(output_classifier_basefilepath)
+    output_classifier_classes_filepath = f"{output_classifier_filepath_noext}_classes.txt"
+    output_classifier_datacolumns_filepath = f"{output_classifier_filepath_noext}_datacolumns.txt"
+    output_classifier_dir, output_classifier_filename = os.path.split(output_classifier_basefilepath)
+    csv_log_filepath = f"{output_classifier_filepath_noext}_train_log.csv"
 
     if output_ext.lower() != '.hdf5':
         message = f"Keras only supports saving in extension .hdf5, not in {output_ext}"
@@ -114,12 +117,17 @@ def train(train_df: pd.DataFrame,
     # Create neural network
     model = keras.models.Sequential()
     # Create the hidden layers as specified in config
+    dropout_pct = conf.classifier.getfloat('multilayer_perceptron_dropout_pct')
     for i, hidden_layer_size in enumerate(hidden_layer_sizes):
         # For the first layer, the input size needs to be specified
         if i == 0:
             model.add(keras.layers.Dense(hidden_layer_size, activation='relu', input_shape=(len(train_data_df.columns),)))
+            if dropout_pct > 0:
+                model.add(keras.layers.Dropout(dropout_pct/100))
         else:
             model.add(keras.layers.Dense(hidden_layer_size, activation='relu'))
+            if dropout_pct > 0:
+                model.add(keras.layers.Dropout(dropout_pct/100))
 
     # Add the final layer that will produce the outputs
     model.add(keras.layers.Dense(len(classes_dict), activation='softmax'))
@@ -128,16 +136,50 @@ def train(train_df: pd.DataFrame,
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     
     logger.info(f"Start fitting classifier:\n{model.summary()}")
-    earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=100, verbose=0, mode='min')
-    mcp_save = keras.callbacks.ModelCheckpoint(
-            output_classifier_filepath, save_best_only=True, monitor='val_loss', mode='min')
-    reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(
-            monitor='val_loss', factor=0.2, patience=30, verbose=1, epsilon=1e-4, mode='min')
-    hist = model.fit(train_data_df, train_classes_df, batch_size=128, epochs=1000, 
-                     callbacks=[earlyStopping, mcp_save, reduce_lr_loss],
-                     validation_data=(test_data_df, test_classes_df))
+    acc_metric_mode = 'min'
+    reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', mode=acc_metric_mode,
+            factor=0.2, patience=30, verbose=1, epsilon=1e-4)
+    
+    # Several best_model strategies are possible, but it seems the standard/typical val_loss 
+    # gives the best results for this case.
+    best_model_strategy = 'VAL_LOSS'
+    if(best_model_strategy == 'VAL_LOSS'):
+        best_model_filepath = output_classifier_basefilepath        
+        mcp_saver = keras.callbacks.ModelCheckpoint(
+                best_model_filepath, save_best_only=True, 
+                monitor='val_loss', mode=acc_metric_mode)
+        earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', mode=acc_metric_mode,
+                patience=100, verbose=0)    
+    elif(best_model_strategy == 'LOSS'):
+        best_model_filepath = f"{output_classifier_filepath_noext}_train_loss{output_ext}"
+        mcp_saver = keras.callbacks.ModelCheckpoint(
+                best_model_filepath, save_best_only=True, 
+                monitor='loss', mode=acc_metric_mode)
+        earlyStopping = keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
+                patience=100, verbose=0)
+    elif(best_model_strategy == 'AVG(VAL_LOSS,LOSS)'):
+        # Custom callback that saves the best models using both train and validation metric
+        mcp_saver = mh.ModelCheckpointExt(
+                output_classifier_dir, output_classifier_filename, 
+                acc_metric_train='loss', acc_metric_validation='val_loss', 
+                acc_metric_mode=acc_metric_mode)
+        earlyStopping = keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
+                patience=100, verbose=0)
+                
+    csv_logger = keras.callbacks.CSVLogger(csv_log_filepath, append=True, separator=';')
+    model.fit(train_data_df, train_classes_df, batch_size=128, epochs=1000, 
+              callbacks=[earlyStopping, reduce_lr_loss, mcp_saver, csv_logger],
+              validation_data=(test_data_df, test_classes_df))
+
+    # For this strategy, the best model need to be looked for after fitting...
+    if(best_model_strategy == 'AVG(VAL_LOSS,LOSS)'):
+        best_model_info = mh.get_best_model(output_classifier_dir, acc_metric_mode=acc_metric_mode)
+        best_model_filepath = best_model_info['filepath']
+
+    return best_model_filepath
 
 def predict_proba(parcel_df: pd.DataFrame,
+                  classifier_basefilepath: str,
                   classifier_filepath: str,
                   output_parcel_predictions_filepath: str) -> pd.DataFrame:
     """
@@ -172,8 +214,8 @@ def predict_proba(parcel_df: pd.DataFrame,
     logger.info(f"Input predict file processed and rows with missing data removed, data shape: {parcel_data_df.shape}, labels shape: {parcel_classes_df.shape}")
 
     # Check of the input data columns match the columns needed for the neural net
-    classifier_filepath_noext, _ = os.path.splitext(classifier_filepath)
-    classifier_datacolumns_filepath = classifier_filepath_noext + '_datacolumns.txt'
+    classifier_basefilepath_noext, _ = os.path.splitext(classifier_basefilepath)
+    classifier_datacolumns_filepath = classifier_basefilepath_noext + '_datacolumns.txt'
     with open(classifier_datacolumns_filepath, "r") as file:
         classifier_datacolumns = eval(file.readline())
     if classifier_datacolumns != list(parcel_data_df.columns):
@@ -190,8 +232,7 @@ def predict_proba(parcel_df: pd.DataFrame,
 
     # Convert probabilities to dataframe, combine with input data and write to file
     # Load the classes from the classes file
-    classifier_filepath_noext, _ = os.path.splitext(classifier_filepath)
-    classifier_classes_filepath = classifier_filepath_noext + '_classes.txt'
+    classifier_classes_filepath = classifier_basefilepath_noext + '_classes.txt'
     with open(classifier_classes_filepath, "r") as file:
         classes_dict = eval(file.readline())
     id_class_proba = np.concatenate(
