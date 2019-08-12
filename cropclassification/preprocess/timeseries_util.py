@@ -5,6 +5,7 @@ Calculates periodic timeseries for input parcels.
 
 from datetime import datetime
 import logging
+import gc
 import glob
 import os
 
@@ -256,6 +257,7 @@ def calculate_periodic_data(
             # Loop over bands and orbits (all combinations of bands and orbits!)
             logger.info(f"Calculate file: {period_data_filename}")
             period_data_df = None
+            gc.collect()                  # Try to evade memory errors
             for band, orbit in [(band, orbit) for band in bands for orbit in orbits]:
 
                 # Get list of files needed for this period, band
