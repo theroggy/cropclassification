@@ -813,8 +813,8 @@ def calc_stats_image_gdf(
         image_data = get_image_data(
                 image_path, bounds=features_total_bounds, bands=[band], pixel_buffer=1)
         
-        # Upsample the image to double resolution, so we can use all_touched=True without 
-        # introducing big errors due to mixels
+        # Upsample the image to double resolution, so we can use pieces of pixels for small
+        # parcels without introducing big errors due to mixels
         upsample_factor = 2
         image_data_upsampled = (image_data[band]['data'].repeat(upsample_factor, axis=0)
                                                         .repeat(upsample_factor, axis=1))
