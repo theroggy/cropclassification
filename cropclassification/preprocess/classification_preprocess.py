@@ -84,6 +84,11 @@ def prepare_input(input_parcel_filepath: str,
         pdh.to_file(df_parceldata, output_parcel_filepath)
     else:
         df_parceldata.to_file(output_parcel_filepath, index=False)
+    
+    message = ("The buffered file just has been prepared, so probably you now you probably need " 
+             + "to sync it to the DIAS and start the timeseries data extraction before proceding!")
+    logger.warning(message)
+    raise Exception(message)
 
 def create_train_test_sample(input_parcel_filepath: str,
                              output_parcel_train_filepath: str,
