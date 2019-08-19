@@ -138,20 +138,22 @@ def train(train_df: pd.DataFrame,
     logger.info(f"Start fitting classifier:\n{model.summary()}")
     acc_metric_mode = 'min'
     reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', mode=acc_metric_mode,
-            factor=0.2, patience=30, verbose=1, epsilon=1e-4)
+            factor=0.2, patience=50, verbose=1, epsilon=1e-4)
     
     # Several best_model strategies are possible, but it seems the standard/typical val_loss 
     # gives the best results for this case.
     best_model_strategy = 'VAL_LOSS'
     if(best_model_strategy == 'VAL_LOSS'):
-        best_model_filepath = output_classifier_basefilepath        
+        to_be_formatted_by_callback = "{val_loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
+        best_model_filepath = f"{output_classifier_filepath_noext}_{to_be_formatted_by_callback}{output_ext}"
         mcp_saver = keras.callbacks.ModelCheckpoint(
                 best_model_filepath, save_best_only=True, 
                 monitor='val_loss', mode=acc_metric_mode)
         earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', mode=acc_metric_mode,
-                patience=100, verbose=0)    
+                patience=200, verbose=0)    
     elif(best_model_strategy == 'LOSS'):
-        best_model_filepath = f"{output_classifier_filepath_noext}_train_loss{output_ext}"
+        to_be_formatted_by_callback = "{loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
+        best_model_filepath = f"{output_classifier_filepath_noext}_{to_be_formatted_by_callback}{output_ext}"
         mcp_saver = keras.callbacks.ModelCheckpoint(
                 best_model_filepath, save_best_only=True, 
                 monitor='loss', mode=acc_metric_mode)
@@ -171,10 +173,9 @@ def train(train_df: pd.DataFrame,
               callbacks=[earlyStopping, reduce_lr_loss, mcp_saver, csv_logger],
               validation_data=(test_data_df, test_classes_df))
 
-    # For this strategy, the best model need to be looked for after fitting...
-    if(best_model_strategy == 'AVG(VAL_LOSS,LOSS)'):
-        best_model_info = mh.get_best_model(output_classifier_dir, acc_metric_mode=acc_metric_mode)
-        best_model_filepath = best_model_info['filepath']
+    # Get the best model after fitting to return it...
+    best_model_info = mh.get_best_model(output_classifier_dir, acc_metric_mode=acc_metric_mode)
+    best_model_filepath = best_model_info['filepath']
 
     return best_model_filepath
 
