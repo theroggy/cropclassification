@@ -135,6 +135,11 @@ def prepare_input(input_parcel_filepath: str,
     geofile_util.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_filepath)
     logger.info(parceldata_buf_poly_gdf)
 
+    message = ("The buffered file just has been prepared, so probably you now you probably need " 
+    + "to sync it to the DIAS and start the timeseries data extraction before proceding!")
+    logger.warning(message)
+    raise Exception(message)
+
 def calculate_periodic_data(
             input_parcel_filepath: str,
             input_base_dir: str,
@@ -152,9 +157,9 @@ def calculate_periodic_data(
         input_parcel_filepath (str): [description]
         input_base_dir (str): [description]
         start_date_str (str): Start date in format %Y-%m-%d. Needs to be aligned already on the 
-                periods wanted.
+                periods wanted + data on this date is included.
         end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on the 
-                periods wanted.
+                periods wanted + data on this date is excluded.
         sensordata_to_get ([]): 
         dest_data_dir (str): [description]
         force (bool, optional): [description]. Defaults to False.
