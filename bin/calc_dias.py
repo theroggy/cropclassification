@@ -23,7 +23,7 @@ def main():
     test = False
 
     # Specify the date range:
-    years = [2018, 2019]
+    years = [2019]
     month_start = 3
     month_stop = 8
     for year in years:
@@ -65,7 +65,7 @@ def main():
             input_features_filename = "Prc_BEFL_2018_2019-06-14_bufm5.shp"
         elif year == 2019:
             #input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
-            input_features_filename = "Prc_BEFL_2019_2019-07-02_bufm5.shp"
+            input_features_filename = "Prc_BEFL_2019_2019-08-14_bufm5.shp"
         else:
             raise Exception(f"Not a valid year: {year}")
         input_features_filepath = os.path.join(input_preprocessed_dir, input_features_filename)
@@ -113,12 +113,7 @@ def main():
 
         if test:
             # Take only the x first images found while testing
-            
-            #input_image_filepaths = input_image_filepaths[:10]
-            input_image_filepaths = []
-            input_image_filepaths.append("/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2018/04/09/S1A_IW_GRDH_1SDV_20180409T054153_20180409T054218_021386_024D13_D824_Orb_RBN_RTN_Cal_TC_20190612T171437.L1TC.CARD")
-            input_image_filepaths.append("/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2018/04/22/S1A_IW_GRDH_1SDV_20180422T173236_20180422T173301_021583_025328_99D1_Orb_RBN_RTN_Cal_TC_20190612T171441.L1TC.CARD")        
-
+            input_image_filepaths = input_image_filepaths[:10]
             logger.info(f"As we are only testing, process only {len(input_image_filepaths)} test images")
 
         calc_ts.calc_stats_per_image(
