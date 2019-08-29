@@ -1,14 +1,15 @@
+#%%
 # -*- coding: utf-8 -*-
 """
 Show the timeseries for a parcel.
 
 TODO: Recently hasn't been tested anymore!!!
-
-@author: Pieter Roggemans
 """
 
 import logging
 import os
+import sys
+[sys.path.append(i) for i in ['.', '..']]
 
 import numpy as np
 import pandas as pd
@@ -37,21 +38,26 @@ def show(input_parcel_filepath: str,
     df = pdh.read_file(input_parcel_filepath)
 
     # Just keep one parcel
-    df = df[df[conf.columns['id']] == filter_id]
+    id_column = 'UID'
+    df = df[df[id_column] == filter_id]
 
     # Remove all unnecessary columns
+    '''
     for column in df:
         if(not column.startswith(SENSORDATA_VV + '_')
            and not column.startswith(SENSORDATA_VH + '_')
            and not column == conf.columns['id']):
             df = df.drop(columns=column)
+    '''
 
-    # Set index for trnaspose
-    df.set_index(conf.columns['id'], inplace=True)
+    # Set index for transpose
+    df.set_index(id_column, inplace=True)
 
     # Transpose columns to rows to create time series
     df = df.transpose()
     df.reset_index(inplace=True)
+
+    '''    
     df.rename(columns={'index':'polarization_date'}, inplace=True)
 
     # Split the date and the polarization, the drop the original column
@@ -75,18 +81,20 @@ def show(input_parcel_filepath: str,
 
     for column in df:
         logger.info(column)
-
+    '''
+    
     logger.info(df)
 
     # Plot
     df.plot()
     
-'''
 # If the script is run directly...
 if __name__ == "__main__":
-    
-    local_data_basedir = 'X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie'
-    local_data_dir = os.path.join(local_data_basedir, 'ClassificationAndTraining\\Hoofdteelt_2017-06-03_2017-09-04')
-    input_parcel_filepath = os.path.join(local_data_dir , 'BEVL2017_result.csv')
-    show(input_parcel_filepath, filter_id = '0000280464DD96FF')
-'''    
+        
+    local_data_basedir = r"X:\Monitoring\Markers\playground\pierog"
+    local_data_dir = os.path.join(local_data_basedir, r"2019_LANDCOVER\Run_2019-08-19_001")
+    input_parcel_filepath = os.path.join(local_data_dir , "Prc_BEFL_2019_2019-08-14_bufm5_weekly_parcel_classdata.sqlite")
+    show(input_parcel_filepath, filter_id = '0000280800C79F930000000C')
+
+
+#%%
