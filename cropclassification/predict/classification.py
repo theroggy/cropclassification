@@ -4,9 +4,10 @@ Module that implements the classification logic.
 """
 
 import logging
-import os
+import os, glob, ast
 
 import pandas as pd
+import numpy as np
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
@@ -37,7 +38,7 @@ def train_test_predict(input_parcel_train_filepath: str,
         input_parcel_classes_test_filepath: the list of parcels with classes to test the classifier, without data!
         input_parcel_classes_all_filepath: the list of parcels with classes that need to be classified, without data!
         input_parcel_classification_data_filepath: the data to be used for the classification for all parcels.
-        output_classifier_filepath: the file path where to save the classifier.
+        output_classifier_basefilepath: the file path where to save the classifier.
         output_predictions_test_filepath: the file path where to save the test predictions.
         output_predictions_all_filepath: the file path where to save the predictions for all parcels.
         force: if True, overwrite all existing output files, if False, don't overwrite them.
@@ -49,7 +50,7 @@ def train_test_predict(input_parcel_train_filepath: str,
        #and os.path.exists(output_classifier_basefilepath)
        and os.path.exists(output_predictions_test_filepath)
        and os.path.exists(output_predictions_all_filepath)):
-        logger.warning(f"predict: output files exist and force is False, so stop: {output_classifier_filepath}, {output_predictions_test_filepath}, {output_predictions_all_filepath}")
+        logger.warning(f"predict: output files exist and force is False, so stop: {output_classifier_basefilepath}, {output_predictions_test_filepath}, {output_predictions_all_filepath}")
         return
 
     # Read the classification data from the csv so we can pass it on to the other functione to improve performance...
@@ -171,6 +172,11 @@ def predict(input_parcel_filepath: str,
     input_parcel_df = input_parcel_df.loc[~input_parcel_df[conf.columns['class_declared']]
                                            .isin(conf.marker.getlist('classes_to_ignore'))]
 
+    # get the expected columns from the classifier
+    datacolumns_filepath = glob.glob(os.path.join(os.path.dirname(input_classifier_filepath), "*datacolumns.txt"))[0]
+    with open(datacolumns_filepath, "r") as f:
+       input_classifier_datacolumns = ast.literal_eval(f.readline())
+
     # If the classification data isn't passed as dataframe, read it from the csv
     if input_parcel_classification_data_df is None:
         logger.info(f"Read classification data file: {input_parcel_classification_data_filepath}")
@@ -179,9 +185,12 @@ def predict(input_parcel_filepath: str,
             input_parcel_classification_data_df.set_index(conf.columns['id'], inplace=True)
         logger.debug('Read classification data file ready')
 
-    # Join the data to send to prediction logic...
+    # only take the required columns as expected by the classifier
+    input_parcel_classification_data_df = input_parcel_classification_data_df[input_classifier_datacolumns]
+
+    # Join the data to send to prediction logic
     logger.info("Join input parcels with the classification data")
-    input_parcel_for_predict_df = input_parcel_df.join(input_parcel_classification_data_df, how='inner')
+    input_parcel_for_predict_df = input_parcel_df.join(input_parcel_classification_data_df, how='inner')   
 
     # Predict!
     logger.info(f"Predict using this model: {input_classifier_filepath}")

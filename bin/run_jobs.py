@@ -4,9 +4,7 @@ Process the jobs in the job directory.
 """
 
 import configparser
-import glob 
-import os
-import sys
+import glob, os, sys
 [sys.path.append(i) for i in ['.', '..']]
 
 import cropclassification.helpers.config_helper as conf 
@@ -29,14 +27,15 @@ def run_jobs():
         job_config.read(job_filepath)
 
         # Now get the info we want from the job config
-        markertype_to_calc = job_config['job']['markertype_to_calc']
-        input_parcel_filename = job_config['job']['input_parcel_filename']
-        input_parcel_filetype = job_config['job']['input_parcel_filetype']
-        year = job_config['job'].getint('year')
-        country_code = job_config['job']['country_code']
-        classes_refe_filename = job_config['job']['classes_refe_filename']
-        input_groundtruth_filename = job_config['job']['input_groundtruth_filename']
-        input_model_to_use_relativepath = job_config['job']['input_model_to_use_relativepath']
+        job_section = job_config['job']
+        markertype_to_calc = job_section['markertype_to_calc']
+        input_parcel_filename = job_section['input_parcel_filename']
+        input_parcel_filetype = job_section['input_parcel_filetype']
+        year = job_section.getint('year')
+        country_code = job_section['country_code']
+        classes_refe_filename = job_section['classes_refe_filename']
+        input_groundtruth_filename = job_section['input_groundtruth_filename']
+        input_model_to_use_relativepath = job_section['input_model_to_use_relativepath']
         if input_model_to_use_relativepath is not None:
             input_model_to_use_filepath = os.path.join(models_dir, input_model_to_use_relativepath)
         else:

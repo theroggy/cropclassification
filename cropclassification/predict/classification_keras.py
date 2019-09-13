@@ -4,7 +4,7 @@ Module that implements the classification logic.
 """
 
 import logging
-import os
+import os, glob, ast
 
 import keras
 from keras import backend as K
@@ -215,10 +215,9 @@ def predict_proba(parcel_df: pd.DataFrame,
     logger.info(f"Input predict file processed and rows with missing data removed, data shape: {parcel_data_df.shape}, labels shape: {parcel_classes_df.shape}")
 
     # Check of the input data columns match the columns needed for the neural net
-    classifier_basefilepath_noext, _ = os.path.splitext(classifier_basefilepath)
-    classifier_datacolumns_filepath = classifier_basefilepath_noext + '_datacolumns.txt'
+    classifier_datacolumns_filepath = glob.glob(os.path.join(os.path.dirname(classifier_filepath), "*_datacolumns.txt"))[0]
     with open(classifier_datacolumns_filepath, "r") as file:
-        classifier_datacolumns = eval(file.readline())
+        classifier_datacolumns = ast.literal_eval(file.readline())
     if classifier_datacolumns != list(parcel_data_df.columns):
         raise Exception(f"Input datacolumns for predict don't match needed columns for neural net: \ninput: {parcel_data_df.columns}, \nneeded: {classifier_datacolumns}" )
 
@@ -233,9 +232,10 @@ def predict_proba(parcel_df: pd.DataFrame,
 
     # Convert probabilities to dataframe, combine with input data and write to file
     # Load the classes from the classes file
-    classifier_classes_filepath = classifier_basefilepath_noext + '_classes.txt'
+    classifier_classes_filepath = glob.glob(os.path.join(os.path.dirname(classifier_filepath), "*_classes.txt"))[0]
     with open(classifier_classes_filepath, "r") as file:
-        classes_dict = eval(file.readline())
+        classes_dict = ast.literal_eval(file.readline())
+
     id_class_proba = np.concatenate(
             [parcel_df[[conf.columns['id'], column_class, column_class_declared]].values, 
              class_proba], axis=1)
