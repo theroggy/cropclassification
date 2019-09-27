@@ -9,18 +9,23 @@ REMARK: this code isn't maintained anymore!
 
 Steps to setup gee:
 
-1. As google earth engine is used to get the Sentinel data for the classification, you will need a
+1. If google earth engine is used to get the Sentinel data for the classification, you will need a
 google account that has google earth engine access enabled.
 So go to https://earthengine.google.com/ and click "Sign up" at the top right if you haven't used
 google earth engine yet.
 Once you are signed up you should be able to visit https://code.earthengine.google.com/.
 
-2.  Run the following command to authenticate with google earth engine, and follow the procedure on the screen:
+2. You also need these extra dependencies
+```
+conda install --channel conda-forge earthengine-api google-api-python-client 
+```
+
+3.  Run the following command to authenticate with google earth engine, and follow the procedure on the screen:
 ```
 earthengine authenticate
 ```
 
-3. Activate (read-only) access to your google drive
+4. Activate (read-only) access to your google drive
     1. Go to the Google APIs cloud resource manager: https://console.developers.google.com/cloud-resource-manager
     2. If the UI isn't in english, you might want to set it to english so following the next steps
     is easier. You can do this in the 'Three dots menu', then 'Preferences'.
