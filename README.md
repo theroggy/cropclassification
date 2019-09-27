@@ -9,7 +9,7 @@ As the scripts are written in Python, you need to use a package manager to be ab
 If you need some more installation instructions, have a look here:
 https://conda.io/docs/user-guide/install/index.html
 
-1. Create new environment and install dependencies
+2. Create new environment and install dependencies
 
 Once you have anaconda installed, you can open an anaconda terminal window and follow the following steps:
 
@@ -27,13 +27,17 @@ Once you have anaconda installed, you can open an anaconda terminal window and f
       ```
       conda activate cropclassification
       ```
-1. Update the configuration to your situation
+3. Update the configuration to your situation
 
 You can now open the scripts in eg. visual studio code, and check out especially the .ini files in the config dir. You need to update those to match your environment, eg. set the paths as you want them,...
 
-1. Run `calc_dias.py` to calculate the time series on a server that has access to the sentinel images
+4. Calculate the time series 
 
-1. Run `run_job.py` to start a crop classification...
+To calculate time series, you need to run the `calc_dias.py` script on a server that has access to the sentinel CARD images.
+
+5. Start a crop classification
+
+Run `run_job.py`.
 
 ## Sample data
 
