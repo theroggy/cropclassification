@@ -10,6 +10,11 @@ import shutil
 import sys
 [sys.path.append(i) for i in ['.', '..']]
 
+# TODO: on windows, the init of this doensn't seem to work properly... should be solved somewhere else?
+if os.name == 'nt':
+    os.environ["GDAL_DATA"] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\gdal"
+    os.environ['PROJ_LIB'] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\proj"
+    
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts

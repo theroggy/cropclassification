@@ -7,6 +7,11 @@ import configparser
 import glob, os, sys
 [sys.path.append(i) for i in ['.', '..']]
 
+# TODO: on windows, the init of this doensn't seem to work properly... should be solved somewhere else?
+if os.name == 'nt':
+    os.environ["GDAL_DATA"] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\gdal"
+    os.environ['PROJ_LIB'] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\proj"
+    
 import cropclassification.helpers.config_helper as conf 
 import cropclassification.marker_runner as marker_runner 
 
