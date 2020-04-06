@@ -8,7 +8,6 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 
 import logging
 import os
-import shutil
 
 import pandas as pd
 import geopandas as gpd
@@ -46,6 +45,7 @@ columns_BEFL_to_keep = [
 
 def prepare_input(input_parcel_filepath: str,
                   classtype_to_prepare: str,
+                  classes_refe_filepath: str,
                   output_dir: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
@@ -75,83 +75,92 @@ def prepare_input(input_parcel_filepath: str,
         logger.critical(message)
         raise Exception(message)
 
-    # Copy the refe file to the run dir, so we always keep knowing which refe was used
-    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
-    if not os.path.exists(input_classes_filepath):
-        raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
-    shutil.copy(input_classes_filepath, output_dir)
-
     # Now start prepare 
     if classtype_to_prepare == 'CROPGROUP':
         parceldata_df = prepare_input_cropgroup(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
-                column_output_class=conf.columns['class_declared'])
+                column_output_class=conf.columns['class_declared'],
+                classes_refe_filepath=classes_refe_filepath)
         return prepare_input_cropgroup(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
-                column_output_class=conf.columns['class'])
+                column_output_class=conf.columns['class'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'CROPGROUP_GROUNDTRUTH':
         return prepare_input_cropgroup(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth'])
+                column_output_class=conf.columns['class_groundtruth'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'CROPGROUP_EARLY':
         parceldata_df = prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
-                column_output_class=conf.columns['class_declared'])
+                column_output_class=conf.columns['class_declared'],
+                classes_refe_filepath=classes_refe_filepath)
         return prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
-                column_output_class=conf.columns['class'])
+                column_output_class=conf.columns['class'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'CROPGROUP_EARLY_GROUNDTRUTH':
         return prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth'])
+                column_output_class=conf.columns['class_groundtruth'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'LANDCOVER':
         parceldata_df = prepare_input_landcover(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
-                column_output_class=conf.columns['class_declared'])
+                column_output_class=conf.columns['class_declared'],
+                classes_refe_filepath=classes_refe_filepath)
         return prepare_input_landcover(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
-                column_output_class=conf.columns['class'])
+                column_output_class=conf.columns['class'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'LANDCOVER_GROUNDTRUTH':
         return prepare_input_landcover(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth'])
+                column_output_class=conf.columns['class_groundtruth'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'LANDCOVER_EARLY':
         parceldata_df = prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
-                column_output_class=conf.columns['class_declared'])
+                column_output_class=conf.columns['class_declared'],
+                classes_refe_filepath=classes_refe_filepath)
         return prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
-                column_output_class=conf.columns['class'])
+                column_output_class=conf.columns['class'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'LANDCOVER_EARLY_GROUNDTRUTH':
         return prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth'])
+                column_output_class=conf.columns['class_groundtruth'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'POPULAR_CROP':
         parceldata_df = prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
-                column_output_class=conf.columns['class_declared'])
+                column_output_class=conf.columns['class_declared'],
+                classes_refe_filepath=classes_refe_filepath)
         return prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop,
-                column_output_class=conf.columns['class'])
+                column_output_class=conf.columns['class'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'POPULAR_CROP_GROUNDTRUTH':
         return prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-                column_output_class=conf.columns['class_groundtruth'])
+                column_output_class=conf.columns['class_groundtruth'],
+                classes_refe_filepath=classes_refe_filepath)
     else:
         message = f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
         logger.fatal(message)
@@ -160,7 +169,8 @@ def prepare_input(input_parcel_filepath: str,
 def prepare_input_cropgroup(
             parceldata_df,
             column_BEFL_cropcode: str,
-            column_output_class: str):
+            column_output_class: str,
+            classes_refe_filepath: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -174,9 +184,8 @@ def prepare_input_cropgroup(
     """
     # Check if parameters are OK and init some extra params
     #--------------------------------------------------------------------------
-    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
-    if not os.path.exists(input_classes_filepath):
-        raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}")
+    if not os.path.exists(classes_refe_filepath):
+        raise Exception(f"Input classes file doesn't exist: {classes_refe_filepath}")
 
     # Convert the crop to unicode, in case the input is int...
     if column_BEFL_cropcode in parceldata_df.columns:
@@ -184,8 +193,8 @@ def prepare_input_cropgroup(
         
     # Read and cleanup the mapping table from crop codes to classes
     #--------------------------------------------------------------------------
-    logger.info(f"Read classes conversion table from {input_classes_filepath}")
-    classes_df = pdh.read_file(input_classes_filepath)
+    logger.info(f"Read classes conversion table from {classes_refe_filepath}")
+    classes_df = pdh.read_file(classes_refe_filepath)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
@@ -225,13 +234,13 @@ def prepare_input_cropgroup(
     if column_BEFL_gesp_pm in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'SGM']), 
-                          column_output_class] = 'MON_STAL_SER'
+                          column_output_class] = 'MON_OVERK_LOO'
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['PLA', 'PLO', 'NPO']), 
-                          column_output_class] = 'MON_STAL_SER'
+                          column_output_class] = 'MON_OVERK_LOO'
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'LOO', 
-                          column_output_class] = 'MON_STAL_SER'           # Een loods is hetzelfde als een stal...
+                          column_output_class] = 'MON_OVERK_LOO'           # Een loods is hetzelfde als een stal...
         parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CON', 
-                          column_output_class] = 'MON_CONTAINERS'     # Containers, niet op volle grond...
+                          column_output_class] = 'MON_CONTAINERS'          # Containers, niet op volle grond...
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
         #parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
     else:
@@ -298,15 +307,16 @@ def prepare_input_cropgroup(
 
 def prepare_input_cropgroup_early(
             parceldata_df,
-            column_BEFL_cropcode: str = 'GWSCOD_H',
-            column_output_class: str = None):
+            column_BEFL_cropcode: str,
+            column_output_class: str,
+            classes_refe_filepath: str):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname 
     column ready to classify the cropgroups for early crops.
     """
     # First run the standard landcover prepare
     parceldata_df = prepare_input_cropgroup(
-            parceldata_df, column_BEFL_cropcode, column_output_class)
+            parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_filepath)
 
     # Set late crops to ignore
     parceldata_df.loc[parceldata_df[column_BEFL_earlylate] != 'MON_TEELTEN_VROEGE', 
@@ -325,8 +335,9 @@ def prepare_input_cropgroup_early(
 
 def prepare_input_landcover(
             parceldata_df,
-            column_BEFL_cropcode: str = 'GWSCOD_H',
-            column_output_class: str = None):
+            column_BEFL_cropcode: str,
+            column_output_class: str,
+            classes_refe_filepath: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -340,9 +351,8 @@ def prepare_input_landcover(
     """
     # Check if parameters are OK and init some extra params
     #--------------------------------------------------------------------------
-    input_classes_filepath = conf.preprocess['classtype_to_prepare_refe_filepath']
-    if not os.path.exists(input_classes_filepath):
-        raise Exception(f"Input classes file doesn't exist: {input_classes_filepath}") 
+    if not os.path.exists(classes_refe_filepath):
+        raise Exception(f"Input classes file doesn't exist: {classes_refe_filepath}") 
 
     # Convert the crop to unicode, in case the input is int...
     if column_BEFL_cropcode in parceldata_df.columns:
@@ -350,8 +360,8 @@ def prepare_input_landcover(
 
     # Read and cleanup the mapping table from crop codes to classes
     #--------------------------------------------------------------------------
-    logger.info(f"Read classes conversion table from {input_classes_filepath}")
-    classes_df = pdh.read_file(input_classes_filepath)
+    logger.info(f"Read classes conversion table from {classes_refe_filepath}")
+    classes_df = pdh.read_file(classes_refe_filepath)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
@@ -387,9 +397,10 @@ def prepare_input_landcover(
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if column_BEFL_gesp_pm in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
-        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'PLA', 'PLO']), 
-                          column_output_class] = 'MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS'
-        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SGM', 'NPO', 'LOO', 'CON']), 
+        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'PLA', 'PLO', 'SGM', 'NPO', 'LOO']), 
+                          column_output_class] = 'MON_LC_OVERK_LOO'
+        # Containers
+        parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm].isin(['CON']), 
                           column_output_class] = 'MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS_NS'
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
         #parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
@@ -416,15 +427,16 @@ def prepare_input_landcover(
 
 def prepare_input_landcover_early(
             parceldata_df,
-            column_BEFL_cropcode: str = 'GWSCOD_H',
-            column_output_class: str = None):
+            column_BEFL_cropcode: str,
+            column_output_class: str,
+            classes_refe_filepath: str):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname 
     column ready to classify the landcover for early crops.
     """
     # First run the standard landcover prepare
     parceldata_df = prepare_input_landcover(
-            parceldata_df, column_BEFL_cropcode, column_output_class)
+            parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_filepath)
 
     # Set crops not in early crops to ignore
     parceldata_df.loc[parceldata_df[column_BEFL_earlylate] != 'MON_TEELTEN_VROEGE', 
@@ -443,8 +455,9 @@ def prepare_input_landcover_early(
 
 def prepare_input_most_popular_crop(
             parceldata_df,
-            column_BEFL_cropcode: str = 'GWSCOD_H',
-            column_output_class: str = None):
+            column_BEFL_cropcode: str,
+            column_output_class: str,
+            classes_refe_filepath: str):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.

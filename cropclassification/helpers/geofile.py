@@ -53,6 +53,18 @@ def get_crs(filepath):
     with fiona.open(filepath, 'r') as geofile:
         return geofile.crs
 
+def get_totalbounds(filepath: str):
+    """
+    Gets the total bounds of a geofile. Return a tuple with the bounds and the crs.
+
+    Remark: implementation is not at all efficient!!!
+    
+    Args:
+        filepath (str): The filepath to the geofile
+    """
+    gdf = gpd.read_file(filepath)
+    return (gdf.total_bounds, gdf.crs)
+
 def is_geofile(filepath) -> bool:
     """
     Determines based on the filepath if this is a geofile.

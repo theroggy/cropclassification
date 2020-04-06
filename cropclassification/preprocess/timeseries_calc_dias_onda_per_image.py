@@ -813,8 +813,8 @@ def calc_stats_image_gdf(
         image_data = get_image_data(
                 image_path, bounds=features_total_bounds, bands=[band], pixel_buffer=1)
         
-        # Upsample the image to double resolution, so we can use all_touched=True without 
-        # introducing big errors due to mixels
+        # Upsample the image to double resolution, so we can use pieces of pixels for small
+        # parcels without introducing big errors due to mixels
         upsample_factor = 2
         image_data_upsampled = (image_data[band]['data'].repeat(upsample_factor, axis=0)
                                                         .repeat(upsample_factor, axis=1))
@@ -825,8 +825,8 @@ def calc_stats_image_gdf(
         # later on gives wrong results
         features_gdf.reset_index(drop=True, inplace=True)
         features_stats = zonal_stats(features_gdf, image_data_upsampled, 
-                affine=affine_upsampled, prefix="", nodata=0, all_touched=True,
-                stats=['count', 'mean', 'std', 'min', 'max'])
+                affine=affine_upsampled, prefix="", nodata=0, all_touched=False,
+                stats=['count', 'mean', 'median', 'std', 'min', 'max'])
         features_stats_df = pd.DataFrame(features_stats)
         features_stats_df['count'] = features_stats_df['count'].divide(upsample_factor*2)
 

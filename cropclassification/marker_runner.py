@@ -10,6 +10,7 @@ import os
 import cropclassification.helpers.config_helper as conf 
 import cropclassification.helpers.dir_helper as dir_helper
 import cropclassification.helpers.log_helper as log_helper
+import cropclassification.helpers.model_helper as mh
 import cropclassification.preprocess.timeseries_util as ts_util
 import cropclassification.preprocess.timeseries as ts
 import cropclassification.preprocess.classification_preprocess as class_pre
@@ -25,20 +26,32 @@ def run(markertype_to_calc: str,
         input_parcel_filetype: str,
         country_code: str,
         year: int,
+        classes_refe_filename: str,
         input_groundtruth_filename: str,
         input_model_to_use_filepath: str):
     """
     Runs a marker for an input file. If no input model to use is specified,
     a new one will be trained.
-
-    Args
-
+    
+    Args:
+        markertype_to_calc (str): [description]
+        input_parcel_filename (str): [description]
+        input_parcel_filetype (str): [description]
+        country_code (str): [description]
+        year (int): [description]
+        classes_refe_filename (str): [description]
+        input_groundtruth_filename (str): [description]
+        input_model_to_use_filepath (str): [description]
+    
+    Raises:
+        Exception: [description]
+        Exception: [description]
     """
 
     # If a model to use is specified, check if it exists...
     if input_model_to_use_filepath is not None and not os.path.exists(input_model_to_use_filepath):
         raise Exception(f"Input file input_model_to_use_filepath doesn't exist: {input_model_to_use_filepath}")
-    
+
     # Determine the config files to load depending on the marker_type
     marker_ini = f"config/{markertype_to_calc.lower()}.ini"
     config_filepaths = ["config/general.ini",
@@ -76,20 +89,24 @@ def run(markertype_to_calc: str,
         logger.info("Write config_used.ini, so it can be reused later on")
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
-
+        
     # Prepare input filepaths
-    input_dir = conf.dirs['input_dir']    
+    input_dir = conf.dirs['input_dir']
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
     if input_groundtruth_filename is not None:
         input_groundtruth_filepath = os.path.join(input_dir, input_groundtruth_filename)
     else:
         input_groundtruth_filepath = None
+    
+    refe_dir = conf.dirs['refe_dir']
+    classes_refe_filepath = os.path.join(refe_dir, classes_refe_filename)
 
     # Check if the necessary input files exist...
-    if not os.path.exists(input_parcel_filepath):
-        message = f"The parcel input file doesn't exist, so STOP: {input_parcel_filepath}"
-        logger.critical(message)
-        raise Exception(message)
+    for path in [classes_refe_filepath, input_parcel_filepath]:
+        if path is not None and not os.path.exists(path):
+            message = f"Input file doesn't exist, so STOP: {path}"
+            logger.critical(message)
+            raise Exception(message)
 
     # Get some general config
     data_ext = conf.general['data_ext']
@@ -144,12 +161,12 @@ def run(markertype_to_calc: str,
     # Remarks:
     #    - this is typically specific for the input dataset and result wanted!!!
     #    - the result is/should be a file with the following columns
-    #           - id (=global_settings.id_column): unique ID for each parcel
-    #           - classname (=global_settings.class_column): the class that must 
+    #           - id (=id_column): unique ID for each parcel
+    #           - classname (=class_column): the class that must 
     #             be classified to.
     #             Remarks: - if in classes_to_ignore_for_train, class won't be used for training
     #                      - if in classes_to_ignore, the class will be ignored
-    #           - pixcount (=global_settings.pixcount_s1s2_column):  
+    #           - pixcount:  
     #             the number of S1/S2 pixels in the parcel.
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess['classtype_to_prepare']
@@ -162,6 +179,7 @@ def run(markertype_to_calc: str,
             input_parcel_filetype=input_parcel_filetype,
             input_parcel_pixcount_filepath=parcel_pixcount_filepath,
             classtype_to_prepare=classtype_to_prepare,
+            classes_refe_filepath=classes_refe_filepath,
             output_parcel_filepath=parcel_filepath)
 
     # Collect all data needed to do the classification in one input file
@@ -181,7 +199,15 @@ def run(markertype_to_calc: str,
     #-------------------------------------------------------------
     parcel_predictions_proba_all_filepath = os.path.join(
             run_dir, f"{base_filename}_predict_proba_all{data_ext}")
+    classifier_ext = conf.classifier['classifier_ext']
+    classifier_basefilepath = os.path.join(run_dir, f"{markertype_to_calc}_01_mlp{classifier_ext}")    
 
+    # Check if a model exists already
+    if input_model_to_use_filepath is None:
+        best_model = mh.get_best_model(run_dir, acc_metric_mode='min')
+        if best_model is not None:
+            input_model_to_use_filepath = best_model['filepath']
+            
     # if there is no model to use specified, train one!
     if input_model_to_use_filepath is None:
 
@@ -199,8 +225,6 @@ def run(markertype_to_calc: str,
                 balancing_strategy=balancing_strategy)
 
         # Train the classifier and output predictions
-        classifier_ext = conf.classifier['classifier_ext']
-        classifier_filepath = os.path.splitext(parcel_train_filepath)[0] + f"_classifier{classifier_ext}"
         parcel_predictions_proba_test_filepath = os.path.join(
                 run_dir, f"{base_filename}_predict_proba_test{data_ext}")
         classification.train_test_predict(
@@ -208,7 +232,7 @@ def run(markertype_to_calc: str,
                 input_parcel_test_filepath=parcel_test_filepath,
                 input_parcel_all_filepath=parcel_filepath,
                 input_parcel_classification_data_filepath=parcel_classification_data_filepath,
-                output_classifier_filepath=classifier_filepath,
+                output_classifier_basefilepath=classifier_basefilepath,
                 output_predictions_test_filepath=parcel_predictions_proba_test_filepath,
                 output_predictions_all_filepath=parcel_predictions_proba_all_filepath)
     else:
@@ -216,6 +240,7 @@ def run(markertype_to_calc: str,
         classification.predict(
                 input_parcel_filepath=parcel_filepath,
                 input_parcel_classification_data_filepath=parcel_classification_data_filepath,
+                input_classifier_basefilepath=classifier_basefilepath,
                 input_classifier_filepath=input_model_to_use_filepath,
                 output_predictions_filepath=parcel_predictions_proba_all_filepath)
 
@@ -261,6 +286,7 @@ def run(markertype_to_calc: str,
                     input_parcel_filetype=input_parcel_filetype,
                     input_parcel_pixcount_filepath=parcel_pixcount_filepath,
                     classtype_to_prepare=conf.preprocess['classtype_to_prepare_groundtruth'],
+                    classes_refe_filepath=classes_refe_filepath,
                     output_parcel_filepath=groundtruth_filepath)
 
     # If we trained a model, there is a test prediction we want to report on

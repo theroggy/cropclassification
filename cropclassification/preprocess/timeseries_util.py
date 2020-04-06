@@ -5,6 +5,7 @@ Calculates periodic timeseries for input parcels.
 
 from datetime import datetime
 import logging
+import gc
 import glob
 import os
 
@@ -134,6 +135,11 @@ def prepare_input(input_parcel_filepath: str,
     geofile_util.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_filepath)
     logger.info(parceldata_buf_poly_gdf)
 
+    message = ("The buffered file just has been prepared, so probably you now you probably need " 
+    + "to sync it to the DIAS and start the timeseries data extraction before proceding!")
+    logger.warning(message)
+    raise Exception(message)
+
 def calculate_periodic_data(
             input_parcel_filepath: str,
             input_base_dir: str,
@@ -151,9 +157,9 @@ def calculate_periodic_data(
         input_parcel_filepath (str): [description]
         input_base_dir (str): [description]
         start_date_str (str): Start date in format %Y-%m-%d. Needs to be aligned already on the 
-                periods wanted.
+                periods wanted + data on this date is included.
         end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on the 
-                periods wanted.
+                periods wanted + data on this date is excluded.
         sensordata_to_get ([]): 
         dest_data_dir (str): [description]
         force (bool, optional): [description]. Defaults to False.
@@ -246,7 +252,7 @@ def calculate_periodic_data(
             period_data_filepath = os.path.join(dest_data_dir, period_data_filename)
 
             # Check if output file exists already
-            if os.path.exists(period_data_filepath):
+            if os.path.exists(period_data_filepath) and os.path.exists(pixcount_filepath):
                 if force is False:
                     logger.info(f"SKIP: force is False and file exists: {period_data_filepath}")
                     continue
@@ -256,6 +262,7 @@ def calculate_periodic_data(
             # Loop over bands and orbits (all combinations of bands and orbits!)
             logger.info(f"Calculate file: {period_data_filename}")
             period_data_df = None
+            gc.collect()                  # Try to evade memory errors
             for band, orbit in [(band, orbit) for band in bands for orbit in orbits]:
 
                 # Get list of files needed for this period, band
@@ -268,7 +275,7 @@ def calculate_periodic_data(
 
                 # Loop all period_files
                 period_band_data_df = None
-                statistic_columns_dict = {'count': [], 'max': [], 'mean': [], 'min': [], 'std': []}
+                statistic_columns_dict = {'count': [], 'max': [], 'mean': [], 'median': [], 'min': [], 'std': []}
                 for j, imagedata_filepath in enumerate(period_files_df.filepath.tolist()):
                     
                     # If file has filesize == 0, skip
@@ -323,6 +330,8 @@ def calculate_periodic_data(
                     period_band_data_df[f"{column_basename}_max"] = np.nanmax(period_band_data_df[statistic_columns_dict['max']], axis=1)
                     # Mean of all mean columns
                     period_band_data_df[f"{column_basename}_mean"] = np.nanmean(period_band_data_df[statistic_columns_dict['mean']], axis=1)
+                    # Mean of all median columns
+                    period_band_data_df[f"{column_basename}_median"] = np.nanmean(period_band_data_df[statistic_columns_dict['median']], axis=1)
                     # Minimum of all min columns
                     period_band_data_df[f"{column_basename}_min"] = np.nanmin(period_band_data_df[statistic_columns_dict['min']], axis=1)
                     # Mean of all std columns
@@ -332,7 +341,7 @@ def calculate_periodic_data(
                                     
                     # Only keep the columns we want to keep
                     columns_to_keep = [f"{column_basename}_count", f"{column_basename}_max", 
-                                    f"{column_basename}_mean", f"{column_basename}_min", 
+                                    f"{column_basename}_mean", f"{column_basename}_median", f"{column_basename}_min", 
                                     f"{column_basename}_std", f"{column_basename}_used_files"] 
                     period_band_data_df = period_band_data_df[columns_to_keep]
 
@@ -348,12 +357,14 @@ def calculate_periodic_data(
                 logger.info(f"Write new file: {period_data_filename}")
                 pdh.to_file(period_data_df, period_data_filepath)
 
+                # Create pixcount file if it doesn't exist yet...
                 if not os.path.exists(pixcount_filepath):
                     pixcount_s1s2_column = conf.columns['pixcount_s1s2']
-                    for column in period_data_df.columns:
-                        if column.endswith('_count'):
-                            period_data_df.rename(columns={column: pixcount_s1s2_column}, inplace=True)
-                            break
+                   
+                    # Get max count of all count columns available 
+                    columns_to_use = [column for column in period_data_df.columns if column.endswith('_count')]
+                    period_data_df[pixcount_s1s2_column] = np.nanmax(period_data_df[columns_to_use], axis=1)
+                    
                     pixcount_df = period_data_df[pixcount_s1s2_column]
                     pixcount_df.fillna(value=0, inplace=True)
                     pdh.to_file(pixcount_df, pixcount_filepath)
