@@ -893,11 +893,21 @@ def _get_errors_per_column(
             df_predquality_filtered[pred_quality_full_doubt_column].isin(error_codes_numerator)]
     df_alfa_full_doubt_per_column = (df_alfa_error_full_doubt.groupby(groupbycolumn, as_index=False)
                                      .size().to_frame('count_error_alfa_full_doubt'))
-
+   
     # Join everything together
     df_alfa_per_column = df_predquality_count.join(df_alfa_per_column, how='left')
     df_alfa_per_column = df_alfa_per_column.join(df_alfa_full_doubt_per_column, how='left')
 
+     # Now calculate the total number of parcels with full doubt applied per groupbycolumn
+    df_predquality_full_doubt_filtered = df_predquality[
+            df_predquality[pred_quality_full_doubt_column].isin(error_codes_denominator)]
+
+    values = (df_predquality_full_doubt_filtered.groupby(groupbycolumn, as_index=False)
+                            .size().to_frame('count_all_full_doubt'))
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
+                                column='count_all_full_doubt',
+                                value=values)
+ 
     # Finally calculate all alfa error percentages
     df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
                               column='count_error_alfa_cumulative',
