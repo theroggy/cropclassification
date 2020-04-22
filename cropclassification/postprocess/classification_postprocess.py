@@ -182,8 +182,6 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
     # Calculate predictions with doubt column
     classes_to_ignore = conf.marker.getlist('classes_to_ignore')
-    
-    
 
     # Init with the standard prediction 
     pred_df[new_pred_column] = 'UNDEFINED'
@@ -317,6 +315,13 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
         elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
             logger.info("Apply some marker-specific doubt algorythms")
+
+            # TODO verder afwerken
+            # Red parcels with MON_TRITICALE always seem to be predicted wrong
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (pred_df['pred1'] == 'MON_TRITICALE'),
+                        new_pred_column] = 'DOUBT_RISK:TRITICALE-DOUBT'
 
     # Accuracy with few pixels might be lower, so set those to doubt
     if apply_doubt_min_nb_pixels is True:
