@@ -336,13 +336,26 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
         elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
             logger.info("Apply some marker-specific doubt algorythms")
-            #TODO afwerken
-            # Red parcels with MON_TRITICALE always seem to be predicted wrong, so place them in doubt
-            '''pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
-                            & (pred_df['pred1'] == 'MON_TRITICALE')
-                            & (pred_df[conf.columns['class_declared']] != 'MON_TRITICALE'),
-                        new_pred_column] = 'DOUBT:TRITICALE-DOUBT'
+            
+            # Red parcels declared as MON_TRITICALE always seem to be predicted wrong, so place them in doubt
+            pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
+                            & (pred_df[conf.columns['class_declared']] != pred_df['pred1'])
+                            & (pred_df[conf.columns['class_declared']] == 'MON_TRITICALE'),
+                        new_pred_column] = 'DOUBT_RISK:TRITICALE-UNCONFIRMED'           
+
+            # Red parcels with MON_HEIDE seem to have a difficult time seeing the difference between MON_HEIDE and MON_GRASSEN
+            pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
+                            & (pred_df[conf.columns['class_declared']] != pred_df['pred1'])
+                            & (pred_df['pred1'] == 'MON_HEIDE'),
+                        new_pred_column] = 'DOUBT_RISK:HEIDE-UNCONFIRMED'   
+            
             '''
+            # Note: this will INCREASE the alpha errors, because we remove a large portion of red parcels to doubt (~886 parcels => 16 alpha errors)
+            pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
+                            & (pred_df[conf.columns['class_declared']] != pred_df['pred1'])
+                            & (pred_df[conf.columns['class_declared']] == 'MON_GRASSEN'),
+                        new_pred_column] = 'DOUBT_RISK:GRASSEN-UNCONFIRMED'              
+            '''           
 
     # Accuracy with few pixels might be lower, so set those to doubt
     if apply_doubt_min_nb_pixels is True:

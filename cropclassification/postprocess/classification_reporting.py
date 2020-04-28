@@ -129,7 +129,7 @@ def write_full_report(parcel_predictions_filepath: str,
         _add_prediction_conclusion(
                 in_df=df_predict,
                 new_columnname=conf.columns['prediction_conclusion_cons'],
-                prediction_column_to_use=conf.columns['prediction_cons'],
+                prediction_column_to_use=conf.columns['prediction_full_alpha'],
                 detailed=False)
 
         # Get the number of 'unimportant' ignore parcels and report them here
@@ -170,7 +170,7 @@ def write_full_report(parcel_predictions_filepath: str,
                     {'parcels': 'All', 'prediction_type': 'standard', 'accuracy': oa})
 
             oa = skmetrics.accuracy_score(
-                    df_predict[conf.columns['class']], df_predict[conf.columns['prediction_cons']],
+                    df_predict[conf.columns['class']], df_predict[conf.columns['prediction_full_alpha']],
                     normalize=True, sample_weight=None) * 100
             overall_accuracies_list.append(
                     {'parcels': 'All', 'prediction_type': 'consolidated', 'accuracy': oa})
@@ -193,7 +193,7 @@ def write_full_report(parcel_predictions_filepath: str,
 
         oa = skmetrics.accuracy_score(
                 df_predict_accuracy_no_ignore[conf.columns['class']],
-                df_predict_accuracy_no_ignore[conf.columns['prediction_cons']],
+                df_predict_accuracy_no_ignore[conf.columns['prediction_full_alpha']],
                 normalize=True, sample_weight=None) * 100
         overall_accuracies_list.append(
                 {'parcels': 'Exclude classes_to_ignore(_for_train) classes', 
@@ -201,8 +201,8 @@ def write_full_report(parcel_predictions_filepath: str,
 
         # Calculate ignoring both classes to ignored + parcels not having a valid prediction
         df_predict_no_ignore_has_prediction = df_predict_accuracy_no_ignore.loc[
-                (df_predict_accuracy_no_ignore[conf.columns['prediction_cons']] != 'NODATA')
-                   & (df_predict_accuracy_no_ignore[conf.columns['prediction_cons']] != 'DOUBT:NOT_ENOUGH_PIXELS')]
+                (df_predict_accuracy_no_ignore[conf.columns['prediction_full_alpha']] != 'NODATA')
+                   & (df_predict_accuracy_no_ignore[conf.columns['prediction_full_alpha']] != 'DOUBT:NOT_ENOUGH_PIXELS')]
         oa = skmetrics.accuracy_score(
                 df_predict_no_ignore_has_prediction[conf.columns['class']],
                 df_predict_no_ignore_has_prediction['pred1'],
@@ -213,7 +213,7 @@ def write_full_report(parcel_predictions_filepath: str,
 
         oa = skmetrics.accuracy_score(
                 df_predict_no_ignore_has_prediction[conf.columns['class']],
-                df_predict_no_ignore_has_prediction[conf.columns['prediction_cons']],
+                df_predict_no_ignore_has_prediction[conf.columns['prediction_full_alpha']],
                 normalize=True, sample_weight=None) * 100
         overall_accuracies_list.append(
                 {'parcels': 'Exclude ignored ones + with prediction (= excl. NODATA, NOT_ENOUGH_PIXELS)', 
@@ -305,9 +305,9 @@ def write_full_report(parcel_predictions_filepath: str,
             html_data['CONFUSION_MATRICES_TABLE'] = df_confmatrix_ext.to_html()
             html_data['CONFUSION_MATRICES_DATA'] = df_confmatrix_ext.to_json()
 
-        # Calculate an extended confusion matrix with the consolidated prediction column and write
+        # Calculate an extended confusion matrix with the full alpha prediction column and write
         # it to output...
-        df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, conf.columns['prediction_cons'])
+        df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, conf.columns['prediction_full_alpha'])
         outputfile.write("\nExtended confusion matrix of the consolidated predictions: Rows: true/input classes, columns: predicted classes\n")
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):
             outputfile.write(f"{df_confmatrix_ext}\n\n")
@@ -363,7 +363,7 @@ def write_full_report(parcel_predictions_filepath: str,
                 logger.info(f"{count_per_class}\n")
                 html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TABLE'] = count_per_class.to_html()
 
-            # Calculate and write the result for the consolidated predictions
+            # Calculate and write the result for the full alpha predictions
             _add_gt_conclusions(df_parcel_gt, conf.columns['prediction_full_alpha'])
             message = f"Prediction quality cons (doubt + not_enough_pixels) overview, for {len(df_parcel_gt.index)} predicted cases in ground truth:"
             outputfile.write(f"\n{message}\n")
