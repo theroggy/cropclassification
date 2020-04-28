@@ -335,14 +335,14 @@ def add_doubt_column(pred_df: pd.DataFrame,
                             & (~pred_df[new_pred_column].str.startswith('DOUBT'))
                             & (pred_df[conf.columns['crop_declared']].isin(['36', '895', '9582']))
                             & (pred_df['pred1'] == 'MON_LC_GRASSES'),
-                        new_pred_column] = 'DOUBT_RISK:SEEN_AS_GRASSES'
+                        new_pred_column] = 'DOUBT_RISK:SEEN-AS-GRASSES'
 
             # If parcel was declared as one of the following and classified as ARABLE, set to doubt_risk
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
                             & (~pred_df[new_pred_column].str.startswith('DOUBT'))
                             & (pred_df[conf.columns['crop_declared']].isin(['601', '644', '932', '9412', '9584']))
                             & (pred_df['pred1'] == 'MON_LC_ARABLE'),
-                        new_pred_column] = 'DOUBT_RISK:SEEN_AS_ARABLE'
+                        new_pred_column] = 'DOUBT_RISK:SEEN-AS-ARABLE'
 
             # If parcel was declared as one of the following and classified as FABACEAE, set to doubt_risk
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
