@@ -476,7 +476,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_column=pred_quality_column,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=alpha_numerator_columns,
-                        error_codes_denominator=alpha_denominator_columns)
+                        error_codes_denominator=alpha_denominator_columns,
+                        error_type='alpha')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -496,7 +497,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_column=pred_quality_column,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=beta_numerator_columns,
-                        error_codes_denominator=beta_denominator_columns)
+                        error_codes_denominator=beta_denominator_columns,
+                        error_type='beta')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -527,7 +529,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_column=pred_quality_column,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=alpha_numerator_columns,
-                        error_codes_denominator=alpha_denominator_columns)
+                        error_codes_denominator=alpha_denominator_columns,
+                        error_type='alpha')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -547,7 +550,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_column=pred_quality_column,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=beta_numerator_columns,
-                        error_codes_denominator=beta_denominator_columns)
+                        error_codes_denominator=beta_denominator_columns,
+                        error_type='beta')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -578,7 +582,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_column=pred_quality_column,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=alpha_numerator_columns,
-                        error_codes_denominator=alpha_denominator_columns)
+                        error_codes_denominator=alpha_denominator_columns,
+                        error_type='alpha')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -598,7 +603,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_column=pred_quality_column,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=beta_numerator_columns,
-                        error_codes_denominator=beta_denominator_columns)
+                        error_codes_denominator=beta_denominator_columns,
+                        error_type='beta')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -632,7 +638,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=alpha_numerator_columns,
                         error_codes_denominator=alpha_denominator_columns,
-                        ascending=False)
+                        ascending=False,
+                        error_type='alpha')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -653,7 +660,8 @@ def write_full_report(parcel_predictions_filepath: str,
                         pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                         error_codes_numerator=beta_numerator_columns,
                         error_codes_denominator=beta_denominator_columns,
-                        ascending=False)
+                        ascending=False,
+                        error_type='beta')
                 #df_per_column.dropna(inplace=True)
                 with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 2000):                    
                     outputfile.write(f"\n{df_per_column}\n")
@@ -860,6 +868,7 @@ def _get_errors_per_column(
             pred_quality_full_doubt_column: str,
             error_codes_numerator: [],
             error_codes_denominator: [],
+            error_type: str,
             ascending: bool = True):
     """ Returns a dataset with detailed information about the number of alfa errors per column that was passed on"""
 
@@ -885,14 +894,14 @@ def _get_errors_per_column(
     df_alfa_error = df_predquality_filtered[
             df_predquality_filtered[pred_quality_column].isin(error_codes_numerator)]
     df_alfa_per_column = (df_alfa_error.groupby(groupbycolumn, as_index=False)
-                          .size().to_frame('count_error_alfa'))
+                          .size().to_frame(f"count_error_{error_type}")) 
     df_alfa_per_column.sort_index(ascending=ascending, inplace=True)                         
 
     # Now calculate the number of alfa errors with full doubt per groupbycolumn 
     df_alfa_error_full_doubt = df_predquality_filtered[
             df_predquality_filtered[pred_quality_full_doubt_column].isin(error_codes_numerator)]
     df_alfa_full_doubt_per_column = (df_alfa_error_full_doubt.groupby(groupbycolumn, as_index=False)
-                                     .size().to_frame('count_error_alfa_full_doubt'))
+                                     .size().to_frame(f"count_error_{error_type}_full_doubt"))
    
     # Join everything together
     df_alfa_per_column = df_predquality_count.join(df_alfa_per_column, how='left')
@@ -910,17 +919,17 @@ def _get_errors_per_column(
  
     # Finally calculate all alfa error percentages
     df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
-                              column='count_error_alfa_cumulative',
-                              value=df_alfa_per_column['count_error_alfa'].cumsum(axis=0))
+                              column=f"count_error_{error_type}_cumulative",
+                              value=df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0))
                                 
-    values = 100 * df_alfa_per_column['count_error_alfa'] / df_alfa_per_column['count_all']
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_all', value=values)
-                                
-    values = (100 * df_alfa_per_column['count_error_alfa_cumulative'] / df_alfa_per_column['count_error_alfa'].sum())
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_alfa_cumulative', value=values)
+    values = 100 * df_alfa_per_column[f"count_error_{error_type}"] / df_alfa_per_column['count_all']
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all", value=values)
 
-    values = (100 * df_alfa_per_column['count_error_alfa_cumulative'] / df_alfa_per_column['count_all'].sum())
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column='pct_error_alfa_of_all_cumulative', value=values)
+    values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_error_{error_type}"].sum())
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_{error_type}_cumulative", value=values) 
+
+    values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column['count_all'].sum())
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all_cumulative", value=values)
 
     return df_alfa_per_column
 

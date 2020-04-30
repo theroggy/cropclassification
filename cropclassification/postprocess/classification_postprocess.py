@@ -303,7 +303,6 @@ def add_doubt_column(pred_df: pd.DataFrame,
                             & (pred_df['pred1'].isin(['MON_LC_BOS', 'MON_LC_HEIDE', 'MON_LC_OVERK_LOO'])),
                       new_pred_column] = 'DOUBT_RISK:DECL<>PRED-PRED=' + pred_df['pred1'].map(str)
 
-            # MarKet
             # If parcel was declared as 9410 and classified as ARABLE, set to doubt
             pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
                             & (pred_df[conf.columns['crop_declared']].isin(['9410']))
