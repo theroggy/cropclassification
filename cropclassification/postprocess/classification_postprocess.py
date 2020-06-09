@@ -223,12 +223,20 @@ def add_doubt_column(pred_df: pd.DataFrame,
         # Apply some extra, marker-specific doubt algorythms
         if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER_EARLY'):
             logger.info("Apply some marker-specific doubt algorythms")
-            # If parcel was declared as grassland, and is classified as arable, set to doubt
+
+            # Remarks:
+            #   - To be sure apply RISKY_DOUBT first, so if there would be 
+            #     overlapping criteria, RISKY_DOUBT "wins".
+            #   - Don't overwrite existing DOUBT on parcels, because the 
+            #     general doubt reasons should win compared to the marker 
+            #     specific doubt/risky_doubt reasons.
+
+            # If parcel was declared as grassland, and is classified as arable, set to risky doubt
             # Remark: those gave 50% false positives for LANDCOVER marker
             pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
                             & (pred_df[conf.columns['class_declared']] == 'MON_LC_GRASSES')
                             & (pred_df['pred1'] == 'MON_LC_ARABLE'),
-                        new_pred_column] = 'DOUBT_RISK:GRASS-SEEN-AS-ARABLE'
+                        new_pred_column] = 'RISKY_DOUBT:GRASS-SEEN-AS-ARABLE'
 
             # If parcel was declared as fallow, and is classified as something else, set to doubt
             # Remark: those gave 50% false positives for marker LANDCOVER
@@ -250,7 +258,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
             pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
                             & (pred_df[conf.columns['crop_declared']].isin(['9603']))
                             & (pred_df['pred1'] == 'MON_LC_GRASSES'),
-                        new_pred_column] = 'DOUBT_RISK:BOOMSIER-SEEN-AS-GRASSES'
+                        new_pred_column] = 'RISKY_DOUBT:BOOMSIER-SEEN-AS-GRASSES'
 
             # If parcel was declared as grain, but is not classified as MON_LC_ARABLE: doubt
             # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
@@ -258,7 +266,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
             pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
                             & (pred_df[conf.columns['crop_declared']].isin(['39', '311', '321', '322', '331', '342', '639', '646']))
                             & (pred_df['pred1'] != 'MON_LC_ARABLE'),
-                        new_pred_column] = 'DOUBT_RISK:GRAIN-UNCONFIRMED'
+                        new_pred_column] = 'RISKY_DOUBT:GRAIN-UNCONFIRMED'
 
             # If parcel was declared as one of the following fabaceae, but is not 
             # classified as such: doubt
@@ -267,9 +275,17 @@ def add_doubt_column(pred_df: pd.DataFrame,
             pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
                             & (pred_df[conf.columns['crop_declared']].isin(['43', '51', '52', '721', '722', '731', '732', '831', '931', '8410']))
                             & (pred_df['pred1'] != 'MON_LC_FABACEAE'),
-                        new_pred_column] = 'DOUBT_RISK:FABACEAE-UNCONFIRMED'
+                        new_pred_column] = 'RISKY_DOUBT:FABACEAE-UNCONFIRMED'
 
-            # If parcel was declared as some arable crops, and is classified as fabaceae, set to doubt
+            # Declared class was not correct, but groundtruth class is permanent
+            pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
+                            & (~pred_df[new_pred_column].str.startswith('DOUBT'))
+                            & (~pred_df[new_pred_column].str.startswith('RISKY_DOUBT'))
+                            & (pred_df[conf.columns['class_declared']] != pred_df['pred1'])
+                            & (pred_df['pred1'].isin(['MON_LC_BOS', 'MON_LC_HEIDE'])),
+                        new_pred_column] = 'RISKY_DOUBT:DECL<>PRED-PRED=' + pred_df['pred1'].map(str)
+
+            # If parcel was declared as some arable crops (9534 = knolvenkel), and is classified as fabaceae, set to doubt
             # Remark: those gave 100% false positives for marker LANDCOVER
             pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
                             & (pred_df[conf.columns['crop_declared']].isin(['9534']))
