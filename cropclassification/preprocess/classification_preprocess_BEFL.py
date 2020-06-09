@@ -203,7 +203,7 @@ def prepare_input_cropgroup(
 
     # Map column with the classname to orig classname
     column_output_class_orig = conf.columns['class'] + '_orig'
-    classes_df[column_output_class_orig] = classes_df['MON_CROPGROUP']
+    classes_df[column_output_class_orig] = classes_df[conf.columns['class_refe']]
 
     # Remove unneeded columns
     for column in classes_df.columns:
@@ -370,7 +370,7 @@ def prepare_input_landcover(
 
     # Map column MON_group to orig classname
     column_output_class_orig = column_output_class + '_orig'
-    classes_df[column_output_class_orig] = classes_df['MON_LC_GROUP']
+    classes_df[column_output_class_orig] = classes_df[conf.columns['class_refe']]
 
     # Remove unneeded columns
     for column in classes_df.columns:
