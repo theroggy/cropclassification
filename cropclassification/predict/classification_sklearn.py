@@ -107,28 +107,30 @@ def predict_proba(parcel_df: pd.DataFrame,
     """
 
     # Some basic checks that input is ok
+    column_class = conf.columns['class']
+    column_class_declared = conf.columns['class_declared']
     parcel_df.reset_index(inplace=True)
     if(conf.columns['id'] not in parcel_df.columns
-       or conf.columns['class'] not in parcel_df.columns):
-        message = f"Columns {conf.columns['id']} and {conf.columns['class']} are mandatory for input parameter parcel_df!"
+       or column_class not in parcel_df.columns):
+        message = f"Columns {conf.columns['id']} and {column_class} are mandatory for input parameter parcel_df!"
         logger.critical(message)
         raise Exception(message)
 
     # Now do final preparation for the classification
     parcel_classes_df = parcel_df[conf.columns['class']]
-    cols_to_keep = parcel_df.columns.difference([conf.columns['id'], conf.columns['class']])
+    cols_to_keep = parcel_df.columns.difference([conf.columns['id'], column_class, column_class_declared])
     parcel_data_df = parcel_df[cols_to_keep]
 
     logger.info(f"Train file processed and rows with missing data removed, data shape: {parcel_data_df.shape}, labels shape: {parcel_classes_df.shape}")
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         logger.info(f"Resulting Columns for training data: {parcel_data_df.columns}")
 
-    # Check of the input data columns match the columns needed for the neural net
+    # Check of the input data columns match the columns needed for the classifier
     classifier_datacolumns_filepath = glob.glob(os.path.join(os.path.dirname(classifier_filepath), "*_datacolumns.txt"))[0]
     with open(classifier_datacolumns_filepath, "r") as file:
         classifier_datacolumns = ast.literal_eval(file.readline())
     if classifier_datacolumns != list(parcel_data_df.columns):
-        raise Exception(f"Input datacolumns for predict don't match needed columns for neural net: \ninput: {parcel_data_df.columns}, \nneeded: {classifier_datacolumns}" )
+        raise Exception(f"Input datacolumns for predict don't match needed columns for classifier: \ninput: {parcel_data_df.columns}, \nneeded: {classifier_datacolumns}" )
 
     # Load the classifier
     classifier = joblib.load(classifier_filepath)
@@ -139,8 +141,8 @@ def predict_proba(parcel_df: pd.DataFrame,
     logger.info(f"Predict classes with probabilities ready")
 
     # Convert probabilities to dataframe, combine with input data and write to file
-    id_class_proba = np.concatenate([parcel_df[[conf.columns['id'], conf.columns['class']]].values, class_proba], axis=1)
-    cols = [conf.columns['id'], conf.columns['class']]
+    id_class_proba = np.concatenate([parcel_df[[conf.columns['id'], column_class, column_class_declared]].values, class_proba], axis=1)
+    cols = [conf.columns['id'], column_class, column_class_declared]
     cols.extend(classifier.classes_)
     proba_df = pd.DataFrame(id_class_proba, columns=cols)
 

@@ -43,14 +43,12 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
         force (bool, optional): [description]. Defaults to False.
     """
     
-    ''' TODO: Check disabled... review!!!
     # If force is false and output exists, already, return
     if(force is False
        and os.path.exists(output_predictions_filepath)):
         logger.warning(f"calc_top3_and_consolidation: output file exist and force is False, so stop: {output_predictions_filepath}")
         return
-    '''
-
+    
     # Read input files
     logger.info("Read input file")
     proba_df = pdh.read_file(input_parcel_probabilities_filepath)
