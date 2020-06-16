@@ -299,7 +299,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['9516']))
                             & (pred_df['pred1'] != 'MON_LC_ARABLE'),
-                        new_pred_column] = 'DOUBT:AARDBEIEN-UNCONFIRMED'
+                        new_pred_column] = 'RISKY_DOUBT:AARDBEIEN-UNCONFIRMED'
 
             # Declared class was not correct, but groundtruth class is permanent
             # TODO: probably dirty this is hardcoded here!
