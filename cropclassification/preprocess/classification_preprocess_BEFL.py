@@ -87,13 +87,13 @@ def prepare_input(input_parcel_filepath: str,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'CROPGROUP_GROUNDTRUTH':
+    elif classtype_to_prepare == 'CROPGROUP-GROUNDTRUTH':
         return prepare_input_cropgroup(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
                 column_output_class=conf.columns['class_groundtruth'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'CROPGROUP_EARLY':
+    elif classtype_to_prepare == 'CROPGROUP-EARLY':
         parceldata_df = prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
@@ -104,7 +104,7 @@ def prepare_input(input_parcel_filepath: str,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'CROPGROUP_EARLY_GROUNDTRUTH':
+    elif classtype_to_prepare == 'CROPGROUP-EARLY-GROUNDTRUTH':
         return prepare_input_cropgroup_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
@@ -121,13 +121,13 @@ def prepare_input(input_parcel_filepath: str,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'LANDCOVER_GROUNDTRUTH':
+    elif classtype_to_prepare == 'LANDCOVER-GROUNDTRUTH':
         return prepare_input_landcover(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
                 column_output_class=conf.columns['class_groundtruth'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'LANDCOVER_EARLY':
+    elif classtype_to_prepare == 'LANDCOVER-EARLY':
         parceldata_df = prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
@@ -138,13 +138,13 @@ def prepare_input(input_parcel_filepath: str,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'LANDCOVER_EARLY_GROUNDTRUTH':
+    elif classtype_to_prepare == 'LANDCOVER-EARLY-GROUNDTRUTH':
         return prepare_input_landcover_early(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,
                 column_output_class=conf.columns['class_groundtruth'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'POPULAR_CROP':
+    elif classtype_to_prepare == 'POPULAR-CROP':
         parceldata_df = prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_declared,
@@ -155,7 +155,7 @@ def prepare_input(input_parcel_filepath: str,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
-    elif classtype_to_prepare == 'POPULAR_CROP_GROUNDTRUTH':
+    elif classtype_to_prepare == 'POPULAR-CROP-GROUNDTRUTH':
         return prepare_input_most_popular_crop(
                 parceldata_df=parceldata_df,
                 column_BEFL_cropcode=column_BEFL_crop_gt_verified,

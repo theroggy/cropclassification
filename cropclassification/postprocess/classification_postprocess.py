@@ -110,13 +110,13 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
         pdh.to_file(pred_df, output_predictions_output_filepath, index=False) 
 
         # Write oracle sqlldr file
-        if conf.marker['markertype'] in ['LANDCOVER', 'LANDCOVER_EARLY']:
+        if conf.marker['markertype'] in ['LANDCOVER', 'LANDCOVER-EARLY']:
             table_name = 'mon_marker_landcover'
             table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_landcover, "
                              + "cons_status, cons_date date 'yyyy-mm-dd', landcover1, probability1, "
                              + "landcover2, probability2, landcover3, probability3, "
                              + "modify_date date 'yyyy-mm-dd'")
-        elif conf.marker['markertype'] in ['CROPGROUP', 'CROPGROUP_EARLY']:
+        elif conf.marker['markertype'] in ['CROPGROUP', 'CROPGROUP-EARLY']:
             table_name = 'mon_marker_cropgroup'
             table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_cropgroup, "
                              + "cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, probability1, "
@@ -221,7 +221,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
     # Marker specific doubt
     if apply_doubt_marker_specific is True:
         # Apply some extra, marker-specific doubt algorythms
-        if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER_EARLY'):
+        if conf.marker['markertype'] in ('LANDCOVER', 'LANDCOVER-EARLY'):
             logger.info("Apply some marker-specific doubt algorythms")
 
             # Remarks:
@@ -254,7 +254,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
                         new_pred_column] = 'RISKY_DOUBT:BOOMSIER-SEEN-AS-GRASSES'
 
             # If parcel was declared as grain, but is not classified as MON_LC_ARABLE: doubt
-            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            # Remark: - those gave > 50% false positives for marker LANDCOVER-EARLY
             #         - gave > 33 % false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['39', '311', '321', '322', '331', '342', '639', '646']))
@@ -263,7 +263,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
             # If parcel was declared as one of the following fabaceae, but is not 
             # classified as such: doubt
-            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            # Remark: - those gave > 50% false positives for marker LANDCOVER-EARLY
             #         - gave 33-100% false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['43', '51', '52', '721', '722', '731', '732', '831', '931', '8410']))
@@ -285,7 +285,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
             # If parcel was declared as 'other herbs' or 'flowers', but is not confirmed as
             # MON_LC_ARABLE classified as such: doubt
-            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            # Remark: - those gave > 50% false positives for marker LANDCOVER-EARLY
             #         - gave 33-50% false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['956', '957', '9831']))
@@ -294,7 +294,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
             # If parcel was declared as 'aardbeien', but is not confirmed as MON_LC_ARABLE 
             # classified as such: doubt
-            # Remark: - those gave > 50% false positives for marker LANDCOVER_EARLY
+            # Remark: - those gave > 50% false positives for marker LANDCOVER-EARLY
             #         - gave 33-50% false positives for marker LANDCOVER
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['9516']))
@@ -338,7 +338,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
                             & (pred_df['pred1'] == 'MON_LC_FABACEAE'),
                         new_pred_column] = 'RISKY_DOUBT:SAVOOIKOOL-SEEN-AS-FABACEAE'
 
-        elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP_EARLY'):
+        elif conf.marker['markertype'] in ('CROPGROUP', 'CROPGROUP-EARLY'):
             logger.info("Apply some marker-specific doubt algorythms")
             
             # Red parcels declared as MON_TRITICALE always seem to be predicted wrong, so place them in doubt
