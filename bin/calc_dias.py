@@ -3,7 +3,7 @@
 Calaculate the timeseries data per image on DIAS.
 """
 
-from datetime import datetime
+import datetime
 import glob
 import os
 import shutil
@@ -27,14 +27,31 @@ def main():
 
     test = False
 
-    # Specify the date range:
-    years = [2019]
-    month_start = 3
-    month_stop = 8
-    for year in years:
+    # Specify the calculations
+    calculations = []
+    calculation = {}
+    #calculation['parcel_year'] = 2017
+    #calculation['calc_date_start'] = datetime.date(2017, 5, 1)
+    #calculation['calc_date_stop'] = datetime.date(2018, 3, 1)
+    #calculations.append(calculation)
+
+    calculation = {}
+    calculation['parcel_year'] = 2020
+    calculation['calc_date_start'] = datetime.date(2020, 3, 15)
+    calculation['calc_date_stop'] = datetime.date(2020, 8, 18)
+    calculations.append(calculation)
+
+    for calculation in calculations:
+
+        calc_year_start = calculation['calc_date_start'].year
+        calc_year_stop = calculation['calc_date_stop'].year
+        calc_month_start = calculation['calc_date_start'].month
+        calc_month_stop = calculation['calc_date_stop'].month
+
+        parcel_year = calculation['parcel_year']
 
         # Read the configuration files
-        conf.read_config(config_filepaths, year=year)
+        conf.read_config(config_filepaths, year=calc_year_start)
 
         # Get the general output dir
         input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
@@ -45,7 +62,7 @@ def main():
             base_log_dir = conf.dirs['log_dir']
         else:
             base_log_dir = conf.dirs['log_dir'] + '_test'
-        log_dir = f"{base_log_dir}{os.sep}calc_dias_{datetime.now():%Y-%m-%d_%H-%M-%S}"
+        log_dir = f"{base_log_dir}{os.sep}calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
 
         # Clean test log dir if it exist
         if test and os.path.exists(base_log_dir):
@@ -64,15 +81,17 @@ def main():
             conf.config.write(config_used_file)
 
         # Input features file depends on the year
-        if year == 2017:
+        if parcel_year == 2017:
             input_features_filename = "Prc_BEFL_2017_2019-06-14_bufm5.shp"
-        elif year == 2018:
+        elif parcel_year == 2018:
             input_features_filename = "Prc_BEFL_2018_2019-06-14_bufm5.shp"
-        elif year == 2019:
+        elif parcel_year == 2019:
             #input_features_filename = "Prc_BEFL_2019_2019-06-25_bufm5.shp"
             input_features_filename = "Prc_BEFL_2019_2019-08-14_bufm5.shp"
+        elif parcel_year == 2020:
+            input_features_filename = "Prc_BEFL_2020_2020-06-09_bufm5.shp"
         else:
-            raise Exception(f"Not a valid year: {year}")
+            raise Exception(f"Not a valid parcel_year: {parcel_year}")
         input_features_filepath = os.path.join(input_preprocessed_dir, input_features_filename)
         
         # Init output dir 
@@ -111,9 +130,19 @@ def main():
 
         ##### Process S1 GRD images #####
         input_image_filepaths = []
-        for i in range(month_start, month_stop+1):
-            input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1TC/{year}/{i:02d}/*/*.CARD"
-            input_image_filepaths.extend(glob.glob(input_image_searchstr))
+        for year in range(calc_year_start, calc_year_stop+1):
+            # TODO: works, but doesn't seem to be the most elegant code...
+            if year < calc_year_stop:
+                month_stop = 12
+            else:
+                month_stop = calc_month_stop
+            if year > calc_year_start:
+                month_start = 1
+            else:
+                month_start = calc_month_start
+            for month in range(calc_month_start, calc_month_stop+1):
+                input_image_searchstr = f"/mnt/NAS*/CARD/FLANDERS/S1*/L1TC/{year}/{month:02d}/*/*.CARD"
+                input_image_filepaths.extend(glob.glob(input_image_searchstr))
         logger.info(f"Found {len(input_image_filepaths)} S1 GRD images to process")
 
         if test:
@@ -132,9 +161,20 @@ def main():
 
         ##### Process S2 images #####
         input_image_filepaths = []
-        for i in range(month_start, month_stop+1):
-            input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S2*/L2A/{year}/{i:02d}/*/*.SAFE"
-            input_image_filepaths.extend(glob.glob(input_image_searchstr))    
+        for year in range(calc_year_start, calc_year_stop+1):
+            # TODO: works, but doesn't seem to be the most elegant code...
+            if year < calc_year_stop:
+                month_stop = 12
+            else:
+                month_stop = calc_month_stop
+            if year > calc_year_start:
+                month_start = 1
+            else:
+                month_start = calc_month_start
+            for month in range(month_start, month_stop+1):
+                input_image_searchstr = f"/mnt/NAS*/CARD/FLANDERS/S2*/L2A/{year}/{month:02d}/*/*.SAFE"
+                logger.info(f"Search for {input_image_searchstr}")
+                input_image_filepaths.extend(glob.glob(input_image_searchstr))    
         logger.info(f"Found {len(input_image_filepaths)} S2 images to process")
 
         if test:
@@ -156,9 +196,19 @@ def main():
 
         ##### Process S1 Coherence images #####   
         input_image_filepaths = []
-        for i in range(month_start, month_stop+1):
-            input_image_searchstr = f"/mnt/NAS3/CARD/FLANDERS/S1*/L1CO/{year}/{i:02d}/*/*.CARD"
-            input_image_filepaths.extend(glob.glob(input_image_searchstr))  
+        for year in range(calc_year_start, calc_year_stop+1):
+            # TODO: works, but doesn't seem to be the most elegant code...
+            if year < calc_year_stop:
+                month_stop = 12
+            else:
+                month_stop = calc_month_stop
+            if year > calc_year_start:
+                month_start = 1
+            else:
+                month_start = calc_month_start
+            for month in range(calc_month_start, calc_month_stop+1):
+                input_image_searchstr = f"/mnt/NAS*/CARD/FLANDERS/S1*/L1CO/{year}/{month:02d}/*/*.CARD"
+                input_image_filepaths.extend(glob.glob(input_image_searchstr))  
         logger.info(f"Found {len(input_image_filepaths)} S1 Coherence images to process")
 
         if test:

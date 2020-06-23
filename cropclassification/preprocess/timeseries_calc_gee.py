@@ -4,6 +4,44 @@ Script to create timeseries data per parcel of
   - S1: the mean VV and VH backscatter data
   - S2: the 4 bands for periods when there is good coverage of cloudfree images of the area of
         interest
+
+REMARK: this code isn't maintained anymore!
+
+Steps to setup gee:
+
+1. If google earth engine is used to get the Sentinel data for the classification, you will need a
+google account that has google earth engine access enabled.
+So go to https://earthengine.google.com/ and click "Sign up" at the top right if you haven't used
+google earth engine yet.
+Once you are signed up you should be able to visit https://code.earthengine.google.com/.
+
+2. You also need these extra dependencies
+```
+conda install --channel conda-forge earthengine-api google-api-python-client 
+```
+
+3.  Run the following command to authenticate with google earth engine, and follow the procedure on the screen:
+```
+earthengine authenticate
+```
+
+4. Activate (read-only) access to your google drive
+    1. Go to the Google APIs cloud resource manager: https://console.developers.google.com/cloud-resource-manager
+    2. If the UI isn't in english, you might want to set it to english so following the next steps
+    is easier. You can do this in the 'Three dots menu', then 'Preferences'.
+    3. Create a project, eg. 'download-gee-data'.
+    4. Search for 'Google Drive API', select the entry, and click 'Enable'.
+    5. Select 'Credentials' from the left menu, click 'Create Credentials', select 'OAuth client ID'.
+        1. Now, the product name and consent screen need to be set -> click 'Configure consent screen'
+        2. Enter a name for the consent screen, eg. download-gee-data.
+        3. Click 'Save'
+        4. Select 'Application type' to be 'Other'.
+        5. Enter a name, eg. download-gee-data.
+        6. Click 'Create'
+        7. Click 'Download JSON' on the right side of Client ID to download client_secret_<really long ID>.json.
+    6. Copy 'client_secret_<really long ID>.json' to your python working directory and rename to
+    client_secret_download-gee-data.json
+
 """
 
 from __future__ import print_function
