@@ -110,6 +110,8 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
         pdh.to_file(pred_df, output_predictions_output_filepath, index=False) 
 
         # Write oracle sqlldr file
+        table_name = None
+        table_columns = None
         if conf.marker['markertype'] in ['LANDCOVER', 'LANDCOVER_EARLY']:
             table_name = 'mon_marker_landcover'
             table_columns = ("layer_id, prc_id, versienummer, markercode, run_id, cons_landcover, "
@@ -126,7 +128,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
             table_name = None
             logger.warning(f"Table unknown for marker type {conf.marker['markertype']}, so cannot write .ctl file")
 
-        if table_name is not None:
+        if table_name is not None and table_columns is not None:
             with open(output_predictions_output_filepath + '.ctl', 'w') as ctlfile:
                 # SKIP=1 to skip the columns names line, the other ones to evade 
                 # more commits than needed

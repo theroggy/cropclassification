@@ -23,6 +23,7 @@ import cropclassification.helpers.pandas_helper as pdh
 logger = logging.getLogger(__name__)
 
 # Set number of parallel threads for keras
+'''
 num_cores = os.cpu_count()
 logger.info(f"Cores found: {num_cores}")
 config = tf.ConfigProto(intra_op_parallelism_threads=num_cores, 
@@ -31,6 +32,7 @@ config = tf.ConfigProto(intra_op_parallelism_threads=num_cores,
                         device_count = {'CPU': num_cores})
 session = tf.Session(config=config)
 K.set_session(session)
+'''
 
 #-------------------------------------------------------------
 # The real work

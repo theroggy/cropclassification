@@ -273,6 +273,9 @@ def calculate_periodic_data(
                 if orbit is not None:
                     period_files_df = period_files_df.loc[(period_files_df.orbit == orbit)]
 
+                if len(period_files_df) == 0:
+                    logger.warn("No input files found!")
+
                 # Loop all period_files
                 period_band_data_df = None
                 statistic_columns_dict = {'count': [], 'max': [], 'mean': [], 'median': [], 'min': [], 'std': []}
