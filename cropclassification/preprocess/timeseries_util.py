@@ -8,6 +8,7 @@ import logging
 import gc
 import glob
 import os
+from typing import List
 
 import geopandas as gpd
 import numpy as np
@@ -145,7 +146,7 @@ def calculate_periodic_data(
             input_base_dir: str,
             start_date_str: str,   
             end_date_str: str,    
-            sensordata_to_get: [],       
+            sensordata_to_get: List[str],       
             dest_data_dir: str,
             force: bool = False):
     """
