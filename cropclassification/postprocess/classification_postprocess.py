@@ -88,7 +88,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
                      apply_doubt_marker_specific=True)
 
     # Calculate the status of the consolidated prediction (OK=usable, NOK=not)
-    pred_df.loc[pred_df[conf.columns['prediction_cons']].isin(proba_df.columns), 
+    pred_df.loc[pred_df[conf.columns['prediction_full_alpha']].isin(proba_df.columns), 
                 conf.columns['prediction_cons_status']] = 'OK'
     pred_df[conf.columns['prediction_cons_status']].fillna('NOK', inplace=True)    
 
