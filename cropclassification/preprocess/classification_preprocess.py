@@ -299,7 +299,7 @@ def create_train_test_sample(input_parcel_filepath: str,
                     .apply(pd.DataFrame.sample, 2000, replace=True))
 
     else:
-        logger.fatal(f"Unknown balancing strategy, STOP!: {balancing_strategy}")
+        logger.critical(f"Unknown balancing strategy, STOP!: {balancing_strategy}")
 
     # Log the resulting numbers per class in the train sample
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):

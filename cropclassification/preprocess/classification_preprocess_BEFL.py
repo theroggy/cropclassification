@@ -163,7 +163,7 @@ def prepare_input(input_parcel_filepath: str,
                 classes_refe_filepath=classes_refe_filepath)
     else:
         message = f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
-        logger.fatal(message)
+        logger.critical(message)
         raise Exception(message)
 
 def prepare_input_cropgroup(
