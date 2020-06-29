@@ -8,8 +8,10 @@ TODO: Recently hasn't been tested anymore!!!
 
 import logging
 import os
+from pathlib import Path
 import sys
-[sys.path.append(i) for i in ['.', '..']]
+sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
+
 
 import numpy as np
 import pandas as pd

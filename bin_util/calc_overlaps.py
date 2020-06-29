@@ -6,11 +6,12 @@ Module calculate overlaps between two layers.
 import os
 # TODO: the init of this doensn't seem to work properly... should be solved somewhere else?
 #os.environ["GDAL_DATA"] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\gdal"
+from pathlib import Path
 import pprint
 
-# Because orthoseg isn't installed as package + it is higher in dir hierarchy, add root to sys.path
+# If not installed as package + it is higher in dir hierarchy, add root to sys.path
 import sys
-[sys.path.append(i) for i in ['.', '..']]
+sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
 
 import geopandas as gpd
 import sqlite3
@@ -26,8 +27,7 @@ import cropclassification.helpers.geofile as geofile_helper
 def main():
 
     # Read the configuration
-    segment_config_filepaths=['../config/general.ini', 
-                              '../config/local_overrule_linux.ini']
+    segment_config_filepaths=['../config/general.ini']
     conf.read_config(segment_config_filepaths, 2018)
     
     # Main initialisation of the logging
