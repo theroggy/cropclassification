@@ -6,6 +6,7 @@ This module contains general functions that apply to timeseries data...
 import glob
 import logging
 import os
+from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -76,12 +77,12 @@ def calc_timeseries_data(input_parcel_filepath: str,
 
         # Now all image data is available per image, calculate periodic data
         return ts_util.calculate_periodic_data(
-                input_parcel_filepath=input_parcel_filepath,
-                input_base_dir=timeseries_per_image_dir,
+                input_parcel_filepath=Path(input_parcel_filepath),
+                input_base_dir=Path(timeseries_per_image_dir),
                 start_date_str=start_date_str,
                 end_date_str=end_date_str,
                 sensordata_to_get=sensordata_to_get,  
-                dest_data_dir=dest_data_dir)
+                dest_data_dir=Path(dest_data_dir))
     else:
         message = f"Unsupported timeseries calculation type: {timeseries_calc_type}"
         logger.error(message)

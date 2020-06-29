@@ -4,30 +4,57 @@ Module that manages configuration data.
 """
 
 import configparser
+import json
 import os
+from pathlib import Path
 import pprint
+from typing import List, Optional
 
-def read_config(config_filepaths: [], 
-                year: int):
+#-------------------------------------------------------------
+# The real work
+#-------------------------------------------------------------
+
+def read_config(
+        config_filepaths: List[Path], 
+        default_basedir: Path = None):
             
     # Read the configuration
     global config
-    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation(),
-                                       converters={'list': lambda x: [i.strip() for i in x.split(',')],
-                                                   'listint': lambda x: [int(i.strip()) for i in x.split(',')]})
+    config = configparser.ConfigParser(
+            interpolation=configparser.ExtendedInterpolation(),
+            converters={'list': lambda x: [i.strip() for i in x.split(',')],
+                        'listint': lambda x: [int(i.strip()) for i in x.split(',')],
+                        'listfloat': lambda x: [float(i.strip()) for i in x.split(',')],
+                        'dict': lambda x: json.loads(x),
+                        'path': lambda x: Path(x)},
+            allow_no_value=True)
 
     # Check if all config filepaths are ok
     for config_filepath in config_filepaths:
-        if not os.path.exists(config_filepath):
+        if not config_filepath.exists():
             raise Exception(f"Config file doesn't exist: {config_filepath}")
 
     config.read(config_filepaths)
 
-    # If the year is specified in parameter, set it.
-    if year is not None:
-        config['marker']['year'] = str(year)
-    else:
-        print("WARNING: the year passed is None, this can result in some parameters giving errors")
+    # If the data_dir parameter is a relative path, try to resolve it towards 
+    # the default basedir of, if specfied.
+    data_dir = config['dirs'].getpath('data_dir')
+    if not data_dir.is_absolute():
+        if default_basedir is None:
+            raise Exception(f"Config parameter dirs.data_dir is relative, but no default_basedir supplied!")
+        data_dir_absolute = (default_basedir / data_dir).resolve()
+        print(f"Config parameter dirs.data_dir was relative, so is now resolved to {data_dir_absolute}")
+        config['dirs']['data_dir'] = data_dir_absolute.as_posix()
+
+    # If the marker_basedir parameter is a relative path, try to resolve it towards 
+    # the default basedir of, if specfied.
+    marker_basedir = config['dirs'].getpath('marker_basedir')
+    if not marker_basedir.is_absolute():
+        if default_basedir is None:
+            raise Exception(f"Config parameter dirs.marker_basedir is relative, but no default_basedir supplied!")
+        marker_basedir_absolute = (default_basedir / marker_basedir).resolve()
+        print(f"Config parameter dirs.marker_basedir was relative, so is now resolved to {marker_basedir_absolute}")
+        config['dirs']['marker_basedir'] = marker_basedir_absolute.as_posix()
 
     global config_filepaths_used
     config_filepaths_used = config_filepaths

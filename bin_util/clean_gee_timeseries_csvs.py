@@ -2,16 +2,16 @@
 Helper script to clean all downloaded gee timeseries csv files.
 """
 
+from pathlib import Path
 import sys
-[sys.path.append(i) for i in ['.', '..']]
+sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
 
 def main():        
     # Read the configuration
-    conf.read_config(['config/general.ini', 'config/local_overrule.ini'], 
-                     year=None)
+    conf.read_config(['config/general.ini'])
 
     # Go!
     timeseries_periodic_dir = conf.dirs['timeseries_periodic_dir']

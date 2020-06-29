@@ -8,9 +8,9 @@ import logging
 import gc
 import glob
 import os
+from pathlib import Path
 from typing import List
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 
@@ -142,12 +142,12 @@ def prepare_input(input_parcel_filepath: str,
     raise Exception(message)
 
 def calculate_periodic_data(
-            input_parcel_filepath: str,
-            input_base_dir: str,
+            input_parcel_filepath: Path,
+            input_base_dir: Path,
             start_date_str: str,   
             end_date_str: str,    
             sensordata_to_get: List[str],       
-            dest_data_dir: str,
+            dest_data_dir: Path,
             force: bool = False):
     """
     This function creates a file that is a weekly summarize of timeseries images from DIAS.
@@ -155,22 +155,20 @@ def calculate_periodic_data(
     TODO: add possibility to choose which values to extract (mean, min, max,...)?
         
     Args:
-        input_parcel_filepath (str): [description]
-        input_base_dir (str): [description]
+        input_parcel_filepath (Path): [description]
+        input_base_dir (Path): [description]
         start_date_str (str): Start date in format %Y-%m-%d. Needs to be aligned already on the 
                 periods wanted + data on this date is included.
         end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on the 
                 periods wanted + data on this date is excluded.
         sensordata_to_get ([]): 
-        dest_data_dir (str): [description]
+        dest_data_dir (Path): [description]
         force (bool, optional): [description]. Defaults to False.
     """
     logger.info('calculate_periodic_data')
 
-    # Init    
-    input_parcels_filename = os.path.basename(input_parcel_filepath)
-    input_parcels_filename_noext, _ = os.path.splitext(input_parcels_filename)
-    input_dir = os.path.join(input_base_dir, input_parcels_filename_noext)
+    # Init
+    input_dir = input_base_dir / input_parcel_filepath.stem
 
     # TODO: in config?
     input_ext = ".sqlite"
@@ -183,8 +181,8 @@ def calculate_periodic_data(
     # Prepare output dir
     test = False
     if test is True:
-        dest_data_dir += "_test"
-    if not os.path.exists(dest_data_dir):
+        dest_data_dir = Path(f"{str(dest_data_dir)}_test")
+    if not dest_data_dir.exists():
         os.mkdir(dest_data_dir)
     
     # Create Dataframe with all files with their info
@@ -193,7 +191,7 @@ def calculate_periodic_data(
     for filename in os.listdir(input_dir): 
         if filename.endswith(input_ext):
             # Get seperate filename parts
-            file_info = get_file_info(os.path.join(input_dir, filename))
+            file_info = get_file_info(input_dir / filename)
             file_info_list.append(file_info)
     
     all_inputfiles_df = pd.DataFrame(file_info_list)
@@ -236,7 +234,7 @@ def calculate_periodic_data(
             raise Exception(f"Unsupported sensordata_type: {sensordata_type}")
 
         # There should also be one pixcount file
-        pixcount_filename = f"{input_parcels_filename_noext}_weekly_pixcount{output_ext}"
+        pixcount_filename = f"{input_parcel_filepath.stem}_weekly_pixcount{output_ext}"
         pixcount_filepath = os.path.join(dest_data_dir, pixcount_filename)
 
         # For each week
@@ -249,7 +247,7 @@ def calculate_periodic_data(
 
             # New file name
             period_date_str_long = period_date.strftime('%Y-%m-%d') 
-            period_data_filename = f"{input_parcels_filename_noext}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
+            period_data_filename = f"{input_parcel_filepath.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
             period_data_filepath = os.path.join(dest_data_dir, period_data_filename)
 
             # Check if output file exists already
@@ -283,7 +281,7 @@ def calculate_periodic_data(
                 for j, imagedata_filepath in enumerate(period_files_df.filepath.tolist()):
                     
                     # If file has filesize == 0, skip
-                    if os.path.getsize(imagedata_filepath) == 0:
+                    if Path(imagedata_filepath).stat().st_size == 0:
                         continue 
 
                     # Read the file (but only the columns we need)
@@ -373,12 +371,12 @@ def calculate_periodic_data(
                     pixcount_df.fillna(value=0, inplace=True)
                     pdh.to_file(pixcount_df, pixcount_filepath)
 
-def get_file_info(filepath: str) -> dict:
+def get_file_info(filepath: Path) -> dict:
     """
     This function gets info of a timeseries data file.
     
     Args:
-        filepath (str): The filepath to the file to get info about.
+        filepath (Path): The filepath to the file to get info about.
         
     Returns:
         dict: a dict containing info about the file
@@ -401,6 +399,8 @@ def get_file_info(filepath: str) -> dict:
 
         # Get the date taken from the filename, depending on the satellite type
         # Remark: the datetime is in this format: '20180101T055812'
+        imagetype = None
+        filedatetime = None
         if satellite.startswith('S1'):
             # Check if it is a GRDH image
             if imageinfo_values[2] == 'GRDH':
@@ -413,6 +413,9 @@ def get_file_info(filepath: str) -> dict:
             imagetype = IMAGETYPE_S2_L2A
             filedatetime = imageinfo_values[2]  
 
+        if(imagetype is None or filedatetime is None):
+            raise Exception(f"Unsupported file: {filepath}")
+        
         filedate = filedatetime.split("T")[0]  
         parseddate = datetime.strptime(filedate, '%Y%m%d') 
         fileweek = int(parseddate.strftime('%W'))
@@ -426,8 +429,18 @@ def get_file_info(filepath: str) -> dict:
         else:
             fileorbit = None
 
+        # The file paths of these files sometimes are longer than 256
+        # characters, so use trick on windows to support this anyway
+        filepath_safe = filepath.as_posix()
+        if(os.name == 'nt'
+           and len(filepath.as_posix()) > 240):
+            if filepath_safe.startswith("//"):
+                filepath_safe = f"//?/UNC/{filepath_safe}"
+            else:
+                filepath_safe = f"//?/{filepath_safe}"
+
         filenameparts = {
-            'filepath': filepath,
+            'filepath': filepath_safe,
             'imagetype': imagetype,
             'filename' : filename,
             'date' : parseddate,

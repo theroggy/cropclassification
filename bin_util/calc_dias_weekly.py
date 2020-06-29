@@ -5,9 +5,10 @@ Calaculate the timeseries data per week based on per image data.
 
 from datetime import datetime
 import os
+from pathlib import Path
 import shutil
 import sys
-[sys.path.append(i) for i in ['.', '..']]
+sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
@@ -20,7 +21,7 @@ def main():
     year = 2018
 
     # Read the configuration files
-    conf.read_config(config_filepaths, year=year)
+    conf.read_config(config_filepaths)
 
     # Init logging
     base_log_dir = conf.dirs['log_dir']

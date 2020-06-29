@@ -3,27 +3,49 @@
 Process the jobs in the job directory.
 """
 
+import argparse
 import configparser
-import glob, os, sys
-[sys.path.append(i) for i in ['.', '..']]
+import glob
+import os
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
 
 # TODO: on windows, the init of this doensn't seem to work properly... should be solved somewhere else?
-if os.name == 'nt':
-    os.environ["GDAL_DATA"] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\gdal"
-    os.environ['PROJ_LIB'] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\proj"
-    
-import cropclassification.helpers.config_helper as conf 
-import cropclassification.marker_runner as marker_runner 
+#if os.name == 'nt':
+#    os.environ["GDAL_DATA"] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\gdal"
+#    os.environ['PROJ_LIB'] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\proj"
 
-def run_jobs():
-    
-    # First read the general config to get the job and models dir
-    conf.read_config(config_filepaths=['config/general.ini', 'config/local_overrule.ini'], year=-1)
-    jobs_dir = conf.dirs['job_dir']                                  
-    models_dir = conf.dirs['model_dir']                                  
+def main():
+       
+    ##### Interprete arguments #####
+    parser = argparse.ArgumentParser(add_help=False)
+
+    # Optional arguments
+    optional = parser.add_argument_group('Optional arguments')
+    optional.add_argument('-j', '--jobdir',
+            help='The path to the dir where jobs (*.ini) to be run can be found.')
+    # Add back help         
+    optional.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+            help='Show this help message and exit')
+    args = parser.parse_args()
+
+    # If job dir is specified, use it
+    if args.jobdir is not None:
+        return run_jobs(jobdir=Path(args.jobdir))
+    else:
+        userjobdir = Path.home() / 'cropclassification' / 'job'
+        if userjobdir.exists():
+            return run_jobs(jobdir=userjobdir)
+        else: 
+            print(f"Error: no jobdir specified, and default job dir ({userjobdir}) does not exist, so stop\n")
+            parser.print_help()
+            sys.exit(1)
+
+def run_jobs(jobdir: Path):
     
     # Get the jobs and treat them
-    job_filepaths = sorted(glob.glob(os.path.join(jobs_dir, "*.ini")))
+    job_filepaths = sorted(jobdir.glob('*.ini'))
     for job_filepath in job_filepaths:      
         # Create configparser and read job file!
         job_config = configparser.ConfigParser(
@@ -32,30 +54,13 @@ def run_jobs():
         job_config.read(job_filepath)
 
         # Now get the info we want from the job config
-        job_section = job_config['job']
-        markertype_to_calc = job_section['markertype_to_calc']
-        input_parcel_filename = job_section['input_parcel_filename']
-        input_parcel_filetype = job_section['input_parcel_filetype']
-        year = job_section.getint('year')
-        country_code = job_section['country_code']
-        classes_refe_filename = job_section['classes_refe_filename']
-        input_groundtruth_filename = job_section['input_groundtruth_filename']
-        input_model_to_use_relativepath = job_section['input_model_to_use_relativepath']
-        if input_model_to_use_relativepath is not None:
-            input_model_to_use_filepath = os.path.join(models_dir, input_model_to_use_relativepath)
-        else:
-            input_model_to_use_filepath = None
+        action = job_config['job'].get('action', 'calc_marker')
 
-        # Run!
-        marker_runner.run(
-                markertype_to_calc=markertype_to_calc,
-                input_parcel_filename=input_parcel_filename,
-                input_parcel_filetype=input_parcel_filetype,
-                country_code=country_code,
-                year=year,
-                classes_refe_filename=classes_refe_filename,
-                input_groundtruth_filename=input_groundtruth_filename,
-                input_model_to_use_filepath=input_model_to_use_filepath)
+        if action == 'calc_marker':
+            from cropclassification import calc_marker 
+            calc_marker.calc_marker_job(job_path=job_filepath)
+        else:
+            raise Exception(f"Action not supported: {action}")
 
 if __name__ == '__main__':
-    run_jobs()
+    main()

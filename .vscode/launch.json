@@ -24,6 +24,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/bin/run_jobs.py",
+            "args": ["-j", "x:/monitoring/markers/playground/pierog/_job"],
             "console": "integratedTerminal"
         }           
     ]

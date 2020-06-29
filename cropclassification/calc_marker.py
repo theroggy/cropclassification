@@ -3,9 +3,11 @@
 Main script to do a classification.
 """
 
-import datetime
+import configparser
 import logging
 import os
+from pathlib import Path
+import shutil
 
 import cropclassification.helpers.config_helper as conf 
 import cropclassification.helpers.dir_helper as dir_helper
@@ -21,50 +23,42 @@ import cropclassification.postprocess.classification_reporting as class_report
 #-------------------------------------------------------------
 # First define/init some general variables/constants
 #-------------------------------------------------------------
-def run(markertype_to_calc: str,
-        input_parcel_filename: str,
-        input_parcel_filetype: str,
-        country_code: str,
-        year: int,
-        classes_refe_filename: str,
-        input_groundtruth_filename: str,
-        input_model_to_use_filepath: str):
+def calc_marker_job(job_path: Path):
     """
-    Runs a marker for an input file. If no input model to use is specified,
+    Runs a marker for an job file. If no input model to use is specified,
     a new one will be trained.
     
     Args:
-        markertype_to_calc (str): [description]
-        input_parcel_filename (str): [description]
-        input_parcel_filetype (str): [description]
-        country_code (str): [description]
-        year (int): [description]
-        classes_refe_filename (str): [description]
-        input_groundtruth_filename (str): [description]
-        input_model_to_use_filepath (str): [description]
+        job_path (Path): the job file where the input parameters to calculate 
+            the marker can be found.
     
     Raises:
         Exception: [description]
         Exception: [description]
     """
+    # Create configparser and read job file!
+    job_config = configparser.ConfigParser(
+            interpolation=configparser.ExtendedInterpolation(),
+            converters={'list': lambda x: [i.strip() for i in x.split(',')]},
+            allow_no_value=True)
+    job_config.read(job_path)
 
-    # If a model to use is specified, check if it exists...
-    if input_model_to_use_filepath is not None and not os.path.exists(input_model_to_use_filepath):
-        raise Exception(f"Input file input_model_to_use_filepath doesn't exist: {input_model_to_use_filepath}")
-
-    # Determine the config files to load depending on the marker_type
-    marker_ini = f"config/{markertype_to_calc.lower()}.ini"
-    config_filepaths = ["config/general.ini",
-                        marker_ini,
-                        "config/local_overrule.ini"]
+    # Determine the config files to load 
+    script_dir = Path(os.path.abspath(__file__)).parent
+    config_filepaths = [script_dir / 'config' / 'general.ini']
+    extra_config_files_to_load = job_config['job'].getlist('extra_config_files_to_load')
+    if extra_config_files_to_load is not None:
+        for config_file in extra_config_files_to_load:
+            config_file_formatted = config_file.format(script_dir=script_dir.as_posix(), job_path=job_path)
+            config_filepaths.append(Path(config_file_formatted))
 
     # Read the configuration files
-    conf.read_config(config_filepaths, year=year)
-
+    conf.read_config(config_filepaths, default_basedir=job_path.parent.parent)
+    
     # Create run dir to be used for the results
     reuse_last_run_dir = conf.dirs.getboolean('reuse_last_run_dir')
     reuse_last_run_dir_config = conf.dirs.getboolean('reuse_last_run_dir_config')
-    run_dir = dir_helper.create_run_dir(conf.dirs['marker_base_dir'], reuse_last_run_dir)
+    run_dir = dir_helper.create_run_dir(conf.dirs['marker_dir'], reuse_last_run_dir)
     if not os.path.exists(run_dir):
         os.makedirs(run_dir)
 
@@ -74,14 +68,14 @@ def run(markertype_to_calc: str,
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # If the config needs to be reused as well, load it, else write it
-    config_used_filepath = os.path.join(run_dir, 'config_used.ini')
+    config_used_filepath = Path(run_dir) / 'config_used.ini'
     if(reuse_last_run_dir 
        and reuse_last_run_dir_config
        and os.path.exists(run_dir)
        and os.path.exists(config_used_filepath)):
         config_filepaths.append(config_used_filepath)
         logger.info(f"Run dir config needs to be reused, so {config_filepaths}")
-        conf.read_config(config_filepaths=config_filepaths, year=year)
+        conf.read_config(config_filepaths=config_filepaths, default_basedir=job_path.parent.parent)
         logger.info("Write new config_used.ini, because some parameters might have been added")
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
@@ -89,8 +83,27 @@ def run(markertype_to_calc: str,
         logger.info("Write config_used.ini, so it can be reused later on")
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
-        
+
+    # Also copy the job file used to the run dir
+    shutil.copy(job_path, run_dir)
+
+    # Read the info about the run
+    runinfo = conf.config['runinfo']
+    input_parcel_filename = runinfo['input_parcel_filename']
+    input_parcel_filetype = runinfo['input_parcel_filetype']
+    country_code = runinfo['country_code']
+    classes_refe_filename = runinfo['classes_refe_filename']
+    input_groundtruth_filename = runinfo['input_groundtruth_filename']
+    input_model_to_use_relativepath = runinfo['input_model_to_use_relativepath']
+
     # Prepare input filepaths
+    if input_model_to_use_relativepath is not None:
+        input_model_to_use_filepath = os.path.join(conf.dirs.get('model_dir'), input_model_to_use_relativepath)
+        if not os.path.exists(input_model_to_use_filepath):
+            raise Exception(f"Input file input_model_to_use_filepath doesn't exist: {input_model_to_use_filepath}")
+    else:
+        input_model_to_use_filepath = None
+
     input_dir = conf.dirs['input_dir']
     input_parcel_filepath = os.path.join(input_dir, input_parcel_filename)
     if input_groundtruth_filename is not None:
@@ -98,8 +111,8 @@ def run(markertype_to_calc: str,
     else:
         input_groundtruth_filepath = None
     
-    refe_dir = conf.dirs['refe_dir']
-    classes_refe_filepath = os.path.join(refe_dir, classes_refe_filename)
+    refe_dir = conf.dirs.getpath('refe_dir')
+    classes_refe_filepath = refe_dir / classes_refe_filename
 
     # Check if the necessary input files exist...
     for path in [classes_refe_filepath, input_parcel_filepath]:
@@ -197,10 +210,11 @@ def run(markertype_to_calc: str,
 
     # STEP 4: Train and test if necessary... and predict
     #-------------------------------------------------------------
+    markertype = conf.marker.get('markertype')
     parcel_predictions_proba_all_filepath = os.path.join(
             run_dir, f"{base_filename}_predict_proba_all{data_ext}")
     classifier_ext = conf.classifier['classifier_ext']
-    classifier_basefilepath = os.path.join(run_dir, f"{markertype_to_calc}_01_mlp{classifier_ext}")    
+    classifier_basefilepath = os.path.join(run_dir, f"{markertype}_01_mlp{classifier_ext}")    
 
     # Check if a model exists already
     if input_model_to_use_filepath is None:

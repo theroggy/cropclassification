@@ -6,9 +6,10 @@ Calaculate the timeseries data per image on DIAS.
 import datetime
 import glob
 import os
+from pathlib import Path
 import shutil
 import sys
-[sys.path.append(i) for i in ['.', '..']]
+sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
 
 # TODO: on windows, the init of this doensn't seem to work properly... should be solved somewhere else?
 if os.name == 'nt':
@@ -51,7 +52,7 @@ def main():
         parcel_year = calculation['parcel_year']
 
         # Read the configuration files
-        conf.read_config(config_filepaths, year=calc_year_start)
+        conf.read_config(config_filepaths)
 
         # Get the general output dir
         input_preprocessed_dir = conf.dirs['input_preprocessed_dir']

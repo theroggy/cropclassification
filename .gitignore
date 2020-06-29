@@ -8,8 +8,6 @@ Old/
 .vscode/
 /.vs
 client_secret_download-gee-data.json
-config/local_overrule.ini
-config/local_overrule_linux.ini
 .vscode/settings.json
 .vscode/.ropeproject/objectdb
 .vscode/.ropeproject/config.py
