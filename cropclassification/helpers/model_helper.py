@@ -6,6 +6,7 @@ Module with helper functions regarding (keras) models.
 import os
 import glob
 import logging
+from typing import Optional
 
 import pandas as pd 
 import keras as kr
@@ -166,7 +167,7 @@ def get_models(model_dir: str,
 
 def get_best_model(model_dir: str,
                    acc_metric_mode: str,
-                   model_base_filename: str = None) -> dict:
+                   model_base_filename: str = None) -> Optional[dict]:
     """
     Get the properties of the model with the highest combined accuracy for the highest 
     traindata version in the dir.

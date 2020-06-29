@@ -4,13 +4,14 @@ Module with helper functions to expand on some features of geopandas.
 """
 
 import os
+from typing import List, Optional
 
 import fiona
 import geopandas as gpd
 
 def read_file(filepath: str,
               layer: str = 'info',
-              columns: [] = None,
+              columns: Optional[List[str]] = None,
               bbox = None) -> gpd.GeoDataFrame:
     """
     Reads a file to a pandas dataframe. The fileformat is detected based on the filepath extension.
