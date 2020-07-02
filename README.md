@@ -1,5 +1,7 @@
 # Crop classification
-This is a collection of scripts that can help to classify crops using Sentinel data.
+This is a collection of scripts that can help to classify crops using Sentinel data. 
+
+Probably this documentation won't suffice to get you started, but you are free to reach out for more info.
 
 ## Installation manual
 1. Install conda
@@ -20,24 +22,25 @@ Once you have anaconda installed, you can open an anaconda terminal window and f
       ```
       2. Install the dependencies for the crop classification scripts:
       ```
-      conda install --channel conda-forge scikit-learn keras tensorflow rasterio rasterstats geopandas pyarrow psutil
+      conda install scikit-learn keras tensorflow rasterio rasterstats geopandas pyarrow psutil
       ```
-      3. Possibly you need to restart your computer now, especially if it was the first time you installed anaconda/geopandas
+      3. If it was the first time you installed anaconda/geopandas, you might have to restat your computer to proceed
       4. Start the anaconda terminal window again and activate the environment
       ```
       conda activate cropclassification
       ```
-3. Update the configuration to your situation
+      5. Now install cropclassification with pip
+      ```
+      pip install cropclassification
+      ```
+4. Calculate time series 
 
-You can now open the scripts in eg. visual studio code, and check out especially the .ini files in the config dir. You need to update those to match your environment, eg. set the paths as you want them,...
-
-4. Calculate the time series 
-
-To calculate time series, you need to run the `calc_dias.py` script on a server that has access to the sentinel CARD images.
+To calculate time series, you need to run `cropclassification -t <tasks_dir>`, with a 'calc_timeseries' type of task in the tasks dir 
+on a server that has access to sentinel CARD images.
 
 5. Start a crop classification
 
-Run `run_job.py`.
+Run `cropclassification -t <tasks_dir>`, with a 'calc_marker' type of task in the tasks dir.
 
 ## Sample data
 
