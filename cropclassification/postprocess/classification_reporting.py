@@ -672,8 +672,10 @@ def write_full_report(
                     logger.info(f"{df_per_column}\n")
                     html_data['PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE'] = df_per_column.to_html()
 
-    with open(str(output_report_txt).replace('.txt', '.html'), 'w') as outputfile:           
-        html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
+    with open(str(output_report_txt).replace('.txt', '.html'), 'w') as outputfile:
+        script_dir = Path(__file__).resolve().parent
+        html_template_path = script_dir / 'html_rapport_template.html'
+        html_template_file = open(html_template_path).read()                        
         src = Template(html_template_file)
         # replace strings and write to file
         output = src.substitute(html_data)
