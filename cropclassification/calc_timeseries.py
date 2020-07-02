@@ -13,6 +13,7 @@ from typing import List
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
+from cropclassification.preprocess import timeseries_util as ts_util
 
 def calc_timeseries_task(
         config_filepaths: List[Path], 
@@ -33,9 +34,11 @@ def calc_timeseries_task(
     conf.read_config(config_filepaths, default_basedir=default_basedir)
 
     test = conf.calc_timeseries_params.getboolean('test')
-    start_date = datetime.datetime.strptime(conf.marker['start_date_str'], '%Y-%m-%d')
-    end_date = datetime.datetime.strptime(conf.marker['end_date_str'], '%Y-%m-%d')
-
+    
+    # As we want a weekly calculation, get nearest monday for start and stop day
+    start_date = ts_util.get_monday(conf.marker['start_date_str']) # output: vb 2018_2_1 - maandag van week 2 van 2018
+    end_date = ts_util.get_monday(conf.marker['end_date_str']) 
+    
     calc_year_start = start_date.year
     calc_year_stop = end_date.year
     calc_month_start = start_date.month

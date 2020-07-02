@@ -57,6 +57,7 @@ def calc_timeseries_data(
     start_date_monday = start_date.strftime('%Y-%m-%d') # terug omzetten naar Y/M/D
     end_date_monday = end_date.strftime('%Y-%m-%d')
 
+    logger.info(f"Start date {start_date_str} converted to monday before: {start_date}, end date {end_date_str} as well: {end_date}")
     timeseries_calc_type = conf.timeseries['timeseries_calc_type']
     if timeseries_calc_type == 'gee':
         # Start!

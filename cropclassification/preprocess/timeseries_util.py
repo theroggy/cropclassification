@@ -451,12 +451,12 @@ def get_file_info(filepath: Path) -> dict:
 
     return filenameparts
 
-def get_monday(input_date: str):
+def get_monday(input_date: str) -> datetime:
     """
     This function gets the first monday before the date provided.
     She is being used to adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
        - inputformat:  %Y-%m-%d
-       - outputformat: %Y_%W_%w eg. 2018_5_1 -  2018 - week 5 - monday.
+       - outputformat: datetime
     """
     parseddate = datetime.strptime(input_date, '%Y-%m-%d')
     year_week = parseddate.strftime('%Y_%W')
