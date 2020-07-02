@@ -6,6 +6,7 @@ Module with helper functions regarding (keras) models.
 import os
 import glob
 import logging
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def get_max_data_version(model_dir: str) -> int:
+def get_max_data_version(model_dir: Path) -> int:
     """
     Get the maximum data version a model exists for in the model_dir.
     
@@ -97,7 +98,7 @@ def format_model_filename2(model_base_filename: str,
     """
     return f"{model_base_filename}_{acc_combined:.5f}_{acc_train:.5f}_{acc_val:.5f}_{epoch}.hdf5"
 
-def parse_model_filename(filepath) -> dict:
+def parse_model_filename(filepath: Path) -> dict:
     """
     Parse a model_filename to a dict containing the properties of the model:
         * segment_subject: the segment subject
@@ -112,8 +113,7 @@ def parse_model_filename(filepath) -> dict:
         filepath: the filepath to the model file
     """
     # Prepare filepath to extract info
-    filename = os.path.splitext(os.path.basename(filepath))[0]
-    param_values = filename.split("_")
+    param_values = filepath.stem.split("_")
 
     # Now extract fields...
     segment_subject = param_values[0]
@@ -131,7 +131,7 @@ def parse_model_filename(filepath) -> dict:
         epoch = 0
     
     return {'filepath': filepath,
-            'filename': filename,
+            'filename': filepath.name,
             'segment_subject': segment_subject,
             'train_data_version': train_data_version,
             'model_architecture': model_architecture,
@@ -140,7 +140,7 @@ def parse_model_filename(filepath) -> dict:
             'acc_val': acc_val,
             'epoch': epoch}
 
-def get_models(model_dir: str,
+def get_models(model_dir: Path,
                model_base_filename: str = None) -> pd.DataFrame:
     """
     Return the list of models in the model_dir passed. It is returned as a 
@@ -154,18 +154,18 @@ def get_models(model_dir: str,
 
     # glob search string    
     if model_base_filename is not None:
-        model_weight_filepaths = glob.glob(f"{model_dir}{os.sep}{model_base_filename}_*.hdf5")
+        model_weight_filepaths = glob.glob(f"{str(model_dir)}{os.sep}{model_base_filename}_*.hdf5")
     else:
-        model_weight_filepaths = glob.glob(f"{model_dir}{os.sep}*.hdf5")
+        model_weight_filepaths = glob.glob(f"{str(model_dir)}{os.sep}*.hdf5")
 
     # Loop through all models and extract necessary info...
     model_info_list = []
     for filepath in model_weight_filepaths:
-        model_info_list.append(parse_model_filename(filepath))
+        model_info_list.append(parse_model_filename(Path(filepath)))
    
     return pd.DataFrame.from_dict(model_info_list)
 
-def get_best_model(model_dir: str,
+def get_best_model(model_dir: Path,
                    acc_metric_mode: str,
                    model_base_filename: str = None) -> Optional[dict]:
     """
@@ -202,7 +202,7 @@ def get_best_model(model_dir: str,
     else :
         return None
     
-def save_and_clean_models(model_save_dir: str,
+def save_and_clean_models(model_save_dir: Path,
                           model_save_base_filename: str,
                           acc_metric_mode: str,                   
                           new_model=None,
@@ -241,7 +241,8 @@ def save_and_clean_models(model_save_dir: str,
 
     # If there is a new model passed as param, add it to the list
     new_model_filepath = None
-    if new_model is not None:            
+    if(new_model is not None and new_model_acc_train is not None 
+       and new_model_acc_val is not None and new_model_epoch is not None):
         # Calculate combined accuracy
         new_model_acc_combined = (new_model_acc_train+new_model_acc_val)/2
         
@@ -251,8 +252,7 @@ def save_and_clean_models(model_save_dir: str,
                 acc_combined=new_model_acc_combined,
                 acc_train=new_model_acc_train, acc_val=new_model_acc_val, 
                 epoch=new_model_epoch)
-        new_model_filepath = os.path.join(model_save_dir, 
-                                          new_model_filename)
+        new_model_filepath = model_save_dir / new_model_filename
         
         # Append model to the retrieved models...
         model_info_df = model_info_df.append({'filepath': new_model_filepath,
@@ -318,7 +318,7 @@ def save_and_clean_models(model_save_dir: str,
 class ModelCheckpointExt(kr.callbacks.Callback):
     
     def __init__(self, 
-                 model_save_dir: str, 
+                 model_save_dir: Path, 
                  model_save_base_filename: str,
                  acc_metric_mode: str,
                  acc_metric_train: str,
@@ -329,7 +329,7 @@ class ModelCheckpointExt(kr.callbacks.Callback):
         """[summary]
         
         Args:
-            model_save_dir (str): [description]
+            model_save_dir (Path): [description]
             model_save_base_filename (str): [description]
             acc_metric_mode (str): use 'min' if the accuracy metrics should be 
                     as low as possible, 'max' if a higher values is better. 
@@ -373,15 +373,15 @@ if __name__ == '__main__':
 
     # General inits
     segment_subject = 'greenhouses'
-    base_dir = "X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-08-12_AutoSegmentation"        
+    base_dir = Path("X:/PerPersoon/PIEROG/Taken/2018/2018-08-12_AutoSegmentation")      
     traindata_version = 17
     model_architecture = "inceptionresnetv2+linknet"
     
-    project_dir = os.path.join(base_dir, segment_subject)
+    project_dir = base_dir / segment_subject
     
     # Init logging
-    import log_helper
-    log_dir = os.path.join(project_dir, "log")
+    from . import log_helper
+    log_dir = project_dir / "log"
     logger = log_helper.main_log_init(log_dir, __name__)
 
     '''
@@ -390,7 +390,7 @@ if __name__ == '__main__':
     '''
     # Test the clean_models function (without new model)
     # Build save dir and model base filename 
-    model_save_dir = os.path.join(project_dir, "models")
+    model_save_dir = project_dir / "models"
     model_save_base_filename = format_model_base_filename(
             segment_subject, traindata_version, model_architecture)
     

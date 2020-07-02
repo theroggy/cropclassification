@@ -1,23 +1,25 @@
-import os, sys
+import os
+from pathlib import Path
+import sys
 [sys.path.append(i) for i in ['.', '..']]
 
 import cropclassification.postprocess.classification_reporting as class_report
 import cropclassification.preprocess.classification_preprocess as class_pre
 
-base_dir = 'x:\\Monitoring\\Markers\\PlayGround\\JoeBro'        
-input_dir = os.path.join(base_dir, 'InputData')  
-class_base_dir = os.path.join(base_dir, f"HTML") 
-input_groundtruth_filepath = os.path.join(input_dir, "Prc_BEFL_2018_groundTruth.csv")
-parcel_pixcount_filepath = os.path.join(input_dir, "BEFL2018_bufm10_weekly_pixcount.csv")
+base_dir = Path('x:/Monitoring/Markers/PlayGround/JoeBro')
+input_dir = base_dir / 'InputData'
+class_base_dir = base_dir / "HTML" 
+input_groundtruth_filepath = input_dir / "Prc_BEFL_2018_groundTruth.csv"
+parcel_pixcount_filepath = input_dir / "BEFL2018_bufm10_weekly_pixcount.csv"
 
-parcel_predictions_all_filepath = os.path.join(class_base_dir, f"BEFL2018_bufm10_weekly_predict_all.csv")
-groundtruth_filepath = os.path.join(class_base_dir, "Prc_BEFL_2018_groundTruth_classes.csv")
-report_txt = os.path.join(class_base_dir, f"testje_accuracy_report.txt")
-report_html = report_txt.replace(".txt", ".html")
+parcel_predictions_all_filepath = class_base_dir / f"BEFL2018_bufm10_weekly_predict_all.csv"
+groundtruth_filepath = class_base_dir / "Prc_BEFL_2018_groundTruth_classes.csv"
+report_txt = class_base_dir / f"testje_accuracy_report.txt"
+report_html = Path(str(report_txt).replace(".txt", ".html"))
 
-if os.path.exists(report_txt):
+if report_txt.exists():
     os.remove(report_txt)
-if os.path.exists(report_html):
+if report_html.exists():
     os.remove(report_html)
 
 '''class_pre.prepare_input(input_parcel_filepath=input_groundtruth_filepath,

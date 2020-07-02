@@ -3,8 +3,11 @@
 Module that implements the classification logic.
 """
 
+import ast
+import glob
 import logging
-import os, glob, ast
+import os
+from pathlib import Path
 
 import keras
 from keras import backend as K
@@ -40,7 +43,7 @@ K.set_session(session)
 
 def train(train_df: pd.DataFrame,
           test_df: pd.DataFrame,
-          output_classifier_basefilepath: str) -> str:
+          output_classifier_basefilepath: Path) -> Path:
     """
     Train a classifier and output the trained classifier to the output file.
 
@@ -55,11 +58,9 @@ def train(train_df: pd.DataFrame,
 
     # Prepare and check some input + init some variables
     output_classifier_filepath_noext, output_ext = os.path.splitext(output_classifier_basefilepath)
-    output_classifier_classes_filepath = f"{output_classifier_filepath_noext}_classes.txt"
-    output_classifier_datacolumns_filepath = f"{output_classifier_filepath_noext}_datacolumns.txt"
-    output_classifier_dir, output_classifier_filename = os.path.split(output_classifier_basefilepath)
-    csv_log_filepath = f"{output_classifier_filepath_noext}_train_log.csv"
-
+    output_classifier_classes_filepath = Path(f"{output_classifier_filepath_noext}_classes.txt")
+    output_classifier_datacolumns_filepath = Path(f"{output_classifier_filepath_noext}_datacolumns.txt")
+    
     if output_ext.lower() != '.hdf5':
         message = f"Keras only supports saving in extension .hdf5, not in {output_ext}"
         logger.error(message)
@@ -135,56 +136,58 @@ def train(train_df: pd.DataFrame,
     model.add(keras.layers.Dense(len(classes_dict), activation='softmax'))
 
     # Prepare model for training + train!
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    optimizer = keras.optimizers.Adam(learning_rate=learning_rate_init)
+    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
     
     logger.info(f"Start fitting classifier:\n{model.summary()}")
     acc_metric_mode = 'min'
     reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', mode=acc_metric_mode,
             factor=0.2, patience=50, verbose=1, epsilon=1e-4)
-    
+    callbacks = [reduce_lr_loss]
+
     # Several best_model strategies are possible, but it seems the standard/typical val_loss 
     # gives the best results for this case.
     best_model_strategy = 'VAL_LOSS'
     if(best_model_strategy == 'VAL_LOSS'):
         to_be_formatted_by_callback = "{val_loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
         best_model_filepath = f"{output_classifier_filepath_noext}_{to_be_formatted_by_callback}{output_ext}"
-        mcp_saver = keras.callbacks.ModelCheckpoint(
+        callbacks.append(keras.callbacks.ModelCheckpoint(
                 best_model_filepath, save_best_only=True, 
-                monitor='val_loss', mode=acc_metric_mode)
-        earlyStopping = keras.callbacks.EarlyStopping(monitor='val_loss', mode=acc_metric_mode,
-                patience=200, verbose=0)    
+                monitor='val_loss', mode=acc_metric_mode))
+        callbacks.append(keras.callbacks.EarlyStopping(monitor='val_loss', mode=acc_metric_mode,
+                patience=200, verbose=0))    
     elif(best_model_strategy == 'LOSS'):
         to_be_formatted_by_callback = "{loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
         best_model_filepath = f"{output_classifier_filepath_noext}_{to_be_formatted_by_callback}{output_ext}"
-        mcp_saver = keras.callbacks.ModelCheckpoint(
+        callbacks.append(keras.callbacks.ModelCheckpoint(
                 best_model_filepath, save_best_only=True, 
-                monitor='loss', mode=acc_metric_mode)
-        earlyStopping = keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
-                patience=100, verbose=0)
+                monitor='loss', mode=acc_metric_mode))
+        callbacks.append(keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
+                patience=100, verbose=0))
     elif(best_model_strategy == 'AVG(VAL_LOSS,LOSS)'):
         # Custom callback that saves the best models using both train and validation metric
-        mcp_saver = mh.ModelCheckpointExt(
-                output_classifier_dir, output_classifier_filename, 
+        callbacks.append(mh.ModelCheckpointExt(
+                output_classifier_basefilepath.parent, output_classifier_basefilepath.name, 
                 acc_metric_train='loss', acc_metric_validation='val_loss', 
-                acc_metric_mode=acc_metric_mode)
-        earlyStopping = keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
-                patience=100, verbose=0)
-                
-    csv_logger = keras.callbacks.CSVLogger(csv_log_filepath, append=True, separator=';')
-    model.fit(train_data_df, train_classes_df, batch_size=128, epochs=1000, 
-              callbacks=[earlyStopping, reduce_lr_loss, mcp_saver, csv_logger],
-              validation_data=(test_data_df, test_classes_df))
+                acc_metric_mode=acc_metric_mode))
+        callbacks.append(keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
+                patience=100, verbose=0))
+
+    csv_log_filepath = Path(f"{output_classifier_filepath_noext}_train_log.csv")
+    callbacks.append(keras.callbacks.CSVLogger(csv_log_filepath, append=True, separator=';'))
+    model.fit(train_data_df, train_classes_df, batch_size=128, epochs=max_iter, 
+              callbacks=callbacks, validation_data=(test_data_df, test_classes_df))
 
     # Get the best model after fitting to return it...
-    best_model_info = mh.get_best_model(output_classifier_dir, acc_metric_mode=acc_metric_mode)
+    best_model_info = mh.get_best_model(output_classifier_basefilepath.parent, acc_metric_mode=acc_metric_mode)
     best_model_filepath = best_model_info['filepath']
 
-    return best_model_filepath
+    return Path(best_model_filepath)
 
 def predict_proba(parcel_df: pd.DataFrame,
-                  classifier_basefilepath: str,
-                  classifier_filepath: str,
-                  output_parcel_predictions_filepath: str) -> pd.DataFrame:
+                  classifier_basefilepath: Path,
+                  classifier_filepath: Path,
+                  output_parcel_predictions_filepath: Path) -> pd.DataFrame:
     """
     Predict the probabilities for all input data using the classifier provided and write it
     to the output file.

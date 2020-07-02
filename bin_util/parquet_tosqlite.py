@@ -10,10 +10,8 @@ from cropclassification.helpers import pandas_helper as pdh
 
 def main():
 
-    dir = r"X:\Monitoring\Markers\playground\pierog\tmp\Run_2019-06-25_007_imported"
-    glob_search = os.path.join(dir, "*.parquet")
-
-    in_filepaths = glob.glob(glob_search)
+    dir = Path("X:/Monitoring/Markers/playground/pierog/tmp/Run_2019-06-25_007_imported")
+    in_filepaths = dir.glob("*.parquet")
 
     # Convert all files found
     for in_filepath in in_filepaths:
@@ -23,8 +21,7 @@ def main():
         df = pdh.read_file(in_filepath)
 
         # Write to new file
-        in_filepath_noext, _ = os.path.splitext(in_filepath)
-        out_filepath = in_filepath_noext + '.sqlite'
+        out_filepath = in_filepath.parent / f"{in_filepath.stem}.sqlite"
         print(f"Write {out_filepath}")
         pdh.to_file(df, out_filepath)
 

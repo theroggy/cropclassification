@@ -1,20 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Process the jobs in the job directory.
+Process the tasks in the tasks directory.
 """
 
 import argparse
 import configparser
-import glob
-import os
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
-
-# TODO: on windows, the init of this doensn't seem to work properly... should be solved somewhere else?
-#if os.name == 'nt':
-#    os.environ["GDAL_DATA"] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\gdal"
-#    os.environ['PROJ_LIB'] = r"C:\Tools\anaconda3\envs\orthoseg4\Library\share\proj"
 
 def main():
        
@@ -23,42 +16,62 @@ def main():
 
     # Optional arguments
     optional = parser.add_argument_group('Optional arguments')
-    optional.add_argument('-j', '--jobdir',
-            help='The path to the dir where jobs (*.ini) to be run can be found.')
+    optional.add_argument('-t', '--tasksdir',
+            help='The path to the dir where tasks (*.ini) to be run can be found.')
     # Add back help         
     optional.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
             help='Show this help message and exit')
     args = parser.parse_args()
 
-    # If job dir is specified, use it
-    if args.jobdir is not None:
-        return run_jobs(jobdir=Path(args.jobdir))
+    # If tasks dir is specified, use it
+    if args.tasksdir is not None:
+        return cropclassification(tasksdir=Path(args.tasksdir))
     else:
-        userjobdir = Path.home() / 'cropclassification' / 'job'
-        if userjobdir.exists():
-            return run_jobs(jobdir=userjobdir)
+        usertasksdir = Path.home() / 'cropclassification' / 'tasks'
+        if usertasksdir.exists():
+            return cropclassification(tasksdir=usertasksdir)
         else: 
-            print(f"Error: no jobdir specified, and default job dir ({userjobdir}) does not exist, so stop\n")
+            print(f"Error: no tasksdir specified, and default tasks dir ({usertasksdir}) does not exist, so stop\n")
             parser.print_help()
             sys.exit(1)
 
-def run_jobs(jobdir: Path):
+def cropclassification(tasksdir: Path):
     
-    # Get the jobs and treat them
-    job_filepaths = sorted(jobdir.glob('*.ini'))
-    for job_filepath in job_filepaths:      
-        # Create configparser and read job file!
-        job_config = configparser.ConfigParser(
+    # Get the tasks and treat them
+    task_paths = sorted(tasksdir.glob('task_*.ini'))
+    for task_path in task_paths:      
+        # Create configparser and read task file!
+        task_config = configparser.ConfigParser(
                 interpolation=configparser.ExtendedInterpolation(),
+                converters={'list': lambda x: [i.strip() for i in x.split(',')]},
                 allow_no_value=True)
-        job_config.read(job_filepath)
+        task_config.read(task_path)
 
-        # Now get the info we want from the job config
-        action = job_config['job'].get('action', 'calc_marker')
+        # Now get the info we want from the task config
+        action = task_config['task'].get('action')
+        default_basedir = task_path.parent.parent
+
+        # Determine the config files to load
+        script_dir = Path(__file__).resolve().parent
+        config_filepaths = [script_dir / 'general.ini']
+        extra_config_files_to_load = task_config['task'].getlist('extra_config_files_to_load')
+        if extra_config_files_to_load is not None:
+            for config_file in extra_config_files_to_load:
+                config_file_formatted = Path(config_file.format(task_filepath=task_path, tasks_dir=task_path.parent))
+                if not config_file_formatted.is_absolute():
+                    config_file_formatted = (default_basedir / config_file_formatted).resolve()
+                config_filepaths.append(Path(config_file_formatted))
 
         if action == 'calc_marker':
             from cropclassification import calc_marker 
-            calc_marker.calc_marker_job(job_path=job_filepath)
+            calc_marker.calc_marker_task(
+                    config_filepaths=config_filepaths, 
+                    default_basedir=default_basedir)
+        elif action == 'calc_timeseries':
+            from cropclassification import calc_timeseries 
+            calc_timeseries.calc_timeseries_task(
+                    config_filepaths=config_filepaths, 
+                    default_basedir=default_basedir)
         else:
             raise Exception(f"Action not supported: {action}")
 

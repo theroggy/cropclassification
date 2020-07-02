@@ -4,6 +4,7 @@ Multicrop marker.
 """
 
 import logging
+from pathlib import Path
 
 import pandas as pd
 
@@ -20,8 +21,8 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def detect_multicrop(input_parcel_filepath: str,
-                     input_parcel_timeseries_data_filepath: str):
+def detect_multicrop(input_parcel_filepath: Path,
+                     input_parcel_timeseries_data_filepath: Path):
 
     '''
     logger.info(f"Read input file: {input_parcel_filepath}")
@@ -66,6 +67,6 @@ def detect_multicrop(input_parcel_filepath: str,
     logger.info(df_result)
 
     # Write to file
-    output_filepath = input_parcel_timeseries_data_filepath + '_largestStdDev.csv'
+    output_filepath = Path(str(input_parcel_timeseries_data_filepath) + '_largestStdDev.csv')
     logger.info(f"Write output file: {output_filepath}")
     pdh.to_file(df_result, output_filepath)

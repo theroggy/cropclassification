@@ -16,23 +16,23 @@ import cropclassification.preprocess.timeseries_util as ts_util
 
 def main():
    
-    config_filepaths = ["config/general.ini",
-                        "config/local_overrule.ini"]
+    config_filepaths = [Path("config/general.ini"),
+                        Path("config/local_overrule.ini")]
     year = 2018
 
     # Read the configuration files
     conf.read_config(config_filepaths)
 
     # Init logging
-    base_log_dir = conf.dirs['log_dir']
-    log_dir = f"{base_log_dir}{os.sep}calc_dias_weekly{datetime.now():%Y-%m-%d_%H-%M-%S}"
+    base_log_dir = conf.dirs.getpath('log_dir')
+    log_dir = base_log_dir / f"{os.sep}calc_dias_weekly{datetime.now():%Y-%m-%d_%H-%M-%S}"
     global logger
     logger = log_helper.main_log_init(log_dir, __name__)
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # Get the config needed
-    timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
-    timeseries_periodic_dir = conf.dirs['timeseries_periodic_dir']
+    timeseries_per_image_dir = conf.dirs.getpath('timeseries_per_image_dir')
+    timeseries_periodic_dir = conf.dirs.getpath('timeseries_periodic_dir')
 
     # Input features file depends on the year
     if year == 2017:
@@ -46,7 +46,7 @@ def main():
         raise Exception(f"Not a valid year: {year}")
 
     # Calculate!
-    input_parcel_filepath = os.path.join(conf.dirs['input_dir'], input_features_filename)
+    input_parcel_filepath = conf.dirs.getpath('input_dir') / input_features_filename
     ts_util.calculate_periodic_data(
             input_parcel_filepath=input_parcel_filepath,
             input_base_dir=timeseries_per_image_dir,

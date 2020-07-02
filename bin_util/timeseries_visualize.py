@@ -33,7 +33,7 @@ SENSORDATA_VH = 'VH' # Vertical Horizontal
 # The real work
 #-------------------------------------------------------------
 
-def show(input_parcel_filepath: str,
+def show(input_parcel_filepath: Path,
          filter_id: str):
 
     # Load input data...
@@ -93,9 +93,9 @@ def show(input_parcel_filepath: str,
 # If the script is run directly...
 if __name__ == "__main__":
         
-    local_data_basedir = r"X:\Monitoring\Markers\playground\pierog"
-    local_data_dir = os.path.join(local_data_basedir, r"2019_LANDCOVER\Run_2019-08-19_001")
-    input_parcel_filepath = os.path.join(local_data_dir , "Prc_BEFL_2019_2019-08-14_bufm5_weekly_parcel_classdata.sqlite")
+    local_data_basedir = Path("X:/Monitoring/Markers/playground/pierog")
+    local_data_dir = local_data_basedir / "2019_LANDCOVER/Run_2019-08-19_001"
+    input_parcel_filepath = local_data_dir / "Prc_BEFL_2019_2019-08-14_bufm5_weekly_parcel_classdata.sqlite"
     show(input_parcel_filepath, filter_id = '0000280800C79F930000000C')
 
 

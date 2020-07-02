@@ -1,5 +1,5 @@
 {
     "python.terminal.activateEnvironment": true,
-    "python.pythonPath": "C:\\Tools\\miniconda3\\envs\\cropclassification\\python.exe",
+    "python.pythonPath": "C:\\Users\\pierog\\Miniconda3\\envs\\cropclassificationdev\\python.exe",
     "terminal.integrated.shell.windows": "C:\\Windows\\System32\\cmd.exe"
 }

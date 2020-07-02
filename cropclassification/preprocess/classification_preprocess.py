@@ -5,6 +5,7 @@ Module with helper functions to preprocess the data to use for the classificatio
 
 import logging
 import os
+from pathlib import Path
 import shutil
 
 import pandas as pd
@@ -24,12 +25,12 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def prepare_input(input_parcel_filepath: str,
+def prepare_input(input_parcel_filepath: Path,
                   input_parcel_filetype: str,
-                  input_parcel_pixcount_filepath: str,
+                  input_parcel_pixcount_filepath: Path,
                   classtype_to_prepare: str,
-                  classes_refe_filepath: str,
-                  output_parcel_filepath: str,
+                  classes_refe_filepath: Path,
+                  output_parcel_filepath: Path,
                   force: bool = False):
     """
     Prepare a raw input file by eg. adding the classification classes to use for the
@@ -42,19 +43,18 @@ def prepare_input(input_parcel_filepath: str,
         return
 
     # If it exists, copy the refe file to the run dir, so we always keep knowing which refe was used
-    output_dir, _ = os.path.split(output_parcel_filepath)
     if classes_refe_filepath is not None:
-        shutil.copy(classes_refe_filepath, output_dir)        
+        shutil.copy(classes_refe_filepath, output_parcel_filepath.parent)        
 
     if input_parcel_filetype == 'BEFL':
         # classes_refe_filepath must exist for BEFL!
-        if not os.path.exists(classes_refe_filepath):
+        if not classes_refe_filepath.exists():
             raise Exception(f"Input classes file doesn't exist: {classes_refe_filepath}")
         
         df_parceldata = befl.prepare_input(input_parcel_filepath=input_parcel_filepath,
                                            classtype_to_prepare=classtype_to_prepare,
                                            classes_refe_filepath=classes_refe_filepath,
-                                           output_dir=output_dir)
+                                           output_dir=output_parcel_filepath.parent)
     else:
         message = f"Unknown value for parameter input_parcel_filetype: {input_parcel_filetype}"
         logger.critical(message)
@@ -85,17 +85,17 @@ def prepare_input(input_parcel_filepath: str,
     else:
         df_parceldata.to_file(output_parcel_filepath, index=False)
 
-def create_train_test_sample(input_parcel_filepath: str,
-                             output_parcel_train_filepath: str,
-                             output_parcel_test_filepath: str,
+def create_train_test_sample(input_parcel_filepath: Path,
+                             output_parcel_train_filepath: Path,
+                             output_parcel_test_filepath: Path,
                              balancing_strategy: str,
                              force: bool = False):
     """ Create a seperate train and test sample from the general input file. """
 
     # If force == False Check and the output files exist already, stop.
     if(force is False
-            and os.path.exists(output_parcel_train_filepath) is True
-            and os.path.exists(output_parcel_test_filepath) is True):
+            and output_parcel_train_filepath.exists() is True
+            and output_parcel_test_filepath.exists() is True):
         logger.warning(f"create_train_test_sample: output files already exist and force == False, so stop: {output_parcel_train_filepath}, {output_parcel_test_filepath}")
         return
 
@@ -299,7 +299,7 @@ def create_train_test_sample(input_parcel_filepath: str,
                     .apply(pd.DataFrame.sample, 2000, replace=True))
 
     else:
-        logger.critical(f"Unknown balancing strategy, STOP!: {balancing_strategy}")
+        raise Exception(f"Unknown balancing strategy, STOP!: {balancing_strategy}")
 
     # Log the resulting numbers per class in the train sample
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):

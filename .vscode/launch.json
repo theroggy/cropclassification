@@ -13,18 +13,11 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: calc_dias_weekly",
+            "name": "Python: cropclassification",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceRoot}/bin/calc_dias_weekly.py",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: run_jobs",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceRoot}/bin/run_jobs.py",
-            "args": ["-j", "x:/monitoring/markers/playground/pierog/_job"],
+            "program": "${workspaceRoot}/cropclassification/cropclassification.py",
+            "args": ["-t", "x:/monitoring/markers/playground/_tasks_pierog"],
             "console": "integratedTerminal"
         }           
     ]

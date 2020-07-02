@@ -3,8 +3,11 @@
 Module that implements the classification logic.
 """
 
+import ast 
+import glob
 import logging
-import os, glob, ast 
+import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -28,7 +31,7 @@ logger = logging.getLogger(__name__)
 #-------------------------------------------------------------
 
 def train(train_df: pd.DataFrame,
-          output_classifier_basefilepath: str) -> str:
+          output_classifier_basefilepath: Path) -> Path:
     """
     Train a classifier and output the trained classifier to the output file.
 
@@ -39,9 +42,9 @@ def train(train_df: pd.DataFrame,
             * ... all columns that will be used as classification data
         output_classifier_basefilepath: the filepath where the classifier can be written
     """
-    output_classifier_filepath_noext, output_ext = os.path.splitext(output_classifier_basefilepath)
+    output_classifier_filepath_noext, _ = os.path.splitext(output_classifier_basefilepath)
     output_classifier_filepath = output_classifier_basefilepath
-    output_classifier_datacolumns_filepath = f"{output_classifier_filepath_noext}_datacolumns.txt" 
+    output_classifier_datacolumns_filepath = Path(f"{output_classifier_filepath_noext}_datacolumns.txt") 
 
     # Split the input dataframe in one with the train classes and one with the train data
     train_classes_df = train_df[conf.columns['class']]
@@ -90,9 +93,9 @@ def train(train_df: pd.DataFrame,
     return output_classifier_filepath
 
 def predict_proba(parcel_df: pd.DataFrame,
-                  classifier_basefilepath: str,
-                  classifier_filepath: str,
-                  output_parcel_predictions_filepath: str) -> pd.DataFrame:
+                  classifier_basefilepath: Path,
+                  classifier_filepath: Path,
+                  output_parcel_predictions_filepath: Path) -> pd.DataFrame:
     """
     Predict the probabilities for all input data using the classifier provided and write it
     to the output file.

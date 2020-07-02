@@ -4,12 +4,13 @@ Module with helper functions to expand on some features of geopandas.
 """
 
 import os
+from pathlib import Path
 from typing import List, Optional
 
 import fiona
 import geopandas as gpd
 
-def read_file(filepath: str,
+def read_file(filepath: Path,
               layer: str = 'info',
               columns: Optional[List[str]] = None,
               bbox = None) -> gpd.GeoDataFrame:
@@ -22,14 +23,14 @@ def read_file(filepath: str,
 
     ext_lower = ext.lower()
     if ext_lower == '.shp':
-        return gpd.read_file(filepath, bbox=bbox)
+        return gpd.read_file(str(filepath), bbox=bbox)
     elif ext_lower == '.gpkg':
-        return gpd.read_file(filepath, layer=layer, bbox=bbox)
+        return gpd.read_file(str(filepath), layer=layer, bbox=bbox)
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
 
 def to_file(gdf: gpd.GeoDataFrame,
-            filepath: str,
+            filepath: Path,
             layer: str = 'info',
             index: bool = True):
     """
@@ -44,17 +45,17 @@ def to_file(gdf: gpd.GeoDataFrame,
     if ext_lower == '.shp':
         if index is True:
             gdf = gdf.reset_index(inplace=False)
-        gdf.to_file(filepath)
+        gdf.to_file(str(filepath))
     elif ext_lower == '.gpkg':
-        gdf.to_file(filepath, layer=layer, driver="GPKG")
+        gdf.to_file(str(filepath), layer=layer, driver="GPKG")
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
         
-def get_crs(filepath):
-    with fiona.open(filepath, 'r') as geofile:
+def get_crs(filepath: Path):
+    with fiona.open(str(filepath), 'r') as geofile:
         return geofile.crs
 
-def get_totalbounds(filepath: str):
+def get_totalbounds(filepath: Path):
     """
     Gets the total bounds of a geofile. Return a tuple with the bounds and the crs.
 
@@ -63,10 +64,10 @@ def get_totalbounds(filepath: str):
     Args:
         filepath (str): The filepath to the geofile
     """
-    gdf = gpd.read_file(filepath)
+    gdf = gpd.read_file(str(filepath))
     return (gdf.total_bounds, gdf.crs)
 
-def is_geofile(filepath) -> bool:
+def is_geofile(filepath: Path) -> bool:
     """
     Determines based on the filepath if this is a geofile.
     """

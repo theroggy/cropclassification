@@ -8,9 +8,7 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 
 import logging
 import os
-
-import pandas as pd
-import geopandas as gpd
+from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
@@ -43,10 +41,10 @@ columns_BEFL_to_keep = [
 # The real work
 #-------------------------------------------------------------
 
-def prepare_input(input_parcel_filepath: str,
+def prepare_input(input_parcel_filepath: Path,
                   classtype_to_prepare: str,
-                  classes_refe_filepath: str,
-                  output_dir: str):
+                  classes_refe_filepath: Path,
+                  output_dir: Path):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -56,7 +54,7 @@ def prepare_input(input_parcel_filepath: str,
         - classname: a string column with a readable name of the classes that will be classified to
     """
     # Check if input parameters are OK
-    if not os.path.exists(input_parcel_filepath):
+    if not input_parcel_filepath.exists():
         raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
     else:
         logger.info(f"Process input file {input_parcel_filepath}")
@@ -170,7 +168,7 @@ def prepare_input_cropgroup(
             parceldata_df,
             column_BEFL_cropcode: str,
             column_output_class: str,
-            classes_refe_filepath: str):
+            classes_refe_filepath: Path):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -184,7 +182,7 @@ def prepare_input_cropgroup(
     """
     # Check if parameters are OK and init some extra params
     #--------------------------------------------------------------------------
-    if not os.path.exists(classes_refe_filepath):
+    if not classes_refe_filepath.exists():
         raise Exception(f"Input classes file doesn't exist: {classes_refe_filepath}")
 
     # Convert the crop to unicode, in case the input is int...
@@ -309,7 +307,7 @@ def prepare_input_cropgroup_early(
             parceldata_df,
             column_BEFL_cropcode: str,
             column_output_class: str,
-            classes_refe_filepath: str):
+            classes_refe_filepath: Path):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname 
     column ready to classify the cropgroups for early crops.
@@ -337,7 +335,7 @@ def prepare_input_landcover(
             parceldata_df,
             column_BEFL_cropcode: str,
             column_output_class: str,
-            classes_refe_filepath: str):
+            classes_refe_filepath: Path):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -351,7 +349,7 @@ def prepare_input_landcover(
     """
     # Check if parameters are OK and init some extra params
     #--------------------------------------------------------------------------
-    if not os.path.exists(classes_refe_filepath):
+    if not classes_refe_filepath.exists():
         raise Exception(f"Input classes file doesn't exist: {classes_refe_filepath}") 
 
     # Convert the crop to unicode, in case the input is int...
@@ -429,7 +427,7 @@ def prepare_input_landcover_early(
             parceldata_df,
             column_BEFL_cropcode: str,
             column_output_class: str,
-            classes_refe_filepath: str):
+            classes_refe_filepath: Path):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname 
     column ready to classify the landcover for early crops.
@@ -457,7 +455,7 @@ def prepare_input_most_popular_crop(
             parceldata_df,
             column_BEFL_cropcode: str,
             column_output_class: str,
-            classes_refe_filepath: str):
+            classes_refe_filepath: Path):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.

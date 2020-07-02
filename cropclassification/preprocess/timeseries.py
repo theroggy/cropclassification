@@ -3,7 +3,6 @@
 This module contains general functions that apply to timeseries data...
 """
 
-import glob
 import logging
 import os
 from pathlib import Path
@@ -25,13 +24,14 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def calc_timeseries_data(input_parcel_filepath: str,
-                         input_country_code: str,
-                         start_date_str: str,
-                         end_date_str: str,
-                         sensordata_to_get: List[str],
-                         base_filename: str,
-                         dest_data_dir: str):
+def calc_timeseries_data(
+        input_parcel_filepath: Path,
+        input_country_code: str,
+        start_date_str: str,
+        end_date_str: str,
+        sensordata_to_get: List[str],
+        base_filename: str,
+        dest_data_dir: Path):
     """
     Calculate timeseries data for the input parcels
 
@@ -48,7 +48,7 @@ def calc_timeseries_data(input_parcel_filepath: str,
     # Check some variables...
     if sensordata_to_get is None:
         raise Exception("sensordata_to_get cannot be None")
-    if not os.path.exists(dest_data_dir):
+    if not dest_data_dir.exists():
         os.makedirs(dest_data_dir)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
@@ -73,26 +73,26 @@ def calc_timeseries_data(input_parcel_filepath: str,
         # Start!
         # TODO: start calculation of per image data on DIAS
         #import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as ts_calc
-        timeseries_per_image_dir = conf.dirs['timeseries_per_image_dir']
+        timeseries_per_image_dir = conf.dirs.getpath('timeseries_per_image_dir')
 
         # Now all image data is available per image, calculate periodic data
         return ts_util.calculate_periodic_data(
-                input_parcel_filepath=Path(input_parcel_filepath),
-                input_base_dir=Path(timeseries_per_image_dir),
+                input_parcel_filepath=input_parcel_filepath,
+                input_base_dir=timeseries_per_image_dir,
                 start_date_str=start_date_str,
                 end_date_str=end_date_str,
                 sensordata_to_get=sensordata_to_get,  
-                dest_data_dir=Path(dest_data_dir))
+                dest_data_dir=dest_data_dir)
     else:
         message = f"Unsupported timeseries calculation type: {timeseries_calc_type}"
         logger.error(message)
         raise Exception(message)
 
 def collect_and_prepare_timeseries_data(
-        input_parcel_filepath: str,
-        timeseries_dir: str,
+        input_parcel_filepath: Path,
+        timeseries_dir: Path,
         base_filename: str,
-        output_filepath: str,
+        output_filepath: Path,
         start_date_str: str,
         end_date_str: str,
         sensordata_to_use: List[str],
@@ -120,7 +120,7 @@ def collect_and_prepare_timeseries_data(
     SENSORDATA_S1_COHERENCE = conf.general['SENSORDATA_S1_COHERENCE']
 
     # If force == False Check and the output file exists already, stop.
-    if(force is False and os.path.exists(output_filepath) is True):
+    if(force is False and output_filepath.exists() is True):
         logger.warning(f"Output file already exists and force == False, so stop: {output_filepath}")
         return
 
@@ -134,22 +134,21 @@ def collect_and_prepare_timeseries_data(
 
     # Loop over all input timeseries data to find the data we really need
     data_ext = conf.general['data_ext']
-    filepath_start = os.path.join(timeseries_dir, f"{base_filename}_{start_date_str}{data_ext}")
-    filepath_end = os.path.join(timeseries_dir, f"{base_filename}_{end_date_str}{data_ext}")
+    filepath_start = timeseries_dir / f"{base_filename}_{start_date_str}{data_ext}"
+    filepath_end = timeseries_dir / f"{base_filename}_{end_date_str}{data_ext}"
     logger.debug(f'filepath_start_date: {filepath_start}')
     logger.debug(f'filepath_end_date: {filepath_end}')
 
-    ts_data_files = glob.glob(os.path.join(timeseries_dir, f"{base_filename}_*{data_ext}"))
+    ts_data_files = timeseries_dir.glob(f"{base_filename}_*{data_ext}")
     for curr_filepath in sorted(ts_data_files):
 
         # Only process data that is of the right sensor types
-        curr_filepath_noext = os.path.splitext(curr_filepath)[0]
-        sensor_type = curr_filepath_noext.split('_')[-1]
+        sensor_type = curr_filepath.stem.split('_')[-1]
         if sensor_type not in sensordata_to_use:
             logger.debug(f"SKIP: file is not in sensor types asked ({sensordata_to_use}): {curr_filepath}")
             continue
         # The only data we want to process is the data in the range of dates
-        if((curr_filepath < filepath_start) or (curr_filepath >= filepath_end)):
+        if((str(curr_filepath) < str(filepath_start)) or (str(curr_filepath) >= str(filepath_end))):
             logger.debug(f"SKIP: File is not in date range asked: {curr_filepath}")
             continue
         # An empty file signifies that there wasn't any valable data for that period/sensor/...
@@ -216,7 +215,7 @@ def collect_and_prepare_timeseries_data(
     parcel_many_null_df = result_df[result_df.isnull().sum(axis=1) > max_number_null]
     if len(parcel_many_null_df.index) > 0:
         # Write the rows with empty data to a file
-        parcel_many_null_filepath = f'{output_filepath}_rows_many_null.sqlite'
+        parcel_many_null_filepath = Path(f'{str(output_filepath)}_rows_many_null.sqlite')
         logger.warn(f"Write {len(parcel_many_null_df.index)} rows with > {max_number_null} of {len(result_df.columns)} columns==null to {parcel_many_null_filepath}")
         pdh.to_file(parcel_many_null_df, parcel_many_null_filepath)
 

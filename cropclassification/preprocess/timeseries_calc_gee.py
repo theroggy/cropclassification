@@ -50,7 +50,7 @@ from datetime import timedelta
 import glob
 import logging
 import os
-import pathlib
+from pathlib import Path
 import time
 from typing import List
 
@@ -67,11 +67,11 @@ from oauth2client import file, client, tools
 import googleapiclient
 
 # Import local stuff
-import cropclassification.preprocess.timeseries as ts
-import cropclassification.preprocess.timeseries_util as ts_util
-import cropclassification.helpers.config_helper as conf
-import cropclassification.helpers.geofile_util as geofile_util
-import cropclassification.helpers.pandas_helper as pdh
+from cropclassification.preprocess import timeseries as ts
+from cropclassification.preprocess import timeseries_util as ts_util
+from cropclassification.helpers import config_helper as conf
+from cropclassification.helpers import geofile
+from cropclassification.helpers import pandas_helper as pdh
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -84,13 +84,13 @@ global_gee_tasks_cache = None
 # The real work
 #-------------------------------------------------------------
 
-def calc_timeseries_data(input_parcel_filepath: str,
+def calc_timeseries_data(input_parcel_filepath: Path,
                          input_country_code: str,
                          start_date_str: str,
                          end_date_str: str,
                          sensordata_to_get: List[str],
                          base_filename: str,
-                         dest_data_dir: str):
+                         dest_data_dir: Path):
     """ Calculate timeseries data for the input parcels
 
     args
@@ -100,24 +100,21 @@ def calc_timeseries_data(input_parcel_filepath: str,
     ##### Check and init some stuff #####
     if sensordata_to_get is None:
         raise Exception("sensordata_to_get cannot be None")
-    if not os.path.exists(dest_data_dir):
+    if not dest_data_dir.exists():
         os.mkdir(dest_data_dir)
 
     # To have a good precision, the vector input must be uploaded to gee in WGS84!
-    input_preprocessed_dir = conf.dirs('input_preprocessed_dir')
-    input_parcel_basename = os.path.basename(input_parcel_filepath)
-    input_parcel_basename_noext, _ = os.path.splitext(input_parcel_basename)
-    input_parcel_4326_filepath = os.path.join(
-            input_preprocessed_dir, f"{input_parcel_basename_noext}_4326.shp")
+    input_preprocessed_dir = conf.dirs.getpath('input_preprocessed_dir')
+    input_parcel_4326_filepath = input_preprocessed_dir / f"{input_parcel_filepath.stem}_4326.shp"
 
     # If the WGS84 version doesn't exist yet, create it
     if(not os.path.exists(input_parcel_4326_filepath)):
-        input_parcel_gdf = geofile_util.read_file(input_parcel_filepath)
+        input_parcel_gdf = geofile.read_file(input_parcel_filepath)
         target_epsg = 4326
         logger.info(f"Reproject features from {input_parcel_gdf.crs} to epsg:{target_epsg}")
         input_parcel_4326_gdf = input_parcel_gdf.to_crs(epsg=target_epsg)
         logger.info(f"Write reprojected features to {input_parcel_4326_filepath}")
-        geofile_util.to_file(input_parcel_4326_gdf, input_parcel_4326_filepath)
+        geofile.to_file(input_parcel_4326_gdf, input_parcel_4326_filepath)
 
     ##### Start calculation of the timeseries on gee #####
 
@@ -132,22 +129,23 @@ def calc_timeseries_data(input_parcel_filepath: str,
     done_success = False
     while done_success is False and nb_retries < 10:
         try:
-            calculate_sentinel_timeseries(input_parcel_filepath=input_parcel_filepath,
-                                          input_country_code=input_country_code,
-                                          start_date_str=start_date_str,
-                                          end_date_str=end_date_str,
-                                          sensordata_to_get=sensordata_to_get,
-                                          base_filename=base_filename,
-                                          dest_data_dir=dest_data_dir)
+            calculate_sentinel_timeseries(
+                    input_parcel_filepath=input_parcel_filepath,
+                    input_country_code=input_country_code,
+                    start_date_str=start_date_str,
+                    end_date_str=end_date_str,
+                    sensordata_to_get=sensordata_to_get,
+                    base_filename=base_filename,
+                    dest_data_dir=dest_data_dir)
             done_success = True
 
         except OSError as ex:
             nb_retries += 1
-            if ex.winerror == 10048:
+            if os.name == 'nt' and ex.winerror == 10048:
                 logger.warning(f"Exception [WinError {ex.winerror}] while trying calculate_sentinel_timeseries, retry! (Full exception message {ex})")
                 time.sleep(10)
             else:
-                raise
+                raise 
 
     # If it wasn't successful, log and stop.
     if done_success is False:
@@ -189,8 +187,9 @@ def calc_timeseries_data(input_parcel_filepath: str,
             logger.error('ERROR downloading from google drive!')
             raise
 
-def download_sentinel_timeseries(dest_data_dir: str,
-                                 base_filename: str):
+def download_sentinel_timeseries(
+        dest_data_dir: Path,
+        base_filename: str):
     """ Download the timeseries data from gee and clean it up. """
 
     logger.info("Start download_sentinel_timeseries")
@@ -200,10 +199,10 @@ def download_sentinel_timeseries(dest_data_dir: str,
     global_gee_tasks_cache = None
 
     # The directory containing the list of filenames of files that need to be downloaded...
-    dest_data_dir_todownload = os.path.join(dest_data_dir, 'TODOWNLOAD')
+    dest_data_dir_todownload = dest_data_dir / 'TODOWNLOAD'
 
     # Get the list of files to download...
-    csv_files_todownload = glob.glob(os.path.join(dest_data_dir_todownload, f'{base_filename}_*.csv'))
+    csv_files_todownload = list(dest_data_dir_todownload.glob(f'{base_filename}_*.csv'))
     if len(csv_files_todownload) > 0:
         logger.info(f"Process files to download: {len(csv_files_todownload)}")
     else:
@@ -244,9 +243,10 @@ def download_sentinel_timeseries(dest_data_dir: str,
             drive_service = connect_to_googledrive()
 
         # Search the file on google drive...
-        results = drive_service.files().list(q=f"name = '{curr_csv_to_download_basename}' and trashed != true",
-                                             pageSize=100,
-                                             fields="nextPageToken, files(id, name)").execute()
+        results = drive_service.files().list(
+                q=f"name = '{curr_csv_to_download_basename}' and trashed != true",
+                pageSize=100,
+                fields="nextPageToken, files(id, name)").execute()
         items = results.get('files', [])
 
         # Check the result of the search
@@ -281,7 +281,7 @@ def download_sentinel_timeseries(dest_data_dir: str,
                     logger.error("Download wasn't completed succesfully and dest csv doesn't exist yet: {dest_filepath}!")
 
     # If there are no todownload files anymore... download is ready...
-    csv_files_todownload = glob.glob(os.path.join(dest_data_dir_todownload, f'{base_filename}_*.csv'))
+    csv_files_todownload = list(dest_data_dir_todownload.glob(f'{base_filename}_*.csv'))
     if len(csv_files_todownload) == 0:
         return_status = 'DOWNLOAD_READY'
 
@@ -345,7 +345,7 @@ def clean_gee_downloaded_csv(csv_file: str,
             if len(data_read_df.columns) > 0:
                 # Replace the original file by the cleaned one
                 logger.info(f"Write the file with the gee specific columns removed to a new file: {output_file}")
-                pdh.to_file(data_read_df, output_file, index=True)
+                pdh.to_file(data_read_df, Path(output_file), index=True)
             else:
                 logger.warning(f"No data columns found in file {csv_file}, so return!!!")
                 return            
@@ -359,13 +359,14 @@ def clean_gee_downloaded_csv(csv_file: str,
     except Exception as ex:
         raise Exception(f"Error processing file {csv_file}") from ex
 
-def calculate_sentinel_timeseries(input_parcel_filepath: str,
-                                  input_country_code: str,
-                                  start_date_str: str,
-                                  end_date_str: str,
-                                  sensordata_to_get: List[str],
-                                  base_filename: str,
-                                  dest_data_dir: str):
+def calculate_sentinel_timeseries(
+        input_parcel_filepath: Path,
+        input_country_code: str,
+        start_date_str: str,
+        end_date_str: str,
+        sensordata_to_get: List[str],
+        base_filename: str,
+        dest_data_dir: Path):
     '''
     Credits: partly based on a gee S1 extraction script written by Guido Lemoine.
 
@@ -375,14 +376,12 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
     '''
 
     # Init some variables
-    dest_data_dir_todownload = os.path.join(dest_data_dir, 'TODOWNLOAD')
-    if not os.path.exists(dest_data_dir_todownload):
+    dest_data_dir_todownload = dest_data_dir / 'TODOWNLOAD'
+    if not dest_data_dir_todownload.exists():
         os.mkdir(dest_data_dir_todownload)
 
     # Prepare filepath as it is available on gee
-    input_parcel_filename = os.path.basename(input_parcel_filepath)
-    input_parcel_filename_noext, _ = os.path.splitext(input_parcel_filename)
-    input_parcel_filepath_gee = f"{conf.dirs['gee']}{input_parcel_filename_noext}"
+    input_parcel_filepath_gee = conf.dirs.getpath('gee') / input_parcel_filepath.stem
 
     # Initialize connection to server
     ee.Initialize()
@@ -562,7 +561,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
     # Remark: In some cases (eg. while debugging/testing) it would be easier that there would be an
     #         option to ignore completed ones. But there is an easy workaround: just change the
     #         basefilename in any way to ignore the completed ones.
-    def check_if_task_exists(task_description: str, task_state_list) -> str:
+    def check_if_task_exists(task_description: str, task_state_list) -> bool:
         """ Checks if a task exists already on gee """
 
         # If the tasks aren't retrieved yet, do so...
@@ -623,7 +622,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
         ee.batch.Task.start(export_task)
 
         # Create file in todownload folder to indicate this file should be downloaded
-        pathlib.Path(dest_fullpath_todownload).touch()
+        Path(dest_fullpath_todownload).touch()
 
     # If the file doesn't exist yet... export the parcel with all interesting columns to csv...
     s1_for_count = (s1.filterDate(ee.List(periods.get(0)).get(0), ee.List(periods.get(0)).get(1))
@@ -715,7 +714,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
         if SENSORDATA_S1DB_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
             sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S1DB_ASCDESC}"
-            if os.path.isfile(os.path.join(dest_data_dir, f"{sensordata_descr}.csv")):
+            if os.path.isfile(dest_data_dir / f"{sensordata_descr}.csv"):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
             else:
                 # Now the real work
@@ -735,7 +734,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
             # If the data is already available locally... skip
             # Remark: this logic is puth here additionaly to evade having to calculate the 95% rule
             #         even if data is available.
-            dest_fullpath = os.path.join(dest_data_dir, f"{sensordata_descr}.csv")
+            dest_fullpath = dest_data_dir / f"{sensordata_descr}.csv"
             if os.path.isfile(dest_fullpath):
                 logger.info(f"For task {sensordata_descr}, file already available locally: SKIP")
             else:
@@ -756,7 +755,7 @@ def calculate_sentinel_timeseries(input_parcel_filepath: str,
                 else:
                     # Create an empty destination file so we'll know that we tested the 95% already
                     # and don't need to do it again...
-                    pathlib.Path(dest_fullpath).touch()
+                    dest_fullpath.touch()
                     continue
 
 #                logger.debug(f"S2 Bands: {ee.Image(s2_forperiod).bandNames().getInfo()}")

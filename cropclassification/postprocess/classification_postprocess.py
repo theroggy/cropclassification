@@ -6,6 +6,7 @@ Module with postprocessing functions on classification results.
 import datetime
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -24,10 +25,10 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def calc_top3_and_consolidation(input_parcel_filepath: str,
-                                input_parcel_probabilities_filepath: str,
-                                output_predictions_filepath: str,
-                                output_predictions_output_filepath: str = None,
+def calc_top3_and_consolidation(input_parcel_filepath: Path,
+                                input_parcel_probabilities_filepath: Path,
+                                output_predictions_filepath: Path,
+                                output_predictions_output_filepath: Path = None,
                                 force: bool = False):
     """
     Calculate the top3 prediction and a consolidation prediction.
@@ -36,16 +37,16 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
     with the declaration of the farmer, rather than taking into account corrections already.
     
     Args:
-        input_parcel_filepath (str): [description]
-        input_parcel_probabilities_filepath (str): [description]
-        output_predictions_filepath (str): [description]
-        output_predictions_output_filepath (str, optional): [description]. Defaults to None.
+        input_parcel_filepath (Path): [description]
+        input_parcel_probabilities_filepath (Path): [description]
+        output_predictions_filepath (Path): [description]
+        output_predictions_output_filepath (Path, optional): [description]. Defaults to None.
         force (bool, optional): [description]. Defaults to False.
     """
     
     # If force is false and output exists, already, return
     if(force is False
-       and os.path.exists(output_predictions_filepath)):
+       and output_predictions_filepath.exists()):
         logger.warning(f"calc_top3_and_consolidation: output file exist and force is False, so stop: {output_predictions_filepath}")
         return
 
@@ -129,12 +130,12 @@ def calc_top3_and_consolidation(input_parcel_filepath: str,
             logger.warning(f"Table unknown for marker type {conf.marker['markertype']}, so cannot write .ctl file")
 
         if table_name is not None and table_columns is not None:
-            with open(output_predictions_output_filepath + '.ctl', 'w') as ctlfile:
+            with open(str(output_predictions_output_filepath) + '.ctl', 'w') as ctlfile:
                 # SKIP=1 to skip the columns names line, the other ones to evade 
                 # more commits than needed
                 ctlfile.write("OPTIONS (SKIP=1, ROWS=10000, BINDSIZE=40000000, READSIZE=40000000)\n")     
                 ctlfile.write("LOAD DATA\n")
-                ctlfile.write(f"INFILE '{os.path.basename(output_predictions_output_filepath)}'  \"str '\\n'\"\n")
+                ctlfile.write(f"INFILE '{output_predictions_output_filepath.name}'  \"str '\\n'\"\n")
                 ctlfile.write(f"INSERT INTO TABLE {table_name} APPEND\n")
                 # A tab as seperator is apparently X'9'  
                 ctlfile.write("FIELDS TERMINATED BY X'9'\n")

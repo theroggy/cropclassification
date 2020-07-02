@@ -1,0 +1,3 @@
+include cropclassification/general.ini
+include cropclassification/postprocess/html_rapport_template.html
+include cropclassification/postprocess/html_rapport_script.js

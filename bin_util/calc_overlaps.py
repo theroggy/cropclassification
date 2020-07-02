@@ -27,11 +27,11 @@ import cropclassification.helpers.geofile as geofile_helper
 def main():
 
     # Read the configuration
-    segment_config_filepaths=['../config/general.ini']
-    conf.read_config(segment_config_filepaths, 2018)
+    segment_config_filepaths=[Path('../config/general.ini')]
+    conf.read_config(segment_config_filepaths)
     
     # Main initialisation of the logging
-    logger = log_helper.main_log_init(conf.dirs['log_dir'], __name__)      
+    logger = log_helper.main_log_init(conf.dirs.getpath('log_dir'), __name__)      
     logger.info("Start")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
@@ -40,16 +40,16 @@ def main():
     # Init variables
     #parcels_filepath = r"X:\GIS\GIS DATA\Percelen_ALP\Vlaanderen\Perc_VL_2019_2019-07-28\perc_2019_met_k_2019-07-28.shp"
     #overlap_filepath = r"X:\Monitoring\OrthoSeg\sealedsurfaces\output_vector\sealedsurfaces_10\sealedsurfaces_10_orig.gpkg"
-    input_preprocessed_dir = conf.dirs['input_preprocessed_dir']
-    parcels_filepath = os.path.join(input_preprocessed_dir, 'Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg')
-    overlap_filepath = os.path.join(input_preprocessed_dir, 'Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg')
+    input_preprocessed_dir = conf.dirs.getpath('input_preprocessed_dir')
+    parcels_filepath = input_preprocessed_dir / 'Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg'
+    overlap_filepath = input_preprocessed_dir / 'Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg'
     
     # Read parcels file to memory (isn't that large...)
     #parcels_gpd = geofile_helper.read_file(parcels_filepath)
     
     # Loop over parcels and calculate overlap
     logger.info(f"Connect to {overlap_filepath}")
-    conn = sqlite3.connect(overlap_filepath) 
+    conn = sqlite3.connect(str(overlap_filepath)) 
     conn.enable_load_extension(True)
 
     #now we can load the extension

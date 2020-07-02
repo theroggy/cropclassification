@@ -5,15 +5,17 @@ Module with some helper functions to report on the classification results.
 
 import logging
 import os
+from pathlib import Path
+from typing import List
 
 import numpy as np
 import pandas as pd
 import sklearn.metrics as skmetrics
 from string import Template
 
-import cropclassification.helpers.config_helper as conf
-import cropclassification.helpers.pandas_helper as pdh
-import cropclassification.postprocess.classification_postprocess as class_postpr
+from cropclassification.helpers import config_helper as conf
+from cropclassification.helpers import pandas_helper as pdh
+from cropclassification.postprocess import classification_postprocess as class_postpr
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -29,10 +31,11 @@ logger = logging.getLogger(__name__)
 # TODO?: report based on area instead of number parcel
 #     -> seems like being a bit "detached from reality", as for RFV the most important parameter is the number of parcels
 
-def write_full_report(parcel_predictions_filepath: str,
-                      output_report_txt: str,
-                      parcel_ground_truth_filepath: str = None,
-                      force: bool = None):
+def write_full_report(
+        parcel_predictions_filepath: Path,
+        output_report_txt: Path,
+        parcel_ground_truth_filepath: Path = None,
+        force: bool = False):
     """Writes a report about the accuracy of the predictions to a file.
 
     Args:
@@ -46,7 +49,7 @@ def write_full_report(parcel_predictions_filepath: str,
     """
 
     # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_report_txt):
+    if force is False and output_report_txt.exists():
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
         return
 
@@ -62,35 +65,35 @@ def write_full_report(parcel_predictions_filepath: str,
     # Python template engine expects all values to be present, so initialize to empty
     empty_string = "''"
     html_data = {
-       'GENERAL_ACCURACIES_TABLE': empty_string,
-       'GENERAL_ACCURACIES_TEXT': empty_string,
-       'GENERAL_ACCURACIES_DATA': empty_string,
-       'CONFUSION_MATRICES_TABLE': empty_string,
-       'CONFUSION_MATRICES_DATA': empty_string,
-       'CONFUSION_MATRICES_CONSOLIDATED_TABLE': empty_string,
-       'CONFUSION_MATRICES_CONSOLIDATED_DATA': empty_string,
-       'PREDICTION_QUALITY_CONS_OVERVIEW_TEXT': empty_string,
-       'PREDICTION_QUALITY_CONS_OVERVIEW_TABLE': empty_string,
-       'PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TEXT': empty_string,
-       'PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE': empty_string,
-       'PREDICTION_QUALITY_ALPHA_TEXT': empty_string,
-       'PREDICTION_QUALITY_BETA_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_CROP_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE': empty_string,       
-       'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT': empty_string,
-       'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TEXT': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_CLASS_TEXT': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_CLASS_TABLE': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_CROP_TEXT': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_CROP_TABLE': empty_string,       
-       'PREDICTION_QUALITY_BETA_PER_PROBABILITY_TEXT': empty_string,
-       'PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE': empty_string
+            'GENERAL_ACCURACIES_TABLE': empty_string,
+            'GENERAL_ACCURACIES_TEXT': empty_string,
+            'GENERAL_ACCURACIES_DATA': empty_string,
+            'CONFUSION_MATRICES_TABLE': empty_string,
+            'CONFUSION_MATRICES_DATA': empty_string,
+            'CONFUSION_MATRICES_CONSOLIDATED_TABLE': empty_string,
+            'CONFUSION_MATRICES_CONSOLIDATED_DATA': empty_string,
+            'PREDICTION_QUALITY_CONS_OVERVIEW_TEXT': empty_string,
+            'PREDICTION_QUALITY_CONS_OVERVIEW_TABLE': empty_string,
+            'PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TEXT': empty_string,
+            'PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE': empty_string,
+            'PREDICTION_QUALITY_ALPHA_TEXT': empty_string,
+            'PREDICTION_QUALITY_BETA_TEXT': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_CROP_TEXT': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE': empty_string,       
+            'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TEXT': empty_string,
+            'PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TEXT': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_CLASS_TEXT': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_CLASS_TABLE': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_CROP_TEXT': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_CROP_TABLE': empty_string,       
+            'PREDICTION_QUALITY_BETA_PER_PROBABILITY_TEXT': empty_string,
+            'PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE': empty_string
     }
     
     # Build and write report...
@@ -106,6 +109,7 @@ def write_full_report(parcel_predictions_filepath: str,
 
         logger.info(f"{dict(conf.marker)}")
         parameter_list = [['marker', key, value] for key, value in conf.marker.items()]
+        parameter_list += [['calc_marker_params', key, value] for key, value in conf.timeseries.items()]
         parameter_list += [['timeseries', key, value] for key, value in conf.timeseries.items()]
         parameter_list += [['preprocess', key, value] for key, value in conf.preprocess.items()]
         parameter_list += [['classifier', key, value] for key, value in conf.classifier.items()]
@@ -316,7 +320,7 @@ def write_full_report(parcel_predictions_filepath: str,
 
         # If the pixcount is available, write the OA per pixcount
         if conf.columns['pixcount_s1s2'] in df_predict.columns:
-            pixcount_output_report_txt = output_report_txt + '_OA_per_pixcount.txt'
+            pixcount_output_report_txt = Path(str(output_report_txt) + '_OA_per_pixcount.txt')
             _write_OA_per_pixcount(df_parcel_predictions=df_predict,
                                    output_report_txt=pixcount_output_report_txt,
                                    force=force)
@@ -380,7 +384,7 @@ def write_full_report(parcel_predictions_filepath: str,
                 html_data['PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE'] = count_per_class.to_html()
 
             # Write the ground truth conclusions to file
-            pdh.to_file(df_parcel_gt, output_report_txt + "_groundtruth_pred_quality_details.tsv")
+            pdh.to_file(df_parcel_gt, Path(str(output_report_txt) + "_groundtruth_pred_quality_details.tsv"))
 
             # Alpha and beta error statistics based on CONS prediction
             # ******************************************************************            
@@ -668,7 +672,7 @@ def write_full_report(parcel_predictions_filepath: str,
                     logger.info(f"{df_per_column}\n")
                     html_data['PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE'] = df_per_column.to_html()
 
-    with open(output_report_txt.replace('.txt', '.html'), 'w') as outputfile:           
+    with open(str(output_report_txt).replace('.txt', '.html'), 'w') as outputfile:           
         html_template_file = open('./cropclassification/postprocess/html_rapport_template.html').read()                        
         src = Template(html_template_file)
         # replace strings and write to file
@@ -780,7 +784,7 @@ def _add_prediction_conclusion(in_df,
               new_columnname] = 'NOK:PREDICTION<>INPUT_CLASS'
 
 def _add_gt_conclusions(in_df, 
-                        prediction_column_to_use) -> str:
+                        prediction_column_to_use):
     """ Add some columns with groundtruth conclusions. """
     
     # Add the new column with a fixed value first
@@ -878,8 +882,8 @@ def _get_errors_per_column(
             df_predquality,
             pred_quality_column: str,
             pred_quality_full_doubt_column: str,
-            error_codes_numerator: [],
-            error_codes_denominator: [],
+            error_codes_numerator: List[str],
+            error_codes_denominator: List[str],
             error_type: str,
             ascending: bool = True):
     """ Returns a dataset with detailed information about the number of alfa errors per column that was passed on"""
@@ -946,11 +950,11 @@ def _get_errors_per_column(
     return df_alfa_per_column
 
 def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,
-                           output_report_txt: str,
+                           output_report_txt: Path,
                            force: bool = False):
     """ Write a report of the overall accuracy that parcels per pixcount get. """
     # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_report_txt):
+    if force is False and output_report_txt.exists():
         logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
         return
 

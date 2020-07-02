@@ -3,11 +3,13 @@
 Module that implements the classification logic.
 """
 
+import ast
+import glob
 import logging
-import os, glob, ast
+import os
+from pathlib import Path
 
 import pandas as pd
-import numpy as np
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
@@ -23,14 +25,15 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-def train_test_predict(input_parcel_train_filepath: str,
-                       input_parcel_test_filepath: str,
-                       input_parcel_all_filepath: str,
-                       input_parcel_classification_data_filepath: str,
-                       output_classifier_basefilepath: str,
-                       output_predictions_test_filepath: str,
-                       output_predictions_all_filepath: str,
-                       force: bool = False):
+def train_test_predict(
+        input_parcel_train_filepath: Path,
+        input_parcel_test_filepath: Path,
+        input_parcel_all_filepath: Path,
+        input_parcel_classification_data_filepath: Path,
+        output_classifier_basefilepath: Path,
+        output_predictions_test_filepath: Path,
+        output_predictions_all_filepath: Path,
+        force: bool = False):
     """ Train a classifier, test it and do full predictions.
 
     Args
@@ -48,8 +51,8 @@ def train_test_predict(input_parcel_train_filepath: str,
 
     if(force is False
        #and os.path.exists(output_classifier_basefilepath)
-       and os.path.exists(output_predictions_test_filepath)
-       and os.path.exists(output_predictions_all_filepath)):
+       and output_predictions_test_filepath.exists()
+       and output_predictions_all_filepath.exists()):
         logger.warning(f"predict: output files exist and force is False, so stop: {output_classifier_basefilepath}, {output_predictions_test_filepath}, {output_predictions_all_filepath}")
         return
 
@@ -61,12 +64,13 @@ def train_test_predict(input_parcel_train_filepath: str,
     logger.debug('Read classification data file ready')
 
     # Train the classification
-    output_classifier_filepath = train(input_parcel_train_filepath=input_parcel_train_filepath,
-          input_parcel_test_filepath=input_parcel_test_filepath,
-          input_parcel_classification_data_filepath=input_parcel_classification_data_filepath,
-          output_classifier_basefilepath=output_classifier_basefilepath,
-          force=force,
-          input_parcel_classification_data_df=input_parcel_classification_data_df)
+    output_classifier_filepath = train(
+            input_parcel_train_filepath=input_parcel_train_filepath,
+            input_parcel_test_filepath=input_parcel_test_filepath,
+            input_parcel_classification_data_filepath=input_parcel_classification_data_filepath,
+            output_classifier_basefilepath=output_classifier_basefilepath,
+            force=force,
+            input_parcel_classification_data_df=input_parcel_classification_data_df)
 
     # Predict the test parcels
     predict(input_parcel_filepath=input_parcel_test_filepath,
@@ -86,17 +90,17 @@ def train_test_predict(input_parcel_train_filepath: str,
             force=force,
             input_parcel_classification_data_df=input_parcel_classification_data_df)
 
-def train(input_parcel_train_filepath: str,
-          input_parcel_test_filepath: str,
-          input_parcel_classification_data_filepath: str,
-          output_classifier_basefilepath: str,
-          force: bool = False,
-          input_parcel_classification_data_df: pd.DataFrame = None):
+def train(  input_parcel_train_filepath: Path,
+            input_parcel_test_filepath: Path,
+            input_parcel_classification_data_filepath: Path,
+            output_classifier_basefilepath: Path,
+            force: bool = False,
+            input_parcel_classification_data_df: pd.DataFrame = None) -> Path:
     """ Train a classifier and test it by predicting the test cases. """
 
     logger.info("train_and_test: Start")
     if(force is False
-       and os.path.exists(output_classifier_basefilepath)):
+       and output_classifier_basefilepath.exists()):
         logger.warning(f"predict: classifier already exist and force == False, so don't retrain: {output_classifier_basefilepath}")
         return output_classifier_basefilepath
 
@@ -145,18 +149,18 @@ def train(input_parcel_train_filepath: str,
                 train_df=train_df, 
                 output_classifier_basefilepath=output_classifier_basefilepath)
 
-def predict(input_parcel_filepath: str,
-            input_parcel_classification_data_filepath: str,
-            input_classifier_basefilepath: str,
-            input_classifier_filepath: str,
-            output_predictions_filepath: str,
+def predict(input_parcel_filepath: Path,
+            input_parcel_classification_data_filepath: Path,
+            input_classifier_basefilepath: Path,
+            input_classifier_filepath: Path,
+            output_predictions_filepath: Path,
             force: bool = False,
             input_parcel_classification_data_df: pd.DataFrame = None):
     """ Predict the classes for the input data. """
 
     # If force is False, and the output file exist already, return
     if(force is False
-       and os.path.exists(output_predictions_filepath)):
+       and output_predictions_filepath.exists()):
         logger.warning(f"predict: predictions output file already exists and force is false, so stop: {output_predictions_filepath}")
         return
 

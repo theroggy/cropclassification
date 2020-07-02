@@ -26,7 +26,7 @@ def read_config(
                         'listint': lambda x: [int(i.strip()) for i in x.split(',')],
                         'listfloat': lambda x: [float(i.strip()) for i in x.split(',')],
                         'dict': lambda x: json.loads(x),
-                        'path': lambda x: Path(x)},
+                        'path': lambda x: None if x is None else Path(x)},
             allow_no_value=True)
 
     # Check if all config filepaths are ok
@@ -62,6 +62,10 @@ def read_config(
     # Now set global variables to each section as shortcuts    
     global general
     general = config['general']
+    global calc_timeseries_params
+    calc_timeseries_params = config['calc_timeseries_params']
+    global calc_marker_params
+    calc_marker_params = config['calc_marker_params']
     global marker
     marker = config['marker']
     global timeseries
