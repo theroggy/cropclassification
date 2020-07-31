@@ -293,7 +293,7 @@ def add_doubt_column(pred_df: pd.DataFrame,
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['956', '957', '9831']))
                             & (pred_df['pred1'] != 'MON_LC_ARABLE'),
-                        new_pred_column] = 'DOUBT:HERBS-UNCONFIRMED'
+                        new_pred_column] = 'RISKY_DOUBT:HERBS-UNCONFIRMED'
 
             # If parcel was declared as 'aardbeien', but is not confirmed as MON_LC_ARABLE 
             # classified as such: doubt
@@ -315,13 +315,13 @@ def add_doubt_column(pred_df: pd.DataFrame,
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['9410']))
                             & (pred_df['pred1'] == 'MON_LC_ARABLE'),
-                        new_pred_column] = 'DOUBT:STAMSLABONEN-SEEN-AS-ARABLE'
+                        new_pred_column] = 'RISKY_DOUBT:STAMSLABONEN-SEEN-AS-ARABLE'
 
             # If parcel was declared as 9602 and classified as FRUIT, set to doubt
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
                             & (pred_df[conf.columns['crop_declared']].isin(['9602']))
                             & (pred_df['pred1'] == 'MON_LC_FRUIT'),
-                        new_pred_column] = 'DOUBT:BOOM/FRUITKWEEK-UNCONFIRMED'
+                        new_pred_column] = 'RISKY_DOUBT:BOOM/FRUITKWEEK-UNCONFIRMED'
 
             # If parcel was declared as one of the following and classified as GRASSES, set to RISKY_DOUBT
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
