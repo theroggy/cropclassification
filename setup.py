@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cropclassification", 
-    version="0.0.5",
+    version="0.0.6",
     author="Pieter Roggemans",
     author_email="pieter.roggemans@gmail.com",
     description="Package to classify crops based on sentinel images.",
