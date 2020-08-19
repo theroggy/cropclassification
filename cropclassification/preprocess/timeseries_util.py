@@ -284,7 +284,9 @@ def calculate_periodic_data(
                         continue 
 
                     # Read the file (but only the columns we need)
-                    columns = [column for column in statistic_columns_dict].append(id_column)
+                    columns = [column for column in statistic_columns_dict]
+                    columns.append(id_column)
+
                     image_data_df = pdh.read_file(imagedata_filepath, columns=columns)
                     image_data_df.set_index(id_column, inplace=True)
                     image_data_df.index.name = id_column
@@ -297,7 +299,12 @@ def calculate_periodic_data(
                         logger.warning(f"Before dropna: {nb_before_dropna}, after: {nb_after_dropna} for file {imagedata_filepath}")
                     if nb_after_dropna == 0:
                         continue
-                        
+                    
+                    # recalculate duplicate rows (the -5 buffer can cause break ups?)
+                    image_data_recalculate_df = image_data_df.loc[image_data_df.index.duplicated()].groupby(id_column).agg({column: "mean" for column in statistic_columns_dict})
+                    image_data_df = image_data_df.loc[~image_data_df.index.duplicated()]
+                    image_data_df.append(image_data_recalculate_df)
+
                     # Rename columns so column names stay unique
                     for statistic_column in statistic_columns_dict:
                         new_column_name = statistic_column + str(j+1)
