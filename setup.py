@@ -3,9 +3,13 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+version = "0.0.8"
+with open('package_tag_version.txt', mode='w') as file:
+    file.write(version)
+
 setuptools.setup(
     name="cropclassification", 
-    version="0.0.7",
+    version=version,
     author="Pieter Roggemans",
     author_email="pieter.roggemans@gmail.com",
     description="Package to classify crops based on sentinel images.",
