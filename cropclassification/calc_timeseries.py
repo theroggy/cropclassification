@@ -66,6 +66,7 @@ def calc_timeseries_task(
     with open(config_used_filepath, 'w') as config_used_file:
         conf.config.write(config_used_file)
 
+    # TODO: this shouldn't be hardcoded!
     input_parcel_filename = conf.calc_timeseries_params.getpath('input_parcel_filename')
     input_features_filename = Path(f"{input_parcel_filename.stem}_bufm5{input_parcel_filename.suffix}")
     input_preprocessed_dir = conf.dirs.getpath('input_preprocessed_dir')

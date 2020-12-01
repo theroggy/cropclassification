@@ -454,13 +454,14 @@ def format_progress_message(
     message = f"{hours_to_go}:{min_to_go} left for {nb_todo-nb_done_total} todo at {nb_per_hour:0.0f}/h ({nb_per_hour_latestbatch:0.0f}/h last batch)"
     return message
     
-def prepare_calc(features_filepath: Path,
-                 id_column: str,
-                 image_path: Path,
-                 output_filepath: Path,
-                 temp_dir: Path,
-                 log_dir: Path,
-                 nb_parallel_max: int = 16) -> dict:
+def prepare_calc(
+            features_filepath: Path,
+            id_column: str,
+            image_path: Path,
+            output_filepath: Path,
+            temp_dir: Path,
+            log_dir: Path,
+            nb_parallel_max: int = 16) -> dict:
     """
     Prepare the inputs for a calculation.
 
@@ -473,18 +474,20 @@ def prepare_calc(features_filepath: Path,
     logger.propagate = False
     log_filepath = log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_prepare_calc_{os.getpid()}.log"
     fh = logging.FileHandler(filename=log_filepath)
-    fh.setLevel(logging.DEBUG)
+    fh.setLevel(logging.INFO)
     fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
     logger.addHandler(fh)
 
     ret_val = {}
 
     # Prepare the image
+    logger.info(f"Start prepare_image for {image_path} to {temp_dir}")
     image_prepared_path = prepare_image(image_path, temp_dir)
     logger.debug(f"Preparing ready, result: {image_prepared_path}")
     ret_val['image_prepared_path'] = image_prepared_path
 
     # Get info about the image
+    logger.info(f"Start get_image_info for {image_prepared_path}")
     image_info = get_image_info(image_prepared_path)
     logger.info(f"image_info: {image_info}")
 
@@ -542,7 +545,7 @@ def prepare_calc(features_filepath: Path,
         try:
             features_gdf_batch.to_pickle(pickle_filepath)
         except Exception as ex:
-            raise Exception(f"Exception writing pickle: {pickle_filepath}") from ex
+            raise Exception(f"Exception writing pickle: {pickle_filepath}: {ex}") from ex
         batch_info["filepath"] = pickle_filepath
         batch_info["nb_items"] = len(features_gdf_batch.index)
         ret_val["feature_batches"].append(batch_info)
@@ -986,9 +989,18 @@ def get_image_info(image_path: Path) -> dict:
                 image_datadir = image_path / image_datadirname
                 band_filepaths = list(image_datadir.glob("*.img"))
 
-                # If no files were found, error!
+                # If no files were found, check if the images are in .tif format!
                 if len(band_filepaths) == 0:
-                    message = f"No image files found in {image_datadir}!"
+                    tif_path = image_path / "Gamma0_VH.tif"
+                    if tif_path.exists():
+                        band_filepaths.append(tif_path)
+                    tif_path = image_path / "Gamma0_VV.tif"
+                    if tif_path.exists():
+                        band_filepaths.append(tif_path)
+
+                # If no files were found, error
+                if len(band_filepaths) == 0:
+                    message = f"No image files found in {image_datadir} or {image_path}!"
                     logger.error(message)
                     raise Exception(message)
 
@@ -1003,10 +1015,9 @@ def get_image_info(image_path: Path) -> dict:
                             image_info['image_crs'] = str(src.crs)
                             image_info['image_epsg'] = image_info['image_crs'].upper().replace('EPSG:', '')
                         #logger.debug(f"Image metadata read: {image_info}")
-                    band_filename = os.path.basename(band_filepath)
-                    if band_filename == "Gamma0_VH.img":
+                    if band_filepath.stem == 'Gamma0_VH':
                         band = 'VH'
-                    elif band_filename == "Gamma0_VV.img":
+                    elif band_filepath.stem == 'Gamma0_VV':
                         band = 'VV'
                     else:
                         raise NotImplementedError(f"Filename not supported: {band_filepath}")
@@ -1014,8 +1025,8 @@ def get_image_info(image_path: Path) -> dict:
                     # Add specific info about the band
                     image_info['bands'][band] = {}
                     image_info['bands'][band]['filepath'] = band_filepath
-                    image_info['bands'][band]['relative_filepath'] = os.path.join(image_datadirname, band_filename) 
-                    image_info['bands'][band]['filename'] = band_filename
+                    image_info['bands'][band]['relative_filepath'] = str(band_filepath).replace(str(image_path) + os.pathsep, "")
+                    image_info['bands'][band]['filename'] = band_filepath.name
                     image_info['bands'][band]['bandindex'] = 0
 
             except Exception as ex:
