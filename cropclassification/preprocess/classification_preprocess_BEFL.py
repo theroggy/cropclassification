@@ -184,6 +184,12 @@ def prepare_input(input_parcel_filepath: Path,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
+    elif classtype_to_prepare == 'FABACEAE-GROUNDTRUTH':
+        return prepare_input_fabaceae(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+                column_output_class=conf.columns['class_groundtruth'],
+                classes_refe_filepath=classes_refe_filepath)          
     else:
         message = f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
         logger.critical(message)
@@ -381,7 +387,7 @@ def prepare_input_fabaceae(
 
     # Filter the parcels to only keep the classes we are interested in
     # TODO: this shouldn't be hardcoded!
-    parceldata_df = parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['700', '660', '732', '723'])
+    parceldata_df = parceldata_df.loc[parceldata_df[column_BEFL_cropcode].isin(['60', '700', '660', '732', '723'])]
 
     # Join/merge the classname
     logger.info('Add the classes to the parceldata')
