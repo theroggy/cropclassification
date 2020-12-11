@@ -174,7 +174,7 @@ def calc_timeseries_task(
                 features_filepath=input_features_filepath,
                 id_column=conf.columns['id'],
                 image_paths=input_image_filepaths,
-                bands=['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'SCL-20m'],
+                bands=conf.timeseries.getlist('s2bands'),
                 output_dir=output_dir,
                 temp_dir=temp_dir,
                 log_dir=log_dir,
