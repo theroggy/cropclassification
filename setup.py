@@ -3,7 +3,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-version = "0.0.8"
+version = "0.0.9"
 with open('package_tag_version.txt', mode='w') as file:
     file.write(version)
 
