@@ -73,15 +73,19 @@ def train(train_df: pd.DataFrame,
         file.write(str(classes_dict))
     # Replace the string values with the ints
     column_class = conf.columns['class']
+
+    # TODO: doesn't seem to be the safest way to implement this: what if the 
+    # classes are integers instead of strings???
     train_df[column_class].replace(classes_dict, inplace=True)
     test_df[column_class].replace(classes_dict, inplace=True)
 
     # The test dataset also should only include classes we are training on...
     # I don't exactly why (don't know why the notnull/isnull must be there), but this seems the 
     # only way it works?
-    test_removed_df = test_df[test_df[column_class].str.isnumeric().notnull()]
-    logger.info(f"Removed following classes from test_classes_df: {test_removed_df[column_class].unique()}")
-    test_df = test_df[test_df[column_class].str.isnumeric().isnull()]
+    if test_df.dtypes[column_class] == 'object':
+        test_removed_df = test_df[test_df[column_class].str.isnumeric().notnull()]
+        logger.info(f"Removed following classes from test_classes_df: {test_removed_df[column_class].unique()}")
+        test_df = test_df[test_df[column_class].str.isnumeric().isnull()]
 
     # Split the input dataframe in one with the train classes and one with the train data
     train_classes_df = train_df[column_class]
