@@ -214,7 +214,7 @@ def calculate_periodic_data(
         elif sensordata_type == conf.general['SENSORDATA_S2gt95']:
             satellitetype = 'S2'
             imagetype = IMAGETYPE_S2_L2A
-            bands = ['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m']
+            bands = ['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'B11-20m', 'B12-20m']
             needed_inputfiles_df = all_inputfiles_df.loc[(all_inputfiles_df.date >= start_date) 
                                                          & (all_inputfiles_df.date < end_date) 
                                                          & (all_inputfiles_df.imagetype == imagetype)                                                         
