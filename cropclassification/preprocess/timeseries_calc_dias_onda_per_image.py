@@ -812,6 +812,9 @@ def calc_stats_image_gdf(
         if band == 'SCL-20m':
             continue
 
+        # Check if output file exists already...
+        output_band_filepath = Path(f"{output_base_filepath_noext}_{band}{output_ext}")
+        
         # Get the image data and calculate statistics
         logger.info(f"Read band {band} for bounds {features_total_bounds}")
         image_data = get_image_data(
@@ -843,7 +846,6 @@ def calc_stats_image_gdf(
             logger.info(f"No data found for band {band}, so no use to process other bands")
             return True
         features_stats_df.set_index(id_column, inplace=True)
-        output_band_filepath = Path(f"{output_base_filepath_noext}_{band}{output_ext}")
         logger.info(f"Write data for {len(features_stats_df.index)} parcels found to {output_band_filepath}")
         pdh.to_file(features_stats_df, output_band_filepath, append=True)
 
