@@ -35,11 +35,10 @@ Once you have anaconda installed, you can open an anaconda terminal window and f
 To calculate time series, you need to run `cropclassification -t <tasks_dir>`, with a 'calc_timeseries' type of task in the tasks dir 
 on a server that has access to sentinel CARD images.
 
+Mind: the sentinel CARD image structure as expected for timeseries calculation depends on the image type:
+  * for Sentinel 2 images this is the standard S2 L2A format as available on the open acces copernicus hub.
+  * for Sentinel 1 backscatter and sentinel 1 coherence data this is a non-standardized data structure as there isn't a standard format (yet) for level 2 processed sentinel 1 images (as far as I know). Check out the code to see the expected data structure ;-). 
+
 5. Start a crop classification
 
 Run `cropclassification -t <tasks_dir>`, with a 'calc_marker' type of task in the tasks dir.
-
-## Sample data
-
-Sample data can be downloaded from the following location. If you don't change the default paths in the scripts in needs to be put in the directory C:\temp\CropClassification\InputData
-https://drive.google.com/open?id=1eN9cBcWyvM0msNMCD6nivcGuZfYyqV5q
