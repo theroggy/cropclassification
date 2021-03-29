@@ -8,9 +8,6 @@ Probably this documentation won't suffice to get you started, but you are free t
 
 As the scripts are written in Python, you need to use a package manager to be able to install the packages the scripts depend on. The rest of the installation manual assumes you use anaconda and python 3.6+. The installer for anaconda can be found here: https://www.anaconda.com/download/.
 
-If you need some more installation instructions, have a look here:
-https://conda.io/docs/user-guide/install/index.html
-
 2. Create new environment and install dependencies
 
 Once you have anaconda installed, you can open an anaconda terminal window and follow the following steps:
