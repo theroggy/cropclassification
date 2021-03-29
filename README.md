@@ -1,7 +1,7 @@
 # Crop classification
 This is a collection of scripts that can help to classify crops using Sentinel data. 
 
-Probably this documentation won't suffice to get you started, but you are free to reach out for more info.
+Probably this documentation won't suffice to get you started, but you are free to reach out for more info if you are really interested.
 
 ## Installation manual
 1. Install conda
