@@ -3,6 +3,8 @@ This is a collection of scripts that can help to classify crops using Sentinel d
 
 Probably this documentation won't suffice to get you started, but you are free to reach out for more info if you are really interested.
 
+In general, you should also be aware that the package isn't really meant to be an easy-to-use solution for crop classification. It is rather a quite specialised solution for our specific needs. Nonetheless we want to make the code public so if anyone is interested, they can have a look and possibly get some inspiration.
+
 ## Installation manual
 1. Install conda
 
