@@ -11,7 +11,7 @@ import fiona
 import geopandas as gpd
 
 def read_file(filepath: Path,
-              layer: str = 'info',
+              layer: str = '',
               columns: Optional[List[str]] = None,
               bbox = None) -> gpd.GeoDataFrame:
     """
@@ -20,8 +20,11 @@ def read_file(filepath: Path,
     # TODO: think about if possible/how to support  adding optional parameter and pass them to next function, example encoding, float_format,...
     """
     _, ext = os.path.splitext(filepath)
-
     ext_lower = ext.lower()
+    
+    if layer == '':
+        layer = filepath.stem
+
     if ext_lower == '.shp':
         return gpd.read_file(str(filepath), bbox=bbox)
     elif ext_lower == '.gpkg':
