@@ -34,7 +34,7 @@ def read_file(filepath: Path,
 
 def to_file(gdf: gpd.GeoDataFrame,
             filepath: Path,
-            layer: str = 'info',
+            layer: str = '',
             index: bool = True):
     """
     Reads a pandas dataframe to file. The fileformat is detected based on the filepath extension.
@@ -43,8 +43,11 @@ def to_file(gdf: gpd.GeoDataFrame,
     # function, example encoding, float_format,...
     """
     _, ext = os.path.splitext(filepath)
-
     ext_lower = ext.lower()
+
+    if layer == '':
+        layer = filepath.stem
+
     if ext_lower == '.shp':
         if index is True:
             gdf = gdf.reset_index(inplace=False)

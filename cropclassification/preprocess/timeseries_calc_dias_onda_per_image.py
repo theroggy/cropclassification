@@ -69,6 +69,7 @@ def calc_stats_per_image(
         # Loop over all images to start the data preparation for each of them in parallel...
         image_paths.sort()
         start_time = datetime.now()
+        esaSwitchedProcessingMethod = datetime.strptime('2021-02-23', '%Y-%m-%d')
         nb_todo = len(image_paths)
         nb_errors_max = 10
         nb_errors = 0
@@ -77,7 +78,6 @@ def calc_stats_per_image(
         calc_stats_batch_dict = {}
         nb_done_total = 0
         i = 0
-        esaSwitchedProcessingMethod = datetime.strptime('2021-02-23', 'yyyy-MM-dd')
 
         try:
             # Keep looping. At the end of the loop there are checks when to
@@ -114,7 +114,7 @@ def calc_stats_per_image(
                         continue
 
                     # Fast-24h <- 2021-02-23 -> NRT-3H
-                    productTimelinessCategory = 'Fast-24h' if datetime.strptime(image_info['acquisition_date'], 'yyyy-MM-ddTHH:mm:ss.fffffff') < esaSwitchedProcessingMethod else 'NRT-3h'
+                    productTimelinessCategory = 'Fast-24h' if datetime.strptime(image_info['acquisition_date'], '%Y-%m-%dT%H:%M:%S.%f') < esaSwitchedProcessingMethod else 'NRT-3h'
                     
                     # If sentinel1 and wrong productTimelinessCategory, skip: we only want 1 type to evade images used twice
                     if image_info['satellite'].startswith('S1') and image_info['productTimelinessCategory'] != productTimelinessCategory:
@@ -1135,7 +1135,7 @@ def get_image_info(image_path: Path) -> dict:
 
             #logger.debug(f"Parse metadata info from {metadata_xml_filepath}")
             image_info['Cloud_Coverage_Assessment'] = float(metadata_root.find("n1:Quality_Indicators_Info/Cloud_Coverage_Assessment", ns).text)
-            image_info['acquisition_date'] = metadata_root.find("n1:Level-2A_User_Product/n1:General_Info/Product_Info/PRODUCT_START_TIME", ns).text
+            image_info['acquisition_date'] = metadata_root.find("n1:General_Info/Product_Info/PRODUCT_START_TIME", ns).text
             
         except Exception as ex:
             raise Exception(f"Exception extracting info from {metadata_xml_filepath}") from ex
