@@ -495,6 +495,10 @@ def prepare_calc(
     image_info = get_image_info(image_prepared_path)
     logger.info(f"image_info: {image_info}")
 
+    # NOTE: somewhere we are still getting 'NONE' CRS images.. 
+    if (image_info['image_epsg'] == 'NONE'):
+        return ret_val
+
     # Load the features that overlap with the image.
     # TODO: passing both bbox and poly is double, or not? 
     # footprint epsg should be passed as well, or reproject here first?
