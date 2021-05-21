@@ -497,6 +497,7 @@ def prepare_calc(
 
     # NOTE: somewhere we are still getting 'NONE' CRS images.. 
     if (image_info['image_epsg'] == 'NONE'):
+        ret_val['nb_features_to_calc_total'] = 0
         return ret_val
 
     # Load the features that overlap with the image.
