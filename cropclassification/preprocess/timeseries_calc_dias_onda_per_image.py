@@ -5,6 +5,7 @@ Calculate timeseries data per image.
 
 from concurrent import futures
 from datetime import datetime
+import dateutil.parser
 import logging
 import math
 import multiprocessing
@@ -69,7 +70,7 @@ def calc_stats_per_image(
         # Loop over all images to start the data preparation for each of them in parallel...
         image_paths.sort()
         start_time = datetime.now()
-        esaSwitchedProcessingMethod = datetime.strptime('2021-02-23', '%Y-%m-%d')
+        esaSwitchedProcessingMethod = dateutil.parser.isoparse('2021-02-23').timestamp()
         nb_todo = len(image_paths)
         nb_errors_max = 10
         nb_errors = 0
@@ -114,7 +115,7 @@ def calc_stats_per_image(
                         continue
 
                     # Fast-24h <- 2021-02-23 -> NRT-3H
-                    productTimelinessCategory = 'Fast-24h' if datetime.strptime(image_info['acquisition_date'], '%Y-%m-%dT%H:%M:%S.%f') < esaSwitchedProcessingMethod else 'NRT-3h'
+                    productTimelinessCategory = 'Fast-24h' if dateutil.parser.isoparse(image_info['acquisition_date']).timestamp() < esaSwitchedProcessingMethod else 'NRT-3h'
                     
                     # If sentinel1 and wrong productTimelinessCategory, skip: we only want 1 type to evade images used twice
                     if image_info['satellite'].startswith('S1') and image_info['productTimelinessCategory'] != productTimelinessCategory:
@@ -1192,13 +1193,13 @@ def get_image_info(image_path: Path) -> dict:
                 image_info['bands'][band]['epsg'] = str(src.crs).upper().replace('EPSG:', '')
                 
                 # Store the crs also on image level, and check if all bands have the same crs 
-                if i == 0:
+                if i == 0 or image_info['image_epsg'] == 'NONE':
                     image_info['image_bounds'] = image_info['bands'][band]['bounds']
                     image_info['image_crs'] = image_info['bands'][band]['crs']
                     image_info['image_epsg'] = image_info['bands'][band]['epsg']
                 else:
-                    if (image_info['bands'][band]['crs'] == 'None'):
-                        # NOTE: strange error when reading AOT_10m?
+                    if (image_info['bands'][band]['epsg'] == 'NONE'):
+                        # NOTE: ignore strange error when reading AOT_10m
                         message = f"Invalid band? CRS is none for {image_info}"
                         logger.warn(message)
                     elif(image_info['image_crs'] != image_info['bands'][band]['crs'] 
