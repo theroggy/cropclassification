@@ -496,11 +496,6 @@ def prepare_calc(
     image_info = get_image_info(image_prepared_path)
     logger.info(f"image_info: {image_info}")
 
-    # NOTE: somewhere we are still getting 'NONE' CRS images.. 
-    if (image_info['image_epsg'] == 'NONE'):
-        ret_val['nb_features_to_calc_total'] = 0
-        return ret_val
-
     # Load the features that overlap with the image.
     # TODO: passing both bbox and poly is double, or not? 
     # footprint epsg should be passed as well, or reproject here first?
@@ -508,8 +503,12 @@ def prepare_calc(
     if 'footprint' in image_info:
         logger.info(f"poly: {image_info['footprint']['shape']}")
         footprint_shape = image_info['footprint']['shape']
+
+    if image_info['image_epsg'] == 'NONE':
+        raise Exception(f'target_epsg == NONE: {image_info}')
+
     features_gdf = load_features_file(
-            features_filepath=features_filepath, 
+            features_filepath=features_filepath,
             target_epsg=image_info['image_epsg'],
             columns_to_retain=[id_column, 'geometry'],
             bbox=image_info['image_bounds'],
@@ -591,7 +590,7 @@ def load_features_file(
 
     # Determine the correct filename for the input features in the correct projection.
     if features_epsg != target_epsg:
-        features_prepr_filepath = features_filepath.parent / f"{features_filepath.stem}_{target_epsg}.gpkg"
+        features_prepr_filepath = features_filepath.parent / f"{features_filepath.stem}_{target_epsg:.0f}.gpkg"
     else:
         features_prepr_filepath = features_filepath
 
@@ -962,6 +961,11 @@ def get_image_info(image_path: Path) -> dict:
                 y, x = coord.split(',') 
                 linear_ring.append((float(x), float(y)))
             image_info['footprint']['shape'] = sh_polygon.Polygon(linear_ring)
+
+            # get epsg
+            epsg = metadata_root.find('imageProjection/EPSG').text
+            image_info['image_epsg'] = float(epsg)
+            image_info['image_crs'] = 'EPSG:' + epsg
         except Exception as ex:
             raise Exception(f"Exception extracting info from {metadata_xml_filepath}") from ex
 
@@ -1025,8 +1029,9 @@ def get_image_info(image_path: Path) -> dict:
                         with rasterio.open(str(band_filepath)) as src:
                             image_info['image_bounds'] = src.bounds
                             image_info['image_affine'] = src.transform
-                            image_info['image_crs'] = str(src.crs)
-                            image_info['image_epsg'] = image_info['image_crs'].upper().replace('EPSG:', '')
+                            if src.crs is not None:
+                                image_info['image_crs'] = src.crs.to_string()
+                                image_info['image_epsg'] = src.crs.to_epsg()
                         #logger.debug(f"Image metadata read: {image_info}")
                     if band_filepath.stem == 'Gamma0_VH':
                         band = 'VH'
@@ -1050,15 +1055,15 @@ def get_image_info(image_path: Path) -> dict:
             # Now parse the first .safe file
             # TODO: maybe check if the info in all safe files  are the same or?.?
             manifest_xml_filepath = manifest_xml_filepaths[0]
-            
+
             try:
                 manifest = ET.parse(str(manifest_xml_filepath))
                 manifest_root = manifest.getroot()
 
                 # Define namespaces...
                 ns = {"safe": "http://www.esa.int/safe/sentinel-1.0",
-                      "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
-                      "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
+                    "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
+                    "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"}
 
                 #logger.debug(f"Parse manifest info from {metadata_xml_filepath}")
                 image_info["transmitter_receiver_polarisation"] = []
@@ -1074,6 +1079,10 @@ def get_image_info(image_path: Path) -> dict:
                 # For coherence filename, remove extra .LCO1 extension + date
                 #image_datafilebasename, _ = os.path.splitext(image_basename_noext)
                 #image_datafilebasename = image_datafilebasename[:image_datafilebasename.rindex('_')]
+                
+                metadata = ET.parse(str(image_path / 'metadata.xml'))
+                metadata_root = metadata.getroot()
+
                 image_basename_noext_nodate = image_basename_noext[:image_basename_noext.rfind('_', 0)]
                 image_datafilename = f"{image_basename_noext_nodate}_byte.tif"
                 image_datafilepath = image_path / image_datafilename
@@ -1082,9 +1091,9 @@ def get_image_info(image_path: Path) -> dict:
                 with rasterio.open(str(image_datafilepath)) as src:
                     image_info['image_bounds'] = src.bounds
                     image_info['image_affine'] = src.transform
-                    image_info['image_crs'] = str(src.crs)
-                    image_info['image_epsg'] = image_info['image_crs'].upper().replace('EPSG:', '')
-                #logger.debug(f"Image metadata read: {image_info}")
+                    if src.crs is not None:
+                        image_info['image_crs'] = src.crs.to_string()
+                        image_info['image_epsg'] = src.crs.to_epsg()
 
                 # Add specific info about the bands
                 image_info["bands"] = {}
@@ -1147,9 +1156,22 @@ def get_image_info(image_path: Path) -> dict:
             raise Exception(f"Exception extracting info from {metadata_xml_filepath}") from ex
             
         # Now have a look in the files themselves to get band info,...
-        # TODO: probably cleaner/easier to read from metadata files?
         image_datadir = image_path / "GRANULE"
         band_filepaths = list(image_datadir.rglob(f"*.jp2"))
+
+        metadata_filepath = list(image_datadir.rglob("MTD_TL.xml"))[0]
+        try:
+            # read epsg
+            metadata = ET.parse(str(metadata_filepath))
+            metadata_root = metadata.getroot()
+
+            ns = {'n1': "https://psd-14.sentinel2.eo.esa.int/PSD/S2_PDI_Level-2A_Tile_Metadata.xsd",
+                  'xsi': "http://www.w3.org/2001/XMLSchema-instance"}
+
+            image_info['image_crs'] = metadata_root.find('n1:Geometric_Info/Tile_Geocoding/HORIZONTAL_CS_CODE', ns).text
+            image_info['image_epsg'] = float(image_info['image_crs'].replace('EPSG:', ''))
+        except Exception as ex:
+            raise Exception(f"Exception extracting info from {metadata_filepath}") from ex
 
         # If no files were found, error!
         if len(band_filepaths) == 0:
@@ -1188,25 +1210,25 @@ def get_image_info(image_path: Path) -> dict:
             logger.debug(f"Read image metadata from {band_filepath}")
             with rasterio.open(str(band_filepath)) as src:
                 image_info['bands'][band]['bounds'] = src.bounds
-                image_info['bands'][band]['affine'] = src.transform
-                image_info['bands'][band]['crs'] = str(src.crs)
-                image_info['bands'][band]['epsg'] = str(src.crs).upper().replace('EPSG:', '')
-                
-                # Store the crs also on image level, and check if all bands have the same crs 
-                if i == 0 or image_info['image_epsg'] == 'NONE':
-                    image_info['image_bounds'] = image_info['bands'][band]['bounds']
-                    image_info['image_crs'] = image_info['bands'][band]['crs']
-                    image_info['image_epsg'] = image_info['bands'][band]['epsg']
+                image_info['bands'][band]['affine'] = src.transform                
+                if src.crs is None:
+                    image_info['bands'][band]['crs'] = image_info['image_crs']
+                    image_info['bands'][band]['epsg'] = image_info['image_epsg']
                 else:
-                    if (image_info['bands'][band]['epsg'] == 'NONE'):
-                        # NOTE: ignore strange error when reading AOT_10m
-                        message = f"Invalid band? CRS is none for {image_info}"
-                        logger.warn(message)
-                    elif(image_info['image_crs'] != image_info['bands'][band]['crs'] 
-                       or image_info['image_epsg'] != image_info['bands'][band]['epsg']):                       
-                        message = f"Not all bands have the same crs for {image_info}"
-                        logger.error(message)
-                        raise Exception(message)
+                    image_info['bands'][band]['crs'] = src.crs.to_string()
+                    image_info['bands'][band]['epsg'] = src.crs.to_epsg()
+                
+            # Store the crs also on image level, and check if all bands have the same crs 
+            if i == 0:
+                image_info['image_bounds'] = image_info['bands'][band]['bounds']
+                #image_info['image_crs'] = image_info['bands'][band]['crs']
+                #image_info['image_epsg'] = image_info['bands'][band]['epsg']
+            else:
+                if(image_info['image_crs'] != image_info['bands'][band]['crs'] 
+                    or image_info['image_epsg'] != image_info['bands'][band]['epsg']):                       
+                    message = f"Not all bands have the same crs for {image_info}"
+                    logger.error(message)
+                    raise Exception(message)
                 
         logger.debug(f"Image metadata read: {image_info}")
 
