@@ -49,8 +49,9 @@ def write_full_report(
     """
 
     # If force == False Check and the output file exists already, stop.
-    if force is False and output_report_txt.exists():
-        logger.warning(f"collect_and_prepare_timeseries_data: output file already exists and force == False, so stop: {output_report_txt}")
+    output_report_html = Path(str(output_report_txt).replace('.txt', '.html'))
+    if force is False and output_report_txt.exists() and output_report_html.exists():
+        logger.warning(f"collect_and_prepare_timeseries_data: output files already exist and force == False, so stop: {output_report_txt}")
         return
 
     logger.info("Start write_full_report")
@@ -147,8 +148,8 @@ def write_full_report(
         outputfile.write(f"\n{message}\n")
         html_data['GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT'] = message
                 
-        count_per_class = (df_predict.groupby(conf.columns['prediction_conclusion_cons'], as_index=False)
-                           .size().to_frame('count'))
+        count_per_class = (df_predict
+                .groupby(conf.columns['prediction_conclusion_cons']).size().to_frame('count'))
         values = 100*count_per_class['count']/count_per_class['count'].sum()
         count_per_class.insert(loc=1, column='pct', value=values)
         
@@ -263,8 +264,9 @@ def write_full_report(
         outputfile.write(f"\n{message}\n")
         html_data['PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TEXT'] = message
         
-        count_per_class = (df_predict.groupby(conf.columns['prediction_conclusion_detail_cons'], as_index=False)
-                            .size().to_frame('count'))
+        count_per_class = (df_predict
+                .groupby(conf.columns['prediction_conclusion_detail_cons'])
+                .size().to_frame('count'))
         values = 100*count_per_class['count']/count_per_class['count'].sum()
         count_per_class.insert(loc=1, column='pct', value=values)
         
@@ -286,8 +288,9 @@ def write_full_report(
         outputfile.write(f"\n{message}\n")
         html_data['PREDICTION_CONCLUSION_DETAIL_FULL_ALPHA_OVERVIEW_TEXT'] = message
         
-        count_per_class = (df_predict.groupby(conf.columns['prediction_conclusion_detail_full_alpha'], as_index=False)
-                            .size().to_frame('count'))
+        count_per_class = (df_predict
+                .groupby(conf.columns['prediction_conclusion_detail_full_alpha'])
+                .size().to_frame('count'))
         values = 100*count_per_class['count']/count_per_class['count'].sum()
         count_per_class.insert(loc=1, column='pct', value=values)
         
@@ -357,8 +360,9 @@ def write_full_report(
             outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_CONS_OVERVIEW_TEXT'] = message
             
-            count_per_class = (df_parcel_gt.groupby(f"gt_conclusion_{conf.columns['prediction_cons']}", as_index=False)
-                               .size().to_frame('count'))
+            count_per_class = (df_parcel_gt
+                    .groupby(f"gt_conclusion_{conf.columns['prediction_cons']}")
+                    .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
             
@@ -373,8 +377,9 @@ def write_full_report(
             outputfile.write(f"\n{message}\n")
             html_data['PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TEXT'] = message
             
-            count_per_class = (df_parcel_gt.groupby(f"gt_conclusion_{conf.columns['prediction_full_alpha']}", as_index=False)
-                               .size().to_frame('count'))
+            count_per_class = (df_parcel_gt
+                    .groupby(f"gt_conclusion_{conf.columns['prediction_full_alpha']}")
+                    .size().to_frame('count'))
             values = 100*count_per_class['count']/count_per_class['count'].sum()
             count_per_class.insert(loc=1, column='pct', value=values)
             
@@ -672,7 +677,7 @@ def write_full_report(
                     logger.info(f"{df_per_column}\n")
                     html_data['PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE'] = df_per_column.to_html()
 
-    with open(str(output_report_txt).replace('.txt', '.html'), 'w') as outputfile:
+    with open(output_report_html, 'w') as outputfile:
         script_dir = Path(__file__).resolve().parent
         html_template_path = script_dir / 'html_rapport_template.html'
         html_template_file = open(html_template_path).read()                        
@@ -895,8 +900,8 @@ def _get_errors_per_column(
             df_predquality[pred_quality_column].isin(error_codes_denominator)]
 
     # Calculate the number of parcels per groupbycolumn, the cumulative sum + the pct of all
-    df_predquality_count = (df_predquality_filtered.groupby(groupbycolumn, as_index=False)
-                            .size().to_frame('count_all'))
+    df_predquality_count = (df_predquality_filtered
+            .groupby(groupbycolumn).size().to_frame('count_all'))
     df_predquality_count.sort_index(ascending=ascending, inplace=True)
     values = df_predquality_count['count_all'].cumsum(axis=0)
     df_predquality_count.insert(loc=len(df_predquality_count.columns),
@@ -911,15 +916,15 @@ def _get_errors_per_column(
     # Now calculate the number of alfa errors per groupbycolumn
     df_alfa_error = df_predquality_filtered[
             df_predquality_filtered[pred_quality_column].isin(error_codes_numerator)]
-    df_alfa_per_column = (df_alfa_error.groupby(groupbycolumn, as_index=False)
-                          .size().to_frame(f"count_error_{error_type}")) 
+    df_alfa_per_column = (df_alfa_error
+            .groupby(groupbycolumn).size().to_frame(f"count_error_{error_type}")) 
     df_alfa_per_column.sort_index(ascending=ascending, inplace=True)                         
 
     # Now calculate the number of alfa errors with full doubt per groupbycolumn 
     df_alfa_error_full_doubt = df_predquality_filtered[
             df_predquality_filtered[pred_quality_full_doubt_column].isin(error_codes_numerator)]
-    df_alfa_full_doubt_per_column = (df_alfa_error_full_doubt.groupby(groupbycolumn, as_index=False)
-                                     .size().to_frame(f"count_error_{error_type}_full_doubt"))
+    df_alfa_full_doubt_per_column = (df_alfa_error_full_doubt
+            .groupby(groupbycolumn).size().to_frame(f"count_error_{error_type}_full_doubt"))
    
     # Join everything together
     df_alfa_per_column = df_predquality_count.join(df_alfa_per_column, how='left')
@@ -929,16 +934,18 @@ def _get_errors_per_column(
     df_predquality_full_doubt_filtered = df_predquality[
             df_predquality[pred_quality_full_doubt_column].isin(error_codes_denominator)]
 
-    values = (df_predquality_full_doubt_filtered.groupby(groupbycolumn, as_index=False)
-                            .size().to_frame('count_all_full_doubt'))
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
-                                column='count_all_full_doubt',
-                                value=values)
+    values = (df_predquality_full_doubt_filtered
+            .groupby(groupbycolumn).size().to_frame('count_all_full_doubt'))
+    df_alfa_per_column.insert(
+            loc=len(df_alfa_per_column.columns),
+            column='count_all_full_doubt',
+            value=values)
  
     # Finally calculate all alfa error percentages
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns),
-                              column=f"count_error_{error_type}_cumulative",
-                              value=df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0))
+    df_alfa_per_column.insert(
+            loc=len(df_alfa_per_column.columns),
+            column=f"count_error_{error_type}_cumulative",
+            value=df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0))
                                 
     values = 100 * df_alfa_per_column[f"count_error_{error_type}"] / df_alfa_per_column['count_all']
     df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all", value=values)
