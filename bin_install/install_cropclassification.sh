@@ -152,7 +152,7 @@ conda deactivate
 
 # Clean the cache dir + deactivate base env
 #conda clean --all
-conda deactivates
+conda deactivate
 
 # Pause
 read -s -n 1 -p "Press any key to continue..."
