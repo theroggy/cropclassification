@@ -53,6 +53,13 @@ def calc_marker_task(
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
+    # If running in conda, export the environment
+    conda_env = os.environ.get('CONDA_DEFAULT_ENV')
+    if conda_env is not None:
+        environment_yml_path = run_dir / f"{conda_env}.yml"
+        logger.info(f"Export conda environment used to {environment_yml_path}")
+        os.system(f"conda env export > {environment_yml_path}")
+
     # If the config needs to be reused as well, load it, else write it
     config_used_filepath = run_dir / 'config_used.ini'
     if(reuse_last_run_dir 
@@ -66,7 +73,7 @@ def calc_marker_task(
         with open(config_used_filepath, 'w') as config_used_file:
             conf.config.write(config_used_file)
     else:
-        # Copy the config files to a config dir for later noticy
+        # Copy the config files to a config dir for later notice
         configfiles_used_dir = run_dir / "configfiles_used"
         if configfiles_used_dir.exists():
             shutil.rmtree(configfiles_used_dir)
