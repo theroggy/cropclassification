@@ -111,7 +111,17 @@ conda config --env --add channels conda-forge
 conda config --env --set channel_priority strict
 
 # List of dependencies + reasons for specific versions.
-conda install -y python=3.8 geopandas keras pyarrow psutil scikit-learn tensorflow rasterio rasterstats 
+#
+# Remark: the dependencies of tensorflow can be found here: 
+# https://libraries.io/pypi/tensorflow
+#
+# python: 3.8 is the only version that is tested on
+# --- General dependencies ---
+# rasterio: tested till version 1.2
+# --- Tensorflow dependencies available on conda ---
+# numpy: for tf: needs 1.19, otherwise replaced with pip version
+# h5py: for tf: <3, otherwise impossible to load saved models
+conda install -y python=3.6 "h5py<3" fiona geopandas pyarrow psutil rasterio rasterstats scikit-learn keras tensorflow
 
 # For the following packages, no conda package is available or -for tensorflow- no recent version.
 if [[ ! $fordev =~ ^[Yy]$ ]]
@@ -119,6 +129,7 @@ then
   echo
   echo "Install the pip package"
   echo
+  #pip install "tensorflow>=2.5,<2.6" cropclassification
   pip install cropclassification
 else
   echo
@@ -129,18 +140,19 @@ else
   echo
   echo "Prepare for development: pip install dependencies of orthoseg that need pip"
   echo
-  # Reasons for the version specifications...
-  # tensorflow: starting from 2.5 compatible with libspatialite 5.0 
-  # geofileops: simplify algorythms used supported from 2.0
-  #pip install 
+  #pip install "tensorflow>=2.5,<2.6" 
 fi
+
+# Export the environment to a .yml file
+mkdir -p yml
+conda env export > "./yml/$envname_${today}.yml"
 
 # Deactivate new env
 conda deactivate
 
 # Clean the cache dir + deactivate base env
 #conda clean --all
-conda deactivate
+conda deactivates
 
 # Pause
-read -s -n 1 -p "Press any key to continue . . ."
+read -s -n 1 -p "Press any key to continue..."
