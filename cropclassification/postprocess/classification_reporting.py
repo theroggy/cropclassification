@@ -956,6 +956,11 @@ def _get_errors_per_column(
     values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column['count_all'].sum())
     df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all_cumulative", value=values)
 
+    #MARINA
+    values = df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_all_cumulative"]
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"new_column", value=values) 
+
+
     return df_alfa_per_column
 
 def _write_OA_per_pixcount(df_parcel_predictions: pd.DataFrame,

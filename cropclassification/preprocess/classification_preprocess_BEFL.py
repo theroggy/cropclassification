@@ -122,6 +122,17 @@ def prepare_input(input_parcel_filepath: Path,
                 column_BEFL_cropcode=column_BEFL_crop,
                 column_output_class=conf.columns['class'],
                 classes_refe_filepath=classes_refe_filepath)
+    elif classtype_to_prepare == 'MULTICROP':
+        parceldata_df = prepare_input_landcover(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop_declared,
+                column_output_class=conf.columns['class_declared'],
+                classes_refe_filepath=classes_refe_filepath)
+        return prepare_input_landcover(
+                parceldata_df=parceldata_df,
+                column_BEFL_cropcode=column_BEFL_crop,
+                column_output_class=conf.columns['class'],
+                classes_refe_filepath=classes_refe_filepath)
     elif classtype_to_prepare == 'LANDCOVER-GROUNDTRUTH':
         return prepare_input_landcover(
                 parceldata_df=parceldata_df,

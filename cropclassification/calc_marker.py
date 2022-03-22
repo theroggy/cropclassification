@@ -45,6 +45,7 @@ def calc_marker_task(
     reuse_last_run_dir = conf.calc_marker_params.getboolean('reuse_last_run_dir')
     reuse_last_run_dir_config = conf.calc_marker_params.getboolean('reuse_last_run_dir_config')
     run_dir = dir_helper.create_run_dir(conf.dirs.getpath('marker_dir'), reuse_last_run_dir)
+    print(run_dir)
     if not run_dir.exists():
         os.makedirs(run_dir)
 
@@ -258,6 +259,8 @@ def calc_marker_task(
     #-------------------------------------------------------------
     # If it was necessary to train, there will be a test prediction... so postprocess it
     parcel_predictions_test_filepath = None
+    #market
+    alphaerrorsshape_filepath = run_dir / f"{base_filename}_alfaerrors.shp"
     if(input_model_to_use_filepath is None 
        and parcel_test_filepath is not None 
        and parcel_predictions_proba_test_filepath is not None):
@@ -265,7 +268,9 @@ def calc_marker_task(
         class_post.calc_top3_and_consolidation(
                 input_parcel_filepath=parcel_test_filepath,
                 input_parcel_probabilities_filepath=parcel_predictions_proba_test_filepath,
-                output_predictions_filepath=parcel_predictions_test_filepath)
+                input_parcel_geofilepath=input_parcel_filepath,
+                output_predictions_filepath=parcel_predictions_test_filepath,
+                output_alphaerrorsshape_filepath=alphaerrorsshape_filepath)
         
     # Postprocess predictions
     parcel_predictions_all_filepath = run_dir / f"{base_filename}_predict_all{data_ext}"
@@ -273,7 +278,9 @@ def calc_marker_task(
     class_post.calc_top3_and_consolidation(
             input_parcel_filepath=parcel_filepath,
             input_parcel_probabilities_filepath=parcel_predictions_proba_all_filepath,
+            input_parcel_geofilepath=input_parcel_filepath, 
             output_predictions_filepath=parcel_predictions_all_filepath,
+            output_alphaerrorsshape_filepath=alphaerrorsshape_filepath,
             output_predictions_output_filepath=parcel_predictions_all_output_filepath)
 
     # STEP 7: Report on the accuracy, incl. ground truth
