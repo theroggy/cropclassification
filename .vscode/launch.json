@@ -13,11 +13,11 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: cropclassification",
+            "name": "Python: run tasks",
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/cropclassification/cropclassification.py",
-            "args": ["-t", "x:/monitoring/markers/playground/_tasks_pierog"],
+            "args": ["-t", "x:/monitoring/markers/playground/_tasks_joebro"],
             "console": "integratedTerminal"
         }           
     ]

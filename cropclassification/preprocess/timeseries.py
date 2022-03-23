@@ -80,8 +80,8 @@ def calc_timeseries_data(
         return ts_util.calculate_periodic_data(
                 input_parcel_filepath=input_parcel_filepath,
                 input_base_dir=timeseries_per_image_dir,
-                start_date_str=start_date_str,
-                end_date_str=end_date_str,
+                start_date_str=start_date_monday,
+                end_date_str=end_date_monday,
                 sensordata_to_get=sensordata_to_get,  
                 dest_data_dir=dest_data_dir)
     else:
@@ -134,9 +134,14 @@ def collect_and_prepare_timeseries_data(
     logger.setLevel(logging.DEBUG)
 
     # Loop over all input timeseries data to find the data we really need
+    start_date = ts_util.get_monday(start_date_str)
+    end_date = ts_util.get_monday(end_date_str) 
+    start_date_monday = start_date.strftime('%Y-%m-%d') # terug omzetten naar Y/M/D
+    end_date_monday = end_date.strftime('%Y-%m-%d')
+
     data_ext = conf.general['data_ext']
-    filepath_start = timeseries_dir / f"{base_filename}_{start_date_str}{data_ext}"
-    filepath_end = timeseries_dir / f"{base_filename}_{end_date_str}{data_ext}"
+    filepath_start = timeseries_dir / f"{base_filename}_{start_date_monday}{data_ext}"
+    filepath_end = timeseries_dir / f"{base_filename}_{end_date_monday}{data_ext}"
     logger.debug(f'filepath_start_date: {filepath_start}')
     logger.debug(f'filepath_end_date: {filepath_end}')
 

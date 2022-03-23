@@ -33,8 +33,6 @@ def calc_timeseries_task(
     # Read the configuration files
     conf.read_config(config_filepaths, default_basedir=default_basedir)
 
-    test = conf.calc_timeseries_params.getboolean('test')
-    
     # As we want a weekly calculation, get nearest monday for start and stop day
     start_date = ts_util.get_monday(conf.marker['start_date_str']) # output: vb 2018_2_1 - maandag van week 2 van 2018
     end_date = ts_util.get_monday(conf.marker['end_date_str']) 
@@ -46,13 +44,15 @@ def calc_timeseries_task(
 
     # Init logging
     base_log_dir = conf.dirs.getpath('log_dir')
+    test = conf.calc_timeseries_params.getboolean('test')
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
-    log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+        
+        # Clean test log dir if it exist
+        if (base_log_dir.exists()):
+            shutil.rmtree(base_log_dir)
 
-    # Clean test log dir if it exist
-    if test and base_log_dir.exists():
-        shutil.rmtree(base_log_dir)
+    log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
 
     global logger
     logger = log_helper.main_log_init(log_dir, __name__)
@@ -80,11 +80,11 @@ def calc_timeseries_task(
         output_basedir = Path(f"{str(timeseries_per_image_dir)}_test")
         logger.info(f"As we are testing, use test output basedir: {output_basedir}")
     output_dir = output_basedir / input_features_filename.stem
-    if test:
-        if output_dir.exists():
-            logger.info(f"As we are only testing, clean the output dir: {output_dir}")
-            # By adding a / at the end, only the contents are recursively deleted
-            shutil.rmtree(str(output_dir) + os.sep)
+
+    if test and output_dir.exists():
+        logger.info(f"As we are only testing, clean the output dir: {output_dir}")
+        # By adding a / at the end, only the contents are recursively deleted
+        shutil.rmtree(str(output_dir) + os.sep)
 
     # Temp dir + clean contents from it.
     temp_dir = conf.dirs.getpath('temp_dir') / 'calc_dias'

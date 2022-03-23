@@ -6,12 +6,13 @@ Calculates periodic timeseries for input parcels.
 from datetime import datetime
 import logging
 import gc
-import os
+import os, shutil
 from pathlib import Path
 from typing import List
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 
 # Import local stuff
 import cropclassification.helpers.config_helper as conf
@@ -168,13 +169,19 @@ def calculate_periodic_data(
     # Init
     input_dir = input_base_dir / input_parcel_filepath.stem
 
-    # TODO: in config?
-    input_ext = ".sqlite"
-    output_ext = ".sqlite"
+    input_ext = conf.general['data_ext']
+    output_ext = conf.general['data_ext']
 
+    id_column = conf.columns['id']
+    gdf_input_parcel = geofile_util.read_file(input_parcel_filepath, columns=[id_column])
+    nb_input_parcels = len(gdf_input_parcel.index)
+    
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d') 
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d') 
     year = start_date_str.split("-")[0] 
+
+    pixcount_filename = f"{input_parcel_filepath.stem}_weekly_pixcount{output_ext}"
+    pixcount_filepath = dest_data_dir / pixcount_filename
 
     # Prepare output dir
     test = False
@@ -192,190 +199,393 @@ def calculate_periodic_data(
             file_info = get_file_info(input_dir / filename)
             file_info_list.append(file_info)
     
-    all_inputfiles_df = pd.DataFrame(file_info_list)
+    all_input_files_df = pd.DataFrame(file_info_list)
 
     # Loop over the data we need to get
-    id_column = conf.columns['id']
     for sensordata_type in sensordata_to_get:
+        start_week = int(datetime.strftime(start_date , '%W'))
+        end_week = int(datetime.strftime(end_date , '%W'))
 
         logger.debug('Get files we need based on start- & stopdates, sensordata_to_get,...')
-        orbits = [None]
         if sensordata_type == conf.general['SENSORDATA_S1_ASCDESC']:
             # Filter files to the ones we need
             satellitetype = 'S1'
             imagetype = IMAGETYPE_S1_GRD
             bands = ['VV', 'VH']
             orbits = ['ASC', 'DESC']
-            needed_inputfiles_df = all_inputfiles_df.loc[(all_inputfiles_df.date >= start_date) 
-                                                         & (all_inputfiles_df.date < end_date)
-                                                         & (all_inputfiles_df.imagetype == imagetype)
-                                                         & (all_inputfiles_df.band.isin(bands))
-                                                         & (all_inputfiles_df.orbit.isin(orbits))]
+            input_files_df = all_input_files_df.loc[(all_input_files_df.date >= start_date) 
+                                      & (all_input_files_df.date < end_date)
+                                      & (all_input_files_df.imagetype == imagetype)
+                                      & (all_input_files_df.band.isin(bands))
+                                      & (all_input_files_df.orbit.isin(orbits))]
+            calculate_weekly(
+                start_week=start_week,
+                end_week=end_week,
+                year=year,
+                sensordata_type=sensordata_type,
+                bands=bands,
+                orbits=orbits,
+                imagetype=imagetype,
+                input_files_df=input_files_df,
+                input_parcel_filepath=input_parcel_filepath,
+                output_pixcount_filepath=pixcount_filepath,
+                output_dest_data_dir=dest_data_dir,
+                output_ext=output_ext,
+                force=force)
         elif sensordata_type == conf.general['SENSORDATA_S2gt95']:
             satellitetype = 'S2'
             imagetype = IMAGETYPE_S2_L2A
-            bands = ['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'B11-20m', 'B12-20m']
-            needed_inputfiles_df = all_inputfiles_df.loc[(all_inputfiles_df.date >= start_date) 
-                                                         & (all_inputfiles_df.date < end_date) 
-                                                         & (all_inputfiles_df.imagetype == imagetype)                                                         
-                                                         & (all_inputfiles_df.band.isin(bands))]
+            bands = ['B02-10m', 'B03-10m', 'B04-10m', 'B08-10m', 'B11-20m', 'B12-20m'] #conf.timeseries.getlist('s2bands')
+            input_files_df = all_input_files_df.loc[(all_input_files_df.date >= start_date) 
+                                                         & (all_input_files_df.date < end_date) 
+                                                         & (all_input_files_df.imagetype == imagetype)                                                         
+                                                         & (all_input_files_df.band.isin(bands))]
+
+            calculate_variable(
+                start_week=start_week,
+                end_week=end_week,
+                year=year,
+                sensordata_type=sensordata_type,
+                bands=bands,
+                orbits=[None],
+                imagetype=imagetype,
+                nb_input_parcels=nb_input_parcels,
+                input_files_df=input_files_df,
+                input_parcel_filepath=input_parcel_filepath,
+                output_pixcount_filepath=pixcount_filepath,
+                output_dest_data_dir=dest_data_dir,
+                output_ext=output_ext,
+                force=force)
+
         elif sensordata_type == conf.general['SENSORDATA_S1_COHERENCE']:
             satellitetype = 'S1'
             imagetype = IMAGETYPE_S1_COHERENCE
             bands = ['VV', 'VH']
             orbits = ['ASC', 'DESC']
-            needed_inputfiles_df = all_inputfiles_df.loc[(all_inputfiles_df.date >= start_date) 
-                                                         & (all_inputfiles_df.date < end_date) 
-                                                         & (all_inputfiles_df.imagetype == imagetype)                                                         
-                                                         & (all_inputfiles_df.band.isin(bands))]
+            input_files_df = all_input_files_df.loc[(all_input_files_df.date >= start_date) 
+                                                         & (all_input_files_df.date < end_date) 
+                                                         & (all_input_files_df.imagetype == imagetype)                                                         
+                                                         & (all_input_files_df.band.isin(bands))]
+            calculate_weekly(
+                start_week=start_week,
+                end_week=end_week,
+                year=year,
+                sensordata_type=sensordata_type,
+                bands=bands,
+                orbits=orbits,
+                imagetype=imagetype,
+                input_files_df=input_files_df,
+                input_parcel_filepath=input_parcel_filepath,
+                output_pixcount_filepath=pixcount_filepath,
+                output_dest_data_dir=dest_data_dir,
+                output_ext=output_ext,
+                force=force)
         else:
             raise Exception(f"Unsupported sensordata_type: {sensordata_type}")
 
-        # There should also be one pixcount file
-        pixcount_filename = f"{input_parcel_filepath.stem}_weekly_pixcount{output_ext}"
-        pixcount_filepath = dest_data_dir / pixcount_filename
+def calculate_weekly(
+    start_week: int,
+    end_week: int,
+    year: str,
+    sensordata_type: str,
+    bands: List[str],
+    orbits: List[str],
+    imagetype: str,
+    input_files_df: pd.DataFrame,
+    input_parcel_filepath: Path,
+    output_pixcount_filepath: Path,
+    output_dest_data_dir: Path,
+    output_ext: str,
+    force: bool = False):
+    for period_index in range(start_week, end_week):
+        # Get the date of the first day of period period_index (eg. monday for a week)
+        period_date = get_monday_from_week(year, period_index)
 
-        # For each week
-        start_week = int(datetime.strftime(start_date , '%W'))
-        end_week = int(datetime.strftime(end_date , '%W'))
-        for period_index in range(start_week, end_week):
+        # New file name
+        period_date_str_long = period_date.strftime('%Y-%m-%d')
+        period_data_filename = f"{input_parcel_filepath.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
+        period_data_filepath = output_dest_data_dir / period_data_filename
 
-            # Get the date of the first day of period period_index (eg. monday for a week)
-            period_date = datetime.strptime(str(year) + '_' + str(period_index) + '_1', '%Y_%W_%w')
+        period_data_df = calculate_period(
+            period_date=period_date,
+            period_index=period_index,
+            period_data_filepath=period_data_filepath,
+            imagetype=imagetype,
+            bands=bands, 
+            orbits=orbits,
+            input_files_df=input_files_df,
+            output_pixcount_filepath=output_pixcount_filepath,
+            force=force)
 
-            # New file name
-            period_date_str_long = period_date.strftime('%Y-%m-%d') 
-            period_data_filename = f"{input_parcel_filepath.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
-            period_data_filepath = dest_data_dir / period_data_filename
+        if period_data_df is not None:
+            logger.info(f"Write new file: {period_data_filepath.stem}")
+            pdh.to_file(period_data_df, period_data_filepath)
 
-            # Check if output file exists already
-            if period_data_filepath.exists() and pixcount_filepath.exists():
-                if force is False:
-                    logger.info(f"SKIP: force is False and file exists: {period_data_filepath}")
-                    continue
-                else:
-                    os.remove(period_data_filepath)
-
-            # Loop over bands and orbits (all combinations of bands and orbits!)
-            logger.info(f"Calculate file: {period_data_filename}")
-            period_data_df = None
-            gc.collect()                  # Try to evade memory errors
-            for band, orbit in [(band, orbit) for band in bands for orbit in orbits]:
-
-                # Get list of files needed for this period, band
-                period_files_df = needed_inputfiles_df.loc[(needed_inputfiles_df.week == period_index)
-                                                           & (needed_inputfiles_df.band == band)]
+            # Create pixcount file if it doesn't exist yet...
+            if not output_pixcount_filepath.exists():
+                pixcount_s1s2_column = conf.columns['pixcount_s1s2']
                 
-                # If an orbit to be filtered was specified, filter
-                if orbit is not None:
-                    period_files_df = period_files_df.loc[(period_files_df.orbit == orbit)]
+                # Get max count of all count columns available 
+                columns_to_use = [column for column in period_data_df.columns if column.endswith('_count')]
+                period_data_df[pixcount_s1s2_column] = np.nanmax(period_data_df[columns_to_use], axis=1)
+                
+                pixcount_df = period_data_df[pixcount_s1s2_column]
+                pixcount_df.fillna(value=0, inplace=True)
 
-                if len(period_files_df) == 0:
-                    logger.warn("No input files found!")
+                pdh.to_file(pixcount_df, output_pixcount_filepath)
 
-                # Loop all period_files
-                period_band_data_df = None
-                statistic_columns_dict = {'count': [], 'max': [], 'mean': [], 'median': [], 'min': [], 'std': []}
-                for j, imagedata_filepath in enumerate(period_files_df.filepath.tolist()):
-                    
-                    # If file has filesize == 0, skip
-                    imagedata_filepath = Path(imagedata_filepath)
-                    if imagedata_filepath.stat().st_size == 0:
-                        continue 
+def calculate_variable(
+    start_week: int,
+    end_week: int,
+    year: str,
+    sensordata_type: str,
+    bands: List[str],
+    orbits: List[str],
+    imagetype: str,
+    nb_input_parcels: int,
+    input_files_df: pd.DataFrame,
+    input_parcel_filepath: Path,
+    output_pixcount_filepath: Path,
+    output_dest_data_dir: Path,
+    output_ext: str,
+    force: bool = False):
 
-                    # Read the file (but only the columns we need)
-                    columns = [column for column in statistic_columns_dict]
-                    columns.append(id_column)
+    max_sliding_window = 3
+    id_column = conf.columns['id']
+    min_parcels_with_data_pct = conf.timeseries.getfloat('min_parcels_with_data_pct')
+    temp_dir = output_dest_data_dir / f"{input_parcel_filepath.stem}"
+    to_process_indices: List[int] = list(range(start_week, end_week))
+    sliding_indices: List[int] = []
+    
+    def getTempFileName(index: int):
+        return temp_dir / f"{input_parcel_filepath.stem}_{index}_{sensordata_type}{output_ext}"
 
-                    image_data_df = pdh.read_file(imagedata_filepath, columns=columns)
-                    image_data_df.set_index(id_column, inplace=True)
-                    image_data_df.index.name = id_column
+    if (not temp_dir.exists()):
+        os.mkdir(temp_dir)
+    
+    while len(to_process_indices) > 0:
+        current_index = to_process_indices.pop(0)
+        
+        if (len(sliding_indices) > 0 and sliding_indices[0] + max_sliding_window <= current_index):
+            logger.info(f"Sliding the window..")
+            sliding_indices.pop(0)
 
-                    # Remove rows with nan values
-                    nb_before_dropna = len(image_data_df.index)
-                    image_data_df.dropna(inplace=True)
-                    nb_after_dropna = len(image_data_df.index)
-                    if nb_after_dropna != nb_before_dropna:
-                        logger.warning(f"Before dropna: {nb_before_dropna}, after: {nb_after_dropna} for file {imagedata_filepath}")
-                    if nb_after_dropna == 0:
+        logger.info(f"Starting calculation for period: {current_index}")
+        # Get the date of the first day of period period_index (eg. monday for a week)
+        
+        # NOTE: cant change file name to period because we *compare* with it later
+        period_start = get_monday_from_week(year, current_index)
+        period_date_str_long = period_start.strftime('%Y-%m-%d') 
+        period_data_filename = f"{input_parcel_filepath.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}" 
+        period_data_filepath = output_dest_data_dir / period_data_filename
+
+        if (period_data_filepath.exists() and not force):
+            logger.info(f"SKIP: force is False and file exists: {period_data_filepath}")
+            sliding_indices = [] # reset
+            continue
+
+        period_data_temp_filename = getTempFileName(current_index) 
+        if (period_data_temp_filename.exists() and not force): 
+            period_data_df = pdh.read_file(period_data_temp_filename)
+        else:
+            period_data_df = calculate_period(
+                    period_date=period_start,
+                    period_index=current_index,
+                    period_data_filepath=period_data_temp_filename,
+                    imagetype=imagetype,
+                    bands=bands, 
+                    orbits=orbits,
+                    input_files_df=input_files_df,
+                    output_pixcount_filepath=output_pixcount_filepath,
+                    prefix_columns=False,
+                    force=force)
+
+        if period_data_df is not None:
+            data_available_pct = len(period_data_df.index)*100/nb_input_parcels
+            if data_available_pct < min_parcels_with_data_pct:
+                logger.info(f"Not enough data found: {data_available_pct} < {min_parcels_with_data_pct}")
+
+                if (not period_data_temp_filename.exists()):
+                    pdh.to_file(period_data_df, period_data_temp_filename)
+
+                # try to bundle previous incomplete data
+                if len(sliding_indices) > 0:
+                    logger.info(f"Trying with a larger window now {current_index} + {sliding_indices[::-1]}")
+
+                    for index in sliding_indices[::-1]:
+                        previous_filename = getTempFileName(index) 
+                        previous_df = pdh.read_file(previous_filename)
+                        previous_df.set_index(id_column, inplace=True)
+                        period_data_df = period_data_df.combine_first(previous_df) # keep the latest data, only add missing data/rows
+
+                    data_available_pct = len(period_data_df.index)*100/nb_input_parcels
+                    sliding_indices.append(current_index)
+
+                    if data_available_pct < min_parcels_with_data_pct:
+                        logger.info(f"Merge didnt give enough data: {data_available_pct} < {min_parcels_with_data_pct}.")
+                        logger.info("Trying again later.")
                         continue
                     
-                    # recalculate duplicate rows (the -5 buffer can cause break ups?)
-                    image_data_recalculate_df = image_data_df.loc[image_data_df.index.duplicated()].groupby(id_column).agg({column: "mean" for column in statistic_columns_dict})
-                    image_data_df = image_data_df.loc[~image_data_df.index.duplicated()]
-                    image_data_df.append(image_data_recalculate_df)
+                    logger.info(f"Enough data found for {sliding_indices}: {data_available_pct} < {min_parcels_with_data_pct}")
+                else: 
+                    logger.info(f"Trying again later.")
+                    sliding_indices.append(current_index)
+                    continue
 
-                    # Rename columns so column names stay unique
-                    for statistic_column in statistic_columns_dict:
-                        new_column_name = statistic_column + str(j+1)
-                        image_data_df.rename(columns={statistic_column: new_column_name},
-                                             inplace=True)
-                        image_data_df[new_column_name] = image_data_df[new_column_name].astype(float)
-                        statistic_columns_dict[statistic_column].append(new_column_name)
-                                            
-                    # Create 1 dataframe for all weekfiles - one row for each code_obj - using concat (code_obj = index)
-                    if period_band_data_df is None:
-                        period_band_data_df = image_data_df                
-                    else:
-                        period_band_data_df = pd.concat([period_band_data_df, image_data_df], axis=1, sort=False)
-                        # Apparently concat removes the index name in some situations
-                        period_band_data_df.index.name = id_column
-                        
-                # Calculate max, mean, min, ...
-                if period_band_data_df is not None:
-                    logger.debug('Calculate max, mean, min, ...')
-                    period_date_str_short = period_date.strftime('%Y%m%d')
-                    # Remark: prefix column names: sqlite doesn't like a numeric start
-                    if orbit is None:
-                        column_basename = f"TS_{period_date_str_short}_{imagetype}_{band}"
-                    else:
-                        column_basename = f"TS_{period_date_str_short}_{imagetype}_{orbit}_{band}"
+            sliding_indices = [] # clean up the previous incomplete data.. it's now useless.
+            period_data_df.columns = period_data_df.columns.str.replace('TS_', f'TS_{period_date_str_long}_')
 
-                    # Number of pixels
-                    # TODO: onderzoeken hoe aantal pixels best bijgehouden wordt : afwijkingen weglaten ? max nemen ? ...
-                    period_band_data_df[f"{column_basename}_count"] = np.nanmax(period_band_data_df[statistic_columns_dict['count']], axis=1)
-                    # Maximum of all max columns
-                    period_band_data_df[f"{column_basename}_max"] = np.nanmax(period_band_data_df[statistic_columns_dict['max']], axis=1)
-                    # Mean of all mean columns
-                    period_band_data_df[f"{column_basename}_mean"] = np.nanmean(period_band_data_df[statistic_columns_dict['mean']], axis=1)
-                    # Mean of all median columns
-                    period_band_data_df[f"{column_basename}_median"] = np.nanmean(period_band_data_df[statistic_columns_dict['median']], axis=1)
-                    # Minimum of all min columns
-                    period_band_data_df[f"{column_basename}_min"] = np.nanmin(period_band_data_df[statistic_columns_dict['min']], axis=1)
-                    # Mean of all std columns
-                    period_band_data_df[f"{column_basename}_std"] = np.nanmean(period_band_data_df[statistic_columns_dict['std']], axis=1)
-                    # Number of Files used
-                    period_band_data_df[f"{column_basename}_used_files"] = period_band_data_df[statistic_columns_dict['max']].count(axis=1)
-                                    
-                    # Only keep the columns we want to keep
-                    columns_to_keep = [f"{column_basename}_count", f"{column_basename}_max", 
-                                    f"{column_basename}_mean", f"{column_basename}_median", f"{column_basename}_min", 
-                                    f"{column_basename}_std", f"{column_basename}_used_files"] 
-                    period_band_data_df = period_band_data_df[columns_to_keep]
+            # Write result to file
+            logger.info(f"Write new file: {period_data_filepath.stem}")
+            pdh.to_file(period_data_df, period_data_filepath)
 
-                    # Merge the data with the other bands/orbits for this period
-                    if period_data_df is None:
-                        period_data_df = period_band_data_df
-                    else:
-                        period_data_df = pd.concat([period_band_data_df, period_data_df], axis=1, sort=False) 
-                        # Apparently concat removes the index name in some situations
-                        period_data_df.index.name = id_column
+            # Create pixcount file if it doesn't exist yet...
+            if not output_pixcount_filepath.exists():
+                pixcount_s1s2_column = conf.columns['pixcount_s1s2']
+                
+                # Get max count of all count columns available 
+                columns_to_use = [column for column in period_data_df.columns if column.endswith('_count')]
+                period_data_df[pixcount_s1s2_column] = np.nanmax(period_data_df[columns_to_use], axis=1)
+                
+                pixcount_df = period_data_df[pixcount_s1s2_column]
+                pixcount_df.fillna(value=0, inplace=True)
+
+                pdh.to_file(pixcount_df, output_pixcount_filepath)
+        else:
+            # If there is no output, there is nothing to merge/append, so just continue
+            logger.info(f"No data found for period {current_index}, skipping..")
             
-            if period_data_df is not None:
-                logger.info(f"Write new file: {period_data_filename}")
-                pdh.to_file(period_data_df, period_data_filepath)
+    # clean up temp files
+    shutil.rmtree(temp_dir)
+        
+def calculate_period(
+        period_date: datetime,
+        period_index: int,
+        output_pixcount_filepath: Path,
+        period_data_filepath: Path,
+        imagetype: str,
+        bands: List[str],
+        orbits: List[str],
+        input_files_df: pd.DataFrame,
+        prefix_columns: bool = True,
+        force: bool = False): 
+    # Check if output file exists already
+    if period_data_filepath.exists() and output_pixcount_filepath.exists():
+        if force is False:
+            logger.info(f"SKIP: force is False and file exists: {period_data_filepath}")
+            return
+        else:
+            os.remove(period_data_filepath)
 
-                # Create pixcount file if it doesn't exist yet...
-                if not pixcount_filepath.exists():
-                    pixcount_s1s2_column = conf.columns['pixcount_s1s2']
-                   
-                    # Get max count of all count columns available 
-                    columns_to_use = [column for column in period_data_df.columns if column.endswith('_count')]
-                    period_data_df[pixcount_s1s2_column] = np.nanmax(period_data_df[columns_to_use], axis=1)
-                    
-                    pixcount_df = period_data_df[pixcount_s1s2_column]
-                    pixcount_df.fillna(value=0, inplace=True)
-                    pdh.to_file(pixcount_df, pixcount_filepath)
+    # Loop over bands and orbits (all combinations of bands and orbits!)
+    logger.info(f"Calculate file: {period_data_filepath.stem}")
+    period_data_df = None
+    id_column = conf.columns['id']
+    gc.collect()                  # Try to evade memory errors
+    for band, orbit in [(band, orbit) for band in bands for orbit in orbits]:
+
+        # Get list of files needed for this period, band
+        period_files_df = input_files_df.loc[(input_files_df.week == period_index)
+                                                    & (input_files_df.band == band)]
+        
+        # If an orbit to be filtered was specified, filter
+        if orbit is not None:
+            period_files_df = period_files_df.loc[(period_files_df.orbit == orbit)]
+
+        if len(period_files_df) == 0:
+            logger.warn("No input files found!")
+
+        # Loop all period_files
+        period_band_data_df = None
+        statistic_columns_dict = {'count': [], 'max': [], 'mean': [], 'median': [], 'min': [], 'std': []}
+        for j, imagedata_filepath in enumerate(period_files_df.filepath.tolist()):
+            
+            # If file has filesize == 0, skip
+            imagedata_filepath = Path(imagedata_filepath)
+            if imagedata_filepath.stat().st_size == 0:
+                continue 
+
+            # Read the file (but only the columns we need)
+            columns = [column for column in statistic_columns_dict]
+            columns.append(id_column)
+
+            image_data_df = pdh.read_file(imagedata_filepath, columns=columns)
+            image_data_df.set_index(id_column, inplace=True)
+            image_data_df.index.name = id_column
+
+            # Remove rows with nan values
+            nb_before_dropna = len(image_data_df.index)
+            image_data_df.dropna(inplace=True)
+            nb_after_dropna = len(image_data_df.index)
+            if nb_after_dropna != nb_before_dropna:
+                logger.warning(f"Before dropna: {nb_before_dropna}, after: {nb_after_dropna} for file {imagedata_filepath}")
+            if nb_after_dropna == 0:
+                continue
+            
+            # recalculate duplicate rows (the -5 buffer can cause break ups?)
+            image_data_recalculate_df = image_data_df.loc[image_data_df.index.duplicated()].groupby(id_column).agg({column: "mean" for column in statistic_columns_dict})
+            image_data_df = image_data_df.loc[~image_data_df.index.duplicated()]
+            image_data_df.append(image_data_recalculate_df)
+
+            # Rename columns so column names stay unique
+            for statistic_column in statistic_columns_dict:
+                new_column_name = statistic_column + str(j+1)
+                image_data_df.rename(columns={statistic_column: new_column_name},
+                                        inplace=True)
+                image_data_df[new_column_name] = image_data_df[new_column_name].astype(float)
+                statistic_columns_dict[statistic_column].append(new_column_name)
+                                    
+            # Create 1 dataframe for all weekfiles - one row for each code_obj - using concat (code_obj = index)
+            if period_band_data_df is None:
+                period_band_data_df = image_data_df                
+            else:
+                period_band_data_df = pd.concat([period_band_data_df, image_data_df], axis=1, sort=False)
+                # Apparently concat removes the index name in some situations
+                period_band_data_df.index.name = id_column
+                
+        # Calculate max, mean, min, ...
+        if period_band_data_df is not None:
+            logger.debug('Calculate max, mean, min, ...')
+            period_date_str_short = period_date.strftime('%Y%m%d')
+            # Remark: prefix column names: sqlite doesn't like a numeric start
+            column_basename = f"TS_{period_date_str_short}_" if prefix_columns else "TS_"
+
+            if orbit is None:
+                column_basename = f"{column_basename}{imagetype}_{band}_"
+            else:
+                column_basename = f"{column_basename}{imagetype}_{orbit}_{band}_"
+
+            # Number of pixels
+            # TODO: onderzoeken hoe aantal pixels best bijgehouden wordt : afwijkingen weglaten ? max nemen ? ...
+            period_band_data_df[f"{column_basename}count"] = np.nanmax(period_band_data_df[statistic_columns_dict['count']], axis=1)
+            # Maximum of all max columns
+            period_band_data_df[f"{column_basename}max"] = np.nanmax(period_band_data_df[statistic_columns_dict['max']], axis=1)
+            # Mean of all mean columns
+            period_band_data_df[f"{column_basename}mean"] = np.nanmean(period_band_data_df[statistic_columns_dict['mean']], axis=1)
+            # Mean of all median columns
+            period_band_data_df[f"{column_basename}median"] = np.nanmean(period_band_data_df[statistic_columns_dict['median']], axis=1)
+            # Minimum of all min columns
+            period_band_data_df[f"{column_basename}min"] = np.nanmin(period_band_data_df[statistic_columns_dict['min']], axis=1)
+            # Mean of all std columns
+            period_band_data_df[f"{column_basename}std"] = np.nanmean(period_band_data_df[statistic_columns_dict['std']], axis=1)
+            # Number of Files used
+            period_band_data_df[f"{column_basename}used_files"] = period_band_data_df[statistic_columns_dict['max']].count(axis=1)
+                            
+            # Only keep the columns we want to keep
+            columns_to_keep = [f"{column_basename}count", f"{column_basename}max", 
+                            f"{column_basename}mean", f"{column_basename}median", f"{column_basename}min", 
+                            f"{column_basename}std", f"{column_basename}used_files"] 
+            period_band_data_df = period_band_data_df[columns_to_keep]
+
+            # Merge the data with the other bands/orbits for this period
+            if period_data_df is None:
+                period_data_df = period_band_data_df
+            else:
+                period_data_df = pd.concat([period_band_data_df, period_data_df], axis=1, sort=False) 
+                # Apparently concat removes the index name in some situations
+                period_data_df.index.name = id_column
+            
+    return period_data_df
 
 def get_file_info(filepath: Path) -> dict:
     """
@@ -469,6 +679,9 @@ def get_monday(input_date: str) -> datetime:
     year_week = parseddate.strftime('%Y_%W')
     year_week_monday = datetime.strptime(year_week + '_1', '%Y_%W_%w') 
     return year_week_monday
+
+def get_monday_from_week(year: str, week: int) -> datetime:
+    return datetime.strptime(str(year) + '_' + str(week) + '_1', '%Y_%W_%w')
 
 # If the script is run directly...
 if __name__ == "__main__":
