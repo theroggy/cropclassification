@@ -121,7 +121,7 @@ conda config --env --set channel_priority strict
 # --- Tensorflow dependencies available on conda ---
 # numpy: for tf: needs 1.19, otherwise replaced with pip version
 # h5py: for tf: <3, otherwise impossible to load saved models
-conda install -y python=3.6 "h5py<3" fiona geopandas pyarrow psutil rasterio rasterstats scikit-learn keras tensorflow
+conda install -y python=3.9 "h5py<3" fiona geopandas pyarrow psutil rasterio rasterstats scikit-learn
 
 # For the following packages, no conda package is available or -for tensorflow- no recent version.
 if [[ ! $fordev =~ ^[Yy]$ ]]
@@ -135,12 +135,12 @@ else
   echo
   echo "Prepare for development: conda install dev tools"
   echo
-  conda install -y pylint pytest rope
+  conda install -y pylint pytest rope flake8
  
   echo
-  echo "Prepare for development: pip install dependencies of orthoseg that need pip"
+  echo "Prepare for development: pip install dependencies of cropclassification that need pip"
   echo
-  #pip install "tensorflow>=2.5,<2.6" 
+  pip install tensorflow
 fi
 
 # Export the environment to a .yml file
