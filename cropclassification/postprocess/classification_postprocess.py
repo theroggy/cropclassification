@@ -104,7 +104,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: Path,
     # alfaerror output to shape
     alfashape_gdf = geofile.read_file(filepath=input_parcel_geofilepath)
     new_gdf = gpd.GeoDataFrame(pred_df.merge(alfashape_gdf, how='right'))
-    geofile.to_file(gdf=new_df, filepath=output_alphaerrorsshape_filepath)
+    geofile.to_file(gdf=new_gdf, filepath=output_alphaerrorsshape_filepath)
 
     # Create final output file with the most important info
     if output_predictions_output_filepath is not None:
