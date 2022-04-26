@@ -936,25 +936,23 @@ def _get_errors_per_column(
 
     values = (df_predquality_full_doubt_filtered
             .groupby(groupbycolumn).size().to_frame('count_all_full_doubt'))
-    df_alfa_per_column.insert(
-            loc=len(df_alfa_per_column.columns),
-            column='count_all_full_doubt',
-            value=values)
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
  
     # Finally calculate all alfa error percentages
-    df_alfa_per_column.insert(
-            loc=len(df_alfa_per_column.columns),
-            column=f"count_error_{error_type}_cumulative",
-            value=df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0))
+    values = df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0).to_frame(f"count_error_{error_type}_cumulative")
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
                                 
-    values = 100 * df_alfa_per_column[f"count_error_{error_type}"] / df_alfa_per_column['count_all']
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all", value=values)
+    values = (100 * df_alfa_per_column[f"count_error_{error_type}"] / df_alfa_per_column['count_all']).to_frame(f"pct_error_{error_type}_of_all")
+    #df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all", value=values)
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+    
+    values = ((100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_error_{error_type}"].sum())).to_frame(f"pct_error_{error_type}_of_{error_type}_cumulative")
+    #df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_{error_type}_cumulative", value=values) 
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
 
-    values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_error_{error_type}"].sum())
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_{error_type}_cumulative", value=values) 
-
-    values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column['count_all'].sum())
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all_cumulative", value=values)
+    values = ((100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column['count_all'].sum())).to_frame(f"pct_error_{error_type}_of_all_cumulative")
+    #df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all_cumulative", value=values)
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
 
     return df_alfa_per_column
 
