@@ -39,7 +39,7 @@ def read_file(
         return data_read_df
     elif ext_lower == '.parquet':
         return pd.read_parquet(str(filepath), columns=columns)
-    elif ext_lower == '.sqlite':
+    elif ext_lower in ('.sqlite', '.gpkg'):
         sql_db = None
         try:
             sql_db = sqlite3.connect(str(filepath))
@@ -47,7 +47,7 @@ def read_file(
                 cols_to_select = '*'
             else:
                 cols_to_select = ', '.join(columns)
-            data_read_df = pd.read_sql_query(f"select {cols_to_select} from {table_name}", sql_db)
+            data_read_df = pd.read_sql_query(f'select {cols_to_select} from "{table_name}"', sql_db)
         except Exception as ex:
             raise Exception(f"Error reading data from {str(filepath)}") from ex
         finally:
