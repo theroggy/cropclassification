@@ -5,17 +5,16 @@ Module with postprocessing functions on classification results.
 
 import datetime
 import logging
-import os
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
+import geofileops as gfo
 import geopandas as gpd
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
-
-import cropclassification.helpers.geofile as geofile
 
 #-------------------------------------------------------------
 # First define/init some general variables/constants
@@ -32,8 +31,8 @@ def calc_top3_and_consolidation(input_parcel_filepath: Path,
                                 input_parcel_probabilities_filepath: Path,
                                 input_parcel_geofilepath: Path,
                                 output_predictions_filepath: Path,
-                                output_alphaerrorsshape_filepath: Path,
-                                output_predictions_output_filepath: Path = None,
+                                output_predictions_geofilepath: Path,
+                                output_predictions_output_filepath: Optional[Path] = None,
                                 force: bool = False):
     """
     Calculate the top3 prediction and a consolidation prediction.
@@ -45,6 +44,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: Path,
         input_parcel_filepath (Path): [description]
         input_parcel_probabilities_filepath (Path): [description]
         output_predictions_filepath (Path): [description]
+        output_predictions_geofilepath (Path): [description]
         output_predictions_output_filepath (Path, optional): [description]. Defaults to None.
         force (bool, optional): [description]. Defaults to False.
     """
@@ -101,10 +101,10 @@ def calc_top3_and_consolidation(input_parcel_filepath: Path,
     logger.info("Write full prediction data to file")
     pdh.to_file(pred_df, output_predictions_filepath)  
 
-    # alfaerror output to shape
-    alfashape_gdf = geofile.read_file(filepath=input_parcel_geofilepath)
-    new_gdf = gpd.GeoDataFrame(pred_df.merge(alfashape_gdf, how='right'))
-    geofile.to_file(gdf=new_gdf, filepath=output_alphaerrorsshape_filepath)
+    # Output to geo file
+    input_parcel_gdf = gfo.read_file(input_parcel_geofilepath)
+    pred_gdf = gpd.GeoDataFrame(input_parcel_gdf.merge(pred_df, how='inner'))
+    gfo.to_file(pred_gdf, output_predictions_geofilepath)
 
     # Create final output file with the most important info
     if output_predictions_output_filepath is not None:

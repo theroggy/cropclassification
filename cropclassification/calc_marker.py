@@ -259,28 +259,29 @@ def calc_marker_task(
     #-------------------------------------------------------------
     # If it was necessary to train, there will be a test prediction... so postprocess it
     parcel_predictions_test_filepath = None
-    #market
-    alphaerrorsshape_filepath = run_dir / f"{base_filename}_alfaerrors.shp"
+    parcel_predictions_test_geopath = None
     if(input_model_to_use_filepath is None 
        and parcel_test_filepath is not None 
        and parcel_predictions_proba_test_filepath is not None):
         parcel_predictions_test_filepath = run_dir / f"{base_filename}_predict_test{data_ext}"
+        parcel_predictions_test_geopath = run_dir / f"{base_filename}_predict_test{geofile_ext}"
         class_post.calc_top3_and_consolidation(
                 input_parcel_filepath=parcel_test_filepath,
                 input_parcel_probabilities_filepath=parcel_predictions_proba_test_filepath,
                 input_parcel_geofilepath=input_parcel_filepath,
                 output_predictions_filepath=parcel_predictions_test_filepath,
-                output_alphaerrorsshape_filepath=alphaerrorsshape_filepath)
+                output_predictions_geofilepath=parcel_predictions_test_geopath)
         
     # Postprocess predictions
     parcel_predictions_all_filepath = run_dir / f"{base_filename}_predict_all{data_ext}"
+    parcel_predictions_all_geopath = run_dir / f"{base_filename}_predict_all{geofile_ext}"
     parcel_predictions_all_output_filepath = run_dir / f"{base_filename}_predict_all_output{output_ext}"
     class_post.calc_top3_and_consolidation(
             input_parcel_filepath=parcel_filepath,
             input_parcel_probabilities_filepath=parcel_predictions_proba_all_filepath,
-            input_parcel_geofilepath=input_parcel_filepath, 
+            input_parcel_geofilepath=input_parcel_filepath,
             output_predictions_filepath=parcel_predictions_all_filepath,
-            output_alphaerrorsshape_filepath=alphaerrorsshape_filepath,
+            output_predictions_geofilepath=parcel_predictions_all_geopath,
             output_predictions_output_filepath=parcel_predictions_all_output_filepath)
 
     # STEP 7: Report on the accuracy, incl. ground truth
@@ -298,18 +299,18 @@ def calc_marker_task(
                     output_parcel_filepath=groundtruth_filepath)
 
     # If we trained a model, there is a test prediction we want to report on
-    if input_model_to_use_filepath is None and parcel_predictions_test_filepath is not None:
+    if input_model_to_use_filepath is None and parcel_predictions_test_geopath is not None:
         # Print full reporting on the accuracy of the test dataset
         report_txt = Path(f"{str(parcel_predictions_test_filepath)}_accuracy_report.txt")
         class_report.write_full_report(
-                parcel_predictions_filepath=parcel_predictions_test_filepath,
+                parcel_predictions_geopath=parcel_predictions_test_geopath,
                 output_report_txt=report_txt,
                 parcel_ground_truth_filepath=groundtruth_filepath)
 
     # Print full reporting on the accuracy of the full dataset
     report_txt = Path(f"{str(parcel_predictions_all_filepath)}_accuracy_report.txt")
     class_report.write_full_report(
-            parcel_predictions_filepath=parcel_predictions_all_filepath,
+            parcel_predictions_geopath=parcel_predictions_all_geopath,
             output_report_txt=report_txt,
             parcel_ground_truth_filepath=groundtruth_filepath)
 
