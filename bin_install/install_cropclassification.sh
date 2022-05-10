@@ -121,7 +121,7 @@ conda config --env --set channel_priority strict
 # --- Tensorflow dependencies available on conda ---
 # numpy: for tf: needs 1.19, otherwise replaced with pip version
 # h5py: for tf: <3, otherwise impossible to load saved models
-conda install -y python=3.9 "h5py<3" fiona geopandas pyarrow psutil rasterio rasterstats scikit-learn
+conda install -y python=3.9 "h5py<3" fiona geofileops geopandas pyarrow psutil rasterio rasterstats scikit-learn
 
 # For the following packages, no conda package is available or -for tensorflow- no recent version.
 if [[ ! $fordev =~ ^[Yy]$ ]]

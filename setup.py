@@ -3,11 +3,11 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open('version.txt', mode='r') as file:
+with open("version.txt", mode="r") as file:
     version = file.readline()
 
 setuptools.setup(
-    name="cropclassification", 
+    name="cropclassification",
     version=version,
     author="Pieter Roggemans",
     author_email="pieter.roggemans@gmail.com",
@@ -17,14 +17,24 @@ setuptools.setup(
     url="https://github.com/theroggy/cropclassification",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    install_requires=["scikit-learn", "tensorflow", "rasterio", "rasterstats", "fiona", "geopandas", "pyarrow", "psutil"],
-    entry_points='''
+    install_requires=[
+        "scikit-learn",
+        "fiona",
+        "geofileops",
+        "geopandas",
+        "psutil",
+        "pyarrow",
+        "rasterio",
+        "rasterstats",
+        "tensorflow",
+    ],
+    entry_points="""
         [console_scripts]
         cropclassification=cropclassification.cropclassification:main
-        ''',
+        """,
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
 )
