@@ -5,11 +5,13 @@ Module with postprocessing functions on classification results.
 
 import datetime
 import logging
-import os
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
+import geofileops as gfo
+import geopandas as gpd
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
@@ -27,8 +29,10 @@ logger = logging.getLogger(__name__)
 
 def calc_top3_and_consolidation(input_parcel_filepath: Path,
                                 input_parcel_probabilities_filepath: Path,
+                                input_parcel_geofilepath: Path,
                                 output_predictions_filepath: Path,
-                                output_predictions_output_filepath: Path = None,
+                                output_predictions_geofilepath: Path,
+                                output_predictions_output_filepath: Optional[Path] = None,
                                 force: bool = False):
     """
     Calculate the top3 prediction and a consolidation prediction.
@@ -40,6 +44,7 @@ def calc_top3_and_consolidation(input_parcel_filepath: Path,
         input_parcel_filepath (Path): [description]
         input_parcel_probabilities_filepath (Path): [description]
         output_predictions_filepath (Path): [description]
+        output_predictions_geofilepath (Path): [description]
         output_predictions_output_filepath (Path, optional): [description]. Defaults to None.
         force (bool, optional): [description]. Defaults to False.
     """
@@ -94,7 +99,12 @@ def calc_top3_and_consolidation(input_parcel_filepath: Path,
     pred_df[conf.columns['prediction_cons_status']].fillna('NOK', inplace=True)    
 
     logger.info("Write full prediction data to file")
-    pdh.to_file(pred_df, output_predictions_filepath)
+    pdh.to_file(pred_df, output_predictions_filepath)  
+
+    # Output to geo file
+    input_parcel_gdf = gfo.read_file(input_parcel_geofilepath)
+    pred_gdf = gpd.GeoDataFrame(input_parcel_gdf.merge(pred_df, how='inner'))
+    gfo.to_file(pred_gdf, output_predictions_geofilepath)
 
     # Create final output file with the most important info
     if output_predictions_output_filepath is not None:
@@ -234,6 +244,10 @@ def add_doubt_column(pred_df: pd.DataFrame,
             #     general doubt reasons should win compared to the marker 
             #     specific doubt/risky_doubt reasons.
 
+            # If less then 12 pixels, then set to doubt
+            pred_df.loc[(pred_df[conf.columns['pixcount_s1s2']] < 12),
+                        new_pred_column] = 'DOUBT:LITTLE-PARCELS'
+
             # If parcel was declared as grassland, and is classified as arable, set to risky doubt
             # Remark: those gave 50% false positives for LANDCOVER marker
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
@@ -325,13 +339,13 @@ def add_doubt_column(pred_df: pd.DataFrame,
 
             # If parcel was declared as one of the following and classified as GRASSES, set to RISKY_DOUBT
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED')
-                            & (pred_df[conf.columns['crop_declared']].isin(['36', '895', '9582']))
+                            & (pred_df[conf.columns['crop_declared']].isin(['36', '895', '9582', '744' '9202', '9714','832', '9602', '9730']))
                             & (pred_df['pred1'] == 'MON_LC_GRASSES'),
                         new_pred_column] = 'RISKY_DOUBT:SEEN-AS-GRASSES'
 
             # If parcel was declared as one of the following and classified as ARABLE, set to RISKY_DOUBT
             pred_df.loc[(pred_df[new_pred_column] == 'UNDEFINED') 
-                            & (pred_df[conf.columns['crop_declared']].isin(['601', '644', '932', '9412', '9584']))
+                            & (pred_df[conf.columns['crop_declared']].isin(['601', '644', '932', '9412', '9584', '8411']))
                             & (pred_df['pred1'] == 'MON_LC_ARABLE'),
                         new_pred_column] = 'RISKY_DOUBT:SEEN-AS-ARABLE'
 

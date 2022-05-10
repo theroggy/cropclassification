@@ -59,7 +59,7 @@ def cropclassification(tasksdir: Path):
             for config_file in extra_config_files_to_load:
                 config_file_formatted = Path(config_file.format(task_filepath=task_path, tasks_dir=task_path.parent))
                 if not config_file_formatted.is_absolute():
-                    config_file_formatted = (task_path.parent / config_file_formatted).resolve()
+                    config_file_formatted = (default_basedir / config_file_formatted).resolve()
                 config_filepaths.append(Path(config_file_formatted))
 
         if action == 'calc_marker':

@@ -9,8 +9,6 @@ import logging
 import os
 from pathlib import Path
 
-import keras
-from keras import backend as K
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -111,8 +109,8 @@ def train(train_df: pd.DataFrame,
         raise Exception(message)
 
     # Keras not only want numeric classes, it wants a column per class
-    train_classes_df = keras.utils.to_categorical(train_classes_df, len(classes_dict))
-    test_classes_df = keras.utils.to_categorical(test_classes_df, len(classes_dict))
+    train_classes_df = tf.keras.utils.to_categorical(train_classes_df, len(classes_dict))
+    test_classes_df = tf.keras.utils.to_categorical(test_classes_df, len(classes_dict))
 
     # Get some config from the config file
     hidden_layer_sizes = conf.classifier.getlistint('multilayer_perceptron_hidden_layer_sizes')
@@ -122,30 +120,30 @@ def train(train_df: pd.DataFrame,
     learning_rate_init = conf.classifier.getfloat('multilayer_perceptron_learning_rate_init')
     
     # Create neural network
-    model = keras.models.Sequential()
+    model = tf.keras.models.Sequential()
     # Create the hidden layers as specified in config
     dropout_pct = conf.classifier.getfloat('multilayer_perceptron_dropout_pct')
     for i, hidden_layer_size in enumerate(hidden_layer_sizes):
         # For the first layer, the input size needs to be specified
         if i == 0:
-            model.add(keras.layers.Dense(hidden_layer_size, activation='relu', input_shape=(len(train_data_df.columns),)))
+            model.add(tf.keras.layers.Dense(hidden_layer_size, activation='relu', input_shape=(len(train_data_df.columns),)))
             if dropout_pct > 0:
-                model.add(keras.layers.Dropout(dropout_pct/100))
+                model.add(tf.keras.layers.Dropout(dropout_pct/100))
         else:
-            model.add(keras.layers.Dense(hidden_layer_size, activation='relu'))
+            model.add(tf.keras.layers.Dense(hidden_layer_size, activation='relu'))
             if dropout_pct > 0:
-                model.add(keras.layers.Dropout(dropout_pct/100))
+                model.add(tf.keras.layers.Dropout(dropout_pct/100))
 
     # Add the final layer that will produce the outputs
-    model.add(keras.layers.Dense(len(classes_dict), activation='softmax'))
+    model.add(tf.keras.layers.Dense(len(classes_dict), activation='softmax'))
 
     # Prepare model for training + train!
-    optimizer = keras.optimizers.Adam(learning_rate=learning_rate_init)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate_init)
     model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
     
     logger.info(f"Start fitting classifier:\n{model.summary()}")
     acc_metric_mode = 'min'
-    reduce_lr_loss = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', mode=acc_metric_mode,
+    reduce_lr_loss = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', mode=acc_metric_mode,
             factor=0.2, patience=50, verbose=1, epsilon=1e-4)
     callbacks = [reduce_lr_loss]
 
@@ -155,18 +153,18 @@ def train(train_df: pd.DataFrame,
     if(best_model_strategy == 'VAL_LOSS'):
         to_be_formatted_by_callback = "{val_loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
         best_model_filepath = f"{output_classifier_filepath_noext}_{to_be_formatted_by_callback}{output_ext}"
-        callbacks.append(keras.callbacks.ModelCheckpoint(
+        callbacks.append(tf.keras.callbacks.ModelCheckpoint(
                 best_model_filepath, save_best_only=True, 
                 monitor='val_loss', mode=acc_metric_mode))
-        callbacks.append(keras.callbacks.EarlyStopping(monitor='val_loss', mode=acc_metric_mode,
+        callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode=acc_metric_mode,
                 patience=200, verbose=0))    
     elif(best_model_strategy == 'LOSS'):
         to_be_formatted_by_callback = "{loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
         best_model_filepath = f"{output_classifier_filepath_noext}_{to_be_formatted_by_callback}{output_ext}"
-        callbacks.append(keras.callbacks.ModelCheckpoint(
+        callbacks.append(tf.keras.callbacks.ModelCheckpoint(
                 best_model_filepath, save_best_only=True, 
                 monitor='loss', mode=acc_metric_mode))
-        callbacks.append(keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
+        callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
                 patience=100, verbose=0))
     elif(best_model_strategy == 'AVG(VAL_LOSS,LOSS)'):
         # Custom callback that saves the best models using both train and validation metric
@@ -174,11 +172,11 @@ def train(train_df: pd.DataFrame,
                 output_classifier_basefilepath.parent, output_classifier_basefilepath.name, 
                 acc_metric_train='loss', acc_metric_validation='val_loss', 
                 acc_metric_mode=acc_metric_mode))
-        callbacks.append(keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
+        callbacks.append(tf.keras.callbacks.EarlyStopping(monitor='loss', mode=acc_metric_mode,
                 patience=100, verbose=0))
 
     csv_log_filepath = Path(f"{output_classifier_filepath_noext}_train_log.csv")
-    callbacks.append(keras.callbacks.CSVLogger(csv_log_filepath, append=True, separator=';'))
+    callbacks.append(tf.keras.callbacks.CSVLogger(csv_log_filepath, append=True, separator=';'))
     model.fit(train_data_df, train_classes_df, batch_size=128, epochs=max_iter, 
               callbacks=callbacks, validation_data=(test_data_df, test_classes_df))
 
@@ -234,9 +232,9 @@ def predict_proba(parcel_df: pd.DataFrame,
         logger.info(f"Resulting Columns for predicting data: {parcel_data_df.columns}")
 
     # Load the classifier and predict
-    model = keras.models.load_model(classifier_filepath)
+    model = tf.keras.models.load_model(classifier_filepath)
     logger.info(f"Predict classes with probabilities: {len(parcel_df.index)} rows")
-    class_proba = model.predict_proba(parcel_data_df)
+    class_proba = model.predict(parcel_data_df)
     logger.info(f"Predict classes with probabilities ready")
 
     # Convert probabilities to dataframe, combine with input data and write to file

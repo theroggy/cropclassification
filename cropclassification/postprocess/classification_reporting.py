@@ -4,10 +4,11 @@ Module with some helper functions to report on the classification results.
 """
 
 import logging
-import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+import geofileops as gfo
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import sklearn.metrics as skmetrics
@@ -27,14 +28,14 @@ logger = logging.getLogger(__name__)
 # The real work
 #-------------------------------------------------------------
 
-# TODO: improve reporting to devide between eligible versus ineligible classes?
+# TODO: improve reporting to divide between eligible versus ineligible classes?
 # TODO?: report based on area instead of number parcel
 #     -> seems like being a bit "detached from reality", as for RFV the most important parameter is the number of parcels
 
 def write_full_report(
-        parcel_predictions_filepath: Path,
+        parcel_predictions_geopath: Path,
         output_report_txt: Path,
-        parcel_ground_truth_filepath: Path = None,
+        parcel_ground_truth_filepath: Optional[Path] = None,
         force: bool = False):
     """Writes a report about the accuracy of the predictions to a file.
 
@@ -59,10 +60,18 @@ def write_full_report(
     pandas_option_context_list = ['display.max_rows', None, 'display.max_columns', None, 
                                   'display.max_colwidth', 300, 'display.width', 2000, 
                                   'display.colheader_justify', 'left']
-    logger.info(f"Read file with predictions: {parcel_predictions_filepath}")
-    df_predict = pdh.read_file(parcel_predictions_filepath)
+    logger.info(f"Read file with predictions: {parcel_predictions_geopath}")
+    df_predict = gfo.read_file(parcel_predictions_geopath)
     df_predict.set_index(conf.columns['id'], inplace=True)
-        
+
+    # Convert all columns to numeric, for the actual numeric ones this will stick.
+    # TODO: pretty ugly, hopefully becomes obsolete if pyogrio is used in gfo.to_file
+    for column in df_predict.columns:
+        try:
+            df_predict[column] = pd.to_numeric(df_predict[column], errors="ignore")
+        except Exception:
+            _ = None
+
     # Python template engine expects all values to be present, so initialize to empty
     empty_string = "''"
     html_data = {
@@ -388,8 +397,10 @@ def write_full_report(
                 logger.info(f"{count_per_class}\n")
                 html_data['PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE'] = count_per_class.to_html()
 
-            # Write the ground truth conclusions to file
+            # Write the ground truth conclusions to files
             pdh.to_file(df_parcel_gt, Path(str(output_report_txt) + "_groundtruth_pred_quality_details.tsv"))
+            output_path = Path(str(output_report_txt) + "_groundtruth_pred_quality_details.gpkg")
+            gfo.to_file(gdf=df_parcel_gt, path=output_path)
 
             # Alpha and beta error statistics based on CONS prediction
             # ******************************************************************            
@@ -936,25 +947,28 @@ def _get_errors_per_column(
 
     values = (df_predquality_full_doubt_filtered
             .groupby(groupbycolumn).size().to_frame('count_all_full_doubt'))
-    df_alfa_per_column.insert(
-            loc=len(df_alfa_per_column.columns),
-            column='count_all_full_doubt',
-            value=values)
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
  
     # Finally calculate all alfa error percentages
-    df_alfa_per_column.insert(
-            loc=len(df_alfa_per_column.columns),
-            column=f"count_error_{error_type}_cumulative",
-            value=df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0))
+    values = df_alfa_per_column[f"count_error_{error_type}"].cumsum(axis=0).to_frame(f"count_error_{error_type}_cumulative")
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
                                 
-    values = 100 * df_alfa_per_column[f"count_error_{error_type}"] / df_alfa_per_column['count_all']
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all", value=values)
+    values = (100 * df_alfa_per_column[f"count_error_{error_type}"] / df_alfa_per_column['count_all']).to_frame(f"pct_error_{error_type}_of_all")
+    #df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all", value=values)
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+    
+    values = ((100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_error_{error_type}"].sum())).to_frame(f"pct_error_{error_type}_of_{error_type}_cumulative")
+    #df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_{error_type}_cumulative", value=values) 
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
 
-    values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_error_{error_type}"].sum())
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_{error_type}_cumulative", value=values) 
+    values = ((100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column['count_all'].sum())).to_frame(f"pct_error_{error_type}_of_all_cumulative")
+    #df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all_cumulative", value=values)
+    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
 
-    values = (100 * df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column['count_all'].sum())
-    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"pct_error_{error_type}_of_all_cumulative", value=values)
+    #MARINA
+    values = df_alfa_per_column[f"count_error_{error_type}_cumulative"] / df_alfa_per_column[f"count_all_cumulative"]
+    df_alfa_per_column.insert(loc=len(df_alfa_per_column.columns), column=f"new_column", value=values) 
+
 
     return df_alfa_per_column
 

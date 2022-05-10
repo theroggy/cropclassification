@@ -197,11 +197,12 @@ def create_train_test_sample(input_parcel_filepath: Path,
         cap_count_limit2 = 50000
         cap_train_limit2 = 20000
         logger.info(f"Cap balancing classes between {cap_count_limit2} and {cap_count_limit1} to {cap_train_limit2}")
-        df_train = df_train.append(df_train_base
+        train_cap2_df = (df_train_base
                 .groupby(class_balancing_column).filter(lambda x: len(x) < cap_count_limit1)
                 .groupby(class_balancing_column).filter(lambda x: len(x) >= cap_count_limit2)
-                .groupby(class_balancing_column, group_keys=False)
-                .apply(pd.DataFrame.sample, cap_train_limit2))
+                .groupby(class_balancing_column, group_keys=False))
+        if len(train_cap2_df) > 0:
+            df_train = df_train.append(train_cap2_df.apply(pd.DataFrame.sample, cap_train_limit2))
         cap_count_limit3 = 20000
         cap_train_limit3 = 10000
         logger.info(f"Cap balancing classes between {cap_count_limit3} and {cap_count_limit2} to {cap_train_limit3}")
