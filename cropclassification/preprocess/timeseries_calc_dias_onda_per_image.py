@@ -691,13 +691,13 @@ def load_features_file(
     # If there is a polygon provided, filter on the polygon (as well)
     if polygon is not None:
         logger.info("Filter polygon provided, start filter")
-        polygon_gdf = gpd.GeoDataFrame(geometry=[polygon], crs={'init' :'epsg:4326'}, index=[0])
+        polygon_gdf = gpd.GeoDataFrame(geometry=[polygon], crs="EPSG:4326", index=[0])
         logger.debug(f"polygon_gdf: {polygon_gdf}")
         logger.debug(f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}")
         polygon_gdf = polygon_gdf.to_crs(features_gdf.crs)
         logger.debug(f"polygon_gdf, after reproj: {polygon_gdf}")
         logger.debug(f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}")
-        features_gdf = gpd.sjoin(features_gdf, polygon_gdf, how='inner', op='within')
+        features_gdf = gpd.sjoin(features_gdf, polygon_gdf, how='inner', predicate='within')
         
         # Drop column added by sjoin
         features_gdf.drop(columns='index_right', inplace=True)
