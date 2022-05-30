@@ -42,6 +42,7 @@ def calc_stats_per_image(
         output_dir: Path,
         temp_dir: Path,
         log_dir: Path,
+        log_level: str,
         max_cloudcover_pct: float = -1,
         force: bool = False):
     """
@@ -235,6 +236,7 @@ def calc_stats_per_image(
                                     bands,
                                     image['output_base_busy_filepath'],
                                     log_dir,
+                                    log_level,
                                     start_time_batch)
                             calc_stats_batch_dict[features_batch['filepath']] = {
                                     'calc_stats_future': future,
@@ -466,6 +468,7 @@ def prepare_calc(
             output_filepath: Path,
             temp_dir: Path,
             log_dir: Path,
+            log_level: str,
             nb_parallel_max: int = 16) -> dict:
     """
     Prepare the inputs for a calculation.
@@ -479,7 +482,7 @@ def prepare_calc(
     logger.propagate = False
     log_filepath = log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_prepare_calc_{os.getpid()}.log"
     fh = logging.FileHandler(filename=log_filepath)
-    fh.setLevel(logging.INFO)
+    fh.setLevel(log_level)
     fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
     logger.addHandler(fh)
 
@@ -583,6 +586,7 @@ def load_features_file(
     """
     # Load parcel input file and preprocess it: remove excess columns + reproject if needed.
     # By convention, the features filename should end on the projection... so extract epsg from filename
+    start_time = datetime.now()
     features_epsg = None
     if features_filepath.stem.find('_') != -1:
         splitted = features_filepath.stem.split('_')
@@ -710,6 +714,7 @@ def load_features_file(
         logger.info(f"Filter ready, found {len(features_gdf.index)}")
             
     # Ready, so return result...
+    logger.debug(f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}")
     return features_gdf
 
 def calc_stats_image_gdf(
@@ -719,6 +724,7 @@ def calc_stats_image_gdf(
         bands: List[str],
         output_base_filepath: Path,
         log_dir: Path,
+        log_level: str,
         future_start_time = None) -> bool:
     """
 
@@ -733,7 +739,7 @@ def calc_stats_image_gdf(
     logger.propagate = False
     log_filepath = log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_calc_stats_image_gdf_{os.getpid()}.log"
     fh = logging.FileHandler(filename=str(log_filepath))
-    fh.setLevel(logging.INFO)
+    fh.setLevel(log_level)
     fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s'))
     logger.addHandler(fh)
 

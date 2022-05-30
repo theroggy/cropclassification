@@ -12,7 +12,8 @@ from pathlib import Path
 #-------------------------------------------------------------
 
 def main_log_init(log_dir: Path,
-                  log_basefilename: str):
+                  log_basefilename: str,
+                  log_level: str = "INFO"):
     
     # Make sure the log dir exists
     if not log_dir.exists():
@@ -22,7 +23,7 @@ def main_log_init(log_dir: Path,
     logger = logging.getLogger('')
     
     # Set the general maximum log level...
-    logger.setLevel(logging.INFO)
+    logger.setLevel(log_level)
     for handler in logger.handlers:
         handler.flush()
         handler.close()
@@ -32,7 +33,7 @@ def main_log_init(log_dir: Path,
     logger.handlers = []
     
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    ch.setLevel(log_level)
     #ch.setFormatter(logging.Formatter('%(levelname)s|%(name)s|%(message)s'))
     #ch.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s',
     #                                  datefmt='%H:%M:%S,uuu'))
@@ -42,7 +43,7 @@ def main_log_init(log_dir: Path,
     
     log_filepath = log_dir / f"{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}_{log_basefilename}.log"
     fh = logging.FileHandler(filename=str(log_filepath))
-    fh.setLevel(logging.INFO)
+    fh.setLevel(log_level)
     fh.setFormatter(logging.Formatter('%(asctime)s|%(levelname)s|%(name)s|%(message)s'))
     logger.addHandler(fh)
     

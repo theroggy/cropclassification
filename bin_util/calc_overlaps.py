@@ -31,7 +31,8 @@ def main():
     conf.read_config(segment_config_filepaths)
     
     # Main initialisation of the logging
-    logger = log_helper.main_log_init(conf.dirs.getpath('log_dir'), __name__)      
+    log_level = conf.general.get("log_level")
+    logger = log_helper.main_log_init(conf.dirs.getpath('log_dir'), __name__, log_level)      
     logger.info("Start")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 

@@ -46,6 +46,7 @@ def calc_timeseries_task(
 
     # Init logging
     base_log_dir = conf.dirs.getpath('log_dir')
+    log_level = conf.general.get("log_level")
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
     log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
@@ -55,7 +56,7 @@ def calc_timeseries_task(
         shutil.rmtree(base_log_dir)
 
     global logger
-    logger = log_helper.main_log_init(log_dir, __name__)
+    logger = log_helper.main_log_init(log_dir, __name__, log_level)
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     if test:         
@@ -120,7 +121,9 @@ def calc_timeseries_task(
             month_start = calc_month_start
         for month in range(calc_month_start, calc_month_stop+1):
             input_image_searchstr = f"/mnt/NAS*/CARD/FLANDERS/S1*/L1TC/{year}/{month:02d}/*/*.CARD"
+            input_image_searchstr = "X:/Monitoring/Markers/playground/tmp/*.CARD"
             input_image_filepaths.extend(glob.glob(input_image_searchstr))
+    input_image_filepaths = list(set(input_image_filepaths))
     logger.info(f"Found {len(input_image_filepaths)} S1 GRD images to process")
 
     if test:
@@ -138,7 +141,8 @@ def calc_timeseries_task(
                 bands=['VV', 'VH'],
                 output_dir=output_dir,
                 temp_dir=temp_dir,
-                log_dir=log_dir)
+                log_dir=log_dir,
+                log_level=log_level)
     except Exception as ex:
         logger.exception(ex)
 
