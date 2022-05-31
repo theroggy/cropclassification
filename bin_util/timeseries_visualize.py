@@ -7,50 +7,44 @@ TODO: Recently hasn't been tested anymore!!!
 """
 
 import logging
-import os
 from pathlib import Path
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parent / '..'))
 
-
-import numpy as np
-import pandas as pd
-
-import cropclassification.helpers.config_helper as conf
+sys.path.insert(0, str(Path(__file__).resolve().parent / ".."))
 import cropclassification.helpers.pandas_helper as pdh
 
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # First define/init some general variables/constants
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
 # Constants for types of sensor data
-SENSORDATA_VV = 'VV' # Vertical Vertical
-SENSORDATA_VH = 'VH' # Vertical Horizontal
+SENSORDATA_VV = "VV"  # Vertical Vertical
+SENSORDATA_VH = "VH"  # Vertical Horizontal
 
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # The real work
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 
-def show(input_parcel_filepath: Path,
-         filter_id: str):
+
+def show(input_parcel_path: Path, filter_id: str):
 
     # Load input data...
-    df = pdh.read_file(input_parcel_filepath)
+    df = pdh.read_file(input_parcel_path)
 
     # Just keep one parcel
-    id_column = 'UID'
+    id_column = "UID"
     df = df[df[id_column] == filter_id]
 
     # Remove all unnecessary columns
-    '''
+    """
     for column in df:
         if(not column.startswith(SENSORDATA_VV + '_')
            and not column.startswith(SENSORDATA_VH + '_')
            and not column == conf.columns['id']):
             df = df.drop(columns=column)
-    '''
+    """
 
     # Set index for transpose
     df.set_index(id_column, inplace=True)
@@ -59,7 +53,7 @@ def show(input_parcel_filepath: Path,
     df = df.transpose()
     df.reset_index(inplace=True)
 
-    '''    
+    """
     df.rename(columns={'index':'polarization_date'}, inplace=True)
 
     # Split the date and the polarization, the drop the original column
@@ -83,20 +77,23 @@ def show(input_parcel_filepath: Path,
 
     for column in df:
         logger.info(column)
-    '''
-    
+    """
+
     logger.info(df)
 
     # Plot
     df.plot()
-    
+
+
 # If the script is run directly...
 if __name__ == "__main__":
-        
+
     local_data_basedir = Path("X:/Monitoring/Markers/playground/pierog")
     local_data_dir = local_data_basedir / "2019_LANDCOVER/Run_2019-08-19_001"
-    input_parcel_filepath = local_data_dir / "Prc_BEFL_2019_2019-08-14_bufm5_weekly_parcel_classdata.sqlite"
-    show(input_parcel_filepath, filter_id = '0000280800C79F930000000C')
+    input_parcel_path = (
+        local_data_dir / "Prc_BEFL_2019_2019-08-14_bufm5_weekly_parcel_classdata.sqlite"
+    )
+    show(input_parcel_path, filter_id="0000280800C79F930000000C")
 
 
 #%%
