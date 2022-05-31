@@ -46,7 +46,8 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     calc_month_stop = end_date.month
 
     # Init logging
-    base_log_dir = conf.dirs.getpath("log_dir")
+    base_log_dir = conf.dirs.getpath('log_dir')
+    log_level = conf.general.get("log_level")
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
     log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
@@ -56,7 +57,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         shutil.rmtree(base_log_dir)
 
     global logger
-    logger = log_helper.main_log_init(log_dir, __name__)
+    logger = log_helper.main_log_init(log_dir, __name__, log_level)
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     if test:
@@ -150,6 +151,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
+            log_level=log_level,
         )
     except Exception as ex:
         logger.exception(ex)
@@ -197,6 +199,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
+            log_level=log_level,
             max_cloudcover_pct=max_cloudcover_pct,
         )
     except Exception as ex:
@@ -241,6 +244,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
+            log_level=log_level,
         )
     except Exception as ex:
         logger.exception(ex)

@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 import cropclassification.preprocess.timeseries_util as ts_util
@@ -27,8 +27,9 @@ def main():
     log_dir = (
         base_log_dir / f"{os.sep}calc_dias_weekly{datetime.now():%Y-%m-%d_%H-%M-%S}"
     )
+    log_level = conf.general.get("log_level")
     global logger
-    logger = log_helper.main_log_init(log_dir, __name__)
+    logger = log_helper.main_log_init(log_dir, __name__, log_level)
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # Get the config needed

@@ -19,6 +19,7 @@ from typing import List, Optional, Tuple
 
 from affine import Affine
 import geopandas as gpd
+import geofileops as gfo
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
 import rasterio
@@ -27,7 +28,6 @@ from shapely.geometry import polygon as sh_polygon
 import xml.etree.ElementTree as ET
 
 from cropclassification.helpers import pandas_helper as pdh
-from cropclassification.helpers import geofile
 
 # General init
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ def calc_stats_per_image(
     output_dir: Path,
     temp_dir: Path,
     log_dir: Path,
+    log_level: str,
     max_cloudcover_pct: float = -1,
     force: bool = False,
 ):
@@ -225,6 +226,7 @@ def calc_stats_per_image(
                         output_base_path,
                         temp_dir,
                         log_dir,
+                        log_level,
                         nb_parallel_max,
                     )
                     image_dict[image_path_str] = {
@@ -317,6 +319,7 @@ def calc_stats_per_image(
                                 bands,
                                 image["output_base_busy_path"],
                                 log_dir,
+                                log_level,
                                 start_time_batch,
                             )
                             calc_stats_batch_dict[features_batch["path"]] = {
@@ -607,6 +610,7 @@ def prepare_calc(
     output_path: Path,
     temp_dir: Path,
     log_dir: Path,
+    log_level: str,
     nb_parallel_max: int = 16,
 ) -> dict:
     """
@@ -625,7 +629,7 @@ def prepare_calc(
         log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_prepare_calc_{os.getpid()}.log"
     )
     fh = logging.FileHandler(filename=log_path)
-    fh.setLevel(logging.INFO)
+    fh.setLevel(log_level)
     fh.setFormatter(
         logging.Formatter("%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s")
     )
@@ -773,7 +777,8 @@ def load_features_file(
                 # Read (all) original features + remove unnecessary columns...
                 logger.info(f"Read original file {features_path}")
                 start_time = datetime.now()
-                features_gdf = geofile.read_file(features_path)
+                logging.getLogger("fiona.ogrext").setLevel(logging.INFO)
+                features_gdf = gfo.read_file(features_path)
                 logger.info(
                     f"Read ready, found {len(features_gdf.index)} features, "
                     f"crs: {features_gdf.crs}, took "
@@ -806,18 +811,18 @@ def load_features_file(
                     f"Write {len(features_gdf.index)} reprojected features to "
                     f"{features_prepr_path}"
                 )
-                geofile.to_file(features_gdf, features_prepr_path, index=False)
+                gfo.to_file(features_gdf, features_prepr_path, index=False)
                 logger.info("Reprojected features written")
 
             except Exception as ex:
                 # If an exception occurs...
                 message = f"Delete possibly incomplete file: {features_prepr_path}"
                 logger.exception(message)
-                os.remove(features_prepr_path)
+                gfo.remove(features_prepr_path)
                 raise Exception(message) from ex
             finally:
                 # Remove lock file as everything is ready for other processes to use it
-                os.remove(features_prepr_path_busy)
+                features_prepr_path_busy.unlink())
 
             # Now filter the parcels that are in bbox provided
             if bbox is not None:
@@ -830,14 +835,21 @@ def load_features_file(
     # just read the data
     if features_gdf is None:
 
-        # If a "busy file" still exists, the file isn't ready yet, but another process
-        # is working on it, so wait till it disappears
+        # If a "busy file" still exists, the file isn't ready yet, but another process is working on it, so wait till it disappears
+        wait_secs_max = 600
+        wait_start_time = datetime.now()
         while features_prepr_path_busy.exists():
             time.sleep(1)
+            wait_secs = (datetime.now() - wait_start_time).total_seconds()
+            if wait_secs > wait_secs_max:
+                raise Exception(
+                    f"Waited {wait_secs} for busy file "
+                    f"{features_prepr_path_busy} and it is still there!"
+                )
 
         logger.info(f"Read {features_prepr_path}")
         start_time = datetime.now()
-        features_gdf = geofile.read_file(features_prepr_path, bbox=bbox)
+        features_gdf = gfo.read_file(features_prepr_path, bbox=bbox)
         logger.info(
             f"Read ready, found {len(features_gdf.index)} features, crs: "
             f"{features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s"
@@ -883,6 +895,7 @@ def load_features_file(
         logger.info(f"Filter ready, found {len(features_gdf.index)}")
 
     # Ready, so return result...
+    logger.debug(f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}")
     return features_gdf
 
 
@@ -893,6 +906,7 @@ def calc_stats_image_gdf(
     bands: List[str],
     output_base_path: Path,
     log_dir: Path,
+    log_level: str,
     future_start_time=None,
 ) -> bool:
     """
@@ -915,7 +929,7 @@ def calc_stats_image_gdf(
         / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_calc_stats_image_gdf_{os.getpid()}.log"
     )
     fh = logging.FileHandler(filename=str(log_path))
-    fh.setLevel(logging.INFO)
+    fh.setLevel(log_level)
     fh.setFormatter(
         logging.Formatter("%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s")
     )
@@ -1639,17 +1653,21 @@ def projected_bounds_to_window(
     return window_to_read
 
 
-def create_file_atomic(filename: Path):
+def create_file_atomic(path: Path):
     """
     Create a lock file in an atomic way, so it is threadsafe.
 
     Returns True if the file was created by this thread, False if the file existed already.
     """
+    fd = None
     try:
-        os.open(filename, os.O_CREAT | os.O_EXCL)
+        fd = os.open(path,  os.O_CREAT | os.O_EXCL)
         return True
     except FileExistsError:
         return False
+    finally:
+        if fd is not None:
+            os.close(fd)
 
 
 def prepare_image(image_path: Path, temp_dir: Path) -> Path:
