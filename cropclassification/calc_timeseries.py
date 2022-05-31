@@ -182,6 +182,7 @@ def calc_timeseries_task(
                 output_dir=output_dir,
                 temp_dir=temp_dir,
                 log_dir=log_dir,
+                log_level=log_level,
                 max_cloudcover_pct=max_cloudcover_pct)
     except Exception as ex:
         logger.exception(ex)
@@ -217,7 +218,8 @@ def calc_timeseries_task(
                 bands=['VV', 'VH'],
                 output_dir=output_dir,
                 temp_dir=temp_dir,
-                log_dir=log_dir)
+                log_dir=log_dir,
+                log_level=log_level)
     except Exception as ex:
         logger.exception(ex)
 

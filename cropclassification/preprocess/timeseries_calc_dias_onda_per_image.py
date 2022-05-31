@@ -19,17 +19,15 @@ from typing import List, Optional, Tuple
 
 from affine import Affine
 import geopandas as gpd
+import geofileops as gfo
 import pandas as pd
 import psutil    # To catch CTRL-C explicitly and kill children
 import rasterio
-from rasterio import windows
 from rasterstats import zonal_stats
 from shapely.geometry import polygon as sh_polygon
 import xml.etree.ElementTree as ET
-import zipfile
 
 from cropclassification.helpers import pandas_helper as pdh
-from cropclassification.helpers import geofile
 
 # General init
 logger = logging.getLogger(__name__)
@@ -169,6 +167,7 @@ def calc_stats_per_image(
                                         output_base_filepath,
                                         temp_dir,
                                         log_dir,
+                                        log_level,
                                         nb_parallel_max)
                     image_dict[image_path_str] = {'features_filepath': features_filepath,
                                             'prepare_calc_future': future, 
@@ -306,7 +305,6 @@ def calc_stats_per_image(
                             shutil.rmtree(image_prepared_path, ignore_errors=True)
                         else:
                             os.remove(image_prepared_path)
-
                     # If the preprocessing created temp pickle files with features, clean them up
                     shutil.rmtree(image['temp_features_dir'], ignore_errors=True)
 
@@ -603,8 +601,8 @@ def load_features_file(
 
     # If the file doesn't exist yet in right projection, read original input file to reproject/write to new file with correct epsg
     features_gdf = None
-    if not (features_prepr_filepath_busy.exists() 
-            or features_prepr_filepath.exists()):
+    if (not features_prepr_filepath_busy.exists() 
+        and not features_prepr_filepath.exists()):
         
         # Create lock file in an atomic way, so we are sure we are the only process working on it. 
         # If function returns true, there isn't any other thread/process already working on it
@@ -614,7 +612,8 @@ def load_features_file(
                 # Read (all) original features + remove unnecessary columns...
                 logger.info(f"Read original file {features_filepath}")
                 start_time = datetime.now()
-                features_gdf = geofile.read_file(features_filepath)
+                logging.getLogger("fiona.ogrext").setLevel(logging.INFO)
+                features_gdf = gfo.read_file(features_filepath)
                 logger.info(f"Read ready, found {len(features_gdf.index)} features, crs: {features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s")
                 for column in features_gdf.columns:
                     if column not in columns_to_retain and column not in ['geometry', 'x_ref']:
@@ -633,7 +632,7 @@ def load_features_file(
 
                 # Cache the file for future use
                 logger.info(f"Write {len(features_gdf.index)} reprojected features to {features_prepr_filepath}")
-                geofile.to_file(features_gdf, features_prepr_filepath, index=False)
+                gfo.to_file(features_gdf, features_prepr_filepath, index=False)
                 logger.info(f"Reprojected features written")
 
                 """ 
@@ -647,11 +646,12 @@ def load_features_file(
                 # If an exception occurs...
                 message = f"Exception, so delete possibly not completed file: {features_prepr_filepath}"
                 logger.exception(message)
-                os.remove(features_prepr_filepath)
+                gfo.remove(features_prepr_filepath)
                 raise Exception(message) from ex
             finally:    
-                # Remove lock file as everything is ready for other processes to use it...
-                os.remove(features_prepr_filepath_busy)
+                # Remove lock file as everything is ready for other processes to use it
+                if features_prepr_filepath_busy.exists():
+                    features_prepr_filepath_busy.unlink()  
 
             # Now filter the parcels that are in bbox provided
             if bbox is not None:
@@ -673,12 +673,20 @@ def load_features_file(
     if features_gdf is None:
 
         # If a "busy file" still exists, the file isn't ready yet, but another process is working on it, so wait till it disappears
+        wait_secs_max = 600
+        wait_start_time = datetime.now()
         while features_prepr_filepath_busy.exists():
             time.sleep(1)
+            wait_secs = (datetime.now() - wait_start_time).total_seconds()
+            if wait_secs > wait_secs_max:
+                raise Exception(
+                    f"Waited {wait_secs} for busy file "
+                    f"{features_prepr_filepath_busy} and it is still there!"
+                )
 
         logger.info(f"Read {features_prepr_filepath}")
         start_time = datetime.now()
-        features_gdf = geofile.read_file(features_prepr_filepath, bbox=bbox)
+        features_gdf = gfo.read_file(features_prepr_filepath, bbox=bbox)
         logger.info(f"Read ready, found {len(features_gdf.index)} features, crs: {features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s")
 
         # Order features on x_ref to (probably) have more clustering of features in further action... 
