@@ -671,9 +671,7 @@ def prepare_calc(
     nb_todo = len(features_gdf.index)
     ret_val["nb_features_to_calc_total"] = nb_todo
     if nb_todo == 0:
-        logger.info(
-            f"No features found in the bounding box of the image: {image_path}"
-        )
+        logger.info(f"No features found in the bounding box of the image: {image_path}")
         return ret_val
 
     # Calculate the number per batch, but keep the number between 100 and 50000...
@@ -746,6 +744,7 @@ def load_features_file(
     # Load parcel file and preprocess it: remove excess columns + reproject if needed.
     # By convention, the features filename should end on the projection... so extract
     # epsg from filename
+    start_time = datetime.now()
     features_epsg = None
     if features_path.stem.find("_") != -1:
         splitted = features_path.stem.split("_")
@@ -822,7 +821,7 @@ def load_features_file(
                 raise Exception(message) from ex
             finally:
                 # Remove lock file as everything is ready for other processes to use it
-                features_prepr_path_busy.unlink())
+                features_prepr_path_busy.unlink()
 
             # Now filter the parcels that are in bbox provided
             if bbox is not None:
@@ -835,7 +834,8 @@ def load_features_file(
     # just read the data
     if features_gdf is None:
 
-        # If a "busy file" still exists, the file isn't ready yet, but another process is working on it, so wait till it disappears
+        # If a "busy file" still exists, the file isn't ready yet, but another process
+        # is working on it, so wait till it disappears
         wait_secs_max = 600
         wait_start_time = datetime.now()
         while features_prepr_path_busy.exists():
@@ -895,7 +895,9 @@ def load_features_file(
         logger.info(f"Filter ready, found {len(features_gdf.index)}")
 
     # Ready, so return result...
-    logger.debug(f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}")
+    logger.debug(
+        f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}"
+    )
     return features_gdf
 
 
@@ -1148,6 +1150,7 @@ def get_image_data(
         pixel_buffer: number to pixels to take as buffer around the bounds provided in
             pixels
     """
+    logger.info("get_image_data start")
     # Get info about the image
     image_info = get_image_info(image_path)
 
@@ -1182,6 +1185,8 @@ def get_image_data(
         message = f"Format currently not supported: {image_path}"
         logger.error(message)
         raise NotImplementedError(message)
+
+    logger.info("get_image_data ready")
 
     return image_data
 
@@ -1443,7 +1448,10 @@ def get_image_info(image_path: Path) -> dict:
                     f"Exception extracting info from {manifest_xml_path}"
                 ) from ex
         else:
-            message = f"Error: found {nb_safefiles} .safe files doing glob in {image_path} with {manifest_xml_searchstring}"
+            message = (
+                f"Error: found {nb_safefiles} .safe files doing glob in {image_path} "
+                f"with {manifest_xml_searchstring}"
+            )
             logger.error(message)
             raise Exception(message)
 
@@ -1565,7 +1573,7 @@ def get_image_info(image_path: Path) -> dict:
                     image_info["bands"][band]["crs"] = src.crs.to_string()
                     image_info["bands"][band]["epsg"] = src.crs.to_epsg()
 
-            # Store the crs also on image level, and check if all bands have the same crs
+            # Store the crs also on image level + check if all bands have the same crs
             if i == 0:
                 image_info["image_bounds"] = image_info["bands"][band]["bounds"]
                 # image_info['image_crs'] = image_info['bands'][band]['crs']
@@ -1597,14 +1605,19 @@ def projected_bounds_to_window(
     pixel_buffer: int = 0,
 ):
     """
-    Returns a rasterio.windows.Window to be used in rasterio to read the part of the image specified.
+    Returns a rasterio.windows.Window to be used in rasterio to read the part of the
+    image specified.
 
     Args
         projected_bounds: bounds to created the window from, in projected coordinates
-        image_transform: Affine transform of the image you want to create the pixel window for
-        image_pixel_width: total width of the image you want to create the pixel window for, in pixels
-        image_pixel_height: total height of the image you want to create the pixel window for, in pixels
-        pixel_buffer: number to pixels to take as buffer around the bounds provided in pixels
+        image_transform: Affine transform of the image you want to create the pixel
+            window for
+        image_pixel_width: total width of the image you want to create the pixel window
+            for, in pixels
+        image_pixel_height: total height of the image you want to create the pixel
+            window for, in pixels
+        pixel_buffer: number to pixels to take as buffer around the bounds provided in
+            pixels
     """
     # Take bounds of the features + convert to image pixels
     xmin, ymin, xmax, ymax = projected_bounds
@@ -1615,7 +1628,8 @@ def projected_bounds_to_window(
     # Round so it only increases window size
     window_to_read = window_to_read_raw.round_offsets("floor").round_lengths("ceil")
 
-    # Now some general math on window properties, but as they are readonly properties, work on copy
+    # Now some general math on window properties, but as they are readonly properties,
+    # work on copy
     col_off, row_off, width, height = window_to_read.flatten()
     # Add buffer of 1 pixel extra around
     col_off -= pixel_buffer
@@ -1645,7 +1659,7 @@ def projected_bounds_to_window(
     """
     bounds_to_read = rasterio.windows.bounds(window_to_read, image_transform)
     logger.debug(f"projected_bounds: {projected_bounds}, "
-                + f"window_to_read_raw: {window_to_read_raw}, window_to_read: {window_to_read}, " 
+                + f"window_to_read_raw: {window_to_read_raw}, window_to_read: {window_to_read}, "
                 + f"image_pixel_width: {image_pixel_width}, image_pixel_height: {image_pixel_height}, "
                 + f"file transform: {image_transform}, bounds_to_read: {bounds_to_read}")
     """
@@ -1657,11 +1671,12 @@ def create_file_atomic(path: Path):
     """
     Create a lock file in an atomic way, so it is threadsafe.
 
-    Returns True if the file was created by this thread, False if the file existed already.
+    Returns True if the file was created by this thread, False if the file existed
+    already.
     """
     fd = None
     try:
-        fd = os.open(path,  os.O_CREAT | os.O_EXCL)
+        fd = os.open(path, os.O_CREAT | os.O_EXCL)
         return True
     except FileExistsError:
         return False
@@ -1679,7 +1694,7 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
     Returns the path to the prepared file/directory.
     """
 
-    # If the input path is not a zip file, don't make local copy and just return image path
+    # If the input path is not a zip file, don't make local copy + just return path
     if image_path.suffix.lower() != ".zip":
         return image_path
     else:
@@ -1690,15 +1705,17 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
         image_unzipped_path = temp_dir / image_basename
 
         image_unzipped_path_busy = Path(f"{image_unzipped_path}_busy")
-        # If the input is a zip file, unzip file to temp local location if it doesn't exist yet
-        # If the file doesn't exist yet in right projection, read original input file to reproject/write to new file with correct epsg
+        # If the input is a zip file, unzip file to temp local location if it doesn't
+        # exist yet. If the file doesn't exist yet in right projection, read original
+        # input file to reproject/write to new file with correct epsg
         if not (image_unzipped_path_busy.exists() or image_unzipped_path.exists()):
 
             # Create temp dir if it doesn't exist yet
             os.makedirs(temp_dir, exist_ok=True)
 
-            # Create lock file in an atomic way, so we are sure we are the only process working on it.
-            # If function returns true, there isn't any other thread/process already working on it
+            # Create lock file in an atomic way, so we are sure we are the only process
+            # working on it. If function returns true, there isn't any other
+            # thread/process already working on it
             if create_file_atomic(image_unzipped_path_busy):
 
                 try:
@@ -1716,7 +1733,8 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
                     # Remove lock file when we are ready
                     os.remove(image_unzipped_path_busy)
 
-        # If a "busy file" still exists, the file isn't ready yet, but another process is working on it, so wait till it disappears
+        # If a "busy file" still exists, the file isn't ready yet, but another process
+        # is working on it, so wait till it disappears
         while image_unzipped_path_busy.exists():
             time.sleep(1)
 
