@@ -50,7 +50,8 @@ def calc_marker_task(
         os.makedirs(run_dir)
 
     # Main initialisation of the logging
-    logger = log_helper.main_log_init(run_dir, __name__)      
+    log_level = conf.general.get("log_level")
+    logger = log_helper.main_log_init(run_dir, __name__, log_level)      
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
