@@ -118,7 +118,7 @@ conda config --env --set channel_priority strict
 # python: 3.9 is the only version that is tested on
 # --- General dependencies ---
 # rasterio: tested till version 1.2
-conda install -y python=3.9 fiona geofileops geopandas pyarrow psutil rasterio "rasterstats<0.16" scikit-learn
+conda install -y python=3.9 fiona geofileops geopandas psutil rasterio "rasterstats<0.16" scikit-learn
 
 # For the following packages, no conda package is available or -for tensorflow- no recent version.
 if [[ ! $fordev =~ ^[Yy]$ ]]

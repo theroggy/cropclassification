@@ -9,9 +9,10 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 import logging
 from pathlib import Path
 
+import geofileops as gfo
+
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
-import cropclassification.helpers.geofile as geofile_util
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -67,8 +68,8 @@ def prepare_input(
 
     # Read input file
     logger.info(f"Read parceldata from {input_parcel_path}")
-    if geofile_util.is_geofile(input_parcel_path):
-        parceldata_df = geofile_util.read_file(input_parcel_path)
+    if gfo.is_geofile(input_parcel_path):
+        parceldata_df = gfo.read_file(input_parcel_path)
     else:
         parceldata_df = pdh.read_file(input_parcel_path)
     logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")

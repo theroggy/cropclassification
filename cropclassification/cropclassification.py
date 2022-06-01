@@ -5,6 +5,9 @@ Process the tasks in the tasks directory.
 
 import argparse
 import configparser
+
+# Import geofilops here already, if tensorflow is loaded first leads to dll load errors
+import geofileops as gfo
 from pathlib import Path
 import sys
 
