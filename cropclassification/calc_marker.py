@@ -9,6 +9,9 @@ from pathlib import Path
 import shutil
 from typing import List
 
+# Import geofilops here already, if tensorflow is loaded first leads to dll load errors
+import geofileops as gfo
+
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
 from cropclassification.helpers import log_helper

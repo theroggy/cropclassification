@@ -10,6 +10,9 @@ from pathlib import Path
 import shutil
 from typing import List
 
+# Import geofilops here already, if tensorflow is loaded first leads to dll load errors
+import geofileops as gfo
+
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
