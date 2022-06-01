@@ -10,12 +10,12 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
+import geofileops as gfo
 import numpy as np
 import pandas as pd
 
 # Import local stuff
 import cropclassification.helpers.config_helper as conf
-import cropclassification.helpers.geofile as geofile_util
 import cropclassification.helpers.pandas_helper as pdh
 
 # -------------------------------------------------------------
@@ -51,7 +51,7 @@ def prepare_input(
         raise Exception(f"Input file doesn't exist: {input_parcel_path}")
 
     # Check if the input file has a projection specified
-    if geofile_util.get_crs(input_parcel_path) is None:
+    if gfo.get_crs(input_parcel_path) is None:
         message = (
             "The parcel input file doesn't have a projection/crs specified, so STOP: "
             f"{input_parcel_path}"
@@ -80,7 +80,7 @@ def prepare_input(
         os.mkdir(temp_output_dir)
 
     # Read the parcel data and write nogeo version
-    parceldata_gdf = geofile_util.read_file(input_parcel_path)
+    parceldata_gdf = gfo.read_file(input_parcel_path)
     logger.info(f"Parceldata read, shape: {parceldata_gdf.shape}")
 
     # Check if the id column is present and set as index
@@ -148,7 +148,7 @@ def prepare_input(
         temp_nopoly_path = (
             temp_output_dir / f"{output_imagedata_parcel_input_path.stem}_nopoly.sqlite"
         )
-        geofile_util.to_file(parceldata_buf_nopoly_gdf, temp_nopoly_path)
+        gfo.to_file(parceldata_buf_nopoly_gdf, temp_nopoly_path)
 
     # Export parcels that are (multi)polygons after buffering
     parceldata_buf_poly_gdf = parceldata_buf_notempty_gdf.loc[
@@ -163,7 +163,7 @@ def prepare_input(
         "Export parcels that are (multi)polygons after buffer to"
         f"{output_imagedata_parcel_input_path}"
     )
-    geofile_util.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_path)
+    gfo.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_path)
     logger.info(parceldata_buf_poly_gdf)
 
     message = (
