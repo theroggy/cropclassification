@@ -5,7 +5,6 @@ channels:
 dependencies:
   - affine=2.3.1=pyhd8ed1ab_0
   - attrs=21.4.0=pyhd8ed1ab_0
-  - blosc=1.21.1=h74325e0_3
   - boost-cpp=1.74.0=h9f4b32c_8
   - branca=0.5.0=pyhd8ed1ab_0
   - brotli=1.0.9=h8ffe710_7
@@ -13,48 +12,42 @@ dependencies:
   - brotlipy=0.7.0=py39hb82d6ee_1004
   - bzip2=1.0.8=h8ffe710_4
   - ca-certificates=2022.5.18.1=h5b45459_0
-  - cairo=1.16.0=h15b3021_1010
+  - cairo=1.16.0=hb19e0ff_1008
   - certifi=2022.5.18.1=py39hcbf5309_0
   - cffi=1.15.0=py39h0878f49_0
-  - cfitsio=4.1.0=h5a969a9_0
+  - cfitsio=3.470=h0af3d06_7
   - charset-normalizer=2.0.12=pyhd8ed1ab_0
-  - click=8.1.3=py39hcbf5309_0
+  - click=7.1.2=pyh9f0ad1d_0
   - click-plugins=1.1.1=py_0
   - cligj=0.7.2=pyhd8ed1ab_1
   - cloudpickle=2.1.0=pyhd8ed1ab_0
-  - colorama=0.4.4=pyh9f0ad1d_0
   - cryptography=37.0.2=py39h7bc7c5c_0
   - curl=7.83.1=h789b8ee_0
   - cycler=0.11.0=pyhd8ed1ab_0
   - expat=2.4.8=h39d44d4_0
-  - fiona=1.8.21=py39hd99abff_0
+  - fiona=1.8.20=py39hea8b339_1
   - folium=0.12.1.post1=pyhd8ed1ab_1
-  - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
-  - font-ttf-inconsolata=3.000=h77eed37_0
-  - font-ttf-source-code-pro=2.038=h77eed37_0
-  - font-ttf-ubuntu=0.83=hab24e00_0
   - fontconfig=2.14.0=hce3cb01_0
-  - fonts-conda-ecosystem=1=0
-  - fonts-conda-forge=1=0
   - fonttools=4.33.3=py39hb82d6ee_0
   - freetype=2.10.4=h546665d_1
   - freexl=1.0.6=ha8e266a_0
-  - gdal=3.4.3=py39h3f5efd6_0
+  - gdal=3.3.1=py39h6795fcd_2
   - geofileops=0.4.0=pyhd8ed1ab_0
   - geopandas=0.10.2=pyhd8ed1ab_1
   - geopandas-base=0.10.2=pyha770c72_1
-  - geos=3.10.2=h39d44d4_0
-  - geotiff=1.7.1=h38b14a8_1
+  - geos=3.9.1=h39d44d4_2
+  - geotiff=1.6.0=ha8a8a2d_6
   - gettext=0.19.8.1=ha2e2712_1008
+  - h5py=2.10.0=nompi_py39hf27771d_106
   - hdf4=4.2.15=h0e5069d_3
-  - hdf5=1.12.1=nompi_h2a0e4a3_104
-  - icu=69.1=h0e60522_0
+  - hdf5=1.10.6=nompi_h5268f04_1114
+  - icu=68.2=h0e60522_0
   - idna=3.3=pyhd8ed1ab_0
   - intel-openmp=2022.1.0=h57928b3_3787
   - jinja2=3.1.2=pyhd8ed1ab_0
   - joblib=1.1.0=pyhd8ed1ab_0
   - jpeg=9e=h8ffe710_1
-  - kealib=1.4.14=h8995ca9_3
+  - kealib=1.4.14=h96bfa42_2
   - kiwisolver=1.4.2=py39h2e07f2f_1
   - krb5=1.19.3=h1176d77_0
   - lcms2=2.12=h2a16943_0
@@ -67,17 +60,17 @@ dependencies:
   - libcurl=7.83.1=h789b8ee_0
   - libdeflate=1.10=h8ffe710_0
   - libffi=3.4.2=h8ffe710_5
-  - libgdal=3.4.3=hb47f0b7_0
+  - libgdal=3.3.1=h7e75cf7_2
   - libglib=2.70.2=h3be07f2_4
   - libiconv=1.16=he774522_0
   - libkml=1.3.0=h9859afa_1014
   - liblapack=3.9.0=14_win64_mkl
-  - libnetcdf=4.8.1=nompi_h1cc8e9d_102
+  - libnetcdf=4.8.1=nompi_hf689e7d_100
   - libpng=1.6.37=h1d00b33_2
-  - libpq=14.3=hfcc5ef8_0
-  - librttopo=1.1.0=hb1df466_9
+  - libpq=13.5=hfcc5ef8_1
+  - librttopo=1.1.0=hb340de5_6
   - libspatialindex=1.9.3=h39d44d4_4
-  - libspatialite=5.0.1=h36c16d9_15
+  - libspatialite=5.0.1=h762a7f4_6
   - libssh2=1.10.0=h680486a_2
   - libtiff=4.3.0=hc4061b1_4
   - libwebp=1.2.2=h57928b3_0
@@ -109,38 +102,38 @@ dependencies:
   - pillow=9.1.1=py39ha53f419_0
   - pip=22.1.2=pyhd8ed1ab_0
   - pixman=0.40.0=h8ffe710_0
-  - poppler=22.04.0=h24fffdf_0
+  - poppler=21.03.0=h9ff6ed8_0
   - poppler-data=0.4.11=hd8ed1ab_0
-  - postgresql=14.3=h1c22c4f_0
-  - proj=9.0.0=h1cfcee9_1
+  - postgresql=13.5=h1c22c4f_1
+  - proj=8.0.1=h1cfcee9_0
   - psutil=5.9.1=py39hb82d6ee_0
   - pthread-stubs=0.4=hcd874cb_1001
   - pycparser=2.21=pyhd8ed1ab_0
-  - pygeos=0.12.0=py39hf063a39_2
+  - pygeos=0.10.2=py39haadaec5_0
   - pyopenssl=22.0.0=pyhd8ed1ab_0
   - pyparsing=3.0.9=pyhd8ed1ab_0
-  - pyproj=3.3.1=py39h23585d7_0
+  - pyproj=3.3.1=py39ha996c60_0
+  - pyreadline=2.1=py39hcbf5309_1005
   - pysocks=1.7.1=py39hcbf5309_5
   - python=3.9.13=h9a09f29_0_cpython
   - python-dateutil=2.8.2=pyhd8ed1ab_0
   - python_abi=3.9=2_cp39
   - pytz=2022.1=pyhd8ed1ab_0
-  - rasterio=1.2.10=py39h0f7fabe_5
+  - rasterio=1.2.8=py39h85efae1_0
   - rasterstats=0.15.0=pyhd8ed1ab_0
   - requests=2.27.1=pyhd8ed1ab_0
   - rtree=1.0.0=py39h09fdee3_1
   - scikit-learn=1.1.1=py39he931e04_0
   - scipy=1.8.1=py39hc0c34ad_0
   - setuptools=62.3.2=py39hcbf5309_0
-  - shapely=1.8.2=py39hf063a39_1
+  - shapely=1.8.0=py39haadaec5_0
   - simplejson=3.17.6=py39hb82d6ee_1
   - six=1.16.0=pyh6c4a22f_0
-  - snappy=1.1.9=h82413e6_1
   - snuggs=1.4.7=py_0
   - sqlite=3.38.5=h8ffe710_0
   - tbb=2021.5.0=h2d74725_1
   - threadpoolctl=3.1.0=pyh8a188c0_0
-  - tiledb=2.8.3=h5689973_1
+  - tiledb=2.3.4=h78dabda_0
   - tk=8.6.12=h8ffe710_0
   - tzdata=2022a=h191b570_0
   - ucrt=10.0.20348.0=h57928b3_0
@@ -168,7 +161,6 @@ dependencies:
     - google-auth-oauthlib==0.4.6
     - google-pasta==0.2.0
     - grpcio==1.46.3
-    - h5py==3.7.0
     - importlib-metadata==4.11.4
     - keras==2.9.0
     - keras-preprocessing==1.1.2
