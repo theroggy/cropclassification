@@ -16,19 +16,21 @@ Once you have anaconda installed, you can open an anaconda terminal window and f
 
       1. Create and activate a new conda environment
       ```
-      conda create --name cropclassification python=3.6
+      conda create --name cropclassification
       conda activate cropclassification
+      conda config --env --add channels conda-forge
+      conda config --env --set channel_priority strict
       ```
       2. Install the dependencies for the crop classification scripts:
       ```
-      conda install scikit-learn keras tensorflow rasterio rasterstats geopandas pyarrow psutil
+      conda install python=3.9 geopandas geofileops pyarrow psutil rasterio "rasterstats<0.16.0" scikit-learn
       ```
-      3. If it was the first time you installed anaconda/geopandas, you might have to restat your computer to proceed
+      3. If it was the first time you installed anaconda/geopandas, you might have to restart your computer to proceed
       4. Start the anaconda terminal window again and activate the environment
       ```
       conda activate cropclassification
       ```
-      5. Now install cropclassification with pip
+      5. Now install cropclassification and dependencies that need pip with pip
       ```
       pip install cropclassification
       ```

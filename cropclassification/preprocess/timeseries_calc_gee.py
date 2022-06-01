@@ -54,6 +54,7 @@ from pathlib import Path
 import time
 from typing import List
 
+import geofileops as gfo
 import numpy as np
 import pandas as pd
 
@@ -70,7 +71,6 @@ import googleapiclient
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.preprocess import timeseries_util as ts_util
 from cropclassification.helpers import config_helper as conf
-from cropclassification.helpers import geofile
 from cropclassification.helpers import pandas_helper as pdh
 
 # -------------------------------------------------------------
@@ -114,14 +114,14 @@ def calc_timeseries_data(
 
     # If the WGS84 version doesn't exist yet, create it
     if not os.path.exists(input_parcel_4326_path):
-        input_parcel_gdf = geofile.read_file(input_parcel_path)
+        input_parcel_gdf = gfo.read_file(input_parcel_path)
         target_epsg = 4326
         logger.info(
             f"Reproject features from {input_parcel_gdf.crs} to epsg:{target_epsg}"
         )
         input_parcel_4326_gdf = input_parcel_gdf.to_crs(epsg=target_epsg)
         logger.info(f"Write reprojected features to {input_parcel_4326_path}")
-        geofile.to_file(input_parcel_4326_gdf, input_parcel_4326_path)
+        gfo.to_file(input_parcel_4326_gdf, input_parcel_4326_path)
 
     # Start calculation of the timeseries on gee
 
