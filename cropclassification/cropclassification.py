@@ -5,10 +5,22 @@ Process the tasks in the tasks directory.
 
 import argparse
 import configparser
+
+# Import geofilops here already, if tensorflow is loaded first leads to dll load errors
+import geofileops as gfo
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+
+def _get_version():
+    version_path = Path(__file__).resolve().parent / "version.txt"
+    with open(version_path, mode="r") as file:
+        return file.readline()
+
+
+__version__ = _get_version()
 
 
 def main():
