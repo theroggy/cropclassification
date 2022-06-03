@@ -8,179 +8,217 @@ import logging
 import gc
 import os, shutil
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+import geofileops as gfo
 import numpy as np
 import pandas as pd
 import geopandas as gpd
 
 # Import local stuff
 import cropclassification.helpers.config_helper as conf
-import cropclassification.helpers.geofile as geofile_util
 import cropclassification.helpers.pandas_helper as pdh
 
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # First define/init some general variables/constants
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-IMAGETYPE_S1_GRD = 'S1_GRD'
-IMAGETYPE_S1_COHERENCE = 'S1_COH'
-IMAGETYPE_S2_L2A = 'S2_L2A'
+IMAGETYPE_S1_GRD = "S1_GRD"
+IMAGETYPE_S1_COHERENCE = "S1_COH"
+IMAGETYPE_S2_L2A = "S2_L2A"
 
-def prepare_input(input_parcel_filepath: Path,
-                  output_imagedata_parcel_input_filepath: Path,
-                  output_parcel_nogeo_filepath: Path = None,
-                  force: bool = False):
+
+def prepare_input(
+    input_parcel_path: Path,
+    output_imagedata_parcel_input_path: Path,
+    output_parcel_nogeo_path: Optional[Path] = None,
+    force: bool = False,
+):
     """
     This function creates a file that is preprocessed to be a good input file for
     timeseries extraction of sentinel images.
 
     Args
-        input_parcel_filepath (Path): input file
-        output_imagedata_parcel_input_filepath (Path): prepared output file
-        output_parcel_nogeo_filepath (Path): output file with a copy of the non-geo data
+        input_parcel_path (Path): input file
+        output_imagedata_parcel_input_path (Path): prepared output file
+        output_parcel_nogeo_path (Path): output file with a copy of the non-geo data
         force: force creation, even if output file(s) exist already
 
     """
-    ##### Check if parameters are OK and init some extra params #####
-    if not input_parcel_filepath.exists():
-        raise Exception(f"Input file doesn't exist: {input_parcel_filepath}")
-    
+    # Check if parameters are OK and init some extra params
+    if not input_parcel_path.exists():
+        raise Exception(f"Input file doesn't exist: {input_parcel_path}")
+
     # Check if the input file has a projection specified
-    if geofile_util.get_crs(input_parcel_filepath) is None:
-        message = f"The parcel input file doesn't have a projection/crs specified, so STOP: {input_parcel_filepath}"
+    if gfo.get_crs(input_parcel_path) is None:
+        message = (
+            "The parcel input file doesn't have a projection/crs specified, so STOP: "
+            f"{input_parcel_path}"
+        )
         logger.critical(message)
         raise Exception(message)
 
     # If force == False Check and the output file exists already, stop.
-    if(force is False 
-       and output_imagedata_parcel_input_filepath.exists()
-       and (output_parcel_nogeo_filepath is None or output_parcel_nogeo_filepath.exists())):
-        logger.warning("prepare_input: force == False and output files exist, so stop: " 
-                       + f"{output_imagedata_parcel_input_filepath}, "
-                       + f"{output_parcel_nogeo_filepath}")
+    if (
+        force is False
+        and output_imagedata_parcel_input_path.exists()
+        and (output_parcel_nogeo_path is None or output_parcel_nogeo_path.exists())
+    ):
+        logger.warning(
+            "prepare_input: force == False and output files exist, so stop: "
+            + f"{output_imagedata_parcel_input_path}, "
+            + f"{output_parcel_nogeo_path}"
+        )
         return
 
-    logger.info(f"Process input file {input_parcel_filepath}")
+    logger.info(f"Process input file {input_parcel_path}")
 
     # Create temp dir to store temporary data for tracebility
-    temp_output_dir = output_imagedata_parcel_input_filepath.parent / 'temp'
+    temp_output_dir = output_imagedata_parcel_input_path.parent / "temp"
     if not temp_output_dir.exists():
         os.mkdir(temp_output_dir)
 
-    ##### Read the parcel data and write nogeo version #####
-    parceldata_gdf = geofile_util.read_file(input_parcel_filepath)
-    logger.info(f'Parceldata read, shape: {parceldata_gdf.shape}')
+    # Read the parcel data and write nogeo version
+    parceldata_gdf = gfo.read_file(input_parcel_path)
+    logger.info(f"Parceldata read, shape: {parceldata_gdf.shape}")
 
     # Check if the id column is present and set as index
-    if conf.columns['id'] in parceldata_gdf.columns:
-        parceldata_gdf.set_index(conf.columns['id'], inplace=True)
+    if conf.columns["id"] in parceldata_gdf.columns:
+        parceldata_gdf.set_index(conf.columns["id"], inplace=True)
     else:
-        message = f"STOP: Column {conf.columns['id']} not found in input parcel file: {input_parcel_filepath}. Make sure the column is present or change the column name in global_constants.py"
+        message = (
+            f"STOP: Column {conf.columns['id']} not found in input parcel file: "
+            f"{input_parcel_path}. Make sure the column is present or change the "
+            "column name in global_constants.py"
+        )
         logger.critical(message)
         raise Exception(message)
-        
-    if(output_parcel_nogeo_filepath is not None
-       and (force is True or not output_parcel_nogeo_filepath.exists())):
-        logger.info(f"Save non-geo data to {output_parcel_nogeo_filepath}")
-        parceldata_nogeo_df = parceldata_gdf.drop(['geometry'], axis = 1)
-        pdh.to_file(parceldata_nogeo_df, output_parcel_nogeo_filepath)
 
-    ##### Do the necessary conversions and write buffered file #####
-    
+    if output_parcel_nogeo_path is not None and (
+        force is True or not output_parcel_nogeo_path.exists()
+    ):
+        logger.info(f"Save non-geo data to {output_parcel_nogeo_path}")
+        parceldata_nogeo_df = parceldata_gdf.drop(["geometry"], axis=1)
+        pdh.to_file(parceldata_nogeo_df, output_parcel_nogeo_path)
+
+    # Do the necessary conversions and write buffered file
+
     # If force == False Check and the output file exists already, stop.
-    if(force is False 
-       and output_imagedata_parcel_input_filepath.exists()):
-        logger.warning("prepare_input: force == False and output files exist, so stop: " 
-                       + f"{output_imagedata_parcel_input_filepath}")
+    if force is False and output_imagedata_parcel_input_path.exists():
+        logger.warning(
+            "prepare_input: force == False and output files exist, so stop: "
+            f"{output_imagedata_parcel_input_path}"
+        )
         return
 
-    logger.info('Apply buffer on parcel')
+    logger.info("Apply buffer on parcel")
     parceldata_buf_gdf = parceldata_gdf.copy()
 
     # resolution = number of segments per circle
-    buffer_size = -conf.marker.getint('buffer')
-    parceldata_buf_gdf[conf.columns['geom']] = (parceldata_buf_gdf[conf.columns['geom']]
-                                                .buffer(buffer_size, resolution=5))
+    buffer_size = -conf.marker.getint("buffer")
+    parceldata_buf_gdf[conf.columns["geom"]] = parceldata_buf_gdf[
+        conf.columns["geom"]
+    ].buffer(buffer_size, resolution=5)
 
     # Export buffered geometries that result in empty geometries
-    logger.info('Export parcels that are empty after buffer')
+    logger.info("Export parcels that are empty after buffer")
     parceldata_buf_empty_df = parceldata_buf_gdf.loc[
-            parceldata_buf_gdf[conf.columns['geom']].is_empty == True]
+        parceldata_buf_gdf[conf.columns["geom"]].is_empty == True
+    ]
     if len(parceldata_buf_empty_df.index) > 0:
-        parceldata_buf_empty_df.drop(conf.columns['geom'], axis=1, inplace=True)
-        temp_empty_filepath = temp_output_dir / f"{output_imagedata_parcel_input_filepath.stem}_empty.sqlite"
-        pdh.to_file(parceldata_buf_empty_df, temp_empty_filepath)
+        parceldata_buf_empty_df.drop(conf.columns["geom"], axis=1, inplace=True)
+        temp_empty_path = (
+            temp_output_dir / f"{output_imagedata_parcel_input_path.stem}_empty.sqlite"
+        )
+        pdh.to_file(parceldata_buf_empty_df, temp_empty_path)
 
     # Export parcels that don't result in a (multi)polygon
     parceldata_buf_notempty_gdf = parceldata_buf_gdf.loc[
-            parceldata_buf_gdf[conf.columns['geom']].is_empty == False]
+        parceldata_buf_gdf[conf.columns["geom"]].is_empty == False
+    ]
     parceldata_buf_nopoly_gdf = parceldata_buf_notempty_gdf.loc[
-            ~parceldata_buf_notempty_gdf[conf.columns['geom']].geom_type.isin(['Polygon', 'MultiPolygon'])]
+        ~parceldata_buf_notempty_gdf[conf.columns["geom"]].geom_type.isin(
+            ["Polygon", "MultiPolygon"]
+        )
+    ]
     if len(parceldata_buf_nopoly_gdf.index) > 0:
-        logger.info('Export parcels that are no (multi)polygons after buffer')
-        parceldata_buf_nopoly_gdf.drop(conf.columns['geom'], axis=1, inplace=True)      
-        temp_nopoly_filepath = temp_output_dir / f"{output_imagedata_parcel_input_filepath.stem}_nopoly.sqlite"
-        geofile_util.to_file(parceldata_buf_nopoly_gdf, temp_nopoly_filepath)
+        logger.info("Export parcels that are no (multi)polygons after buffer")
+        parceldata_buf_nopoly_gdf.drop(conf.columns["geom"], axis=1, inplace=True)
+        temp_nopoly_path = (
+            temp_output_dir / f"{output_imagedata_parcel_input_path.stem}_nopoly.sqlite"
+        )
+        gfo.to_file(parceldata_buf_nopoly_gdf, temp_nopoly_path)
 
     # Export parcels that are (multi)polygons after buffering
     parceldata_buf_poly_gdf = parceldata_buf_notempty_gdf.loc[
-            parceldata_buf_notempty_gdf[conf.columns['geom']].geom_type.isin(['Polygon', 'MultiPolygon'])]
+        parceldata_buf_notempty_gdf[conf.columns["geom"]].geom_type.isin(
+            ["Polygon", "MultiPolygon"]
+        )
+    ]
     for column in parceldata_buf_poly_gdf.columns:
-        if column not in [conf.columns['id'], conf.columns['geom']]:
+        if column not in [conf.columns["id"], conf.columns["geom"]]:
             parceldata_buf_poly_gdf.drop(column, axis=1, inplace=True)
-    logger.info(f"Export parcels that are (multi)polygons after buffer to {output_imagedata_parcel_input_filepath}")
-    geofile_util.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_filepath)
+    logger.info(
+        "Export parcels that are (multi)polygons after buffer to"
+        f"{output_imagedata_parcel_input_path}"
+    )
+    gfo.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_path)
     logger.info(parceldata_buf_poly_gdf)
 
-    message = ("The buffered file just has been prepared, so probably you now you probably need " 
-    + "to sync it to the DIAS and start the timeseries data extraction before proceding!")
+    message = (
+        "The buffered file just has been prepared, so probably you now you probably "
+        "need to sync it to the DIAS and start the timeseries data extraction before "
+        "proceding!"
+    )
     logger.warning(message)
     raise Exception(message)
 
+
 def calculate_periodic_data(
-            input_parcel_filepath: Path,
-            input_base_dir: Path,
-            start_date_str: str,   
-            end_date_str: str,    
-            sensordata_to_get: List[str],       
-            dest_data_dir: Path,
-            force: bool = False):
+    input_parcel_path: Path,
+    input_base_dir: Path,
+    start_date_str: str,
+    end_date_str: str,
+    sensordata_to_get: List[str],
+    dest_data_dir: Path,
+    force: bool = False,
+):
     """
-    This function creates a file that is a weekly summarize of timeseries images from DIAS.
+    This function creates a file that is a weekly summarize of timeseries images from
+    DIAS.
 
     TODO: add possibility to choose which values to extract (mean, min, max,...)?
-        
+
     Args:
-        input_parcel_filepath (Path): [description]
+        input_parcel_path (Path): [description]
         input_base_dir (Path): [description]
-        start_date_str (str): Start date in format %Y-%m-%d. Needs to be aligned already on the 
-                periods wanted + data on this date is included.
-        end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on the 
-                periods wanted + data on this date is excluded.
-        sensordata_to_get ([]): 
+        start_date_str (str): Start date in format %Y-%m-%d. Needs to be aligned
+            already on the periods wanted + data on this date is included.
+        end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on
+            the periods wanted + data on this date is excluded.
+        sensordata_to_get ([]):
         dest_data_dir (Path): [description]
         force (bool, optional): [description]. Defaults to False.
     """
-    logger.info('calculate_periodic_data')
+    logger.info("calculate_periodic_data")
 
     # Init
-    input_dir = input_base_dir / input_parcel_filepath.stem
+    input_dir = input_base_dir / input_parcel_path.stem
 
     input_ext = conf.general['data_ext']
     output_ext = conf.general['data_ext']
 
     id_column = conf.columns['id']
-    gdf_input_parcel = geofile_util.read_file(input_parcel_filepath, columns=[id_column])
+    gdf_input_parcel = gfo.read_file(input_parcel_path, columns=[id_column])
     nb_input_parcels = len(gdf_input_parcel.index)
-    
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d') 
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d') 
-    year = start_date_str.split("-")[0] 
 
-    pixcount_filename = f"{input_parcel_filepath.stem}_weekly_pixcount{output_ext}"
+    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+    year = start_date_str.split("-")[0]
+
+    pixcount_filename = f"{input_parcel_path.stem}_weekly_pixcount{output_ext}"
     pixcount_filepath = dest_data_dir / pixcount_filename
 
     # Prepare output dir
@@ -189,11 +227,11 @@ def calculate_periodic_data(
         dest_data_dir = Path(f"{str(dest_data_dir)}_test")
     if not dest_data_dir.exists():
         os.mkdir(dest_data_dir)
-    
+
     # Create Dataframe with all files with their info
-    logger.debug('Create Dataframe with all files and their properties')
+    logger.debug("Create Dataframe with all files and their properties")
     file_info_list = []
-    for filename in os.listdir(input_dir): 
+    for filename in os.listdir(input_dir):
         if filename.endswith(input_ext):
             # Get seperate filename parts
             file_info = get_file_info(input_dir / filename)
@@ -209,7 +247,7 @@ def calculate_periodic_data(
         logger.debug('Get files we need based on start- & stopdates, sensordata_to_get,...')
         if sensordata_type == conf.general['SENSORDATA_S1_ASCDESC']:
             # Filter files to the ones we need
-            satellitetype = 'S1'
+            satellitetype = "S1"
             imagetype = IMAGETYPE_S1_GRD
             bands = ['VV', 'VH']
             orbits = ['ASC', 'DESC']
@@ -227,7 +265,7 @@ def calculate_periodic_data(
                 orbits=orbits,
                 imagetype=imagetype,
                 input_files_df=input_files_df,
-                input_parcel_filepath=input_parcel_filepath,
+                input_parcel_path=input_parcel_path,
                 output_pixcount_filepath=pixcount_filepath,
                 output_dest_data_dir=dest_data_dir,
                 output_ext=output_ext,
@@ -251,7 +289,7 @@ def calculate_periodic_data(
                 imagetype=imagetype,
                 nb_input_parcels=nb_input_parcels,
                 input_files_df=input_files_df,
-                input_parcel_filepath=input_parcel_filepath,
+                input_parcel_path=input_parcel_path,
                 output_pixcount_filepath=pixcount_filepath,
                 output_dest_data_dir=dest_data_dir,
                 output_ext=output_ext,
@@ -275,7 +313,7 @@ def calculate_periodic_data(
                 orbits=orbits,
                 imagetype=imagetype,
                 input_files_df=input_files_df,
-                input_parcel_filepath=input_parcel_filepath,
+                input_parcel_path=input_parcel_path,
                 output_pixcount_filepath=pixcount_filepath,
                 output_dest_data_dir=dest_data_dir,
                 output_ext=output_ext,
@@ -292,7 +330,7 @@ def calculate_weekly(
     orbits: List[str],
     imagetype: str,
     input_files_df: pd.DataFrame,
-    input_parcel_filepath: Path,
+    input_parcel_path: Path,
     output_pixcount_filepath: Path,
     output_dest_data_dir: Path,
     output_ext: str,
@@ -303,7 +341,7 @@ def calculate_weekly(
 
         # New file name
         period_date_str_long = period_date.strftime('%Y-%m-%d')
-        period_data_filename = f"{input_parcel_filepath.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
+        period_data_filename = f"{input_parcel_path.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
         period_data_filepath = output_dest_data_dir / period_data_filename
 
         period_data_df = calculate_period(
@@ -344,7 +382,7 @@ def calculate_variable(
     imagetype: str,
     nb_input_parcels: int,
     input_files_df: pd.DataFrame,
-    input_parcel_filepath: Path,
+    input_parcel_path: Path,
     output_pixcount_filepath: Path,
     output_dest_data_dir: Path,
     output_ext: str,
@@ -353,12 +391,12 @@ def calculate_variable(
     max_sliding_window = 3
     id_column = conf.columns['id']
     min_parcels_with_data_pct = conf.timeseries.getfloat('min_parcels_with_data_pct')
-    temp_dir = output_dest_data_dir / f"{input_parcel_filepath.stem}"
+    temp_dir = output_dest_data_dir / f"{input_parcel_path.stem}"
     to_process_indices: List[int] = list(range(start_week, end_week))
     sliding_indices: List[int] = []
     
     def getTempFileName(index: int):
-        return temp_dir / f"{input_parcel_filepath.stem}_{index}_{sensordata_type}{output_ext}"
+        return temp_dir / f"{input_parcel_path.stem}_{index}_{sensordata_type}{output_ext}"
 
     if (not temp_dir.exists()):
         os.mkdir(temp_dir)
@@ -376,7 +414,7 @@ def calculate_variable(
         # NOTE: cant change file name to period because we *compare* with it later
         period_start = get_monday_from_week(year, current_index)
         period_date_str_long = period_start.strftime('%Y-%m-%d') 
-        period_data_filename = f"{input_parcel_filepath.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}" 
+        period_data_filename = f"{input_parcel_path.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}" 
         period_data_filepath = output_dest_data_dir / period_data_filename
 
         if (period_data_filepath.exists() and not force):
@@ -551,30 +589,30 @@ def calculate_period(
             column_basename = f"TS_{period_date_str_short}_" if prefix_columns else "TS_"
 
             if orbit is None:
-                column_basename = f"{column_basename}{imagetype}_{band}_"
+                column_basename = f"{column_basename}{imagetype}_{band}"
             else:
-                column_basename = f"{column_basename}{imagetype}_{orbit}_{band}_"
+                column_basename = f"{column_basename}{imagetype}_{orbit}_{band}"
 
             # Number of pixels
             # TODO: onderzoeken hoe aantal pixels best bijgehouden wordt : afwijkingen weglaten ? max nemen ? ...
-            period_band_data_df[f"{column_basename}count"] = np.nanmax(period_band_data_df[statistic_columns_dict['count']], axis=1)
+            period_band_data_df[f"{column_basename}_count"] = np.nanmax(period_band_data_df[statistic_columns_dict['count']], axis=1)
             # Maximum of all max columns
-            period_band_data_df[f"{column_basename}max"] = np.nanmax(period_band_data_df[statistic_columns_dict['max']], axis=1)
+            period_band_data_df[f"{column_basename}_max"] = np.nanmax(period_band_data_df[statistic_columns_dict['max']], axis=1)
             # Mean of all mean columns
-            period_band_data_df[f"{column_basename}mean"] = np.nanmean(period_band_data_df[statistic_columns_dict['mean']], axis=1)
+            period_band_data_df[f"{column_basename}_mean"] = np.nanmean(period_band_data_df[statistic_columns_dict['mean']], axis=1)
             # Mean of all median columns
-            period_band_data_df[f"{column_basename}median"] = np.nanmean(period_band_data_df[statistic_columns_dict['median']], axis=1)
+            period_band_data_df[f"{column_basename}_median"] = np.nanmean(period_band_data_df[statistic_columns_dict['median']], axis=1)
             # Minimum of all min columns
-            period_band_data_df[f"{column_basename}min"] = np.nanmin(period_band_data_df[statistic_columns_dict['min']], axis=1)
+            period_band_data_df[f"{column_basename}_min"] = np.nanmin(period_band_data_df[statistic_columns_dict['min']], axis=1)
             # Mean of all std columns
-            period_band_data_df[f"{column_basename}std"] = np.nanmean(period_band_data_df[statistic_columns_dict['std']], axis=1)
+            period_band_data_df[f"{column_basename}_std"] = np.nanmean(period_band_data_df[statistic_columns_dict['std']], axis=1)
             # Number of Files used
-            period_band_data_df[f"{column_basename}used_files"] = period_band_data_df[statistic_columns_dict['max']].count(axis=1)
+            period_band_data_df[f"{column_basename}_used_files"] = period_band_data_df[statistic_columns_dict['max']].count(axis=1)
                             
             # Only keep the columns we want to keep
-            columns_to_keep = [f"{column_basename}count", f"{column_basename}max", 
-                            f"{column_basename}mean", f"{column_basename}median", f"{column_basename}min", 
-                            f"{column_basename}std", f"{column_basename}used_files"] 
+            columns_to_keep = [f"{column_basename}_count", f"{column_basename}_max", 
+                            f"{column_basename}_mean", f"{column_basename}_median", f"{column_basename}_min", 
+                            f"{column_basename}_std", f"{column_basename}_used_files"] 
             period_band_data_df = period_band_data_df[columns_to_keep]
 
             # Merge the data with the other bands/orbits for this period
@@ -587,13 +625,14 @@ def calculate_period(
             
     return period_data_df
 
+
 def get_file_info(filepath: Path) -> dict:
     """
     This function gets info of a timeseries data file.
-    
+
     Args:
-        filepath (Path): The filepath to the file to get info about.
-        
+        path (Path): The filepath to the file to get info about.
+
     Returns:
         dict: a dict containing info about the file
     """
@@ -605,61 +644,61 @@ def get_file_info(filepath: Path) -> dict:
         filename_imageinfo = filename_splitted[1]
 
         # Extract imageinfo
-        imageinfo_values = filename_imageinfo.split("_")    
+        imageinfo_values = filename_imageinfo.split("_")
 
-        # Satellite 
+        # Satellite
         satellite = imageinfo_values[0]
 
         # Get the date taken from the filename, depending on the satellite type
         # Remark: the datetime is in this format: '20180101T055812'
         imagetype = None
         filedatetime = None
-        if satellite.startswith('S1'):
+        if satellite.startswith("S1"):
             # Check if it is a GRDH image
-            if imageinfo_values[2] == 'GRDH':
+            if imageinfo_values[2] == "GRDH":
                 imagetype = IMAGETYPE_S1_GRD
-                filedatetime = imageinfo_values[4]  
-            elif imageinfo_values[1].startswith('S1'):
+                filedatetime = imageinfo_values[4]
+            elif imageinfo_values[1].startswith("S1"):
                 imagetype = IMAGETYPE_S1_COHERENCE
-                filedatetime = imageinfo_values[2]  
-        elif satellite.startswith('S2'):
+                filedatetime = imageinfo_values[2]
+        elif satellite.startswith("S2"):
             imagetype = IMAGETYPE_S2_L2A
-            filedatetime = imageinfo_values[2]  
+            filedatetime = imageinfo_values[2]
 
-        if(imagetype is None or filedatetime is None):
+        if imagetype is None or filedatetime is None:
             raise Exception(f"Unsupported file: {filepath}")
-        
-        filedate = filedatetime.split("T")[0]  
-        parseddate = datetime.strptime(filedate, '%Y%m%d') 
-        fileweek = int(parseddate.strftime('%W'))
 
-        # Get the band 
-        fileband = imageinfo_values[-1]         # =last value
+        filedate = filedatetime.split("T")[0]
+        parseddate = datetime.strptime(filedate, "%Y%m%d")
+        fileweek = int(parseddate.strftime("%W"))
 
-        # For S1 images, get the orbit 
-        if satellite.startswith('S1'):
-            fileorbit = imageinfo_values[-2]    # =2nd last value
+        # Get the band
+        fileband = imageinfo_values[-1]  # =last value
+
+        # For S1 images, get the orbit
+        if satellite.startswith("S1"):
+            fileorbit = imageinfo_values[-2]  # =2nd last value
         else:
             fileorbit = None
 
         # The file paths of these files sometimes are longer than 256
         # characters, so use trick on windows to support this anyway
         filepath_safe = filepath.as_posix()
-        if(os.name == 'nt'
-           and len(filepath.as_posix()) > 240):
+        if os.name == "nt" and len(filepath.as_posix()) > 240:
             if filepath_safe.startswith("//"):
                 filepath_safe = f"//?/UNC/{filepath_safe}"
             else:
                 filepath_safe = f"//?/{filepath_safe}"
 
         filenameparts = {
-                'filepath': filepath_safe,
-                'imagetype': imagetype,
-                'filestem' : filepath.stem,
-                'date' : parseddate,
-                'week' : fileweek,
-                'band' : fileband, 
-                'orbit' : fileorbit} # ASC/DESC
+            "filepath": filepath_safe,
+            "imagetype": imagetype,
+            "filestem": filepath.stem,
+            "date": parseddate,
+            "week": fileweek,
+            "band": fileband,
+            "orbit": fileorbit,
+        }  # ASC/DESC
 
     except Exception as ex:
         message = f"Error extracting info from filename {filepath}"
@@ -668,16 +707,18 @@ def get_file_info(filepath: Path) -> dict:
 
     return filenameparts
 
+
 def get_monday(input_date: str) -> datetime:
     """
     This function gets the first monday before the date provided.
-    She is being used to adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
+    She is being used to adapt start_date and end_date so they are mondays, so it
+    becomes easier to reuse timeseries data
        - inputformat:  %Y-%m-%d
        - outputformat: datetime
     """
-    parseddate = datetime.strptime(input_date, '%Y-%m-%d')
-    year_week = parseddate.strftime('%Y_%W')
-    year_week_monday = datetime.strptime(year_week + '_1', '%Y_%W_%w') 
+    parseddate = datetime.strptime(input_date, "%Y-%m-%d")
+    year_week = parseddate.strftime("%Y_%W")
+    year_week_monday = datetime.strptime(year_week + "_1", "%Y_%W_%w")
     return year_week_monday
 
 def get_monday_from_week(year: str, week: int) -> datetime:
@@ -686,4 +727,3 @@ def get_monday_from_week(year: str, week: int) -> datetime:
 # If the script is run directly...
 if __name__ == "__main__":
     raise Exception("Not implemented")
-    
