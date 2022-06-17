@@ -140,7 +140,7 @@ def calc_top3_and_consolidation(
         if conf.marker["markertype"] in ["LANDCOVER", "LANDCOVER-EARLY"]:
             table_name = "mon_marker_landcover"
             table_columns = (
-                "layer_id, prc_id, versienummer, markercode, run_id, cons_landcover, "
+                "layer_id, prc_id, versienummer, markercode, run_id, cons_input, cons_landcover, "
                 + "cons_status, cons_date date 'yyyy-mm-dd', landcover1, probability1, "
                 + "landcover2, probability2, landcover3, probability3, "
                 + "modify_date date 'yyyy-mm-dd'"
@@ -148,7 +148,7 @@ def calc_top3_and_consolidation(
         elif conf.marker["markertype"] in ["CROPGROUP", "CROPGROUP-EARLY"]:
             table_name = "mon_marker_cropgroup"
             table_columns = (
-                "layer_id, prc_id, versienummer, markercode, run_id, cons_cropgroup, "
+                "layer_id, prc_id, versienummer, markercode, run_id, cons_input, cons_cropgroup, "
                 + "cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, probability1, "
                 + "cropgroup2, probability2, cropgroup3, probability3, "
                 + "modify_date date 'yyyy-mm-dd'"
