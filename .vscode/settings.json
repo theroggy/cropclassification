@@ -3,5 +3,8 @@
     "python.pythonPath": "%USERPROFILE%\\Miniconda3\\envs\\cropclassification\\python.exe",
     "terminal.integrated.shell.windows": "C:\\Windows\\System32\\cmd.exe",
     "editor.formatOnSave": true,
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+      }
 }

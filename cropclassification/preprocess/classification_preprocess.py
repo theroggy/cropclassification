@@ -143,25 +143,25 @@ def create_train_test_sample(
     #     groups above the data and evades having to do
     #     .reset_index(level=class_balancing_column_NAME, drop=True)
     #     to get rid of the group level
-    df_test = df_in.groupby(class_balancing_column, group_keys=False).apply(
+    test_df = df_in.groupby(class_balancing_column, group_keys=False).apply(
         pd.DataFrame.sample, frac=0.20
     )
     logger.debug(
-        f"df_test after sampling 20% of data per class, shape: {df_test.shape}"
+        f"df_test after sampling 20% of data per class, shape: {test_df.shape}"
     )
 
     # The candidate parcel for training are all non-test parcel
-    df_train_base = df_in[~df_in.index.isin(df_test.index)]
-    logger.debug(f"df_train_base after isin\n{df_train_base}")
+    train_base_df = df_in[~df_in.index.isin(test_df.index)]
+    logger.debug(f"df_train_base after isin\n{train_base_df}")
 
     # Remove parcel with too few pixels from the train sample
     min_pixcount = conf.marker.getfloat("min_nb_pixels_train")
-    df_train_base = df_train_base[
-        df_train_base[conf.columns["pixcount_s1s2"]] >= min_pixcount
+    train_base_df = train_base_df[
+        train_base_df[conf.columns["pixcount_s1s2"]] >= min_pixcount
     ]
     logger.debug(
         "Number of parcels in df_train_base after filter on pixcount >= "
-        f"{min_pixcount}: {len(df_train_base)}"
+        f"{min_pixcount}: {len(train_base_df)}"
     )
 
     # Some classes shouldn't be used for training... so remove them!
@@ -169,8 +169,8 @@ def create_train_test_sample(
         "Remove 'classes_to_ignore_for_train' from train sample (= where "
         f"{class_column} is in: {conf.marker.getlist('classes_to_ignore_for_train')}"
     )
-    df_train_base = df_train_base[
-        ~df_train_base[class_column].isin(
+    train_base_df = train_base_df[
+        ~train_base_df[class_column].isin(
             conf.marker.getlist("classes_to_ignore_for_train")
         )
     ]
@@ -180,15 +180,15 @@ def create_train_test_sample(
         f"Remove 'classes_to_ignore' from train sample (= where {class_column} is in: "
         f"{conf.marker.getlist('classes_to_ignore')}"
     )
-    df_train_base = df_train_base[
-        ~df_train_base[class_column].isin(conf.marker.getlist("classes_to_ignore"))
+    train_base_df = train_base_df[
+        ~train_base_df[class_column].isin(conf.marker.getlist("classes_to_ignore"))
     ]
 
     # Print the train base result before applying any balancing
     with pd.option_context(
         "display.max_rows", None, "display.max_columns", None
     ):  # type: ignore
-        count_per_class = df_train_base.groupby(
+        count_per_class = train_base_df.groupby(
             class_balancing_column, as_index=False
         ).size()
         logger.info(
@@ -204,7 +204,7 @@ def create_train_test_sample(
         #           size than other classes
         #         - this results in a relatively high accuracy in overall numbers, but
         #           the small classes are not detected at all
-        df_train = df_train_base.groupby(
+        train_df = train_base_df.groupby(
             class_balancing_column, group_keys=False
         ).apply(pd.DataFrame.sample, frac=0.25)
 
@@ -223,22 +223,22 @@ def create_train_test_sample(
             f"Cap over {upper_limit}, keep the full number of training sample till "
             f"{lower_limit}, samples smaller than that are oversampled"
         )
-        df_train = (
-            df_train_base.groupby(class_balancing_column)
+        train_df = (
+            train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_limit)
             .groupby(class_balancing_column, group_keys=False)
             .apply(pd.DataFrame.sample, upper_limit)
         )
         # Middle classes use the number as they are
-        df_train = df_train.append(
-            df_train_base.groupby(class_balancing_column)
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < upper_limit)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= lower_limit)
         )
         # For smaller classes, oversample...
-        df_train = df_train.append(
-            df_train_base.groupby(class_balancing_column)
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < lower_limit)
             .groupby(class_balancing_column, group_keys=False)
             .apply(pd.DataFrame.sample, lower_limit, replace=True)
@@ -254,52 +254,68 @@ def create_train_test_sample(
         # For the larger classes, leave the samples larger but cap
         cap_count_limit1 = 100000
         cap_train_limit1 = 30000
-        logger.info(f"Cap balancing classes over {cap_count_limit1} to {cap_train_limit1}")
-        df_train = pd.DataFrame()
-        df_train_cap = (df_train_base
-                    .groupby(class_balancing_column).filter(lambda x: len(x) >= cap_count_limit1)
-                    .groupby(class_balancing_column, group_keys=False))
-        if (len(df_train_cap) > 0):
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, cap_train_limit1))
-
+        logger.info(
+            f"Cap balancing classes over {cap_count_limit1} to {cap_train_limit1}"
+        )
+        train_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= cap_count_limit1)
+            .groupby(class_balancing_column, group_keys=False)
+            .apply(pd.DataFrame.sample, cap_train_limit1)
+        )
         cap_count_limit2 = 50000
         cap_train_limit2 = 20000
-        logger.info(f"Cap balancing classes between {cap_count_limit2} and {cap_count_limit1} to {cap_train_limit2}")
-        df_train_cap = (df_train_base
-                .groupby(class_balancing_column).filter(lambda x: len(x) < cap_count_limit1)
-                .groupby(class_balancing_column).filter(lambda x: len(x) >= cap_count_limit2)
-                .groupby(class_balancing_column, group_keys=False))
-        if len(df_train_cap) > 0:
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, cap_train_limit2))
-
+        logger.info(
+            f"Cap balancing classes between {cap_count_limit2} and {cap_count_limit1} "
+            f"to {cap_train_limit2}"
+        )
+        train_cap2_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < cap_count_limit1)
+            .groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= cap_count_limit2)
+            .groupby(class_balancing_column, group_keys=False)
+        )
+        if len(train_cap2_df) > 0:
+            train_df = train_df.append(
+                train_cap2_df.apply(pd.DataFrame.sample, cap_train_limit2)
+            )
         cap_count_limit3 = 20000
         cap_train_limit3 = 10000
-        logger.info(f"Cap balancing classes between {cap_count_limit3} and {cap_count_limit2} to {cap_train_limit3}")
-        df_train_cap = (df_train_base
-                .groupby(class_balancing_column).filter(lambda x: len(x) < cap_count_limit2)
-                .groupby(class_balancing_column).filter(lambda x: len(x) >= cap_count_limit3)
-                .groupby(class_balancing_column, group_keys=False))
-        if len(df_train_cap) > 0:
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, cap_train_limit3))
-
+        logger.info(
+            f"Cap balancing classes between {cap_count_limit3} and {cap_count_limit2} "
+            f"to {cap_train_limit3}"
+        )
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < cap_count_limit2)
+            .groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= cap_count_limit3)
+            .groupby(class_balancing_column, group_keys=False)
+            .apply(pd.DataFrame.sample, cap_train_limit3)
+        )
         cap_count_limit4 = 10000
         cap_train_limit4 = 10000
-        logger.info(f"Cap balancing classes between {cap_count_limit4} and {cap_count_limit3} to {cap_train_limit4}")
-        df_train_cap = (df_train_base
-                .groupby(class_balancing_column).filter(lambda x: len(x) < cap_count_limit3)
-                .groupby(class_balancing_column).filter(lambda x: len(x) >= cap_count_limit4)
-                .groupby(class_balancing_column, group_keys=False))
-        if len(df_train_cap) > 0:  
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, cap_train_limit4))
-
+        logger.info(
+            f"Cap balancing classes between {cap_count_limit4} and {cap_count_limit3} "
+            f"to {cap_train_limit4}"
+        )
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < cap_count_limit3)
+            .groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= cap_count_limit4)
+            .groupby(class_balancing_column, group_keys=False)
+            .apply(pd.DataFrame.sample, cap_train_limit4)
+        )
         oversample_count = 1000
         # Middle classes use the number as they are
         logger.info(
             f"For classes between {cap_count_limit4} and {oversample_count}, just use "
             "all samples"
         )
-        df_train = df_train.append(
-            df_train_base.groupby(class_balancing_column)
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < cap_count_limit4)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= oversample_count)
@@ -309,8 +325,8 @@ def create_train_test_sample(
             f"For classes smaller than {oversample_count}, oversample to "
             f"{oversample_count}"
         )
-        df_train = df_train.append(
-            df_train_base.groupby(class_balancing_column)
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < oversample_count)
             .groupby(class_balancing_column, group_keys=False)
             .apply(pd.DataFrame.sample, oversample_count, replace=True)
@@ -327,46 +343,69 @@ def create_train_test_sample(
         df_train = pd.DataFrame()
         upper_count_limit1 = 100000
         upper_train_limit1 = 30000
-        logger.info(f"Cap balancing classes over {upper_count_limit1} to {upper_train_limit1}")
-        df_train_cap = (df_train_base
-                    .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit1)
-                    .groupby(class_balancing_column, group_keys=False))                    
-        if (len(df_train_cap) > 0):
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, upper_train_limit1))
-
+        logger.info(
+            f"Cap balancing classes over {upper_count_limit1} to {upper_train_limit1}"
+        )
+        train_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= upper_count_limit1)
+            .groupby(class_balancing_column, group_keys=False)
+            .apply(pd.DataFrame.sample, upper_train_limit1)
+        )
         upper_count_limit2 = 50000
         upper_train_limit2 = 20000
-        logger.info(f"Cap balancing classes between {upper_count_limit2} and {upper_count_limit1} to {upper_train_limit2}")
-        df_train_cap = (df_train_base
-                .groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit1)
-                .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit2)
-                .groupby(class_balancing_column, group_keys=False))                
-        if (len(df_train_cap) > 0):
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, upper_train_limit2))
-
+        logger.info(
+            f"Cap balancing classes between {upper_count_limit2} and "
+            f"{upper_count_limit1} to {upper_train_limit2}"
+        )
+        train_limit2_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < upper_count_limit1)
+            .groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= upper_count_limit2)
+            .groupby(class_balancing_column, group_keys=False)
+        )
+        if len(train_limit2_df) > 0:
+            train_df = train_df.append(
+                train_limit2_df.apply(pd.DataFrame.sample, upper_train_limit2)
+            )
         upper_count_limit3 = 20000
         upper_train_limit3 = 10000
-        logger.info(f"Cap balancing classes between {upper_count_limit3} and {upper_count_limit2} to {upper_train_limit3}")
-        df_train_cap = (df_train_base
-                .groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit2)
-                .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit3)
-                .groupby(class_balancing_column, group_keys=False))
-        if (len(df_train_cap) > 0):
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, upper_train_limit3))
-
+        logger.info(
+            f"Cap balancing classes between {upper_count_limit3} and "
+            f"{upper_count_limit2} to {upper_train_limit3}"
+        )
+        train_limit3_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < upper_count_limit2)
+            .groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= upper_count_limit3)
+            .groupby(class_balancing_column, group_keys=False)
+        )
+        if len(train_limit3_df) > 0:
+            train_df = train_df.append(
+                train_limit3_df.apply(pd.DataFrame.sample, upper_train_limit3)
+            )
         upper_count_limit4 = 10000
         upper_train_limit4 = 5000
-        logger.info(f"Cap balancing classes between {upper_count_limit4} and {upper_count_limit3} to {upper_train_limit4}")
-        df_train_cap = (df_train_base
-                .groupby(class_balancing_column).filter(lambda x: len(x) < upper_count_limit3)
-                .groupby(class_balancing_column).filter(lambda x: len(x) >= upper_count_limit4)
-                .groupby(class_balancing_column, group_keys=False))
-        if (len(df_train_cap) > 0):
-            df_train = df_train.append(df_train_cap.apply(pd.DataFrame.sample, upper_train_limit4))
-            
+        logger.info(
+            f"Cap balancing classes between {upper_count_limit4} and "
+            f"{upper_count_limit3} to {upper_train_limit4}"
+        )
+        train_limit4_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < upper_count_limit3)
+            .groupby(class_balancing_column)
+            .filter(lambda x: len(x) >= upper_count_limit4)
+            .groupby(class_balancing_column, group_keys=False)
+        )
+        if len(train_limit4_df) > 0:
+            train_df = train_df.append(
+                train_limit4_df.apply(pd.DataFrame.sample, upper_train_limit4)
+            )
         # For smaller balancing classes, just use all samples
-        df_train = df_train.append(
-            df_train_base.groupby(class_balancing_column).filter(
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column).filter(
                 lambda x: len(x) < upper_count_limit4
             )
         )
@@ -382,15 +421,15 @@ def create_train_test_sample(
         # upper_limit
         upper_limit = 10000
         logger.info(f"Cap over {upper_limit}...")
-        df_train = (
-            df_train_base.groupby(class_balancing_column)
+        train_df = (
+            train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_limit)
             .groupby(class_balancing_column, group_keys=False)
             .apply(pd.DataFrame.sample, upper_limit)
         )
         # For smaller classes, just use all samples
-        df_train = df_train.append(
-            df_train_base.groupby(class_balancing_column).filter(
+        train_df = train_df.append(
+            train_base_df.groupby(class_balancing_column).filter(
                 lambda x: len(x) < upper_limit
             )
         )
@@ -399,7 +438,7 @@ def create_train_test_sample(
         # In theory the most logical way to balance: make sure all classes have the
         # same amount of training data by undersampling the largest classes and
         # oversampling the small classes.
-        df_train = df_train_base.groupby(
+        train_df = train_base_df.groupby(
             class_balancing_column, group_keys=False
         ).apply(pd.DataFrame.sample, 2000, replace=True)
 
@@ -410,7 +449,7 @@ def create_train_test_sample(
     with pd.option_context(
         "display.max_rows", None, "display.max_columns", None
     ):  # type: ignore
-        count_per_class = df_train.groupby(
+        count_per_class = train_df.groupby(
             class_balancing_column, as_index=False
         ).size()
         logger.info(
@@ -418,7 +457,7 @@ def create_train_test_sample(
             f"{count_per_class}"
         )
         if class_balancing_column != class_column:
-            count_per_class = df_train.groupby(class_column, as_index=False).size()
+            count_per_class = train_df.groupby(class_column, as_index=False).size()
             logger.info(
                 "Number of elements per class_column in train dataset:\n"
                 f"{count_per_class}"
@@ -428,13 +467,13 @@ def create_train_test_sample(
     with pd.option_context(
         "display.max_rows", None, "display.max_columns", None
     ):  # type: ignore
-        count_per_class = df_test.groupby(class_balancing_column, as_index=False).size()
+        count_per_class = test_df.groupby(class_balancing_column, as_index=False).size()
         logger.info(
             "Number of elements per class_balancing_column in test dataset:\n"
             f"{count_per_class}"
         )
         if class_balancing_column != class_column:
-            count_per_class = df_test.groupby(class_column, as_index=False).size()
+            count_per_class = test_df.groupby(class_column, as_index=False).size()
             logger.info(
                 "Number of elements per class_column in test dataset:\n"
                 f"{count_per_class}"
@@ -442,10 +481,10 @@ def create_train_test_sample(
 
     # Write to output files
     logger.info("Write the output files")
-    df_train.set_index(conf.columns["id"], inplace=True)
-    df_test.set_index(conf.columns["id"], inplace=True)
-    pdh.to_file(df_train, output_parcel_train_path)  # The ID column is the index...
-    pdh.to_file(df_test, output_parcel_test_path)  # The ID column is the index...
+    train_df.set_index(conf.columns["id"], inplace=True)
+    test_df.set_index(conf.columns["id"], inplace=True)
+    pdh.to_file(train_df, output_parcel_train_path)  # The ID column is the index...
+    pdh.to_file(test_df, output_parcel_test_path)  # The ID column is the index...
 
 
 # If the script is run directly...
