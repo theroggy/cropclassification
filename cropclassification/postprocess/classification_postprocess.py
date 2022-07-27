@@ -186,13 +186,13 @@ def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
             proba_tmp_df.drop(column, axis=1, inplace=True)
 
     # Get the top 3 predictions for each row
-    # First get the indeces of the top 3 predictions for each row
+    # First get the indices of the top 3 predictions for each row
     # Remark: argsort sorts ascending, so we need to take:
     #     - "[:,": for all rows
     #     - ":-4": the last 3 elements of the values
     #     - ":-1]": and than reverse the order with a negative step
     top3_pred_classes_idx = np.argsort(proba_tmp_df.values, axis=1)[:, :-4:-1]
-    # Convert the indeces to classes
+    # Convert the indices to classes
     top3_pred_classes = np.take(proba_tmp_df.columns, top3_pred_classes_idx)
     # Get the values of the top 3 predictions
     top3_pred_values = np.sort(proba_tmp_df.values, axis=1)[:, :-4:-1]
@@ -208,6 +208,7 @@ def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Convert to dataframe
+    # Also apply infer_objects: otherwise the float columns are of object dtype.
     top3_df = pd.DataFrame(
         id_class_top3,
         columns=[
@@ -220,7 +221,7 @@ def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
             "pred2_prob",
             "pred3_prob",
         ],
-    )
+    ).infer_objects()
 
     return top3_df
 
