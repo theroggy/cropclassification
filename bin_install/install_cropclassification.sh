@@ -135,7 +135,7 @@ else
   echo
   echo "Prepare for development: conda install dev tools"
   echo
-  conda install -y pylint pytest rope flake8
+  conda install -y pylint pytest rope flake8 black
  
   echo
   echo "Prepare for development: pip install dependencies of cropclassification that need pip"
