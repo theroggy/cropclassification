@@ -34,7 +34,7 @@ def prepare_input(
     output_imagedata_parcel_input_path: Path,
     output_parcel_nogeo_path: Optional[Path] = None,
     force: bool = False,
-):
+) -> bool:
     """
     This function creates a file that is preprocessed to be a good input file for
     timeseries extraction of sentinel images.
@@ -44,7 +44,6 @@ def prepare_input(
         output_imagedata_parcel_input_path (Path): prepared output file
         output_parcel_nogeo_path (Path): output file with a copy of the non-geo data
         force: force creation, even if output file(s) exist already
-
     """
     # Check if parameters are OK and init some extra params
     if not input_parcel_path.exists():
@@ -110,7 +109,7 @@ def prepare_input(
             "prepare_input: force == False and output files exist, so stop: "
             f"{output_imagedata_parcel_input_path}"
         )
-        return
+        return False
 
     logger.info("Apply buffer on parcel")
     parceldata_buf_gdf = parceldata_gdf.copy()
@@ -166,13 +165,7 @@ def prepare_input(
     gfo.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_path)
     logger.info(parceldata_buf_poly_gdf)
 
-    message = (
-        "The buffered file just has been prepared, so probably you now you probably "
-        "need to sync it to the DIAS and start the timeseries data extraction before "
-        "proceding!"
-    )
-    logger.warning(message)
-    raise Exception(message)
+    return True
 
 
 def calculate_periodic_data(
