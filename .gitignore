@@ -1,13 +1,34 @@
+
+# General
+# -------
+Old/
+
+# GEE (google earth engine)
+# -------------------------
 client_secret.json
 client_secret_download-gee-data.json
 credentials.json
-Old/
+
+# python
+# ------
 *.pyc
-.spyproject/
-.spyproject/workspace.ini
-.vscode/
-/.vs
-client_secret_download-gee-data.json
-.vscode/settings.json
-.vscode/.ropeproject/objectdb
-.vscode/.ropeproject/config.py
+
+# VSCode
+# ------
+# Some inspiration from:
+# https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
+
+.vscode/*
+#!.vscode/settings.json
+!.vscode/settings_template.json
+!.vscode/tasks.json
+#!.vscode/launch.json
+!.vscode/launch_template.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix

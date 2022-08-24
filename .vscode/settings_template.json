@@ -4,9 +4,7 @@
     "terminal.integrated.shell.windows": "C:\\Windows\\System32\\cmd.exe",
     "editor.formatOnSave": true,
     "python.formatting.provider": "black",
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+      }
 }
