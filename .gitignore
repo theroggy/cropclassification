@@ -19,10 +19,10 @@ credentials.json
 # https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 
 .vscode/*
-!.vscode/settings.json
+#!.vscode/settings.json
 !.vscode/settings_template.json
 !.vscode/tasks.json
-!.vscode/launch.json
+#!.vscode/launch.json
 !.vscode/launch_template.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
