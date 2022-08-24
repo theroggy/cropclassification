@@ -20,6 +20,7 @@ setuptools.setup(
     install_requires=[
         "geofileops",
         "geopandas",
+        "openeo",
         "psutil",
         "rasterio",
         "rasterstats",

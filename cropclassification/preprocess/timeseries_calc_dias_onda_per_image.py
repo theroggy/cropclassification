@@ -16,6 +16,7 @@ import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
 from typing import List, Optional, Tuple
+import xml.etree.ElementTree as ET
 
 from affine import Affine
 import geopandas as gpd
@@ -25,7 +26,6 @@ import psutil  # To catch CTRL-C explicitly and kill children
 import rasterio
 from rasterstats import zonal_stats
 from shapely.geometry import polygon as sh_polygon
-import xml.etree.ElementTree as ET
 
 from cropclassification.helpers import pandas_helper as pdh
 

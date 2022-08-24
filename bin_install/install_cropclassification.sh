@@ -140,7 +140,7 @@ else
   echo
   echo "Prepare for development: pip install dependencies of cropclassification that need pip"
   echo
-  pip install tensorflow
+  pip install tensorflow openeo
 fi
 
 # Export the environment to a .yml file

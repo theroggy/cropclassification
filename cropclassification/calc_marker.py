@@ -166,7 +166,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     imagedata_input_parcel_path = (
         input_preprocessed_dir / imagedata_input_parcel_filename
     )
-    new_input_prepared = ts_util.prepare_input(
+    ts_util.prepare_input(
         input_parcel_path=input_parcel_path,
         output_imagedata_parcel_input_path=imagedata_input_parcel_path,
         output_parcel_nogeo_path=input_parcel_nogeo_path,
@@ -174,18 +174,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
 
     # STEP 2: Get the timeseries data needed for the classification
     # -------------------------------------------------------------
-    # If a new input file was prepared and ONDA is used for timeseries claculation, 
-    # show following message
-    timeseries_calc_type = conf.timeseries["timeseries_calc_type"]
-    if new_input_prepared and timeseries_calc_type == "onda":
-        message = (
-            "The buffered file just has been prepared, so probably you now you "
-            "probably need to sync it to the DIAS and start the timeseries data "
-            "extraction before proceding!"
-        )
-        logger.warning(message)
-        raise Exception(message)
-
     # Get the time series data (S1 and S2) to be used for the classification
     # Result: data is put in files in timeseries_periodic_dir, in one file per
     #         date/period

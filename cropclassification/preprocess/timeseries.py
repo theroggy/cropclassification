@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 def calc_timeseries_data(
     input_parcel_path: Path,
-    input_country_code: str,
     start_date_str: str,
     end_date_str: str,
     sensordata_to_get: List[str],
@@ -39,7 +38,6 @@ def calc_timeseries_data(
 
     Args:
         input_parcel_path (str): [description]
-        input_country_code (str): [description]
         start_date_str (str): [description]
         end_date_str (str): [description]
         sensordata_to_get (List[str]): an array with data you want to be calculated:
@@ -58,28 +56,13 @@ def calc_timeseries_data(
         start_date_str
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
     end_date = ts_util.get_monday(end_date_str)
-    start_date_monday = start_date.strftime("%Y-%m-%d")  # terug omzetten naar Y/M/D
-    end_date_monday = end_date.strftime("%Y-%m-%d")
 
     logger.info(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
         f"date {end_date_str} as well: {end_date}"
     )
     timeseries_calc_type = conf.timeseries["timeseries_calc_type"]
-    if timeseries_calc_type == "gee":
-        # Start!
-        import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
-
-        return ts_calc_gee.calc_timeseries_data(
-            input_parcel_path=input_parcel_path,
-            input_country_code=input_country_code,
-            start_date_str=start_date_monday,
-            end_date_str=end_date_monday,
-            sensordata_to_get=sensordata_to_get,
-            base_filename=base_filename,
-            dest_data_dir=dest_data_dir,
-        )
-    elif timeseries_calc_type == "onda":
+    if timeseries_calc_type == "onda":
         # Start!
         # TODO: start calculation of per image data on DIAS
         # import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as
@@ -90,8 +73,21 @@ def calc_timeseries_data(
         return ts_util.calculate_periodic_data(
             input_parcel_path=input_parcel_path,
             input_base_dir=timeseries_per_image_dir,
-            start_date_str=start_date_str,
-            end_date_str=end_date_str,
+            start_date=start_date,
+            end_date=end_date,
+            sensordata_to_get=sensordata_to_get,
+            dest_data_dir=dest_data_dir,
+        )
+    elif timeseries_calc_type == "openeo":
+        import cropclassification.preprocess.timeseries_calc_openeo as ts_calc_openeo
+        timeseries_per_image_dir = conf.dirs.getpath("timeseries_per_image_dir")
+
+        # Now all image data is available per image, calculate periodic data
+        return ts_util.calculate_periodic_data(
+            input_parcel_path=input_parcel_path,
+            input_base_dir=timeseries_per_image_dir,
+            start_date=start_date,
+            end_date=end_date,
             sensordata_to_get=sensordata_to_get,
             dest_data_dir=dest_data_dir,
         )

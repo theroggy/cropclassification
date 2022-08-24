@@ -8,7 +8,7 @@ import logging
 import gc
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import geofileops as gfo
 import numpy as np
@@ -171,8 +171,8 @@ def prepare_input(
 def calculate_periodic_data(
     input_parcel_path: Path,
     input_base_dir: Path,
-    start_date_str: str,
-    end_date_str: str,
+    start_date: datetime,
+    end_date: datetime,
     sensordata_to_get: List[str],
     dest_data_dir: Path,
     force: bool = False,
@@ -186,9 +186,9 @@ def calculate_periodic_data(
     Args:
         input_parcel_path (Path): [description]
         input_base_dir (Path): [description]
-        start_date_str (str): Start date in format %Y-%m-%d. Needs to be aligned
+        start_date (datetime): Start date. Needs to be aligned
             already on the periods wanted + data on this date is included.
-        end_date_str (str): End date in format %Y-%m-%d. Needs to be aligned already on
+        end_date (datetime): End date. Needs to be aligned already on
             the periods wanted + data on this date is excluded.
         sensordata_to_get ([]):
         dest_data_dir (Path): [description]
@@ -203,9 +203,7 @@ def calculate_periodic_data(
     input_ext = ".sqlite"
     output_ext = ".sqlite"
 
-    start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-    end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
-    year = start_date_str.split("-")[0]
+    year = start_date.year
 
     # Prepare output dir
     test = False
@@ -562,16 +560,18 @@ def get_file_info(path: Path) -> dict:
     return filenameparts
 
 
-def get_monday(input_date: str) -> datetime:
+def get_monday(date: Union[str, datetime]) -> datetime:
     """
     This function gets the first monday before the date provided.
-    She is being used to adapt start_date and end_date so they are mondays, so it
+    It is being used to adapt start_date and end_date so they are mondays, so it
     becomes easier to reuse timeseries data
        - inputformat:  %Y-%m-%d
        - outputformat: datetime
     """
-    parseddate = datetime.strptime(input_date, "%Y-%m-%d")
-    year_week = parseddate.strftime("%Y_%W")
+    if isinstance(date, str):
+        date = datetime.strptime(date, "%Y-%m-%d")
+
+    year_week = date.strftime("%Y_%W")
     year_week_monday = datetime.strptime(year_week + "_1", "%Y_%W_%w")
     return year_week_monday
 
