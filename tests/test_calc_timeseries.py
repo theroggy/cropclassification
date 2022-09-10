@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from pathlib import Path
 import sys
 
@@ -14,11 +15,14 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
 
     # Test raw version
     input_features_path = Path(
-        "/srv/data/playground/_inputdata_preprocessed/Prc_BEFL_2020_2020-07-01_bufm5.shp"
+        "/srv/data/playground/_inputdata_preprocessed/"
+        "Prc_BEFL_2020_2020-07-01_bufm5.shp"
     )
     input_image_paths = [
         Path(
-            "/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2020/07/11/S1A_IW_GRDH_1SDV_20200711T172447_20200711T172512_033410_03DF06_66B7_Orb_RBN_RTN_Cal_TC_20200714T100938.L1TC.CARD"
+            "/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2020/07/11/"
+            "S1A_IW_GRDH_1SDV_20200711T172447_20200711T172512_033410_03DF06_66B7_"
+            "Orb_RBN_RTN_Cal_TC_20200714T100938.L1TC.CARD"
         )
     ]
     tmp_dir = Path(tmpdir) / "raw"
@@ -32,9 +36,11 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",
+            log_level=logging.INFO,
         )
         print(
-            f"calc_stats_per_image ready in {(datetime.now()-start_time).total_seconds():.2f}"
+            "calc_stats_per_image ready in "
+            f"{(datetime.now()-start_time).total_seconds():.2f}"
         )
     except Exception as ex:
         raise Exception(
@@ -44,7 +50,8 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     # Test .tif version
     input_image_paths = [
         Path(
-            "/mnt/NAS5/SAMPLES_CARD/S1A_IW_GRDH_1SDV_20200711T172447_20200711T172512_033410_03DF06_66B7_Orb_RBN_RTN_Cal_TC_20200722T143946.L1TC.CARD"
+            "/mnt/NAS5/SAMPLES_CARD/S1A_IW_GRDH_1SDV_20200711T172447_20200711T172512_"
+            "033410_03DF06_66B7_Orb_RBN_RTN_Cal_TC_20200722T143946.L1TC.CARD"
         )
     ]
     tmp_dir = Path(tmpdir) / "tif"
@@ -58,9 +65,11 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",
+            log_level=logging.INFO,
         )
         print(
-            f"calc_stats_per_image ready in {(datetime.now()-start_time).total_seconds():.2f}"
+            "calc_stats_per_image ready in "
+            f"{(datetime.now()-start_time).total_seconds():.2f}"
         )
     except Exception as ex:
         raise Exception(
