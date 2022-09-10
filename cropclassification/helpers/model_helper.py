@@ -107,7 +107,11 @@ def format_model_filename2(
         acc_combined: the average of the train and validation accuracy
         epoch: the epoch during training that reached these model weights
     """
-    return f"{model_base_filename}_{acc_combined:.5f}_{acc_train:.5f}_{acc_val:.5f}_{epoch}.hdf5"
+    res = (
+        f"{model_base_filename}_{acc_combined:.5f}_{acc_train:.5f}_{acc_val:.5f}_"
+        f"{epoch}.hdf5"
+    )
+    return res
 
 
 def parse_model_filename(path: Path) -> dict:
@@ -181,7 +185,7 @@ def get_models(
     for path in model_weight_paths:
         model_info_list.append(parse_model_filename(Path(path)))
 
-    return pd.DataFrame.from_dict(model_info_list)
+    return pd.DataFrame.from_dict(model_info_list)  # type: ignore
 
 
 def get_best_model(
@@ -201,7 +205,8 @@ def get_best_model(
     acc_metric_mode_values = ["min", "max"]
     if acc_metric_mode not in acc_metric_mode_values:
         raise Exception(
-            f"Invalid value for mode: {acc_metric_mode}, should be one of {acc_metric_mode_values}"
+            f"Invalid value for mode: {acc_metric_mode}, should be one of "
+            f"{acc_metric_mode_values}"
         )
 
     # Get list of existing models for this train dataset
@@ -220,9 +225,13 @@ def get_best_model(
 
     if len(model_info_df) > 0:
         if acc_metric_mode == "max":
-            return model_info_df.loc[model_info_df["acc_combined"].values.argmax()]
+            return model_info_df.loc[
+                model_info_df["acc_combined"].values.argmax()  # type: ignore
+            ]
         else:
-            return model_info_df.loc[model_info_df["acc_combined"].values.argmin()]
+            return model_info_df.loc[
+                model_info_df["acc_combined"].values.argmin()  # type: ignore
+            ]
     else:
         return None
 
