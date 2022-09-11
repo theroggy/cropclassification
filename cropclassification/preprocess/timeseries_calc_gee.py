@@ -2,50 +2,54 @@
 """
 Script to create timeseries data per parcel of
   - S1: the mean VV and VH backscatter data
-  - S2: the 4 bands for periods when there is good coverage of cloudfree images of the area of
-        interest
+  - S2: the 4 bands for periods when there is good coverage of cloudfree images of the
+        area of interest
 
 REMARK: this code isn't maintained anymore!
 
 Steps to setup gee:
 
-1. If google earth engine is used to get the Sentinel data for the classification, you will need a
-google account that has google earth engine access enabled.
-So go to https://earthengine.google.com/ and click "Sign up" at the top right if you haven't used
-google earth engine yet.
+1. If google earth engine is used to get the Sentinel data for the classification, you
+will need a google account that has google earth engine access enabled.
+So go to https://earthengine.google.com/ and click "Sign up" at the top right if you
+haven't used google earth engine yet.
 Once you are signed up you should be able to visit https://code.earthengine.google.com/.
 
 2. You also need these extra dependencies
 ```
-conda install --channel conda-forge earthengine-api google-api-python-client 
+conda install --channel conda-forge earthengine-api google-api-python-client
 ```
 
-3.  Run the following command to authenticate with google earth engine, and follow the procedure on the screen:
+3.  Run the following command to authenticate with google earth engine, and follow the
+procedure on the screen:
 ```
 earthengine authenticate
 ```
 
 4. Activate (read-only) access to your google drive
-    1. Go to the Google APIs cloud resource manager: https://console.developers.google.com/cloud-resource-manager
-    2. If the UI isn't in english, you might want to set it to english so following the next steps
-    is easier. You can do this in the 'Three dots menu', then 'Preferences'.
+    1. Go to the Google APIs cloud resource manager:
+       https://console.developers.google.com/cloud-resource-manager
+    2. If the UI isn't in english, you might want to set it to english so following the
+    next steps is easier. You can do this in the 'Three dots menu', then 'Preferences'.
     3. Create a project, eg. 'download-gee-data'.
     4. Search for 'Google Drive API', select the entry, and click 'Enable'.
-    5. Select 'Credentials' from the left menu, click 'Create Credentials', select 'OAuth client ID'.
-        1. Now, the product name and consent screen need to be set -> click 'Configure consent screen'
+    5. Select 'Credentials' from the left menu, click 'Create Credentials', select
+       'OAuth client ID'.
+        1. Now, the product name and consent screen need to be set -> click
+           'Configure consent screen'
         2. Enter a name for the consent screen, eg. download-gee-data.
         3. Click 'Save'
         4. Select 'Application type' to be 'Other'.
         5. Enter a name, eg. download-gee-data.
         6. Click 'Create'
-        7. Click 'Download JSON' on the right side of Client ID to download client_secret_<really long ID>.json.
-    6. Copy 'client_secret_<really long ID>.json' to your python working directory and rename to
-    client_secret_download-gee-data.json
+        7. Click 'Download JSON' on the right side of Client ID to download
+           client_secret_<really long ID>.json.
+    6. Copy 'client_secret_<really long ID>.json' to your python working directory and
+    rename to client_secret_download-gee-data.json
 
 """
 
 from __future__ import print_function
-from datetime import datetime
 from datetime import timedelta
 import glob
 import logging
@@ -121,17 +125,18 @@ def calc_timeseries_data(
         )
         input_parcel_4326_gdf = input_parcel_gdf.to_crs(epsg=target_epsg)
         logger.info(f"Write reprojected features to {input_parcel_4326_path}")
-        gfo.to_file(input_parcel_4326_gdf, input_parcel_4326_path)
+        gfo.to_file(input_parcel_4326_gdf, input_parcel_4326_path)  # type: ignore
 
     # Start calculation of the timeseries on gee
 
     logger.info("Start create_sentinel_timeseries_info")
-    # On windows machines there seems to be an issue with gee. The following error is very common,
-    # probably because there are too many sockets created in a short time... and the cleanup
-    # procedure in windows can't follow:
-    #     "OSError: [WinError 10048] Elk socketadres (protocol/netwerkadres/poort) kan normaal
-    #      slechts één keer worden gebruikt"
-    # So execute in a loop and retry every 10 seconds... this seems to be a working workaround.
+    # On windows machines there seems to be an issue with gee. The following error is
+    # very common, probably because there are too many sockets created in a short
+    # time... and the cleanup procedure in windows can't follow:
+    #     "OSError: [WinError 10048] Elk socketadres (protocol/netwerkadres/poort) kan
+    #     normaal slechts één keer worden gebruikt"
+    # So execute in a loop and retry every 10 seconds... this seems to be a working
+    # workaround.
     nb_retries = 0
     done_success = False
     while done_success is False and nb_retries < 10:
@@ -151,7 +156,9 @@ def calc_timeseries_data(
             nb_retries += 1
             if os.name == "nt" and ex.winerror == 10048:
                 logger.warning(
-                    f"Exception [WinError {ex.winerror}] while trying calculate_sentinel_timeseries, retry! (Full exception message {ex})"
+                    f"Exception [WinError {ex.winerror}] while trying "
+                    f"calculate_sentinel_timeseries, retry!"
+                    f"(Full exception message {ex})"
                 )
                 time.sleep(10)
             else:
@@ -159,7 +166,10 @@ def calc_timeseries_data(
 
     # If it wasn't successful, log and stop.
     if done_success is False:
-        message = "STOP: calculate_sentinel_timeseries couldn't be completed even after many retries..."
+        message = (
+            "STOP: calculate_sentinel_timeseries couldn't be completed even after many "
+            "retries..."
+        )
         logger.critical(message)
         raise Exception(message)
 
@@ -177,7 +187,8 @@ def calc_timeseries_data(
             # Retry every 10 minutes
             if return_status == "RETRY_NEEDED":
                 logger.info(
-                    "Not all data was available yet on google drive... try again in a few minutes..."
+                    "Not all data was available yet on google drive... try again in a "
+                    "few minutes..."
                 )
 
                 # Retry only 36 times, or +- 6 hours
@@ -187,8 +198,8 @@ def calc_timeseries_data(
                     logger.error(message)
                     raise Exception(message)
 
-                # Wait for 10 minutes before retrying again... but only sleep 10 seconds at
-                # a time so it can be cancelled.
+                # Wait for 10 minutes before retrying again... but only sleep 10 seconds
+                # at a time so it can be cancelled.
                 nb_sleeps = 0
                 while nb_sleeps < 30:
                     time.sleep(10)
@@ -196,7 +207,7 @@ def calc_timeseries_data(
 
                 number_retries += 1
 
-        except:
+        except Exception:
             logger.error("ERROR downloading from google drive!")
             raise
 
@@ -210,7 +221,8 @@ def download_sentinel_timeseries(dest_data_dir: Path, base_filename: str):
     global global_gee_tasks_cache
     global_gee_tasks_cache = None
 
-    # The directory containing the list of filenames of files that need to be downloaded...
+    # The directory containing the list of filenames of files that need to be
+    # downloaded...
     dest_data_dir_todownload = dest_data_dir / "TODOWNLOAD"
 
     # Get the list of files to download...
@@ -228,8 +240,8 @@ def download_sentinel_timeseries(dest_data_dir: Path, base_filename: str):
         # We need to be able to read file metadata and file contents
         scopes = "https://www.googleapis.com/auth/drive.readonly"
 
-        # The client secret file needs to be located in the same dir as the script otherwise it
-        # doesn't seem to work
+        # The client secret file needs to be located in the same dir as the script
+        # otherwise it doesn't seem to work
         client_secret_file = "client_secret_download-gee-data.json"
         store = file.Storage("credentials.json")
         creds = store.get()
@@ -243,12 +255,14 @@ def download_sentinel_timeseries(dest_data_dir: Path, base_filename: str):
     drive_service = None
     for curr_csv_to_download_path in sorted(csv_files_todownload):
 
-        # Get the basename of the file to download -> this will be the file name in google drive
+        # Get the basename of the file to download -> this will be the file name in
+        # google drive
         curr_csv_to_download_basename = os.path.basename(curr_csv_to_download_path)
         dest_path = os.path.join(dest_data_dir, curr_csv_to_download_basename)
         if os.path.isfile(dest_path) is True:
             logger.error(
-                f"SKIP, because file exists in destination dir, even though it is still in TODOWNLOAD dir as well???: {curr_csv_to_download_basename}"
+                "SKIP, because file exists in destination dir, even though it is still "
+                f"in TODOWNLOAD dir as well???: {curr_csv_to_download_basename}"
             )
             continue
 
@@ -276,7 +290,7 @@ def download_sentinel_timeseries(dest_data_dir: Path, base_filename: str):
             return_status = "RETRY_NEEDED"
         elif len(items) > 1:
             logger.error(
-                f"More than one file found for filename: {curr_csv_to_download_basename}"
+                f"> 1 file found for filename: {curr_csv_to_download_basename}"
             )
         else:
             for item in items:
@@ -343,7 +357,7 @@ def clean_gee_downloaded_csv(csv_file: str, remove_orig_csv: bool = False):
         file_noext, _ = os.path.splitext(csv_file)
         output_file = f"{file_noext}{conf.general['data_ext']}"
 
-        # Check if output file exists already even though it is different from input file
+        # Check if output file exists already even though it's different from input file
         if output_file != csv_file and os.path.exists(output_file):
             logger.warning(
                 f"Output file exists already, so don't create it again: {output_file}"
@@ -358,14 +372,17 @@ def clean_gee_downloaded_csv(csv_file: str, remove_orig_csv: bool = False):
             # Read the file
             logger.info(f"Read file and remove gee specifice columns from {csv_file}")
 
-            # Sample 100 rows of data to determine dtypes, so floats can be read as float32 instead of the
-            # default float64. Writing those to eg. parquet is a lot more efficiënt.
+            # Sample 100 rows of data to determine dtypes, so floats can be read as
+            # float32 instead of the default float64. Writing those to eg. parquet is a
+            # lot more efficiënt.
             test_df = pd.read_csv(csv_file, nrows=100)
             float_cols = [c for c in test_df if test_df[c].dtype == "float64"]
             float32_cols = {c: np.float32 for c in float_cols}
 
             # Now read entire file
-            data_read_df = pd.read_csv(csv_file, engine="c", dtype=float32_cols)
+            data_read_df = pd.read_csv(
+                csv_file, engine="c", dtype=float32_cols  # type: ignore
+            )
 
             # Drop unnecessary gee specific columns...
             for column in data_read_df.columns:
@@ -386,7 +403,8 @@ def clean_gee_downloaded_csv(csv_file: str, remove_orig_csv: bool = False):
             if len(data_read_df.columns) > 0:
                 # Replace the original file by the cleaned one
                 logger.info(
-                    f"Write the file with the gee specific columns removed to a new file: {output_file}"
+                    "Write the file with the gee specific columns removed to a new "
+                    f"file: {output_file}"
                 )
                 pdh.to_file(data_read_df, Path(output_file), index=True)
             else:
@@ -417,9 +435,11 @@ def calculate_sentinel_timeseries(
     """
     Credits: partly based on a gee S1 extraction script written by Guido Lemoine.
 
-    TODO: it would be cleaner if feature of interest didn't have to be passed explicitly... but could be calculated from input_parcels... but too slow??
-    TODO: some code is still old code from the original js version that could be cleaner by just writing it in python.
-          this would also result in using less sockets, and less error that sockets can't be reused on windows ;-).
+    TODO: it would be cleaner if feature of interest didn't have to be passed
+          explicitly... but could be calculated from input_parcels... but too slow??
+    TODO: some code is still old code from the original js version that could be cleaner
+          by just writing it in python. This would also result in using less sockets,
+          and less error that sockets can't be reused on windows ;-).
     """
 
     # Init some variables
@@ -470,15 +490,18 @@ def calculate_sentinel_timeseries(
             .geometry()
         )
 
-    # TODO: add check if the ID column exists in the parcel file, otherwise he processes everything without ID column in output :-(!!!
+    # TODO: add check if the ID column exists in the parcel file, otherwise he processes
+    # everything without ID column in output :-(!!!
 
-    # First adapt start_date and end_date so they are mondays, so it becomes easier to reuse timeseries data
+    # First adapt start_date and end_date so they are mondays, so it becomes easier to
+    # reuse timeseries data
     logger.info("Adapt start_date and end_date so they are mondays")
 
     start_date = ts_util.get_monday(start_date_str)
     end_date = ts_util.get_monday(
         end_date_str
-    )  # Remark: de end date is exclusive in gee filtering, so must be a monday as well...
+    )
+    # Remark: de end date is exclusive in gee filtering, so must be a monday as well...
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
 
@@ -491,12 +514,20 @@ def calculate_sentinel_timeseries(
     input_parcels = ee.FeatureCollection(input_parcel_path_gee)
 
     logging.info(
-        f"Create sentinel timeseries from {start_date} till {end_date} for parcel in file {input_parcel_path_gee}"
+        f"Create sentinel timeseries from {start_date} till {end_date} for parcel in "
+        f"file {input_parcel_path_gee}"
     )
 
     # Add some columns with feature info, to be able to eg. filter only polygons...
     #    def add_feature_info(feature):
-    #        return feature.set('area', feature.area(), 'perimeter', feature.perimeter(), 'type', feature.geometry().type())
+    #        return feature.set(
+    #            'area',
+    #            feature.area(),
+    #            'perimeter',
+    #            feature.perimeter(),
+    #            'type',
+    #            feature.geometry().type()
+    #        )
     #    bevl2017 = bevl2017.map(add_feature_info)
 
     """
@@ -511,7 +542,12 @@ def calculate_sentinel_timeseries(
 
     # Export non-polygons..
     #    bevl2017_nopoly = bevl2017.filterMetadata('type', 'not_equals', 'Polygon')
-    #    ee.batch.Export.table.toDrive(collection = bevl2017_nopoly, folder = 'Monitoring', description = 'BEVL2017_no_polygon', fileFormat = 'KMZ')
+    #    ee.batch.Export.table.toDrive(
+    #        collection=bevl2017_nopoly,
+    #        folder='Monitoring',
+    #        description='BEVL2017_no_polygon',
+    #        fileFormat='KMZ'
+    #    )
 
     # Filter the S1 data we want to have (VV and VH pol.)
     s1 = (
@@ -644,7 +680,8 @@ def calculate_sentinel_timeseries(
 
     # Get the S2's for a period...
     # Remark: median on an imagecollection apparently has a result that
-    # the geometry of the image is not correct anymore... so median only is done afterwards.
+    # the geometry of the image is not correct anymore... so median only is done
+    # afterwards.
     def get_s2s_forperiod(period):
         return s2.filterDate(ee.List(period).get(0), ee.List(period).get(1))
 
@@ -653,15 +690,17 @@ def calculate_sentinel_timeseries(
     #     - READY    : the task is submitted to the gee server, but not yet running
     #     - RUNNING  : the task is running on gee
     #     - COMPLETED: the task is completely completed
-    #     - FAILED   : an error occured while processing the task and the tas stopped without result
+    #     - FAILED   : an error occured while processing the task and the tas stopped
+    #                  without result
     def get_gee_tasklist():
         tasklist = ee.batch.data.getTaskList()
         logger.info(f"Number of tasks: {len(tasklist)}")
         return tasklist
 
-    # Remark: In some cases (eg. while debugging/testing) it would be easier that there would be an
-    #         option to ignore completed ones. But there is an easy workaround: just change the
-    #         basefilename in any way to ignore the completed ones.
+    # Remark:
+    #     In some cases (eg. while debugging/testing) it would be easier that there
+    #     would be an option to ignore completed ones. But there is an easy workaround:
+    #     just change the basefilename in any way to ignore the completed ones.
     def check_if_task_exists(task_description: str, task_state_list) -> bool:
         """Checks if a task exists already on gee"""
 
@@ -670,8 +709,8 @@ def calculate_sentinel_timeseries(
         if global_gee_tasks_cache is None:
             global_gee_tasks_cache = get_gee_tasklist()
 
-        # Check if there is a task with this name and this state (there can be multiple tasks with
-        # this name!)
+        # Check if there is a task with this name and this state (there can be multiple
+        # tasks with this name!)
         for task in global_gee_tasks_cache:
             if (
                 task["description"] == task_description
@@ -679,11 +718,13 @@ def calculate_sentinel_timeseries(
                 and task["state"] in task_state_list
             ):
                 logger.debug(
-                    f"<check_if_task_exists> Task {task_description} found with state {task['state']}"
+                    f"<check_if_task_exists> Task {task_description} found with state "
+                    f"{task['state']}"
                 )
                 return True
         logger.debug(
-            f"<check_if_task_exists> Task {task_description} doesn't exist with any of the states in {task_state_list}"
+            f"<check_if_task_exists> Task {task_description} doesn't exist with any of "
+            f"the states in {task_state_list}"
         )
         return False
 
@@ -705,13 +746,14 @@ def calculate_sentinel_timeseries(
             )
             return
 
-        # If the data is already "ordered" in a previous run and is still busy processing, don't
-        # start processing again
+        # If the data is already "ordered" in a previous run and is still busy
+        # processing, don't start processing again
         if os.path.isfile(dest_fullpath_todownload) and (
             check_if_task_exists(export_description, ["RUNNING", "READY", "COMPLETED"])
         ):
             logger.info(
-                f"For task {export_descr}, file still busy processing or is ready on gee: SKIP"
+                f"For task {export_descr}, file still busy processing or is ready on "
+                "gee: SKIP"
             )
             return
 
@@ -743,7 +785,8 @@ def calculate_sentinel_timeseries(
         # Create file in todownload folder to indicate this file should be downloaded
         Path(dest_fullpath_todownload).touch()
 
-    # If the file doesn't exist yet... export the parcel with all interesting columns to csv...
+    # If the file doesn't exist yet... export the parcel with all interesting columns
+    # to csv...
     s1_for_count = (
         s1.filterDate(ee.List(periods.get(0)).get(0), ee.List(periods.get(0)).get(1))
         .mean()
@@ -758,12 +801,13 @@ def calculate_sentinel_timeseries(
 
     # Loop over all periods and export data per period to drive
     # Create the reducer we want to use...
-    # Remark: always use both the mean and stdDev reducer, the stdDev is useful for detecting if
-    #         the parcel isn't one crop in any case, and that way the name of the columns always
-    #         end with the aggregation/reduce type used, otherwise it doesn't and other code will
-    #         break
+    # Remark:
+    #     always use both the mean and stdDev reducer, the stdDev is useful for
+    #     detecting if the parcel isn't one crop in any case, and that way the name of
+    #     the columns always end with the aggregation/reduce type used, otherwise it
+    #     doesn't and other code will break
     reducer = ee.Reducer.mean().combine(reducer2=ee.Reducer.stdDev(), sharedInputs=True)
-    #    reducer = ee.Reducer.mean()
+    # reducer = ee.Reducer.mean()
     nb_periods = periods.length().getInfo()
     logger.info(f"Loop through all <{nb_periods}> periods")
     for i in range(0, nb_periods):
@@ -775,8 +819,8 @@ def calculate_sentinel_timeseries(
 
         def merge_bands(image1, image2):
             """
-            Merges the bands of the two images, without getting errors if one of the images is None.
-            If both images are None, None will be returned.
+            Merges the bands of the two images, without getting errors if one of the
+            images is None. If both images are None, None will be returned.
             """
 
             if image1 is not None:
@@ -825,7 +869,8 @@ def calculate_sentinel_timeseries(
                     export_descr=sensordata_descr,
                 )
 
-        # Get mean s1 asc and desc image of the s1 images that are available in this period
+        # Get mean s1 asc and desc image of the s1 images that are available in this
+        # period
         SENSORDATA_S1_ASCDESC = conf.general["SENSORDATA_S1_ASCDESC"]
         if SENSORDATA_S1_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
@@ -851,7 +896,8 @@ def calculate_sentinel_timeseries(
                     export_descr=sensordata_descr,
                 )
 
-        # Get mean s1 in DB, asc and desc image of the s1 images that are available in this period
+        # Get mean s1 in DB, asc and desc image of the s1 images that are available in
+        # this period
         SENSORDATA_S1DB_ASCDESC = conf.general["SENSORDATA_S1DB_ASCDESC"]
         if SENSORDATA_S1DB_ASCDESC in sensordata_to_get:
             # If the data is already available locally... skip
@@ -877,15 +923,16 @@ def calculate_sentinel_timeseries(
                     export_descr=sensordata_descr,
                 )
 
-        # Get mean s2 image of the s2 images that have (almost)cloud free images available in this
-        # period
+        # Get mean s2 image of the s2 images that have (almost)cloud free images
+        # available in this period
         SENSORDATA_S2gt95 = conf.general["SENSORDATA_S2gt95"]
         if SENSORDATA_S2gt95 in sensordata_to_get:
             sensordata_descr = f"{base_filename}_{period_start_str}_{SENSORDATA_S2gt95}"
 
             # If the data is already available locally... skip
-            # Remark: this logic is puth here additionaly to evade having to calculate the 95% rule
-            #         even if data is available.
+            # Remark:
+            #     this logic is puth here additionaly to evade having to calculate the
+            #     95% rule even if data is available.
             dest_fullpath = dest_data_dir / f"{sensordata_descr}.csv"
             if os.path.isfile(dest_fullpath):
                 logger.info(
@@ -912,20 +959,16 @@ def calculate_sentinel_timeseries(
                         ],
                     )
                 else:
-                    # Create an empty destination file so we'll know that we tested the 95% already
-                    # and don't need to do it again...
+                    # Create an empty destination file so we'll know that we tested the
+                    # 95% already and don't need to do it again...
                     dest_fullpath.touch()
                     continue
 
-                #                logger.debug(f"S2 Bands: {ee.Image(s2_forperiod).bandNames().getInfo()}")
+                # logger.debug(
+                #     f"S2 Bands: {ee.Image(s2_forperiod).bandNames().getInfo()}"
+                # )
                 reduce_and_export(
                     imagedata=s2_forperiod,
                     reducer=reducer,
                     export_descr=sensordata_descr,
                 )
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")

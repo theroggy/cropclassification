@@ -27,23 +27,28 @@ def read_file(
     ext_lower = path.suffix.lower()
     if ext_lower == ".csv":
         try:
-            data_read_df = pd.read_csv(str(path), usecols=columns, low_memory=False)
-        except UnicodeDecodeError:
-            # If a unicode decode error is thrown, try again using ANSI encoding
             data_read_df = pd.read_csv(
-                str(path), usecols=columns, low_memory=False, encoding="ANSI"
-            )
-        return data_read_df
-    elif ext_lower == ".tsv":
-        try:
-            data_read_df = pd.read_csv(
-                str(path), usecols=columns, sep="\t", low_memory=False
+                str(path), usecols=columns, low_memory=False  # type: ignore
             )
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
             data_read_df = pd.read_csv(
                 str(path),
-                usecols=columns,
+                usecols=columns,  # type: ignore
+                low_memory=False,
+                encoding="ANSI"
+            )
+        return data_read_df
+    elif ext_lower == ".tsv":
+        try:
+            data_read_df = pd.read_csv(
+                str(path), usecols=columns, sep="\t", low_memory=False  # type: ignore
+            )
+        except UnicodeDecodeError:
+            # If a unicode decode error is thrown, try again using ANSI encoding
+            data_read_df = pd.read_csv(
+                str(path),
+                usecols=columns,  # type: ignore
                 sep="\t",
                 low_memory=False,
                 encoding="ANSI",
