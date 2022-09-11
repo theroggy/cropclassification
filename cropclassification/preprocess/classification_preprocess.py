@@ -235,14 +235,14 @@ def create_train_test_sample(
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < upper_limit)
             .groupby(class_balancing_column)
-            .filter(lambda x: len(x) >= lower_limit)
+            .filter(lambda x: len(x) >= lower_limit)  # type: ignore
         )
         # For smaller classes, oversample...
         train_df = train_df.append(
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < lower_limit)
             .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, lower_limit, replace=True)
+            .apply(pd.DataFrame.sample, lower_limit, replace=True)  # type: ignore
         )
 
     elif balancing_strategy == "BALANCING_STRATEGY_MEDIUM2":
@@ -350,7 +350,9 @@ def create_train_test_sample(
         )
         if len(train_capped_df) > 0:
             train_df = train_df.append(
-                train_capped_df.apply(pd.DataFrame.sample, oversample_count, replace=True)
+                train_capped_df.apply(
+                    pd.DataFrame.sample, oversample_count, replace=True
+                )
             )
 
     elif balancing_strategy == "BALANCING_STRATEGY_PROPORTIONAL_GROUPS":
@@ -388,7 +390,9 @@ def create_train_test_sample(
         )
         if len(train_limit2_df) > 0:
             train_df = train_df.append(
-                train_limit2_df.apply(pd.DataFrame.sample, upper_train_limit2)
+                train_limit2_df.apply(
+                    pd.DataFrame.sample, upper_train_limit2  # type: ignore
+                )
             )
         upper_count_limit3 = 20000
         upper_train_limit3 = 10000
@@ -405,7 +409,9 @@ def create_train_test_sample(
         )
         if len(train_limit3_df) > 0:
             train_df = train_df.append(
-                train_limit3_df.apply(pd.DataFrame.sample, upper_train_limit3)
+                train_limit3_df.apply(
+                    pd.DataFrame.sample, upper_train_limit3  # type: ignore
+                )
             )
         upper_count_limit4 = 10000
         upper_train_limit4 = 5000
@@ -422,13 +428,15 @@ def create_train_test_sample(
         )
         if len(train_limit4_df) > 0:
             train_df = train_df.append(
-                train_limit4_df.apply(pd.DataFrame.sample, upper_train_limit4)
+                train_limit4_df.apply(
+                    pd.DataFrame.sample, upper_train_limit4  # type: ignore
+                )
             )
         # For smaller balancing classes, just use all samples
         train_df = train_df.append(
             train_base_df.groupby(class_balancing_column).filter(
                 lambda x: len(x) < upper_count_limit4
-            )
+            )  # type: ignore
         )
 
     elif balancing_strategy == "BALANCING_STRATEGY_UPPER_LIMIT":
@@ -452,7 +460,7 @@ def create_train_test_sample(
         train_df = train_df.append(
             train_base_df.groupby(class_balancing_column).filter(
                 lambda x: len(x) < upper_limit
-            )
+            )  # type: ignore
         )
 
     elif balancing_strategy == "BALANCING_STRATEGY_EQUAL":
@@ -504,11 +512,5 @@ def create_train_test_sample(
     logger.info("Write the output files")
     train_df.set_index(conf.columns["id"], inplace=True)
     test_df.set_index(conf.columns["id"], inplace=True)
-    pdh.to_file(train_df, output_parcel_train_path)  # The ID column is the index...
-    pdh.to_file(test_df, output_parcel_test_path)  # The ID column is the index...
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")
+    pdh.to_file(train_df, output_parcel_train_path)  # type: ignore
+    pdh.to_file(test_df, output_parcel_test_path)  # type: ignore

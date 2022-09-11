@@ -18,10 +18,10 @@ import cropclassification.helpers.pandas_helper as pdh
 logger = logging.getLogger(__name__)
 
 # define some specific BEFL column names
-column_BEFL_earlylate = 'MON_EARLY_LATE'     # Is it an early or a late crop?
-column_BEFL_gesp_pm = 'GESP_PM'              # Gespecialiseerde productiemethode
-column_BEFL_gis_area = 'GRAF_OPP'            # GIS Area
-column_BEFL_status_perm_grass = 'STAT_BGV'   # Status permanent grassland
+column_BEFL_earlylate = "MON_EARLY_LATE"  # Is it an early or a late crop?
+column_BEFL_gesp_pm = "GESP_PM"  # Gespecialiseerde productiemethode
+column_BEFL_gis_area = "GRAF_OPP"  # GIS Area
+column_BEFL_status_perm_grass = "STAT_BGV"  # Status permanent grassland
 
 # -------------------------------------------------------------
 # The real work
@@ -65,138 +65,159 @@ def prepare_input(
     # Now start prepare
     if classtype_to_prepare == "CROPGROUP":
         parceldata_df = prepare_input_cropgroup(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_declared'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
         return prepare_input_cropgroup(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'CROPGROUP-GROUNDTRUTH':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CROPGROUP-GROUNDTRUTH":
         return prepare_input_cropgroup(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'CROPGROUP-EARLY':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CROPGROUP-EARLY":
         parceldata_df = prepare_input_cropgroup_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_declared'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
         return prepare_input_cropgroup_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'CROPGROUP-EARLY-GROUNDTRUTH':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CROPGROUP-EARLY-GROUNDTRUTH":
         return prepare_input_cropgroup_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'LANDCOVER':
-        parceldata_df = prepare_input_landcover(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_declared'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
-        return prepare_input_landcover(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'MULTICROP':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "LANDCOVER":
         parceldata_df = prepare_input_landcover(
             parceldata_df=parceldata_df,
-            column_BEFL_cropcode=conf.columns['crop_declared'],
+            column_BEFL_cropcode=conf.columns["crop_declared"],
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
         )
         return prepare_input_landcover(
             parceldata_df=parceldata_df,
-            column_BEFL_cropcode=conf.columns['crop'],
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "MULTICROP":
+        parceldata_df = prepare_input_landcover(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+        return prepare_input_landcover(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LANDCOVER-GROUNDTRUTH":
         return prepare_input_landcover(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'LANDCOVER-EARLY':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "LANDCOVER-EARLY":
         parceldata_df = prepare_input_landcover_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_declared'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
         return prepare_input_landcover_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'LANDCOVER-EARLY-GROUNDTRUTH':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "LANDCOVER-EARLY-GROUNDTRUTH":
         return prepare_input_landcover_early(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'POPULAR-CROP':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "POPULAR-CROP":
         parceldata_df = prepare_input_most_popular_crop(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_declared'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
         return prepare_input_most_popular_crop(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'POPULAR-CROP-GROUNDTRUTH':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "POPULAR-CROP-GROUNDTRUTH":
         return prepare_input_most_popular_crop(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'LATECROP':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "LATECROP":
         parceldata_df = prepare_input_latecrop(
-                parceldata_df=parceldata_df,
-                column_BEFL_latecrop=conf.columns['crop_declared'],
-                column_BEFL_maincrop=conf.columns['main_crop_declared'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=conf.columns["crop_declared"],
+            column_BEFL_maincrop=conf.columns["main_crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
         return prepare_input_latecrop(
-                parceldata_df=parceldata_df,
-                column_BEFL_latecrop=conf.columns['crop'],
-                column_BEFL_maincrop=conf.columns['main_crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'LATECROP-GROUNDTRUTH':
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=conf.columns["crop"],
+            column_BEFL_maincrop=conf.columns["main_crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
         return prepare_input_cropgroup(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'FABACEAE':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "FABACEAE":
         parceldata_df = prepare_input_fabaceae(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class_declared'],
-                classes_refe_path=classes_refe_path)
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
         return prepare_input_fabaceae(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop'],
-                column_output_class=conf.columns['class'],
-                classes_refe_path=classes_refe_path)
-    elif classtype_to_prepare == 'FABACEAE-GROUNDTRUTH':
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "FABACEAE-GROUNDTRUTH":
         return prepare_input_fabaceae(
-                parceldata_df=parceldata_df,
-                column_BEFL_cropcode=conf.columns['crop_gt_verified'],
-                column_output_class=conf.columns['class_groundtruth'],
-                classes_refe_path=classes_refe_path)          
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
     else:
         message = (
             f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
@@ -248,10 +269,12 @@ def prepare_input_cropgroup(
     classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
 
     # Remove unneeded columns
-    columns_to_keep=conf.preprocess.getlist('columns_to_keep')
+    columns_to_keep = conf.preprocess.getlist("columns_to_keep")
     for column in classes_df.columns:
-        if(column not in [column_output_class_orig, column_BEFL_cropcode]
-           and column not in columns_to_keep):
+        if (
+            column not in [column_output_class_orig, column_BEFL_cropcode]
+            and column not in columns_to_keep
+        ):
             classes_df.drop(column, axis=1, inplace=True)
 
     # Set the index
@@ -341,19 +364,34 @@ def prepare_input_cropgroup(
     #                  column_output_class] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    for _, row in parceldata_df.groupby(column_output_class).size().reset_index(name='count').iterrows():
-        if row['count'] <= conf.preprocess.getint('min_parcels_in_class'):
-            logger.info(f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES")
-            parceldata_df.loc[parceldata_df[column_output_class] == row[column_output_class], 
-                              column_output_class] = 'IGNORE_NOT_ENOUGH_SAMPLES'
+    for _, row in (
+        parceldata_df.groupby(column_output_class)
+        .size()
+        .reset_index(name="count")
+        .iterrows()
+    ):
+        if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+            logger.info(
+                f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+            )
+            parceldata_df.loc[
+                parceldata_df[column_output_class] == row[column_output_class],
+                column_output_class,
+            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
-        if(column not in [column_output_class, conf.columns['id'], 
-                          conf.columns['class_groundtruth'], 
-                          conf.columns['class_declared']]
-             and column not in conf.preprocess.getlist('extra_export_columns')
-             and column not in columns_to_keep):
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_to_keep
+        ):
             parceldata_df.drop(column, axis=1, inplace=True)
         elif column == column_BEFL_gesp_pm:
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
@@ -406,10 +444,12 @@ def prepare_input_fabaceae(
     classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
 
     # Remove unneeded columns
-    columns_to_keep=conf.preprocess.getlist('columns_to_keep')
+    columns_to_keep = conf.preprocess.getlist("columns_to_keep")
     for column in classes_df.columns:
-        if(column not in [column_output_class_orig, column_BEFL_cropcode]
-           and column not in columns_to_keep):
+        if (
+            column not in [column_output_class_orig, column_BEFL_cropcode]
+            and column not in columns_to_keep
+        ):
             classes_df.drop(column, axis=1, inplace=True)
 
     # Set the index
@@ -505,19 +545,34 @@ def prepare_input_fabaceae(
     #                  column_output_class] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    for _, row in parceldata_df.groupby(column_output_class).size().reset_index(name='count').iterrows():
-        if row['count'] <= conf.preprocess.getint('min_parcels_in_class'):
-            logger.info(f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES")
-            parceldata_df.loc[parceldata_df[column_output_class] == row[column_output_class], 
-                              column_output_class] = 'IGNORE_NOT_ENOUGH_SAMPLES'
+    for _, row in (
+        parceldata_df.groupby(column_output_class)
+        .size()
+        .reset_index(name="count")
+        .iterrows()
+    ):
+        if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+            logger.info(
+                f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+            )
+            parceldata_df.loc[
+                parceldata_df[column_output_class] == row[column_output_class],
+                column_output_class,
+            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
-        if(column not in [column_output_class, conf.columns['id'], 
-                          conf.columns['class_groundtruth'], 
-                          conf.columns['class_declared']]
-             and column not in conf.preprocess.getlist('extra_export_columns')
-             and column not in columns_to_keep):
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_to_keep
+        ):
             parceldata_df.drop(column, axis=1, inplace=True)
         elif column == column_BEFL_gesp_pm:
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
@@ -528,11 +583,12 @@ def prepare_input_fabaceae(
 
 
 def prepare_input_latecrop(
-            parceldata_df,
-            column_BEFL_latecrop: str,
-            column_BEFL_maincrop: str,
-            column_output_class: str,
-            classes_refe_path: Path):
+    parceldata_df,
+    column_BEFL_latecrop: str,
+    column_BEFL_maincrop: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+):
     """
     This function creates a file that is compliant with the assumptions used by the rest of the
     classification functionality.
@@ -551,7 +607,14 @@ def prepare_input_latecrop(
 
     # Convert the crop to unicode, in case the input is int...
     if column_BEFL_latecrop in parceldata_df.columns:
-        parceldata_df[column_BEFL_latecrop] = parceldata_df[column_BEFL_latecrop].astype('unicode')
+        parceldata_df[column_BEFL_latecrop] = parceldata_df[
+            column_BEFL_latecrop
+        ].astype("unicode")
+
+    if column_BEFL_maincrop in parceldata_df.columns:
+        parceldata_df[column_BEFL_maincrop] = parceldata_df[
+            column_BEFL_maincrop
+        ].astype("unicode")
 
     if column_BEFL_maincrop in parceldata_df.columns:
         parceldata_df[column_BEFL_maincrop] = parceldata_df[column_BEFL_maincrop].astype('unicode')
@@ -562,25 +625,31 @@ def prepare_input_latecrop(
     classes_df = pdh.read_file(classes_refe_path)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
-    # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
-    # unicode to be able to do comparisons with the other data
-    classes_df[column_BEFL_latecrop] = classes_df['CROPCODE'].astype('unicode')
-    classes_df[column_BEFL_maincrop] = classes_df['CROPCODE'].astype('unicode')
+    # Because the file was read as ansi, and gewas is int, so the data needs to be
+    # converted to unicode to be able to do comparisons with the other data
+    classes_df[column_BEFL_latecrop] = classes_df["CROPCODE"].astype("unicode")
+    classes_df[column_BEFL_maincrop] = classes_df["CROPCODE"].astype("unicode")
 
     # Map column with the classname to orig classname
     column_output_class_orig = conf.columns["class"] + "_orig"
     classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
 
     # Remove unneeded columns
-    columns_to_keep=conf.preprocess.getlist('columns_to_keep')
+    columns_to_keep = conf.preprocess.getlist("columns_to_keep")
     for column in classes_df.columns:
-        if(column not in [column_output_class_orig, 
-                          column_BEFL_latecrop,
-                          column_BEFL_maincrop,
-                          conf.columns['class_declared'],
-                          conf.columns['class']]
-           and column not in columns_to_keep
-           and column not in ['MON_CROPGROUP','IS_PERM_BEDEKKING', 'IS_BOUWLAND']):
+        if (
+            column
+            not in [
+                column_output_class_orig,
+                column_BEFL_latecrop,
+                column_BEFL_maincrop,
+                conf.columns["class_declared"],
+                conf.columns["class"],
+            ]
+            and column not in columns_to_keep
+            and column
+            not in ["MON_CROPGROUP", "IS_PERM_BEDEKKING", "IS_BOUWLAND"]
+        ):
             classes_df.drop(column, axis=1, inplace=True)
 
     # Set the index
@@ -592,11 +661,20 @@ def prepare_input_latecrop(
     # Join/merge the classname
     logger.info("Add the classes to the parceldata")
     parceldata_df = parceldata_df.merge(
-            classes_df[cols_to_join], how='left', left_on=column_BEFL_latecrop,
-            right_index=True, validate='many_to_one')
+        classes_df[cols_to_join],
+        how="left",
+        left_on=column_BEFL_latecrop,
+        right_index=True,
+        validate="many_to_one",
+    )
     parceldata_df = parceldata_df.merge(
-            classes_df[cols_to_join], how='left', left_on=column_BEFL_maincrop,
-            right_index=True, validate='many_to_one', suffixes=(None, '_MAIN'))
+        classes_df[cols_to_join],
+        how="left",
+        left_on=column_BEFL_maincrop,
+        right_index=True,
+        validate="many_to_one",
+        suffixes=(None, "_MAINCROP"),
+    )
 
     # Copy orig classname to classification classname
     parceldata_df.insert(
@@ -612,36 +690,50 @@ def prepare_input_latecrop(
 
     # Assumption: if there is no latecrop and the maincrop is akkerbouw, then the land will be left barren after
     # except for grasses
-    parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                      (parceldata_df['IS_BOUWLAND_MAIN'] == 1) &
-                      (parceldata_df['MON_CROPGROUP_MAIN'] != 'MON_GRASSEN'), 
-                          column_output_class] = 'MON_BRAAK'
+    parceldata_df.loc[
+        (parceldata_df[column_output_class] == "UNKNOWN")
+        & (parceldata_df["IS_BOUWLAND_MAINCROP"] == 1)
+        & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_GRASSEN"),
+        column_output_class,
+    ] = "MON_BRAAK"
 
-    parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                      (parceldata_df['IS_PERM_BEDEKKING_MAIN'] == 0) &
-                      (parceldata_df['MON_CROPGROUP_MAIN'] == 'MON_GRASSEN'), 
-                          column_output_class] = 'MON_GRASSEN'
+    parceldata_df.loc[
+        (parceldata_df[column_output_class] == "UNKNOWN")
+        & (parceldata_df["IS_PERM_BEDEKKING_MAINCROP"] == 0)
+        & (parceldata_df["MON_CROPGROUP_MAINCROP"] == "MON_GRASSEN"),
+        column_output_class,
+    ] = "MON_GRASSEN"
 
     # Assemption: permanent crops wont/cant have a latecrop, so dont bother predicting them
-    parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                      (parceldata_df['IS_PERM_BEDEKKING_MAIN'] == 1),
-                          column_output_class] = 'IGNORE_PERMANENT_BEDEKKING'
+    parceldata_df.loc[
+        (parceldata_df[column_output_class] == "UNKNOWN")
+        & (parceldata_df["IS_PERM_BEDEKKING_MAINCROP"] == 1),
+        column_output_class,
+    ] = "IGNORE_PERMANENT_BEDEKKING"
 
     # If a column with extra info exists, use it as well to fine-tune the classification classes.
     if column_BEFL_gesp_pm in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
-        parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                          (parceldata_df[column_BEFL_gesp_pm].isin(['SER', 'SGM'])), 
-                          column_output_class] = 'MON_OVERK_LOO'
-        parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                          (parceldata_df[column_BEFL_gesp_pm].isin(['PLA', 'PLO', 'NPO'])), 
-                          column_output_class] = 'MON_OVERK_LOO'
-        parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                          (parceldata_df[column_BEFL_gesp_pm] == 'LOO'), 
-                          column_output_class] = 'MON_OVERK_LOO'           # Een loods is hetzelfde als een stal...
-        parceldata_df.loc[(parceldata_df[column_output_class] == 'UNKNOWN') & 
-                          (parceldata_df[column_BEFL_gesp_pm] == 'CON'), 
-                          column_output_class] = 'MON_CONTAINERS'          # Containers, niet op volle grond...
+        parceldata_df.loc[
+            (parceldata_df[column_output_class] == "UNKNOWN")
+            & (parceldata_df[column_BEFL_gesp_pm].isin(["SER", "SGM"])),
+            column_output_class,
+        ] = "MON_OVERK_LOO"
+        parceldata_df.loc[
+            (parceldata_df[column_output_class] == "UNKNOWN")
+            & (parceldata_df[column_BEFL_gesp_pm].isin(["PLA", "PLO", "NPO"])),
+            column_output_class,
+        ] = "MON_OVERK_LOO"
+        parceldata_df.loc[
+            (parceldata_df[column_output_class] == "UNKNOWN")
+            & (parceldata_df[column_BEFL_gesp_pm] == "LOO"),
+            column_output_class,
+        ] = "MON_OVERK_LOO"  # Een loods is hetzelfde als een stal...
+        parceldata_df.loc[
+            (parceldata_df[column_output_class] == "UNKNOWN")
+            & (parceldata_df[column_BEFL_gesp_pm] == "CON"),
+            column_output_class,
+        ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
         # parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
     else:
@@ -650,19 +742,34 @@ def prepare_input_latecrop(
         )
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    for _, row in parceldata_df.groupby(column_output_class).size().reset_index(name='count').iterrows():
-        if row['count'] <= conf.preprocess.getint('min_parcels_in_class'):
-            logger.info(f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES")
-            parceldata_df.loc[parceldata_df[column_output_class] == row[column_output_class], 
-                              column_output_class] = 'IGNORE_NOT_ENOUGH_SAMPLES'
+    for _, row in (
+        parceldata_df.groupby(column_output_class)
+        .size()
+        .reset_index(name="count")
+        .iterrows()
+    ):
+        if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+            logger.info(
+                f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+            )
+            parceldata_df.loc[
+                parceldata_df[column_output_class] == row[column_output_class],
+                column_output_class,
+            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
-        if(column not in [column_output_class, conf.columns['id'], 
-                          conf.columns['class_groundtruth'], 
-                          conf.columns['class_declared']]
-             and column not in conf.preprocess.getlist('extra_export_columns')
-             and column not in columns_to_keep):
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_to_keep
+        ):
             parceldata_df.drop(column, axis=1, inplace=True)
         elif column == column_BEFL_gesp_pm:
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
@@ -754,10 +861,12 @@ def prepare_input_landcover(
     classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
 
     # Remove unneeded columns
-    columns_to_keep=conf.preprocess.getlist('columns_to_keep')
+    columns_to_keep = conf.preprocess.getlist("columns_to_keep")
     for column in classes_df.columns:
-        if(column not in [column_output_class_orig, column_BEFL_cropcode]
-           and column not in columns_to_keep):
+        if (
+            column not in [column_output_class_orig, column_BEFL_cropcode]
+            and column not in columns_to_keep
+        ):
             classes_df.drop(column, axis=1, inplace=True)
 
     # Set the index
@@ -812,11 +921,17 @@ def prepare_input_landcover(
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
-        if(column not in [column_output_class, conf.columns['id'], 
-                          conf.columns['class_groundtruth'], 
-                          conf.columns['class_declared']]
-             and column not in conf.preprocess.getlist('extra_export_columns')
-             and column not in columns_to_keep):
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_to_keep
+        ):
             parceldata_df.drop(column, axis=1, inplace=True)
         elif column == column_BEFL_gesp_pm:
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
@@ -918,12 +1033,14 @@ def prepare_input_most_popular_crop(
     ] = "IGNORE_UNIMPORTANT_CLASS"
 
     # Drop the columns that aren't useful at all
-    columns_to_keep=conf.preprocess.getlist('columns_to_keep')
+    columns_to_keep = conf.preprocess.getlist("columns_to_keep")
     for column in parceldata_df.columns:
-        if(column not in [conf.columns['id'], column_output_class]
-             and column not in conf.preprocess.getlist('extra_export_columns')
-             and column not in columns_to_keep
-             and not column == column_BEFL_cropcode):
+        if (
+            column not in [conf.columns["id"], column_output_class]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_to_keep
+            and not column == column_BEFL_cropcode
+        ):
             parceldata_df.drop(column, axis=1, inplace=True)
         elif column == column_BEFL_gesp_pm:
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
@@ -932,10 +1049,3 @@ def prepare_input_most_popular_crop(
 
     # Return result
     return parceldata_df
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")
