@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Python: Huidige bestand",
             "type": "python",
@@ -13,12 +12,15 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: cropclassification",
+            "name": "Python: run tasks",
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/cropclassification/cropclassification.py",
-            "args": ["-t", "x:/monitoring/markers/playground/_tasks_pierog"],
+            "args": [
+                "-t",
+                "x:/monitoring/markers/playground/_tasks_pierog"
+            ],
             "console": "integratedTerminal"
-        }           
+        }
     ]
 }

@@ -98,12 +98,16 @@ def train(
     # Split the input dataframe in one with the train classes and one with the train
     # data
     train_classes_df = train_df[column_class]
-    cols_to_keep = train_df.columns.difference([conf.columns["id"], column_class])
+    cols_to_keep = train_df.columns.difference(
+        [conf.columns["id"], column_class]  # type: ignore
+    )
     train_data_df = train_df[cols_to_keep]
     train_data_df.sort_index(axis=1, inplace=True)
 
     test_classes_df = test_df[column_class]
-    cols_to_keep = test_df.columns.difference([conf.columns["id"], column_class])
+    cols_to_keep = test_df.columns.difference(
+        [conf.columns["id"], column_class]  # type: ignore
+    )
     test_data_df = test_df[cols_to_keep]
     test_data_df.sort_index(axis=1, inplace=True)
 
@@ -111,7 +115,9 @@ def train(
         "Train file processed and rows with missing data removed, data shape: "
         f"{train_data_df.shape}, labels shape: {train_classes_df.shape}"
     )
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+    with pd.option_context(
+        "display.max_rows", None, "display.max_columns", None  # type: ignore
+    ):
         logger.info(
             f"Resulting Columns for training data: {list(train_data_df.columns)}"
         )
@@ -260,7 +266,7 @@ def train(
     best_model_info = mh.get_best_model(
         output_classifier_basepath.parent, acc_metric_mode=acc_metric_mode
     )
-    best_model_path = best_model_info["path"]
+    best_model_path = best_model_info["path"]  # type: ignore
 
     return Path(best_model_path)
 
@@ -301,7 +307,7 @@ def predict_proba(
     # Now do final preparation for the classification
     parcel_classes_df = parcel_df[column_class]
     cols_to_keep = parcel_df.columns.difference(
-        [conf.columns["id"], column_class, column_class_declared]
+        [conf.columns["id"], column_class, column_class_declared]  # type: ignore
     )
     parcel_data_df = parcel_df[cols_to_keep]
     parcel_data_df.sort_index(axis=1, inplace=True)
@@ -323,7 +329,9 @@ def predict_proba(
             f"\ninput: {parcel_data_df.columns}, \nneeded: {classifier_datacolumns}"
         )
 
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):
+    with pd.option_context(
+        "display.max_rows", None, "display.max_columns", None  # type: ignore
+    ):
         logger.info(f"Resulting Columns for predicting data: {parcel_data_df.columns}")
 
     # Load the classifier and predict

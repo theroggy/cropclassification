@@ -197,6 +197,7 @@ def create_train_test_sample(
         )
 
     # Depending on the balancing_strategy, use different way to get a training sample
+    train_df = pd.DataFrame().reindex_like(train_base_df)
     if balancing_strategy == "BALANCING_STRATEGY_NONE":
         # Just use 25% of all non-test data as train data -> 25% of 80% of data -> 20%
         # of all data will be training date
@@ -252,64 +253,81 @@ def create_train_test_sample(
         #     results significantly less good.
 
         # For the larger classes, leave the samples larger but cap
+        # Cap 1
         cap_count_limit1 = 100000
         cap_train_limit1 = 30000
         logger.info(
             f"Cap balancing classes over {cap_count_limit1} to {cap_train_limit1}"
         )
-        train_df = (
+        train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit1)
             .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, cap_train_limit1)
         )
+        if len(train_capped_df) > 0:
+            train_df = train_df.append(
+                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit1)
+            )
+
+        # Cap 2
         cap_count_limit2 = 50000
         cap_train_limit2 = 20000
         logger.info(
             f"Cap balancing classes between {cap_count_limit2} and {cap_count_limit1} "
             f"to {cap_train_limit2}"
         )
-        train_cap2_df = (
+        train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < cap_count_limit1)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit2)
             .groupby(class_balancing_column, group_keys=False)
         )
-        if len(train_cap2_df) > 0:
+        if len(train_capped_df) > 0:
             train_df = train_df.append(
-                train_cap2_df.apply(pd.DataFrame.sample, cap_train_limit2)
+                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit2)
             )
+
+        # Cap 3
         cap_count_limit3 = 20000
         cap_train_limit3 = 10000
         logger.info(
             f"Cap balancing classes between {cap_count_limit3} and {cap_count_limit2} "
             f"to {cap_train_limit3}"
         )
-        train_df = train_df.append(
+        train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < cap_count_limit2)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit3)
             .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, cap_train_limit3)
         )
+        if len(train_capped_df) > 0:
+            train_df = train_df.append(
+                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit3)
+            )
+
+        # Cap 4
         cap_count_limit4 = 10000
         cap_train_limit4 = 10000
         logger.info(
             f"Cap balancing classes between {cap_count_limit4} and {cap_count_limit3} "
             f"to {cap_train_limit4}"
         )
-        train_df = train_df.append(
+        train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < cap_count_limit3)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit4)
             .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, cap_train_limit4)
         )
+        if len(train_capped_df) > 0:
+            train_df = train_df.append(
+                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit4)
+            )
+
+        # Middle classes use the number as they are, smaller classes are oversampled
         oversample_count = 1000
-        # Middle classes use the number as they are
         logger.info(
             f"For classes between {cap_count_limit4} and {oversample_count}, just use "
             "all samples"
@@ -325,12 +343,15 @@ def create_train_test_sample(
             f"For classes smaller than {oversample_count}, oversample to "
             f"{oversample_count}"
         )
-        train_df = train_df.append(
+        train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < oversample_count)
             .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, oversample_count, replace=True)
         )
+        if len(train_capped_df) > 0:
+            train_df = train_df.append(
+                train_capped_df.apply(pd.DataFrame.sample, oversample_count, replace=True)
+            )
 
     elif balancing_strategy == "BALANCING_STRATEGY_PROPORTIONAL_GROUPS":
         # Balance the train data, but still use some larger samples for the classes

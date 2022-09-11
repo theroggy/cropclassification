@@ -132,7 +132,9 @@ def calc_top3_and_consolidation(
         logger.info("Write final output prediction data to file")
         pred_df.reset_index(inplace=True)
         pred_df = pred_df[conf.columns.getlist("output_columns")]
-        pdh.to_file(pred_df, output_predictions_output_path, index=False)
+        pdh.to_file(
+            pred_df, output_predictions_output_path, index=False  # type: ignore
+        )
 
         # Write oracle sqlldr file
         table_name = None
@@ -140,23 +142,24 @@ def calc_top3_and_consolidation(
         if conf.marker["markertype"] in ["LANDCOVER", "LANDCOVER-EARLY"]:
             table_name = "mon_marker_landcover"
             table_columns = (
-                "layer_id, prc_id, versienummer, markercode, run_id, cons_input, cons_landcover, "
-                + "cons_status, cons_date date 'yyyy-mm-dd', landcover1, probability1, "
-                + "landcover2, probability2, landcover3, probability3, "
-                + "modify_date date 'yyyy-mm-dd'"
+                "layer_id, prc_id, versienummer, markercode, run_id, cons_input, "
+                "cons_landcover, cons_status, cons_date date 'yyyy-mm-dd', landcover1, "
+                "probability1, landcover2, probability2, landcover3, probability3, "
+                "modify_date date 'yyyy-mm-dd'"
             )
         elif conf.marker["markertype"] in ["CROPGROUP", "CROPGROUP-EARLY"]:
             table_name = "mon_marker_cropgroup"
             table_columns = (
-                "layer_id, prc_id, versienummer, markercode, run_id, cons_input, cons_cropgroup, "
-                + "cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, probability1, "
-                + "cropgroup2, probability2, cropgroup3, probability3, "
-                + "modify_date date 'yyyy-mm-dd'"
+                "layer_id, prc_id, versienummer, markercode, run_id, cons_input, "
+                "cons_cropgroup, cons_status, cons_date date 'yyyy-mm-dd', cropgroup1, "
+                "probability1, cropgroup2, probability2, cropgroup3, probability3, "
+                "modify_date date 'yyyy-mm-dd'"
             )
         else:
             table_name = None
             logger.warning(
-                f"Table unknown for marker type {conf.marker['markertype']}, so cannot write .ctl file"
+                f"Table unknown for marker type {conf.marker['markertype']}, so cannot "
+                "write .ctl file"
             )
 
         if table_name is not None and table_columns is not None:
@@ -164,7 +167,8 @@ def calc_top3_and_consolidation(
                 # SKIP=1 to skip the columns names line, the other ones to evade
                 # more commits than needed
                 ctlfile.write(
-                    "OPTIONS (SKIP=1, ROWS=10000, BINDSIZE=40000000, READSIZE=40000000)\n"
+                    "OPTIONS (SKIP=1, ROWS=10000, BINDSIZE=40000000, "
+                    "READSIZE=40000000)\n"
                 )
                 ctlfile.write("LOAD DATA\n")
                 ctlfile.write(
@@ -273,7 +277,8 @@ def add_doubt_column(
         if doubt_pred_ne_input_proba1_st_pct > 0:
             if doubt_pred_ne_input_proba1_st_pct > 100:
                 raise Exception(
-                    f"doubt_pred_ne_input_proba1_st_pct should be float from 0 till 100, not {doubt_pred_ne_input_proba1_st_pct}"
+                    "doubt_pred_ne_input_proba1_st_pct should be float from 0 till 100,"
+                    f" not {doubt_pred_ne_input_proba1_st_pct}"
                 )
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
@@ -292,7 +297,8 @@ def add_doubt_column(
         if doubt_pred_eq_input_proba1_st_pct > 0:
             if doubt_pred_eq_input_proba1_st_pct > 100:
                 raise Exception(
-                    f"doubt_pred_ne_input_proba1_st_pct should be float from 0 till 100, not {doubt_pred_eq_input_proba1_st_pct}"
+                    "doubt_pred_ne_input_proba1_st_pct should be float from 0 till 100,"
+                    f" not {doubt_pred_eq_input_proba1_st_pct}"
                 )
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
@@ -496,7 +502,8 @@ def add_doubt_column(
                 new_pred_column,
             ] = "RISKY_DOUBT:SEEN-AS-ARABLE"
 
-            # If parcel was declared as one of the following and classified as FABACEAE, set to RISKY_DOUBT
+            # If parcel was declared as one of the following and classified as
+            # FABACEAE, set to RISKY_DOUBT
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df[conf.columns["crop_declared"]].isin(["9546"]))
@@ -507,7 +514,8 @@ def add_doubt_column(
         elif conf.marker["markertype"] in ("CROPGROUP", "CROPGROUP-EARLY"):
             logger.info("Apply some marker-specific doubt algorythms")
 
-            # Red parcels declared as MON_TRITICALE always seem to be predicted wrong, so place them in doubt
+            # Red parcels declared as MON_TRITICALE always seem to be predicted wrong,
+            # so place them in doubt
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df[conf.columns["class_declared"]] != pred_df["pred1"])
@@ -515,7 +523,8 @@ def add_doubt_column(
                 new_pred_column,
             ] = "RISKY_DOUBT:TRITICALE-UNCONFIRMED"
 
-            # Red parcels with MON_HEIDE seem to have a difficult time seeing the difference between MON_HEIDE and MON_GRASSEN
+            # Red parcels with MON_HEIDE seem to have a difficult time seeing the
+            # difference between MON_HEIDE and MON_GRASSEN
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df[conf.columns["class_declared"]] != pred_df["pred1"])
@@ -524,11 +533,15 @@ def add_doubt_column(
             ] = "RISKY_DOUBT:HEIDE-UNCONFIRMED"
 
             """
-            # Note: this will INCREASE the alpha errors, because we remove a large portion of red parcels to doubt (~886 parcels => 16 alpha errors)
-            pred_df.loc[((pred_df[new_pred_column] == 'UNDEFINED') | (~pred_df[new_pred_column].str.startswith('DOUBT')))
-                            & (pred_df[conf.columns['class_declared']] != pred_df['pred1'])
-                            & (pred_df[conf.columns['class_declared']] == 'MON_GRASSEN'),
-                        new_pred_column] = 'RISKY_DOUBT:GRASSEN-UNCONFIRMED'
+            # Note: this will INCREASE the alpha errors, because we remove a large
+            # portion of red parcels to doubt (~886 parcels => 16 alpha errors)
+            pred_df.loc[
+                ((pred_df[new_pred_column] == 'UNDEFINED') |
+                        (~pred_df[new_pred_column].str.startswith('DOUBT')))
+                    & (pred_df[conf.columns['class_declared']] != pred_df['pred1'])
+                    & (pred_df[conf.columns['class_declared']] == 'MON_GRASSEN'),
+                    new_pred_column
+            ] = 'RISKY_DOUBT:GRASSEN-UNCONFIRMED'
             """
 
     # Accuracy with few pixels might be lower, so set those to doubt

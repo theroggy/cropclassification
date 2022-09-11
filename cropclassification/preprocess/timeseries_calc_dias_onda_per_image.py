@@ -15,7 +15,7 @@ import shutil
 import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import xml.etree.ElementTree as ET
 
 from affine import Affine
@@ -41,7 +41,7 @@ def calc_stats_per_image(
     output_dir: Path,
     temp_dir: Path,
     log_dir: Path,
-    log_level: str,
+    log_level: Union[str, int],
     max_cloudcover_pct: float = -1,
     force: bool = False,
 ):
@@ -610,7 +610,7 @@ def prepare_calc(
     output_path: Path,
     temp_dir: Path,
     log_dir: Path,
-    log_level: str,
+    log_level: Union[str, int],
     nb_parallel_max: int = 16,
 ) -> dict:
     """
@@ -810,7 +810,9 @@ def load_features_file(
                     f"Write {len(features_gdf.index)} reprojected features to "
                     f"{features_prepr_path}"
                 )
-                gfo.to_file(features_gdf, features_prepr_path, index=False)
+                gfo.to_file(
+                    features_gdf, features_prepr_path, index=False  # type: ignore
+                )
                 logger.info("Reprojected features written")
 
             except Exception as ex:
@@ -870,12 +872,15 @@ def load_features_file(
     # If there is a polygon provided, filter on the polygon (as well)
     if polygon is not None:
         logger.info("Filter polygon provided, start filter")
-        polygon_gdf = gpd.GeoDataFrame(geometry=[polygon], crs="EPSG:4326", index=[0])
+        polygon_gdf = gpd.GeoDataFrame(
+            geometry=[polygon], crs="EPSG:4326", index=[0]  # type: ignore
+        )
         logger.debug(f"polygon_gdf: {polygon_gdf}")
         logger.debug(
             f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}"
         )
         polygon_gdf = polygon_gdf.to_crs(features_gdf.crs)
+        assert polygon_gdf is not None
         logger.debug(f"polygon_gdf, after reproj: {polygon_gdf}")
         logger.debug(
             f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}"
@@ -898,6 +903,7 @@ def load_features_file(
     logger.debug(
         f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}"
     )
+    assert isinstance(features_gdf, gpd.GeoDataFrame)
     return features_gdf
 
 
@@ -908,7 +914,7 @@ def calc_stats_image_gdf(
     bands: List[str],
     output_base_path: Path,
     log_dir: Path,
-    log_level: str,
+    log_level: Union[str, int],
     future_start_time=None,
 ) -> bool:
     """
@@ -966,7 +972,8 @@ def calc_stats_image_gdf(
         # These are considered "OK":
         #   -> 2 (dark area pixels), 4 (vegetation), 5 (not_vegetated),
         #      6 (water), 7 (unclassified), 10 (thin cirrus)
-        # List of classes: https://usermanual.readthedocs.io/en/latest/pages/ProductGuide.html#quality-indicator-bands
+        # List of classes:
+        # https://usermanual.readthedocs.io/en/latest/pages/ProductGuide.html#quality-indicator-bands
 
         # Get the image data and calculate
         logger.info(
@@ -1171,7 +1178,9 @@ def get_image_data(
                 window_to_read = projected_bounds_to_window(
                     bounds, src.transform, src.width, src.height, pixel_buffer
                 )
-                image_data[band]["transform"] = rasterio.windows.transform(
+                image_data[band][
+                    "transform"
+                ] = rasterio.windows.transform(  # type: ignore
                     window_to_read, src.transform
                 )
                 # Read!
@@ -1218,19 +1227,35 @@ def get_image_info(image_path: Path) -> dict:
 
         try:
             # Get the filename
-            image_info["filename"] = metadata_root.find("productFilename").text
+            image_info["filename"] = metadata_root.find(
+                "productFilename"
+            ).text  # type: ignore
 
             # Get the footprint
             image_info["footprint"] = {}
             footprint = metadata_root.find("footprint")
+            assert footprint is not None
             poly = footprint.find("{http://www.opengis.net/gml}Polygon")
+            assert poly is not None
             image_info["footprint"]["srsname"] = poly.attrib.get("srsName")
             linear_ring = []
-            # for coord in poly.findall("{http://www.opengis.net/gml}outerBoundaryIs/{http://www.opengis.net/gml}LinearRing/{http://www.opengis.net/gml}coord"):
-            #    linear_ring.append((float(coord.findtext("{http://www.opengis.net/gml}X")),float(coord.findtext("{http://www.opengis.net/gml}Y"))))
+            # for coord in poly.findall(
+            #   "{http://www.opengis.net/gml}outerBoundaryIs/"
+            #   "{http://www.opengis.net/gml}LinearRing/"
+            #   "{http://www.opengis.net/gml}coord"
+            # ):
+            #    linear_ring.append(
+            #        (float(coord.findtext(
+            #            "{http://www.opengis.net/gml}X"
+            #        )),
+            #        float(coord.findtext("{http://www.opengis.net/gml}Y")))
+            #    )
             coord_str = poly.find(
-                "{http://www.opengis.net/gml}outerBoundaryIs/{http://www.opengis.net/gml}LinearRing/{http://www.opengis.net/gml}coordinates"
+                "{http://www.opengis.net/gml}outerBoundaryIs/"
+                "{http://www.opengis.net/gml}LinearRing/"
+                "{http://www.opengis.net/gml}coordinates"
             )
+            assert coord_str is not None and coord_str.text is not None
             logger.debug(f"coord_str: {coord_str}, coord_str.text: {coord_str.text}")
             coord_list = coord_str.text.split(" ")
             for coord in coord_list:
@@ -1242,9 +1267,10 @@ def get_image_info(image_path: Path) -> dict:
             image_info["footprint"]["shape"] = sh_polygon.Polygon(linear_ring)
 
             # get epsg
-            epsg = metadata_root.find("imageProjection/EPSG").text
-            image_info["image_epsg"] = float(epsg)
-            image_info["image_crs"] = "EPSG:" + epsg
+            epsg = metadata_root.find("imageProjection/EPSG")
+            assert epsg is not None and epsg.text is not None
+            image_info["image_epsg"] = float(epsg.text)
+            image_info["image_crs"] = f"EPSG:{epsg.text}"
         except Exception as ex:
             raise Exception(
                 f"Exception extracting info from {metadata_xml_path}"
@@ -1269,35 +1295,45 @@ def get_image_info(image_path: Path) -> dict:
                 ns = {
                     "safe": "http://www.esa.int/safe/sentinel-1.0",
                     "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
-                    "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1",
+                    "s1sarl1": (
+                        "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"
+                    ),
                 }
 
                 logger.debug(f"Parse manifest info from {metadata_xml_path}")
                 image_info["transmitter_receiver_polarisation"] = []
                 for polarisation in manifest_root.findall(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:transmitterReceiverPolarisation",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "s1sarl1:standAloneProductInformation/"
+                    "s1sarl1:transmitterReceiverPolarisation",
                     ns,
                 ):
                     image_info["transmitter_receiver_polarisation"].append(
                         polarisation.text
                     )
                 image_info["productTimelinessCategory"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:productTimelinessCategory",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "s1sarl1:standAloneProductInformation/"
+                    "s1sarl1:productTimelinessCategory",
                     ns,
-                ).text
+                ).text  # type: ignore
 
                 image_info["instrument_mode"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/safe:platform/safe:instrument/safe:extension/s1sarl1:instrumentMode/s1sarl1:mode",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "safe:platform/safe:instrument/safe:extension/"
+                    "s1sarl1:instrumentMode/s1sarl1:mode",
                     ns,
-                ).text
+                ).text  # type: ignore
                 image_info["orbit_properties_pass"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass",
                     ns,
-                ).text
+                ).text  # type: ignore
                 image_info["acquisition_date"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/safe:acquisitionPeriod/safe:startTime",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "safe:acquisitionPeriod/safe:startTime",
                     ns,
-                ).text
+                ).text  # type: ignore
 
                 # Now have a look in the files themselves to get band info,...
                 # TODO: probably cleaner/easier to read from metadata files...
@@ -1375,40 +1411,52 @@ def get_image_info(image_path: Path) -> dict:
                 ns = {
                     "safe": "http://www.esa.int/safe/sentinel-1.0",
                     "s1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1",
-                    "s1sarl1": "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1",
+                    "s1sarl1": (
+                        "http://www.esa.int/safe/sentinel-1.0/sentinel-1/sar/level-1"
+                    ),
                 }
 
                 # logger.debug(f"Parse manifest info from {metadata_xml_path}")
                 image_info["transmitter_receiver_polarisation"] = []
                 for polarisation in manifest_root.findall(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:transmitterReceiverPolarisation",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "s1sarl1:standAloneProductInformation/"
+                    "s1sarl1:transmitterReceiverPolarisation",
                     ns,
                 ):
                     image_info["transmitter_receiver_polarisation"].append(
                         polarisation.text
                     )
                 image_info["productTimelinessCategory"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/s1sarl1:standAloneProductInformation/s1sarl1:productTimelinessCategory",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "s1sarl1:standAloneProductInformation/"
+                    "s1sarl1:productTimelinessCategory",
                     ns,
-                ).text
+                ).text  # type: ignore
                 image_info["instrument_mode"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/safe:platform/safe:instrument/safe:extension/s1sarl1:instrumentMode/s1sarl1:mode",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "safe:platform/safe:instrument/safe:extension/"
+                    "s1sarl1:instrumentMode/s1sarl1:mode",
                     ns,
-                ).text
+                ).text  # type: ignore
                 image_info["orbit_properties_pass"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass",
                     ns,
-                ).text
+                ).text  # type: ignore
                 image_info["acquisition_date"] = manifest_root.find(
-                    "metadataSection/metadataObject/metadataWrap/xmlData/safe:acquisitionPeriod/safe:startTime",
+                    "metadataSection/metadataObject/metadataWrap/xmlData/"
+                    "safe:acquisitionPeriod/safe:startTime",
                     ns,
-                ).text
+                ).text  # type: ignore
 
                 # Now have a look in the files themselves to get band info,...
                 # TODO: probably cleaner/easier to read from metadata files...
                 # For coherence filename, remove extra .LCO1 extension + date
                 # image_datafilebasename, _ = os.path.splitext(image_basename_noext)
-                # image_datafilebasename = image_datafilebasename[:image_datafilebasename.rindex('_')]
+                # image_datafilebasename = image_datafilebasename[
+                #     :image_datafilebasename.rindex('_')
+                # ]
 
                 metadata = ET.parse(str(image_path / "metadata.xml"))
                 metadata_root = metadata.getroot()
@@ -1481,9 +1529,12 @@ def get_image_info(image_path: Path) -> dict:
             metadata_root = metadata.getroot()
 
             # Define namespaces...
-            # xsi:schemaLocation="https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd"
+            # xsi:schemaLocation=
+            #     "https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd"
             ns = {
-                "n1": "https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd",
+                "n1": (
+                    "https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-2A.xsd"
+                ),
                 "xsi": "http://www.w3.org/2001/XMLSchema-instance",
             }
 
@@ -1491,11 +1542,11 @@ def get_image_info(image_path: Path) -> dict:
             image_info["Cloud_Coverage_Assessment"] = float(
                 metadata_root.find(
                     "n1:Quality_Indicators_Info/Cloud_Coverage_Assessment", ns
-                ).text
+                ).text  # type: ignore
             )
             image_info["acquisition_date"] = metadata_root.find(
                 "n1:General_Info/Product_Info/PRODUCT_START_TIME", ns
-            ).text
+            ).text  # type: ignore
 
         except Exception as ex:
             raise Exception(
@@ -1513,15 +1564,18 @@ def get_image_info(image_path: Path) -> dict:
             metadata_root = metadata.getroot()
 
             ns = {
-                "n1": "https://psd-14.sentinel2.eo.esa.int/PSD/S2_PDI_Level-2A_Tile_Metadata.xsd",
+                "n1": (
+                    "https://psd-14.sentinel2.eo.esa.int/PSD/"
+                    "S2_PDI_Level-2A_Tile_Metadata.xsd"
+                ),
                 "xsi": "http://www.w3.org/2001/XMLSchema-instance",
             }
 
             image_info["image_crs"] = metadata_root.find(
                 "n1:Geometric_Info/Tile_Geocoding/HORIZONTAL_CS_CODE", ns
-            ).text
+            ).text  # type: ignore
             image_info["image_epsg"] = float(
-                image_info["image_crs"].replace("EPSG:", "")
+                image_info["image_crs"].replace("EPSG:", "")  # type: ignore
             )
         except Exception as ex:
             raise Exception(f"Exception extracting info from {metadata_path}") from ex
@@ -1621,7 +1675,7 @@ def projected_bounds_to_window(
     """
     # Take bounds of the features + convert to image pixels
     xmin, ymin, xmax, ymax = projected_bounds
-    window_to_read_raw = rasterio.windows.from_bounds(
+    window_to_read_raw = rasterio.windows.from_bounds(  # type: ignore
         xmin, ymin, xmax, ymax, image_transform
     )
 
@@ -1653,15 +1707,19 @@ def projected_bounds_to_window(
         height = image_pixel_height - row_off
 
     # Ready... prepare to return...
-    window_to_read = rasterio.windows.Window(col_off, row_off, width, height)
+    window_to_read = rasterio.windows.Window(  # type: ignore
+        col_off, row_off, width, height
+    )
 
     # Debug info
     """
     bounds_to_read = rasterio.windows.bounds(window_to_read, image_transform)
     logger.debug(f"projected_bounds: {projected_bounds}, "
-                + f"window_to_read_raw: {window_to_read_raw}, window_to_read: {window_to_read}, "
-                + f"image_pixel_width: {image_pixel_width}, image_pixel_height: {image_pixel_height}, "
-                + f"file transform: {image_transform}, bounds_to_read: {bounds_to_read}")
+        f"window_to_read_raw: {window_to_read_raw}, window_to_read: {window_to_read}, "
+        f"image_pixel_width: {image_pixel_width}, "
+        f"image_pixel_height: {image_pixel_height}, "
+        f"file transform: {image_transform}, bounds_to_read: {bounds_to_read}"
+    )
     """
 
     return window_to_read
@@ -1740,8 +1798,3 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
 
         # Now we are ready to return the path...
         return image_unzipped_path
-
-
-if __name__ == "__main__":
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")
