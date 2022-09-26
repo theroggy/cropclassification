@@ -1,13 +1,7 @@
 
 # General
 # -------
-Old/
-
-# GEE (google earth engine)
-# -------------------------
-client_secret.json
-client_secret_download-gee-data.json
-credentials.json
+local/
 
 # python
 # ------
@@ -18,11 +12,12 @@ credentials.json
 # Some inspiration from:
 # https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 
+.vs/*
 .vscode/*
-#!.vscode/settings.json
+!.vscode/settings_template.jsonc
 !.vscode/settings_template.json
 !.vscode/tasks.json
-#!.vscode/launch.json
+!.vscode/launch_template.jsonc
 !.vscode/launch_template.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
@@ -32,3 +27,9 @@ credentials.json
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# GEE (google earth engine)
+# -------------------------
+client_secret.json
+client_secret_download-gee-data.json
+credentials.json
