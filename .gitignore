@@ -15,10 +15,8 @@ local/
 .vs/*
 .vscode/*
 !.vscode/settings_template.jsonc
-!.vscode/settings_template.json
 !.vscode/tasks.json
 !.vscode/launch_template.jsonc
-!.vscode/launch_template.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 
