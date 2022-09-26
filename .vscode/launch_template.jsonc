@@ -5,11 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Huidige bestand",
+            "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            // Ook breakpoints in onderliggende bibliotheken kunnen zetten
+            "justMyCode": false,
+            // De workspace folder als pythonpath gebruiken zodat dat path niet overal
+            // in code toegevoegd moet worden.
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
             "name": "Python: run tasks",
