@@ -206,11 +206,7 @@ def calculate_periodic_data(
     year = start_date.year
 
     # Prepare output dir
-    test = False
-    if test is True:
-        dest_data_dir = Path(f"{str(dest_data_dir)}_test")
-    if not dest_data_dir.exists():
-        os.mkdir(dest_data_dir)
+    dest_data_dir.mkdir(parents=True, exist_ok=True)
 
     # Create Dataframe with all files with their info
     logger.debug("Create Dataframe with all files and their properties")
@@ -231,7 +227,7 @@ def calculate_periodic_data(
             "Get files we need based on start- & stopdates, sensordata_to_get,..."
         )
         orbits = [None]
-        if sensordata_type == conf.general["SENSORDATA_S1_ASCDESC"]:
+        if sensordata_type == "S1AscDesc":
             # Filter files to the ones we need
             satellitetype = "S1"
             imagetype = IMAGETYPE_S1_GRD
@@ -244,7 +240,18 @@ def calculate_periodic_data(
                 & (all_inputfiles_df.band.isin(bands))
                 & (all_inputfiles_df.orbit.isin(orbits))
             ]
-        elif sensordata_type == conf.general["SENSORDATA_S2gt95"]:
+        elif sensordata_type == "S1Coh":
+            satellitetype = "S1"
+            imagetype = IMAGETYPE_S1_COHERENCE
+            bands = ["VV", "VH"]
+            orbits = ["ASC", "DESC"]
+            needed_inputfiles_df = all_inputfiles_df.loc[
+                (all_inputfiles_df.date >= start_date)
+                & (all_inputfiles_df.date < end_date)
+                & (all_inputfiles_df.imagetype == imagetype)
+                & (all_inputfiles_df.band.isin(bands))
+            ]
+        elif sensordata_type == "S2gt95":
             satellitetype = "S2"
             imagetype = IMAGETYPE_S2_L2A
             bands = ["B02-10m", "B03-10m", "B04-10m", "B08-10m", "B11-20m", "B12-20m"]
@@ -254,11 +261,20 @@ def calculate_periodic_data(
                 & (all_inputfiles_df.imagetype == imagetype)
                 & (all_inputfiles_df.band.isin(bands))
             ]
-        elif sensordata_type == conf.general["SENSORDATA_S1_COHERENCE"]:
-            satellitetype = "S1"
-            imagetype = IMAGETYPE_S1_COHERENCE
-            bands = ["VV", "VH"]
-            orbits = ["ASC", "DESC"]
+        elif sensordata_type == "S2-landcover":
+            satellitetype = "S2"
+            imagetype = IMAGETYPE_S2_L2A
+            bands = ["landcover"]
+            needed_inputfiles_df = all_inputfiles_df.loc[
+                (all_inputfiles_df.date >= start_date)
+                & (all_inputfiles_df.date < end_date)
+                & (all_inputfiles_df.imagetype == imagetype)
+                & (all_inputfiles_df.band.isin(bands))
+            ]
+        elif sensordata_type == "S2-ndvi":
+            satellitetype = "S2"
+            imagetype = IMAGETYPE_S2_L2A
+            bands = ["ndvi"]
             needed_inputfiles_df = all_inputfiles_df.loc[
                 (all_inputfiles_df.date >= start_date)
                 & (all_inputfiles_df.date < end_date)
@@ -574,8 +590,3 @@ def get_monday(date: Union[str, datetime]) -> datetime:
     year_week = date.strftime("%Y_%W")
     year_week_monday = datetime.strptime(year_week + "_1", "%Y_%W_%w")
     return year_week_monday
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-    raise Exception("Not implemented")

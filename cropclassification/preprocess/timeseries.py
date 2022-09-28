@@ -8,19 +8,16 @@ import os
 from pathlib import Path
 from typing import List
 
-import pandas as pd
-
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.preprocess.timeseries_util as ts_util
 
-# -------------------------------------------------------------
 # First define/init some general variables/constants
 # -------------------------------------------------------------
+
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-# -------------------------------------------------------------
 # The real work
 # -------------------------------------------------------------
 
@@ -30,7 +27,6 @@ def calc_timeseries_data(
     start_date_str: str,
     end_date_str: str,
     sensordata_to_get: List[str],
-    base_filename: str,
     dest_data_dir: Path,
 ):
     """
@@ -42,14 +38,13 @@ def calc_timeseries_data(
         end_date_str (str): [description]
         sensordata_to_get (List[str]): an array with data you want to be calculated:
                 check out the constants starting with DATA_TO_GET... for the options.
-        base_filename (str): [description]
         dest_data_dir (str): [description]
     """
     # Check some variables...
     if sensordata_to_get is None:
         raise Exception("sensordata_to_get cannot be None")
     if not dest_data_dir.exists():
-        os.makedirs(dest_data_dir)
+        dest_data_dir.mkdir(parents=True, exist_ok=True)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
     start_date = ts_util.get_monday(
@@ -61,40 +56,51 @@ def calc_timeseries_data(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
         f"date {end_date_str} as well: {end_date}"
     )
-    timeseries_calc_type = conf.timeseries["timeseries_calc_type"]
-    if timeseries_calc_type == "onda":
+    openeo_supported = ["S2-landcover", "S2-ndvi"]
+    sensordata_to_get_onda = [
+        sensor for sensor in sensordata_to_get if sensor not in openeo_supported
+    ]
+    sensordata_to_get_openeo = [
+        sensor for sensor in sensordata_to_get if sensor in openeo_supported
+    ]
+
+    if len(sensordata_to_get_onda) > 0:
         # Start!
         # TODO: start calculation of per image data on DIAS
         # import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as
         # ts_calc
-        timeseries_per_image_dir = conf.dirs.getpath("timeseries_per_image_dir")
 
         # Now all image data is available per image, calculate periodic data
-        return ts_util.calculate_periodic_data(
+        ts_util.calculate_periodic_data(
             input_parcel_path=input_parcel_path,
-            input_base_dir=timeseries_per_image_dir,
+            input_base_dir=conf.dirs.getpath("timeseries_per_image_dir"),
             start_date=start_date,
             end_date=end_date,
-            sensordata_to_get=sensordata_to_get,
+            sensordata_to_get=sensordata_to_get_onda,
             dest_data_dir=dest_data_dir,
         )
-    elif timeseries_calc_type == "openeo":
+    if len(sensordata_to_get_openeo) > 0:
+        # Pepare periodic images + calculate base timeseries on them
         import cropclassification.preprocess.timeseries_calc_openeo as ts_calc_openeo
-        timeseries_per_image_dir = conf.dirs.getpath("timeseries_per_image_dir")
 
-        # Now all image data is available per image, calculate periodic data
-        return ts_util.calculate_periodic_data(
+        ts_calc_openeo.calc_timeseries_data(
             input_parcel_path=input_parcel_path,
-            input_base_dir=timeseries_per_image_dir,
             start_date=start_date,
             end_date=end_date,
-            sensordata_to_get=sensordata_to_get,
+            sensordata_to_get=sensordata_to_get_openeo,
+            dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
+            dest_data_dir=conf.dirs.getpath("timeseries_per_image_dir"),
+        )
+
+        # Now all image data is available per image, calculate periodic data
+        ts_util.calculate_periodic_data(
+            input_parcel_path=input_parcel_path,
+            input_base_dir=conf.dirs.getpath("timeseries_per_image_dir"),
+            start_date=start_date,
+            end_date=end_date,
+            sensordata_to_get=sensordata_to_get_openeo,
             dest_data_dir=dest_data_dir,
         )
-    else:
-        message = f"Unsupported timeseries calculation type: {timeseries_calc_type}"
-        logger.error(message)
-        raise Exception(message)
 
 
 def collect_and_prepare_timeseries_data(
@@ -113,32 +119,6 @@ def collect_and_prepare_timeseries_data(
     scaling,... as needed.
     """
 
-    # Some constants to choose which type of data to use in the marker.
-    # Remark: the string needs to be the same as the end of the name of the columns in the csv files!
-    # TODO: I'm not really happy with both a list in the ini file + here... not sure what the
-    #       cleanest solution is though...
-    PARCELDATA_AGGRAGATION_MEAN = conf.general[
-        "PARCELDATA_AGGRAGATION_MEAN"
-    ]  # Mean value of the pixels values in a parcel.
-    PARCELDATA_AGGRAGATION_STDDEV = conf.general[
-        "PARCELDATA_AGGRAGATION_STDDEV"
-    ]  # std dev of the values of the pixels in a parcel
-
-    # Constants for types of sensor data
-    SENSORDATA_S1 = conf.general["SENSORDATA_S1"]  # Sentinel 1 data
-    SENSORDATA_S1DB = conf.general["SENSORDATA_S1DB"]  # Sentinel 1 data, in dB
-    SENSORDATA_S1_ASCDESC = conf.general[
-        "SENSORDATA_S1_ASCDESC"
-    ]  # Sentinel 1 data, divided in Ascending and Descending passes
-    SENSORDATA_S1DB_ASCDESC = conf.general[
-        "SENSORDATA_S1DB_ASCDESC"
-    ]  # Sentinel 1 data, in dB, divided in Ascending and Descending passes
-    SENSORDATA_S2 = conf.general["SENSORDATA_S2"]  # Sentinel 2 data
-    SENSORDATA_S2gt95 = conf.general[
-        "SENSORDATA_S2gt95"
-    ]  # Sentinel 2 data (B2,B3,B4,B8) IF available for 95% or area
-    SENSORDATA_S1_COHERENCE = conf.general["SENSORDATA_S1_COHERENCE"]
-
     # If force == False Check and the output file exists already, stop.
     if force is False and output_path.exists() is True:
         logger.warning(
@@ -151,9 +131,7 @@ def collect_and_prepare_timeseries_data(
     if result_df.index.name != conf.columns["id"]:
         result_df.set_index(conf.columns["id"], inplace=True)
     nb_input_parcels = len(result_df.index)
-    logger.info(
-        f"Parceldata aggregations that need to be used: {parceldata_aggregations_to_use}"
-    )
+    logger.info(f"Parceldata aggregations to use: {parceldata_aggregations_to_use}")
     logger.setLevel(logging.DEBUG)
 
     # Loop over all input timeseries data to find the data we really need
@@ -170,7 +148,7 @@ def collect_and_prepare_timeseries_data(
         sensor_type = curr_path.stem.split("_")[-1]
         if sensor_type not in sensordata_to_use:
             logger.debug(
-                f"SKIP: file is not in sensor types asked ({sensordata_to_use}): {curr_path}"
+                f"SKIP: file not needed (only {sensordata_to_use}): {curr_path}"
             )
             continue
         # The only data we want to process is the data in the range of dates
@@ -215,7 +193,8 @@ def collect_and_prepare_timeseries_data(
                 if column.endswith("_" + parceldata_aggregation):
                     column_ok = True
             if column_ok is False:
-                # Drop column if it doesn't end with something in parcel_data_aggregations_to_use
+                # Drop column if it doesn't end with something in
+                # parcel_data_aggregations_to_use
                 logger.debug(
                     f"Drop column as it's column aggregation isn't to be used: {column}"
                 )
@@ -236,18 +215,18 @@ def collect_and_prepare_timeseries_data(
                 data_read_df.drop(column, axis=1, inplace=True)
 
         # If S2, rescale data
-        if sensor_type.startswith(SENSORDATA_S2):
+        if sensor_type.startswith("S2"):
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column contains S2 data, so scale it by dividing by 10.000: {column}"
+                    f"Column with S2 data: scale it by dividing by 10.000: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 10000
 
         # If S1 coherence, rescale data
-        if sensor_type == SENSORDATA_S1_COHERENCE:
+        if sensor_type == "S1Coh":
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column contains S1 Coherence data, so scale it by dividing by 300: {column}"
+                    f"Column with S1 Coherence: scale it by dividing by 300: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 300
 

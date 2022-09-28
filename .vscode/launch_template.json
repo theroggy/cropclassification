@@ -9,7 +9,8 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": true
         },
         {
             "name": "Python: run tasks",
@@ -20,7 +21,8 @@
                 "-t",
                 "x:/monitoring/markers/playground/_tasks_pierog"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

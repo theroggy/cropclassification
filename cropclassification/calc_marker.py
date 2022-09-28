@@ -10,7 +10,7 @@ import shutil
 from typing import List
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
@@ -58,7 +58,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
-    logger = log_helper.main_log_init(run_dir, __name__, log_level)      
+    logger = log_helper.main_log_init(run_dir, __name__, log_level)
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
@@ -102,7 +102,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     # Read the info about the run
     input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
     input_parcel_filetype = conf.calc_marker_params["input_parcel_filetype"]
-    country_code = conf.calc_marker_params["country_code"]
     classes_refe_filename = conf.calc_marker_params.getpath("classes_refe_filename")
     input_groundtruth_filename = conf.calc_marker_params.getpath(
         "input_groundtruth_filename"
@@ -174,7 +173,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
 
     # STEP 2: Get the timeseries data needed for the classification
     # -------------------------------------------------------------
-    # Get the time series data (S1 and S2) to be used for the classification
+    # Get the time series data (eg. S1, S2,...) to be used for the classification
     # Result: data is put in files in timeseries_periodic_dir, in one file per
     #         date/period
     timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
@@ -184,14 +183,11 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     parceldata_aggregations_to_use = conf.marker.getlist(
         "parceldata_aggregations_to_use"
     )
-    base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
     ts.calc_timeseries_data(
         input_parcel_path=imagedata_input_parcel_path,
-        input_country_code=country_code,
         start_date_str=start_date_str,
         end_date_str=end_date_str,
         sensordata_to_get=sensordata_to_use,
-        base_filename=base_filename,
         dest_data_dir=timeseries_periodic_dir,
     )
 
@@ -211,6 +207,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
+    base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
     parcel_pixcount_path = (
         timeseries_periodic_dir / f"{base_filename}_pixcount{data_ext}"
     )
