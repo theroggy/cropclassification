@@ -184,6 +184,11 @@ def create_train_test_sample(
         ~train_base_df[class_column].isin(conf.marker.getlist("classes_to_ignore"))
     ]
 
+    # Remove parcels that are marked that they are not to be used for training
+    if "ignore_for_training" in train_base_df.columns:
+        logger.info("Remove parcels from train sample where ignore_for_training == 1")
+        train_base_df = train_base_df[train_base_df["ignore_for_training"] == 1]
+
     # Print the train base result before applying any balancing
     with pd.option_context(
         "display.max_rows", None, "display.max_columns", None

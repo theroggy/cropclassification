@@ -22,8 +22,12 @@ column_BEFL_earlylate = "MON_EARLY_LATE"  # Is it an early or a late crop?
 column_BEFL_gesp_pm = "GESP_PM"  # Gespecialiseerde productiemethode
 column_BEFL_gis_area = "GRAF_OPP"  # GIS Area
 column_BEFL_status_perm_grass = "STAT_BGV"  # Status permanent grassland
+column_BEFL_latecrop2 = "GWSCOD_N2"  # 2e nateelt
 
-# -------------------------------------------------------------
+ndvi_latecrop_count = "_count"
+ndvi_latecrop_mean = "_mean"
+ndvi_latecrop_median = "_median"
+
 # The real work
 # -------------------------------------------------------------
 
@@ -35,12 +39,13 @@ def prepare_input(
     output_dir: Path,
 ):
     """
-    This function creates a file that is compliant with the assumptions used by the rest of the
-    classification functionality.
+    This function creates a file that is compliant with the assumptions used by the
+    rest of the classification functionality.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
-        - classname: a string column with a readable name of the classes that will be classified to
+        - classname: a string column with a readable name of the classes that will be
+          classified to
     """
     # Check if input parameters are OK
     if not input_parcel_path.exists():
@@ -180,6 +185,7 @@ def prepare_input(
         parceldata_df = prepare_input_latecrop(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=conf.columns["crop_declared"],
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
             column_BEFL_maincrop=conf.columns["main_crop_declared"],
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
@@ -187,6 +193,7 @@ def prepare_input(
         return prepare_input_latecrop(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=conf.columns["crop"],
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
             column_BEFL_maincrop=conf.columns["main_crop"],
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
@@ -435,8 +442,8 @@ def prepare_input_fabaceae(
     classes_df = pdh.read_file(classes_refe_path)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
-    # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
-    # unicode to be able to do comparisons with the other data
+    # Because the file was read as ansi, and gewas is int, so the data needs to be
+    # converted to unicode to be able to do comparisons with the other data
     classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("unicode")
 
     # Map column with the classname to orig classname
@@ -585,40 +592,42 @@ def prepare_input_fabaceae(
 def prepare_input_latecrop(
     parceldata_df,
     column_BEFL_latecrop: str,
+    column_BEFL_latecrop2: str,
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
 ):
     """
-    This function creates a file that is compliant with the assumptions used by the rest of the
-    classification functionality.
+    This function creates a file that is compliant with the assumptions used by the rest
+    of the classification functionality.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
-        - classname: a string column with a readable name of the classes that will be classified to
+        - classname: a string column with a readable name of the classes that will be
+          classified to
 
-    This specific implementation converts the typiscal export format used in BE-Flanders to
-    this format.
+    This specific implementation converts the typiscal export format used in BE-Flanders
+    to this format.
     """
     # Check if parameters are OK and init some extra params
     # --------------------------------------------------------------------------
     if not classes_refe_path.exists():
         raise Exception(f"Input classes file doesn't exist: {classes_refe_path}")
 
-    # Convert the crop to unicode, in case the input is int...
+    # Convert the crops to unicode, in case the input is int
     if column_BEFL_latecrop in parceldata_df.columns:
         parceldata_df[column_BEFL_latecrop] = parceldata_df[
             column_BEFL_latecrop
         ].astype("unicode")
-
+    if column_BEFL_latecrop2 in parceldata_df.columns:
+        parceldata_df[column_BEFL_latecrop2] = parceldata_df[
+            column_BEFL_latecrop2
+        ].astype("unicode")
     if column_BEFL_maincrop in parceldata_df.columns:
         parceldata_df[column_BEFL_maincrop] = parceldata_df[
             column_BEFL_maincrop
         ].astype("unicode")
 
-    if column_BEFL_maincrop in parceldata_df.columns:
-        parceldata_df[column_BEFL_maincrop] = parceldata_df[column_BEFL_maincrop].astype('unicode')
-        
     # Read and cleanup the mapping table from crop codes to classes
     # --------------------------------------------------------------------------
     logger.info(f"Read classes conversion table from {classes_refe_path}")
@@ -628,6 +637,7 @@ def prepare_input_latecrop(
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
     classes_df[column_BEFL_latecrop] = classes_df["CROPCODE"].astype("unicode")
+    classes_df[column_BEFL_latecrop2] = classes_df["CROPCODE"].astype("unicode")
     classes_df[column_BEFL_maincrop] = classes_df["CROPCODE"].astype("unicode")
 
     # Map column with the classname to orig classname
@@ -642,13 +652,18 @@ def prepare_input_latecrop(
             not in [
                 column_output_class_orig,
                 column_BEFL_latecrop,
+                column_BEFL_latecrop2,
                 column_BEFL_maincrop,
-                conf.columns["class_declared"],
+                column_BEFL_status_perm_grass,
+                conf.columns
+                ["class_declared"],
                 conf.columns["class"],
+                ndvi_latecrop_count,
+                ndvi_latecrop_mean,
+                ndvi_latecrop_median,
             ]
             and column not in columns_to_keep
-            and column
-            not in ["MON_CROPGROUP", "IS_PERM_BEDEKKING", "IS_BOUWLAND"]
+            and column not in ["MON_CROPGROUP", "IS_PERM_BEDEKKING", "IS_BOUWLAND"]
         ):
             classes_df.drop(column, axis=1, inplace=True)
 
@@ -666,6 +681,14 @@ def prepare_input_latecrop(
         left_on=column_BEFL_latecrop,
         right_index=True,
         validate="many_to_one",
+    )
+    parceldata_df = parceldata_df.merge(
+        classes_df[cols_to_join],
+        how="left",
+        left_on=column_BEFL_latecrop2,
+        right_index=True,
+        validate="many_to_one",
+        suffixes=(None, "_LATECROP2"),
     )
     parceldata_df = parceldata_df.merge(
         classes_df[cols_to_join],
@@ -688,18 +711,27 @@ def prepare_input_latecrop(
     ## TODO: controle obv ndvi > 0.3 => geen braak?
     ## braak van in de zomer => geen "braak" meer vanwege onkruid
 
-    # Assumption: if there is no latecrop and the maincrop is akkerbouw, then the land will be left barren after
-    # except for grasses
+    # Assumption: if there is no latecrop and the maincrop is akkerbouw, then the land
+    # will be left barren after, except for grasses
+    """
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
         & (parceldata_df["IS_BOUWLAND_MAINCROP"] == 1)
         & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_GRASSEN"),
         column_output_class,
     ] = "MON_BRAAK"
-
+    """
+    # If the median ndvi <= 0.3, it is treated as a bare field for training
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
-        & (parceldata_df["IS_PERM_BEDEKKING_MAINCROP"] == 0)
+        & (parceldata_df[ndvi_latecrop_median] <= 0.3),
+        column_output_class,
+    ] = "MON_BRAAK"
+
+    # If permanent grassland, there will be grass on the parcels
+    parceldata_df.loc[
+        (parceldata_df[column_output_class] == "UNKNOWN")
+        & (parceldata_df[column_BEFL_status_perm_grass] is not None)
         & (parceldata_df["MON_CROPGROUP_MAINCROP"] == "MON_GRASSEN"),
         column_output_class,
     ] = "MON_GRASSEN"
@@ -711,7 +743,8 @@ def prepare_input_latecrop(
         column_output_class,
     ] = "IGNORE_PERMANENT_BEDEKKING"
 
-    # If a column with extra info exists, use it as well to fine-tune the classification classes.
+    # If a column with extra info exists, use it as well to fine-tune the
+    # classification classes.
     if column_BEFL_gesp_pm in parceldata_df.columns:
         # Serres, tijdelijke overkappingen en loodsen
         parceldata_df.loc[
@@ -735,10 +768,12 @@ def prepare_input_latecrop(
             column_output_class,
         ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
-        # parceldata_df.loc[parceldata_df[column_BEFL_gesp_pm] == 'CIV', class_columnname] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
+        # parceldata_df.loc[
+        #     parceldata_df[column_BEFL_gesp_pm] == 'CIV', class_columnname
+        # ] = 'MON_CONTAINERS'   # Containers, niet op volle grond...
     else:
         logger.warning(
-            f"The column {column_BEFL_gesp_pm} doesn't exist, so this part of the code was skipped!"
+            f"The column {column_BEFL_gesp_pm} doesn't exist, so couldn't be used!"
         )
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
@@ -750,12 +785,20 @@ def prepare_input_latecrop(
     ):
         if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
             logger.info(
-                f"Class <{row[column_output_class]}> only contains {row['count']} elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+                f"Class <{row[column_output_class]}> only contains {row['count']} "
+                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
             )
             parceldata_df.loc[
                 parceldata_df[column_output_class] == row[column_output_class],
                 column_output_class,
             ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+
+    # Add ignore_for_training column: if 1, ignore for training
+    parceldata_df["ignore_for_training"] = 0
+    # If no NDVI data avalable, not possible to determine bare soil -> ignore parcel
+    parceldata_df.loc[
+        parceldata_df[ndvi_latecrop_count] == 0, "ignore_for_training"
+    ] = 1
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
@@ -766,6 +809,10 @@ def prepare_input_latecrop(
                 conf.columns["id"],
                 conf.columns["class_groundtruth"],
                 conf.columns["class_declared"],
+                ndvi_latecrop_count,
+                ndvi_latecrop_mean,
+                ndvi_latecrop_median,
+                "ignore_for_training",
             ]
             and column not in conf.preprocess.getlist("extra_export_columns")
             and column not in columns_to_keep
