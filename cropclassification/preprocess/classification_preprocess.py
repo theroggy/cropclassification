@@ -154,7 +154,7 @@ def create_train_test_sample(
     train_base_df = df_in[~df_in.index.isin(test_df.index)]
     logger.debug(f"df_train_base after isin\n{train_base_df}")
 
-    # Remove parcel with too few pixels from the train sample
+    # Remove parcels with too few pixels from the train sample
     min_pixcount = conf.marker.getfloat("min_nb_pixels_train")
     train_base_df = train_base_df[
         train_base_df[conf.columns["pixcount_s1s2"]] >= min_pixcount

@@ -252,7 +252,7 @@ def prepare_input_cropgroup(
         - classname: a string column with a readable name of the classes that will be
           classified to
 
-    This specific implementation converts the typiscal export format used in BE-Flanders
+    This specific implementation converts the typical export format used in BE-Flanders
     to this format.
     """
     # Check if parameters are OK and init some extra params
@@ -456,7 +456,7 @@ def prepare_input_fabaceae(
         - classname: a string column with a readable name of the classes that will be
           classified to
 
-    This specific implementation converts the typiscal export format used in BE-Flanders
+    This specific implementation converts the typical export format used in BE-Flanders
     to this format.
     """
     # Check if parameters are OK and init some extra params
@@ -668,7 +668,7 @@ def prepare_input_latecrop(
         - classname: a string column with a readable name of the classes that will be
           classified to
 
-    This specific implementation converts the typiscal export format used in BE-Flanders
+    This specific implementation converts the typical export format used in BE-Flanders
     to this format.
     """
     # Check if parameters are OK and init some extra params
@@ -789,7 +789,7 @@ def prepare_input_latecrop(
         column_output_class,
     ] = "MON_BRAAK"
 
-    # If permanent grassland, there will be grass on the parcels
+    # If permanent grassland, there will typically still be grass on the parcels
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
         & (parceldata_df[column_BEFL_status_perm_grass] is not None)
@@ -942,7 +942,7 @@ def prepare_input_landcover(
         - classname: a string column with a readable name of the classes that will be
           classified to
 
-    This specific implementation converts the typiscal export format used in BE-Flanders
+    This specific implementation converts the typical export format used in BE-Flanders
     to this format.
     """
     # Check if parameters are OK and init some extra params
@@ -1111,7 +1111,7 @@ def prepare_input_most_popular_crop(
         - classname: a string column with a readable name of the classes that will be
           classified to
 
-    This specific implementation converts the typiscal export format used in BE-Flanders
+    This specific implementation converts the typical export format used in BE-Flanders
     to this format.
     """
 
