@@ -50,8 +50,8 @@ def zonal_stats(
     output_temp_path = tmp_dir / f"{output_path.name}"
 
     info = gfo.get_layerinfo(input_vector_path)
-    max_aantal_per_batch = 20000
-    nb_batches = math.ceil(info.featurecount / max_aantal_per_batch)
+    max_nb_per_batch = 10000
+    nb_batches = math.ceil(info.featurecount / max_nb_per_batch)
     nb_per_batch = int(info.featurecount / nb_batches)
 
     nb_parallel = multiprocessing.cpu_count()
