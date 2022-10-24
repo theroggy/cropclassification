@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List
 
 from cropclassification.util import openeo_util
-from cropclassification.helpers import geoops_util
+from cropclassification.util import geoops_util
 
 # First define/init some general variables/constants
 # -------------------------------------------------------------

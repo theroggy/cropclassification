@@ -52,7 +52,7 @@ def zonal_stats(
     info = gfo.get_layerinfo(input_vector_path)
     max_nb_per_batch = 10000
     nb_batches = math.ceil(info.featurecount / max_nb_per_batch)
-    nb_per_batch = int(info.featurecount / nb_batches)
+    nb_per_batch = math.floor(info.featurecount / nb_batches)
 
     nb_parallel = multiprocessing.cpu_count()
     future_infos = {}
