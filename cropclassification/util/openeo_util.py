@@ -29,6 +29,7 @@ def calc_periodic_mosaic(
     sensordata_to_get: List[str],
     output_dir: Path,
     period_name: Optional[str] = None,
+    delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
 ) -> List[Path]:
@@ -74,13 +75,19 @@ def calc_periodic_mosaic(
         f"to {output_dir}"
     )
 
-    # Delete all jobs that are running already
-    jobs = conn.list_jobs()
-    if len(jobs) > 0:
-        for job in jobs:
-            batch_job = openeo.rest.job.BatchJob(job["id"], conn)
-            logger.info(f"delete job '{job['title']}', id: {job['id']}")
-            batch_job.delete_job()
+    if delete_existing_openeo_jobs:
+        # Delete all jobs that are running already
+        jobs = conn.list_jobs()
+        if len(jobs) > 0:
+            for job in jobs:
+                batch_job = openeo.rest.job.BatchJob(job["id"], conn)
+                logger.info(f"delete job '{job['title']}', id: {job['id']}")
+                batch_job.delete_job()
+    else:
+        # Process jobs that are still on the server
+        output_paths = get_job_results(conn, output_dir, raise_errors=raise_errors)
+        for output_path in output_paths:
+            add_overviews(output_path)
 
     period_start_date = start_date
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
