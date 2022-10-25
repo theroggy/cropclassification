@@ -810,12 +810,17 @@ def prepare_input_latecrop(
         column_output_class,
     ] = "MON_BRAAK"
     """
-    # If the median ndvi <= 0.3, it is treated as a bare field for training
-    parceldata_df.loc[
-        (parceldata_df[column_output_class] == "UNKNOWN")
-        & (parceldata_df[ndvi_latecrop_median] <= 0.3),
-        column_output_class,
-    ] = "MON_BRAAK"
+    # If the median ndvi <= 0.3, it is treated as a bare field (for training)
+    if ndvi_latecrop_median in parceldata_df.columns:
+        parceldata_df.loc[
+            (parceldata_df[column_output_class] == "UNKNOWN")
+            & (parceldata_df[ndvi_latecrop_median] <= 0.3),
+            column_output_class,
+        ] = "MON_BRAAK"
+    else:
+        logger.warning(
+            f"No column {ndvi_latecrop_count} available to set ignore_for_training"
+        )
 
     # If permanent grassland, there will typically still be grass on the parcels
     parceldata_df.loc[
@@ -885,10 +890,17 @@ def prepare_input_latecrop(
 
     # Add ignore_for_training column: if 1, ignore for training
     parceldata_df["ignore_for_training"] = 0
-    # If no NDVI data avalable, not possible to determine bare soil -> ignore parcel
-    parceldata_df.loc[
-        parceldata_df[ndvi_latecrop_count] == 0, "ignore_for_training"
-    ] = 1
+
+    # If ndvi_latecrop_count data columns available, use them
+    if ndvi_latecrop_count in parceldata_df.columns:
+        # If no NDVI data avalable, not possible to determine bare soil -> ignore parcel
+        parceldata_df.loc[
+            parceldata_df[ndvi_latecrop_count] == 0, "ignore_for_training"
+        ] = 1
+    else:
+        logger.warning(
+            f"No column {ndvi_latecrop_count} available to set ignore_for_training"
+        )
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
@@ -941,7 +953,9 @@ def prepare_input_latecrop_early(
     # Set crops not in early crops to ignore
     # TODO: should be in REFE instead of hardcoded!!!
     parceldata_df.loc[
-        parceldata_df[column_BEFL_maincrop].isin(201, 202, 71, 91, 8532, 9532),
+        parceldata_df[column_BEFL_maincrop].isin(
+            ["201", "202", "71", "91", "8532", "9532"]
+        ),
         column_output_class,
     ] = "IGNORE_LATE_MAINCROP"
 

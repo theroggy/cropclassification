@@ -184,10 +184,19 @@ def create_train_test_sample(
         ~train_base_df[class_column].isin(conf.marker.getlist("classes_to_ignore"))
     ]
 
-    # Remove parcels that are marked that they are not to be used for training
+    # There shouldn't be any classes left that start with IGNORE now
+    train_ignore_df = train_base_df[train_base_df[class_column].str.startswith("IGNORE")]
+    if len(train_ignore_df) > 0:
+        raise ValueError(
+            "There are still classes that start with IGNORE, after removing filtering "
+            "all classes in classes_to_ignore and classes_to_ignore, this must be a "
+            f"config error: {train_ignore_df[class_column].unique()}"
+        )
+
+    # Only keep parcels that are not to be ignored for training
     if "ignore_for_training" in train_base_df.columns:
         logger.info("Remove parcels from train sample where ignore_for_training == 1")
-        train_base_df = train_base_df[train_base_df["ignore_for_training"] == 1]
+        train_base_df = train_base_df[train_base_df["ignore_for_training"] == 0]
 
     # Print the train base result before applying any balancing
     with pd.option_context(
