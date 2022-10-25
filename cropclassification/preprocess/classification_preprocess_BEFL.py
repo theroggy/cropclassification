@@ -185,6 +185,23 @@ def prepare_input(
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
         )
+    elif classtype_to_prepare == "LATECROP-EARLY":
+        parceldata_df = prepare_input_latecrop_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=conf.columns["crop_declared"],
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=conf.columns["main_crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+        return prepare_input_latecrop_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=conf.columns["crop"],
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=conf.columns["main_crop"],
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
     elif classtype_to_prepare == "LATECROP":
         parceldata_df = prepare_input_latecrop(
             parceldata_df=parceldata_df,
@@ -202,11 +219,22 @@ def prepare_input(
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
         )
-    elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
-        return prepare_input_cropgroup(
+    elif classtype_to_prepare == "LATECROP-EARLY-GROUNDTRUTH":
+        return prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
-            column_BEFL_cropcode=conf.columns["crop_gt_verified"],
-            column_output_class=conf.columns["class_groundtruth"],
+            column_BEFL_latecrop=conf.columns["crop_declared"],
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=conf.columns["main_crop_declared"],
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
+        return prepare_input_latecrop(
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=conf.columns["crop_declared"],
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=conf.columns["main_crop_declared"],
+            column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "FABACEAE":
@@ -884,6 +912,38 @@ def prepare_input_latecrop(
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
                 column_BEFL_gesp_pm
             ].str.replace(",", ";")
+
+    return parceldata_df
+
+
+def prepare_input_latecrop_early(
+    parceldata_df,
+    column_BEFL_latecrop: str,
+    column_BEFL_latecrop2: str,
+    column_BEFL_maincrop: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+):
+    """
+    Prepare a dataframe based on the BEFL input file so it onclused a classname
+    column ready to classify the landcover for early crops.
+    """
+    # First run the standard latecrop prepare
+    parceldata_df = prepare_input_latecrop(
+        parceldata_df=parceldata_df,
+        column_BEFL_latecrop=column_BEFL_latecrop,
+        column_BEFL_latecrop2=column_BEFL_latecrop2,
+        column_BEFL_maincrop=column_BEFL_maincrop,
+        column_output_class=column_output_class,
+        classes_refe_path=classes_refe_path,
+    )
+
+    # Set crops not in early crops to ignore
+    # TODO: should be in REFE instead of hardcoded!!!
+    parceldata_df.loc[
+        parceldata_df[column_BEFL_maincrop].isin(201, 202, 71, 91, 8532, 9532),
+        column_output_class,
+    ] = "IGNORE_LATE_MAINCROP"
 
     return parceldata_df
 
