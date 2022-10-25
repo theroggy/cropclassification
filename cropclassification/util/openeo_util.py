@@ -168,7 +168,10 @@ def calc_periodic_mosaic(
 
                 if save_landcover:
                     job_title = f"{output_basestem}_{band}.tif"
-                    if job_title == "S2_mosaic_weekly_2021-11-29_2021-12-06_landcover.tif":
+                    if (
+                        job_title
+                        == "S2_mosaic_weekly_2021-11-29_2021-12-06_landcover.tif"
+                    ):
                         period_start_date = period_end_date
                         continue
 
@@ -219,6 +222,7 @@ def calc_periodic_mosaic(
                             scl_band_name="SCENECLASSIFICATION_20M",
                         )
                         .reduce_dimension(dimension="t", reducer="max")
+                        .apply(lambda x: 0.004 * x - 0.08)
                         .create_job(out_format="GTiff", title=job_title)
                         .start_job()
                     )
@@ -280,11 +284,12 @@ def get_job_results(
 
             # If there is no title specified, delete job
             if "title" not in job:
-                logger.info(f"job {job} didn't have a title, so just delete it")
+                logger.info(f"job {job} doesn't have a title, so just delete it")
                 batch_job.delete_job()
             else:
                 # Download results + delete job
                 output_path = output_dir / job["title"]
+                logger.info(f"job {job} finished, so download results")
                 batch_job.get_results().download_file(target=output_path)
                 batch_job.delete_job()
                 output_paths += output_paths
