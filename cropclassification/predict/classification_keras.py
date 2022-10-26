@@ -358,16 +358,10 @@ def predict_proba(
     cols = [conf.columns["id"], column_class, column_class_declared]
     cols.extend(classes_dict)
     proba_df = pd.DataFrame(id_class_proba, columns=cols)
-    proba_df.set_index(keys=conf.columns["id"], inplace=True)
+    proba_df = proba_df.set_index(keys=conf.columns["id"])
 
     # If output path provided, write results
     if output_parcel_predictions_path:
         pdh.to_file(proba_df, output_parcel_predictions_path)
 
     return proba_df
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")

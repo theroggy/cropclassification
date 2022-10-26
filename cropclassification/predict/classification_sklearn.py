@@ -14,7 +14,7 @@ import pandas as pd
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.externals import joblib  # type: ignore
+import joblib
 from sklearn.svm import SVC
 
 import cropclassification.helpers.config_helper as conf
@@ -196,15 +196,10 @@ def predict_proba(
     cols = [conf.columns["id"], column_class, column_class_declared]
     cols.extend(classifier.classes_)
     proba_df = pd.DataFrame(id_class_proba, columns=cols)
+    proba_df = proba_df.set_index(keys=conf.columns["id"])
 
     # If output path provided, write results
     if output_parcel_predictions_path:
         pdh.to_file(proba_df, output_parcel_predictions_path)
 
     return proba_df
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")
