@@ -22,11 +22,9 @@ column_BEFL_earlylate = "MON_EARLY_LATE"  # Is it an early or a late crop?
 column_BEFL_gesp_pm = "GESP_PM"  # Gespecialiseerde productiemethode
 column_BEFL_gis_area = "GRAF_OPP"  # GIS Area
 column_BEFL_status_perm_grass = "STAT_BGV"  # Status permanent grassland
-column_BEFL_latecrop2 = "GWSCOD_N2"  # 2e nateelt
 
-ndvi_latecrop_count = "_count"
-ndvi_latecrop_mean = "_mean"
-ndvi_latecrop_median = "_median"
+ndvi_latecrop_count = "latecrop_ndvi_count"
+ndvi_latecrop_median = "latecrop_ndvi_median"
 
 # The real work
 # -------------------------------------------------------------
@@ -186,35 +184,19 @@ def prepare_input(
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LATECROP-EARLY":
-        parceldata_df = prepare_input_latecrop_early(
-            parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["crop_declared"],
-            column_BEFL_latecrop2=column_BEFL_latecrop2,
-            column_BEFL_maincrop=conf.columns["main_crop_declared"],
-            column_output_class=conf.columns["class_declared"],
-            classes_refe_path=classes_refe_path,
-        )
         return prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["crop"],
-            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_latecrop=conf.columns["late_crop"],
+            column_BEFL_latecrop2=conf.columns["late_crop2"],
             column_BEFL_maincrop=conf.columns["main_crop"],
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LATECROP":
-        parceldata_df = prepare_input_latecrop(
-            parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["crop_declared"],
-            column_BEFL_latecrop2=column_BEFL_latecrop2,
-            column_BEFL_maincrop=conf.columns["main_crop_declared"],
-            column_output_class=conf.columns["class_declared"],
-            classes_refe_path=classes_refe_path,
-        )
         return prepare_input_latecrop(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["crop"],
-            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_latecrop=conf.columns["late_crop"],
+            column_BEFL_latecrop2=conf.columns["late_crop2"],
             column_BEFL_maincrop=conf.columns["main_crop"],
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
@@ -222,10 +204,10 @@ def prepare_input(
     elif classtype_to_prepare == "LATECROP-EARLY-GROUNDTRUTH":
         return prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["crop_declared"],
-            column_BEFL_latecrop2=column_BEFL_latecrop2,
-            column_BEFL_maincrop=conf.columns["main_crop_declared"],
-            column_output_class=conf.columns["class_declared"],
+            column_BEFL_latecrop=conf.columns["late_crop"],
+            column_BEFL_latecrop2=conf.columns["late_crop2"],
+            column_BEFL_maincrop=conf.columns["main_crop"],
+            column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
@@ -748,7 +730,6 @@ def prepare_input_latecrop(
                 conf.columns["class_declared"],
                 conf.columns["class"],
                 ndvi_latecrop_count,
-                ndvi_latecrop_mean,
                 ndvi_latecrop_median,
             ]
             and column not in columns_to_keep
@@ -796,44 +777,42 @@ def prepare_input_latecrop(
     # For rows with no class, set to UNKNOWN
     parceldata_df.fillna(value={column_output_class: "UNKNOWN"}, inplace=True)
 
-    # TODO: MON_BRAAK opkuisen met Timo?
-    # TODO: controle obv ndvi > 0.3 => geen braak?
-    # braak van in de zomer => geen "braak" meer vanwege onkruid
+    # Add ignore_for_training column: if 1, ignore for training
+    parceldata_df["ignore_for_training"] = 0
 
-    # Assumption: if there is no latecrop and the maincrop is akkerbouw, then the land
-    # will be left barren after, except for grasses
-    """
-    parceldata_df.loc[
-        (parceldata_df[column_output_class] == "UNKNOWN")
-        & (parceldata_df["IS_BOUWLAND_MAINCROP"] == 1)
-        & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_GRASSEN"),
-        column_output_class,
-    ] = "MON_BRAAK"
-    """
-    # If the median ndvi <= 0.3, it is treated as a bare field (for training)
-    if ndvi_latecrop_median in parceldata_df.columns:
+    # If ndvi_latecrop_count data columns available, use them
+    if ndvi_latecrop_count in parceldata_df.columns:
+        # If no NDVI data avalable, not possible to determine bare soil
+        # -> ignore parcel in training
         parceldata_df.loc[
-            (parceldata_df[column_output_class] == "UNKNOWN")
-            & (parceldata_df[ndvi_latecrop_median] <= 0.3),
-            column_output_class,
-        ] = "MON_BRAAK"
+            parceldata_df[ndvi_latecrop_count] < 10, "ignore_for_training"
+        ] = 1
     else:
         logger.warning(
             f"No column {ndvi_latecrop_count} available to set ignore_for_training"
         )
 
+    # TODO: MON_BRAAK opkuisen met Timo?
+    # TODO: controle obv ndvi > 0.3 => geen braak?
+    #       braak van in de zomer => geen "braak" meer vanwege onkruid
+
+    """
     # If permanent grassland, there will typically still be grass on the parcels
+    # BUT: 60 is in ECO_430_GRASLAND_KLAVER_LUZ_GRAAN!!!
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
         & (parceldata_df[column_BEFL_status_perm_grass] is not None)
         & (parceldata_df["MON_CROPGROUP_MAINCROP"] == "MON_GRASSEN"),
         column_output_class,
     ] = "MON_GRASSEN"
+    """
 
-    # Assemption: permanent crops won't/can't have a latecrop, so don't bother
-    # predicting them
+    # Assumption: permanent crops except grassland won't/can't have a latecrop, so
+    # don't bother predicting them
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
+        # & (parceldata_df[column_BEFL_status_perm_grass] is None)
+        & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_GRASSEN")
         & (parceldata_df["IS_PERM_BEDEKKING_MAINCROP"] == 1),
         column_output_class,
     ] = "IGNORE_PERMANENT_BEDEKKING"
@@ -888,14 +867,24 @@ def prepare_input_latecrop(
                 column_output_class,
             ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
-    # Add ignore_for_training column: if 1, ignore for training
-    parceldata_df["ignore_for_training"] = 0
+    # Add copy of class as class_declared
+    parceldata_df[conf.columns["class_declared"]] = parceldata_df[column_output_class]
 
-    # If ndvi_latecrop_count data columns available, use them
-    if ndvi_latecrop_count in parceldata_df.columns:
-        # If no NDVI data avalable, not possible to determine bare soil -> ignore parcel
+    # If the median ndvi <= 0.3 parcel is still a bare field (for training)
+    if ndvi_latecrop_median in parceldata_df.columns:
+        # If also no grass, train as MON_BRAAK
         parceldata_df.loc[
-            parceldata_df[ndvi_latecrop_count] == 0, "ignore_for_training"
+            (parceldata_df[ndvi_latecrop_median] <= 0.3)
+            # & (parceldata_df[column_output_class] == "UNKNOWN")
+            & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_GRASSEN"),
+            column_output_class,
+        ] = "MON_BRAAK"
+
+        # For all other classes, don't use for training if bare soil
+        parceldata_df.loc[
+            (parceldata_df[ndvi_latecrop_median] <= 0.3)
+            & (parceldata_df[column_output_class] != "MON_BRAAK"),
+            "ignore_for_training",
         ] = 1
     else:
         logger.warning(
@@ -912,7 +901,6 @@ def prepare_input_latecrop(
                 conf.columns["class_groundtruth"],
                 conf.columns["class_declared"],
                 ndvi_latecrop_count,
-                ndvi_latecrop_mean,
                 ndvi_latecrop_median,
                 "ignore_for_training",
             ]
@@ -951,12 +939,20 @@ def prepare_input_latecrop_early(
     )
 
     # Set crops not in early crops to ignore
+    # 396: mengteelt mais en vlinderbloemigen
+    # "71", "91", "8532", "9532": bieten
     # TODO: should be in REFE instead of hardcoded!!!
     parceldata_df.loc[
         parceldata_df[column_BEFL_maincrop].isin(
-            ["201", "202", "71", "91", "8532", "9532"]
+            ["396", "201", "202", "71", "91", "8532", "9532"]
         ),
         column_output_class,
+    ] = "IGNORE_LATE_MAINCROP"
+    parceldata_df.loc[
+        parceldata_df[column_BEFL_maincrop].isin(
+            ["396", "201", "202", "71", "91", "8532", "9532"]
+        ),
+        conf.columns["class_declared"],
     ] = "IGNORE_LATE_MAINCROP"
 
     return parceldata_df

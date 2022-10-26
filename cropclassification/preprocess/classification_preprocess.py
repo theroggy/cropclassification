@@ -185,7 +185,9 @@ def create_train_test_sample(
     ]
 
     # There shouldn't be any classes left that start with IGNORE now
-    train_ignore_df = train_base_df[train_base_df[class_column].str.startswith("IGNORE")]
+    train_ignore_df = train_base_df[
+        train_base_df[class_column].str.startswith("IGNORE")
+    ]
     if len(train_ignore_df) > 0:
         raise ValueError(
             "There are still classes that start with IGNORE, after removing filtering "
