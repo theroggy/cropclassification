@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 import pprint
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import geofileops as gfo
 import openeo
@@ -85,11 +85,18 @@ def calc_periodic_mosaic(
                 batch_job.delete_job()
     else:
         # Process jobs that are still on the server
-        output_paths = get_job_results(conn, output_dir, raise_errors=raise_errors)
-        for output_path in output_paths:
-            add_overviews(output_path)
+        result_paths, job_errors = get_job_results(conn, output_dir)
+        for result_path in result_paths:
+            add_overviews(result_path)
+        if raise_errors and len(job_errors) > 0:
+            raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
     period_start_date = start_date
+    job_options = {
+        "executor-memory": "4G",
+        "executor-memoryOverhead": "2G",
+        "executor-cores": "2",
+    }
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
 
         for sensordata_type in sensordata_to_get:
@@ -125,8 +132,8 @@ def calc_periodic_mosaic(
                 # Save RGB image
                 if save_rgb:
                     job_title = f"{output_basestem}_rgb.tif"
-                    output_path = output_dir / job_title
-                    if check_output_file(output_path, force):
+                    result_path = output_dir / job_title
+                    if check_output_file(result_path, force):
                         # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
                         # Use the "min" reducer filters out "lightly clouded areas"
                         _ = (
@@ -137,7 +144,11 @@ def calc_periodic_mosaic(
                             )
                             .filter_bands(bands=["B04", "B03", "B02"])
                             .reduce_dimension(dimension="t", reducer="min")
-                            .create_job(out_format="GTiff", title=job_title)
+                            .create_job(
+                                out_format="GTiff",
+                                title=job_title,
+                                job_options=job_options,
+                            )
                             .start_job()
                         )
 
@@ -157,12 +168,16 @@ def calc_periodic_mosaic(
                 #   * 11: SNOW
                 if save_scl:
                     job_title = f"{output_basestem}_scl.tif"
-                    output_path = output_dir / job_title
-                    if check_output_file(output_path, force):
+                    result_path = output_dir / job_title
+                    if check_output_file(result_path, force):
                         _ = (
                             s2_cube.band("SCL")
                             .reduce_dimension(dimension="t", reducer="max")
-                            .create_job(out_format="GTiff", title=job_title)
+                            .create_job(
+                                out_format="GTiff",
+                                title=job_title,
+                                job_options=job_options,
+                            )
                             .start_job()
                         )
 
@@ -175,9 +190,9 @@ def calc_periodic_mosaic(
                         period_start_date = period_end_date
                         continue
 
-                    output_path = output_dir / job_title
-                    result_paths.append(output_path)
-                    if check_output_file(output_path, force):
+                    result_path = output_dir / job_title
+                    result_paths.append(result_path)
+                    if check_output_file(result_path, force):
 
                         # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
                         s2_cube_scl = s2_cube.filter_bands(bands=["SCL"])
@@ -193,15 +208,19 @@ def calc_periodic_mosaic(
                             )
                             .filter_bands(bands=["SCL_DATA"])
                             .reduce_dimension(dimension="t", reducer="max")
-                            .create_job(out_format="GTiff", title=job_title)
+                            .create_job(
+                                out_format="GTiff",
+                                title=job_title,
+                                job_options=job_options,
+                            )
                             .start_job()
                         )
 
             elif sensordata_type == "S2-ndvi":
                 job_title = f"{output_basestem}_{band}.tif"
-                output_path = output_dir / job_title
-                result_paths.append(output_path)
-                if check_output_file(output_path, force):
+                result_path = output_dir / job_title
+                result_paths.append(result_path)
+                if check_output_file(result_path, force):
 
                     # Load cube of relevant S2 images
                     # You can look which layers are available here:
@@ -221,9 +240,12 @@ def calc_periodic_mosaic(
                             data=s2_ndvi_cube,
                             scl_band_name="SCENECLASSIFICATION_20M",
                         )
+                        .filter_bands(bands=["NDVI_10M"])
                         .reduce_dimension(dimension="t", reducer="max")
                         .apply(lambda x: 0.004 * x - 0.08)
-                        .create_job(out_format="GTiff", title=job_title)
+                        .create_job(
+                            out_format="GTiff", title=job_title, job_options=job_options
+                        )
                         .start_job()
                     )
             else:
@@ -234,10 +256,13 @@ def calc_periodic_mosaic(
             period_start_date = period_end_date
 
     # Get the results
-    output_paths = get_job_results(conn, output_dir, raise_errors=raise_errors)
+    output_paths, job_errors = get_job_results(conn, output_dir)
     for output_path in output_paths:
         add_overviews(output_path)
+    if raise_errors and len(job_errors) > 0:
+        raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
+    result_paths.extend(output_paths)
     return result_paths
 
 
@@ -264,8 +289,8 @@ def check_output_file(path: Path, force: bool) -> bool:
 
 
 def get_job_results(
-    conn: openeo.Connection, output_dir: Path, raise_errors: bool
-) -> List[Path]:
+    conn: openeo.Connection, output_dir: Path
+) -> Tuple[List[Path], List[str]]:
     """Get results of the completed jobs."""
 
     output_paths = []
@@ -292,32 +317,29 @@ def get_job_results(
                 logger.info(f"job {job} finished, so download results")
                 batch_job.get_results().download_file(target=output_path)
                 batch_job.delete_job()
-                output_paths += output_paths
+                output_paths.append(output_path)
 
         # As long as processing is needed, keep polling
+        errors = []
         if "queued" in jobs_per_status or "running" in jobs_per_status:
             time.sleep(30)
         else:
             # We are ready, so deal with error jobs and break
-            errors_found = []
             for job in jobs_per_status["error"]:
                 batch_job = openeo.rest.job.BatchJob(job["id"], conn)
                 logger.error(f"Error processing job '{job['title']}', id: {job['id']}")
                 errorlog = pprint.pformat(batch_job.logs())
                 logger.error(errorlog)
                 batch_job.delete_job()
-                errors_found.append(f"Error for job '{job['title']}', id: {job['id']}")
+                errors.append(f"Error for job '{job['title']}', id: {job['id']}")
             for job in jobs_per_status["created"]:
                 batch_job = openeo.rest.job.BatchJob(job["id"], conn)
                 logger.info(f"delete created job '{job['title']}', id: {job['id']}")
                 batch_job.delete_job()
 
-            if errors_found and raise_errors:
-                raise RuntimeError(f"Errors occured: {pprint.pformat(errors_found)}")
-
             break
 
-    return output_paths
+    return output_paths, errors
 
 
 def add_overviews(path: Path):
