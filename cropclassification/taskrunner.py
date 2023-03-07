@@ -7,7 +7,6 @@ import argparse
 import configparser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
 from pathlib import Path
 import sys
 
@@ -47,11 +46,11 @@ def main():
 
     # If tasks dir is specified, use it
     if args.tasksdir is not None:
-        return cropclassification(tasksdir=Path(args.tasksdir))
+        return run_tasks(tasksdir=Path(args.tasksdir))
     else:
         usertasksdir = Path.home() / "cropclassification" / "tasks"
         if usertasksdir.exists():
-            return cropclassification(tasksdir=usertasksdir)
+            return run_tasks(tasksdir=usertasksdir)
         else:
             print(
                 f"Error: no tasksdir specified, and default tasks dir ({usertasksdir}) "
@@ -61,7 +60,7 @@ def main():
             sys.exit(1)
 
 
-def cropclassification(tasksdir: Path):
+def run_tasks(tasksdir: Path):
 
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
