@@ -56,7 +56,7 @@ def calc_timeseries_data(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
         f"date {end_date_str} as well: {end_date}"
     )
-    openeo_supported = ["S2-landcover", "S2-ndvi"]
+    openeo_supported = ["s2-rgb", "s2-ndvi", "s2-agri", "s1-asc", "s1-desc", "s1-coh"]
     sensordata_to_get_onda = [
         sensor for sensor in sensordata_to_get if sensor not in openeo_supported
     ]
