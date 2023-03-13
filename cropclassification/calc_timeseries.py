@@ -17,8 +17,8 @@ import geofileops as gfo  # noqa: F401
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 from cropclassification.helpers import raster_helper
-from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
-from cropclassification.preprocess import timeseries_util as ts_util
+from cropclassification.preprocess import _timeseries_calc_per_image as calc_ts
+from cropclassification.preprocess import _timeseries_util as ts_util
 
 
 def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):

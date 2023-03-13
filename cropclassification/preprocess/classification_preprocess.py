@@ -10,7 +10,7 @@ import shutil
 
 import pandas as pd
 
-import cropclassification.preprocess.classification_preprocess_BEFL as befl
+import cropclassification.preprocess._classification_preprocess_BEFL as befl
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 

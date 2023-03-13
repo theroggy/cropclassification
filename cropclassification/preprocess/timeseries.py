@@ -10,7 +10,7 @@ from typing import List
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
-import cropclassification.preprocess.timeseries_util as ts_util
+import cropclassification.preprocess._timeseries_util as ts_util
 
 # First define/init some general variables/constants
 # -------------------------------------------------------------
@@ -81,7 +81,7 @@ def calc_timeseries_data(
         )
     if len(sensordata_to_get_openeo) > 0:
         # Pepare periodic images + calculate base timeseries on them
-        import cropclassification.preprocess.timeseries_calc_openeo as ts_calc_openeo
+        import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 
         ts_calc_openeo.calc_timeseries_data(
             input_parcel_path=input_parcel_path,

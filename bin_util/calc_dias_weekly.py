@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-import cropclassification.preprocess.timeseries_util as ts_util
+import cropclassification.preprocess._timeseries_util as ts_util
 
 
 def main():
