@@ -9,12 +9,14 @@ import os
 from pathlib import Path
 import shutil
 from typing import List
+import dateutil.parser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
+from cropclassification.helpers import raster_helper
 from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
 from cropclassification.preprocess import timeseries_util as ts_util
 
@@ -102,19 +104,6 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # By adding a / at the end, only the contents are recursively deleted
         shutil.rmtree(str(temp_dir) + os.sep)
 
-    """
-    # TEST to extract exact footprint from S1 image...
-    path = "/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2017/01/01/S1A_IW_GRDH_1SDV_20170101T055005_20170101T055030_014634_017CB9_Orb_RBN_RTN_Cal_TC.CARD/S1A_IW_GRDH_1SDV_20170101T055005_20170101T055030_014634_017CB9_Orb_RBN_RTN_Cal_TC.data/Gamma0_VH.img"
-    image = rasterio.open(path)
-    geoms = list(rasterio.features.dataset_features(src=image, as_mask=True, precision=5))
-    footprint = gpd.GeoDataFrame.from_features(geoms)
-    logger.info(footprint)
-    footprint = footprint.simplify(0.00001)
-    logger.info(footprint)
-    logger.info("Ready")
-    # Start calculation
-    """
-
     # Process S1 GRD images
     input_image_paths = []
     for year in range(calc_year_start, calc_year_stop + 1):
@@ -132,6 +121,51 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
                 f"/mnt/NAS*/CARD/FLANDERS/S1*/L1TC/{year}/{month:02d}/*/*.CARD"
             )
             input_image_paths.extend(glob.glob(input_image_searchstr))
+    logger.info(f"Found {len(input_image_paths)} S1 GRD images in the time period")
+
+    # Verify which S1 images we actually want to process...
+    tmp_input_image_paths = []
+    esaSwitchedProcessingMethod = dateutil.parser.isoparse("2021-02-23").timestamp()
+    for input_image_path in input_image_paths:
+        input_image_path = Path(input_image_path)
+        # Get more detailed info about the image
+        try:
+            image_info = raster_helper.get_image_info(input_image_path)
+        except Exception:
+            # If not possible to get info for image, log and skip it
+            logger.exception(
+                f"SKIP image: error getting info for {input_image_path}"
+            )
+            continue
+
+        # Fast-24h <- 2021-02-23 -> NRT-3H
+        productTimelinessCategory = (
+            "Fast-24h"
+            if dateutil.parser.isoparse(
+                image_info["acquisition_date"]
+            ).timestamp()
+            < esaSwitchedProcessingMethod
+            else "NRT-3h"
+        )
+
+        # If sentinel1 and wrong productTimelinessCategory, skip: we only
+        # want 1 type to evade images used twice
+        if (
+            image_info["satellite"].startswith("S1")
+            and image_info["productTimelinessCategory"]
+            != productTimelinessCategory
+        ):
+            logger.info(
+                f"SKIP image, productTimelinessCategory should be "
+                f"'{productTimelinessCategory}', but is: "
+                f"{image_info['productTimelinessCategory']} for "
+                f"{input_image_path}"
+            )
+            continue
+
+        tmp_input_image_paths.append(input_image_path)
+
+    input_image_paths = tmp_input_image_paths
     logger.info(f"Found {len(input_image_paths)} S1 GRD images to process")
 
     if test:
@@ -140,10 +174,6 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         logger.info(
             f"As we are only testing, process only {len(input_image_paths)} test images"
         )
-
-    input_image_paths = [
-        Path(input_image_path) for input_image_path in input_image_paths
-    ]
 
     try:
         calc_ts.calc_stats_per_image(
@@ -189,9 +219,35 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     # TODO: refactor underlying code so the SCL band is used regardless of it being
     # passed here
     max_cloudcover_pct = conf.timeseries.getfloat("max_cloudcover_pct")
-    input_image_paths = [
-        Path(input_image_path) for input_image_path in input_image_paths
-    ]
+    # Verify which S1 images we actually want to process...
+    tmp_input_image_paths = []
+    for input_image_path in input_image_paths:
+        input_image_path = Path(input_image_path)
+
+        # Get more detailed info about the image
+        try:
+            image_info = raster_helper.get_image_info(input_image_path)
+        except Exception:
+            # If not possible to get info for image, log and skip it
+            logger.exception(
+                f"SKIP image: error getting info for {input_image_path}"
+            )
+            continue
+
+        # If sentinel2 and cloud coverage too high... skip
+        if (
+            max_cloudcover_pct >= 0
+            and image_info["satellite"].startswith("S2")
+            and image_info["Cloud_Coverage_Assessment"] > max_cloudcover_pct
+        ):
+            logger.info(
+                "SKIP image, Cloud_Coverage_Assessment: "
+                f"{image_info['Cloud_Coverage_Assessment']:0.2f} > "
+                f"{max_cloudcover_pct} for {input_image_path}"
+            )
+            continue
+
+        tmp_input_image_paths.append(input_image_path)
 
     try:
         calc_ts.calc_stats_per_image(
@@ -203,7 +259,6 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             temp_dir=temp_dir,
             log_dir=log_dir,
             log_level=log_level,
-            max_cloudcover_pct=max_cloudcover_pct,
         )
     except Exception as ex:
         logger.exception(ex)
