@@ -10,7 +10,9 @@ dependencies:
   - geopandas>=0.11
   - h5py <3
   - numpy
-  - openeo
+  # Openeo >=0.14 +- doesn't work on windows.
+  # More info here: https://github.com/Open-EO/openeo-python-client/issues/387
+  - openeo <0.14
   - pandas
   - psutil
   - pyproj

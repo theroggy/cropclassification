@@ -52,9 +52,8 @@ def main():
     ts_util.calculate_periodic_data(
         input_parcel_path=input_parcel_path,
         input_base_dir=timeseries_per_image_dir,
-        start_date_str=f"{year}-03-15",
-        end_date_str=f"{year}-08-15",
-        # sensordata_to_get=conf.marker.getlist('sensordata_to_use'),
+        start_date=datetime.fromisoformat(f"{year}-03-15"),
+        end_date=datetime.fromisoformat(f"{year}-08-15"),
         sensordata_to_get=["SENSORDATA_S1_COHERENCE"],
         dest_data_dir=timeseries_periodic_dir,
         force=False,

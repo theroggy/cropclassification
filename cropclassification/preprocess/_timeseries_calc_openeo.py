@@ -1,10 +1,13 @@
 from datetime import datetime
 import logging
 from pathlib import Path
+import tempfile
 from typing import List
 
+from cropclassification.helpers import config_helper as conf
 from cropclassification.util import openeo_util
-from cropclassification.util import geoops_util
+from cropclassification.util.ImageProfile import ImageProfile
+import cropclassification.preprocess._timeseries_calc_per_image as ts_per_image
 
 # First define/init some general variables/constants
 # -------------------------------------------------------------
@@ -20,7 +23,7 @@ def calc_timeseries_data(
     input_parcel_path: Path,
     start_date: datetime,
     end_date: datetime,
-    sensordata_to_get: List[str],
+    sensordata_to_get: List[ImageProfile],
     dest_image_data_dir: Path,
     dest_data_dir: Path,
 ):
@@ -33,17 +36,35 @@ def calc_timeseries_data(
     """
     # As we want a weekly calculation, get nearest monday for start and stop day
     days_per_period = 7
-    periodic_images = openeo_util.calc_periodic_mosaic(
+    periodic_images_result = openeo_util.calc_periodic_mosaic(
         roi_path=input_parcel_path,
         start_date=start_date,
         end_date=end_date,
         days_per_period=days_per_period,
         output_dir=dest_image_data_dir,
-        sensordata_to_get=sensordata_to_get,
+        images_to_get=sensordata_to_get,
         force=False,
     )
 
     # Now calculate the timeseries
+    images_bands = [
+        (image_path, imageprofile.bands)
+        for image_path, imageprofile in periodic_images_result
+    ]
+    temp_dir = conf.dirs.getpath("temp_dir")
+    if temp_dir == "None":
+        temp_dir = Path(tempfile.gettempdir())
+    ts_per_image.calc_stats_per_image(
+        features_path=input_parcel_path,
+        id_column=conf.columns["id"],
+        images_bands=images_bands,
+        output_dir=dest_data_dir,
+        temp_dir=temp_dir,
+        log_dir=conf.dirs.getpath("log_dir"),
+        log_level=conf.general.get("log_level"),
+    )
+
+    """
     for image_path in periodic_images:
         output_path = (
             dest_data_dir / f"{input_parcel_path.stem}__{image_path.stem}.gpkg"
@@ -53,3 +74,4 @@ def calc_timeseries_data(
             input_raster_path=image_path,
             output_path=output_path,
         )
+    """

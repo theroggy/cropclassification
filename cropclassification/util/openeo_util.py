@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
@@ -17,27 +18,36 @@ from osgeo import gdal
 gdal.PushErrorHandler("CPLQuietErrorHandler")
 import rasterio
 
+from cropclassification.util.ImageProfile import ImageProfile
+
 # First define/init some general variables/constants
 # -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
+
 # The real work
 # -------------------------------------------------------------
-
-
 def calc_periodic_mosaic(
     roi_path: Path,
     start_date: datetime,
     end_date: datetime,
     days_per_period: int,
-    sensordata_to_get: List[str],
+    images_to_get: List[ImageProfile],
     output_dir: Path,
     period_name: Optional[str] = None,
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
-) -> List[Path]:
+) -> List[Tuple[Path, ImageProfile]]:
+    # Validate time_dimension_reducer
+    for imageprofile in images_to_get:
+        reducer = imageprofile.process_options.get("time_dimension_reducer", None)
+        if reducer is None:
+            raise ValueError(
+                "process_options must contain a time_dimension_reducer for "
+                "calc_periodic_mosaic"
+            )
 
     # Prepare period_name:
     if period_name is None:
@@ -101,60 +111,36 @@ def calc_periodic_mosaic(
         "executor-memoryOverhead": "2G",
         "executor-cores": "2",
     }
-    mosaic_paths = []
+    result = []
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
         period_end_date = period_start_date + timedelta(days=days_per_period)
-        for sensordata_type in sensordata_to_get:
+        for imageprofile in images_to_get:
             # Period in openeo is inclusive for startdate and excludes enddate
-            sensordata_type = sensordata_type.lower()
-            satellite, bands_code = sensordata_type.split("-")
-            collection = None
-            bands = None
-            process_options = {}
-            reducer = None
-            if sensordata_type == "s2-ndvi":
-                collection = "TERRASCOPE_S2_NDVI_V2"
-                bands = ["NDVI_10M"]
-                process_options["filter_clouds"] = "SCENECLASSIFICATION_20M"
-                reducer = "max"
-            elif satellite == "s2":
-                collection = "TERRASCOPE_S2_TOC_V2"
-                process_options["filter_clouds"] = "SCL"
-                # Use the "min" reducer filters out "lightly clouded areas"
-                reducer = "min"
-                if bands_code == "rgb":
-                    bands = ["B04", "B03", "B02"]
-                elif bands_code == "agri":
-                    bands = ["B02", "B03", "B04", "B08", "B11", "B12"]
-            elif satellite == "s1":
-                reducer = "max"
-                if bands_code == "asc":
-                    collection = "S1_GRD_SIGMA0_ASCENDING"
-                    bands = ["VV", "VH", "angle"]
-                elif bands_code == "desc":
-                    collection = "S1_GRD_SIGMA0_DESCENDING"
-                    bands = ["VV", "VH", "angle"]
-                elif bands_code == "coh":
-                    collection = "TERRASCOPE_S1_SLC_COHERENCE_V1"
-                    bands = ["VV", "VH"]
-            if collection is None or bands is None:
-                raise ValueError(f"sensordata_type not known: {sensordata_type}")
-
-            processed_path = start_job_mosaic(
-                conn=conn,
-                collection=collection,
-                spatial_extent=roi_extent,
+            name = format_name(
+                imageprofile.name,
                 start_date=period_start_date,
                 end_date=period_end_date,
-                bands=bands,
-                period_name=period_name,
-                reducer=reducer,
-                output_dir=output_dir,
-                job_options=job_options,
-                process_options=process_options,
-                force=force,
+                bands=imageprofile.bands,
             )
-            mosaic_paths.append(processed_path)
+            processed_path = output_dir / name
+            if not file_exists(processed_path, force):
+                process_options = deepcopy(imageprofile.process_options)
+                reducer = process_options["time_dimension_reducer"]
+                del process_options["time_dimension_reducer"]
+
+                create_mosaic_job(
+                    conn=conn,
+                    collection=imageprofile.collection,
+                    spatial_extent=roi_extent,
+                    start_date=period_start_date,
+                    end_date=period_end_date,
+                    bands=imageprofile.bands,
+                    time_dimension_reducer=reducer,
+                    output_name=name,
+                    job_options=job_options,
+                    process_options=process_options,
+                ).start_job()
+            result.append((processed_path, imageprofile))
 
         period_start_date = period_end_date
 
@@ -167,58 +153,53 @@ def calc_periodic_mosaic(
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
-    if True:
-        for path in mosaic_paths:
-            logger.info(f"Info of {path.name}:")
-            with rasterio.open(path, "r") as dst:
-                logger.info(dst.profile)
-
-    return mosaic_paths
+    return result
 
 
-def start_job_mosaic(
+def format_name(
+    imageprofile: str,
+    start_date: datetime,
+    end_date: datetime,
+    bands: List[str],
+) -> str:
+    start_date_str = start_date.strftime("%Y-%m-%d")
+    end_date_str = end_date.strftime("%Y-%m-%d")
+    bands_str = "-".join(bands)
+    name = (
+        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}.tif"
+    )
+    return name
+
+
+def create_mosaic_job(
     conn: openeo.Connection,
     collection: str,
     spatial_extent,
     start_date: datetime,
     end_date: datetime,
     bands: List[str],
-    output_dir: Path,
-    period_name: str,
-    reducer: str,
+    output_name: str,
+    time_dimension_reducer: str,
     job_options: dict,
     process_options: dict,
-    force: bool = False,
-) -> Path:
-    # Check and process input params
-    period = [
-        start_date.strftime("%Y-%m-%d"),
-        end_date.strftime("%Y-%m-%d"),
-    ]
-    bands_str = "-".join(bands)
-    collection_str = collection.replace("_", "-")
-    name = (
-        f"{collection_str}_mosaic_{period_name}_{period[0]}_{period[1]}_{bands_str}.tif"
-    )
-    output_path = output_dir / name
-    if file_exists(output_path, force):
-        return output_path
+) -> openeo.BatchJob:
+    logger.info(f"Schedule {output_name}")
 
+    # Check and process input params
     period = [
         start_date.strftime("%Y-%m-%d"),
         end_date.strftime("%Y-%m-%d"),
     ]
 
     bands_to_load = list(bands)
-    filter_clouds_band = None
+    cloud_filter_band = None
     for option in process_options:
-        if option == "filter_clouds":
-            filter_clouds_band = process_options[option]
-            bands_to_load.append(filter_clouds_band)
+        if option == "cloud_filter_band":
+            cloud_filter_band = process_options[option]
+            bands_to_load.append(cloud_filter_band)
         else:
             raise ValueError(f"unknown processing option: {option}")
 
-    logger.info(f"{output_path.stem} needs to be scheduled")
     # Load cube of relevant images
     # You can look which layers are available here:
     # https://openeo.cloud/data-collections/
@@ -229,30 +210,26 @@ def start_job_mosaic(
         bands=bands_to_load,
     )
 
-    job_title = output_path.name
-
     # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
-    if filter_clouds_band is not None:
+    if cloud_filter_band is not None:
         cube = cube.process(
             "mask_scl_dilation",
             data=cube,
-            scl_band_name=filter_clouds_band,
+            scl_band_name=cloud_filter_band,
         )
 
     cube = cube.filter_bands(bands=bands)
-    cube = cube.reduce_dimension(dimension="t", reducer=reducer)
+    cube = cube.reduce_dimension(dimension="t", reducer=time_dimension_reducer)
 
     # The NDVI collection needs to be recalculated
     if collection == "TERRASCOPE_S2_NDVI_V2":
         cube = cube.apply(lambda x: 0.004 * x - 0.08)
 
-    cube = cube.create_job(
+    return cube.create_job(
         out_format="GTiff",
-        title=job_title,
+        title=output_name,
         job_options=job_options,
     )
-    cube.start_job()
-    return output_path
 
 
 def file_exists(path: Path, force: bool) -> bool:
@@ -277,7 +254,7 @@ def file_exists(path: Path, force: bool) -> bool:
 
 
 def get_job_results(
-    conn: openeo.Connection, output_dir: Path
+    conn: openeo.Connection, output_dir: Path, ignore_errors: bool = False
 ) -> Tuple[List[Path], List[str]]:
     """Get results of the completed jobs."""
 
@@ -329,6 +306,9 @@ def get_job_results(
                 batch_job.delete_job()
 
             break
+
+    if not ignore_errors and len(errors) > 0:
+        raise RuntimeError(f"openeo processing errors: {pprint.pformat(errors)}")
 
     return output_paths, errors
 

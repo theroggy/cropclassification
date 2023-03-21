@@ -56,7 +56,7 @@ def calc_timeseries_data(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
         f"date {end_date_str} as well: {end_date}"
     )
-    openeo_supported = ["s2-rgb", "s2-ndvi", "s2-agri", "s1-asc", "s1-desc", "s1-coh"]
+    openeo_supported = ["s2-ndvi", "s2-agri", "s1-asc", "s1-desc", "s1-coh"]
     sensordata_to_get_onda = [
         sensor for sensor in sensordata_to_get if sensor not in openeo_supported
     ]
@@ -83,14 +83,20 @@ def calc_timeseries_data(
         # Pepare periodic images + calculate base timeseries on them
         import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 
+        sensordata_to_get_info_openeo = [
+            conf.image_profiles[sensordatatype]
+            for sensordatatype in sensordata_to_get_openeo
+        ]
         ts_calc_openeo.calc_timeseries_data(
             input_parcel_path=input_parcel_path,
             start_date=start_date,
             end_date=end_date,
-            sensordata_to_get=sensordata_to_get_openeo,
+            sensordata_to_get=sensordata_to_get_info_openeo,
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
             dest_data_dir=conf.dirs.getpath("timeseries_per_image_dir"),
         )
+
+        raise Exception("STOP")
 
         # Now all image data is available per image, calculate periodic data
         ts_util.calculate_periodic_data(

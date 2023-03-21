@@ -282,7 +282,7 @@ def calculate_periodic_data(
                 & (all_inputfiles_df.band.isin(bands))
             ]
         else:
-            raise Exception(f"Unsupported sensordata_type: {sensordata_type}")
+            raise ValueError(f"Unsupported sensordata_type: {sensordata_type}")
 
         # There should also be one pixcount file
         pixcount_filename = f"{input_parcel_path.stem}_weekly_pixcount{output_ext}"

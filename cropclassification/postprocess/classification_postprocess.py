@@ -425,7 +425,7 @@ def add_doubt_column(
                 new_pred_column,
             ] = "RISKY_DOUBT:HERBS-UNCONFIRMED"
 
-            # If parcel was declared as 'aardbeien', but is not confirmed as 
+            # If parcel was declared as 'aardbeien', but is not confirmed as
             # MON_LC_ARABLE classified as such: doubt
             # Remark: - those gave > 50% false positives for marker LANDCOVER-EARLY
             #         - gave 33-50% false positives for marker LANDCOVER
@@ -466,7 +466,7 @@ def add_doubt_column(
             ] = "RISKY_DOUBT:BOOM/FRUITKWEEK-UNCONFIRMED"
 
             # Parcel was declared as one of the following + classified as GRASSES
-            # 
+            #
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (
@@ -475,12 +475,12 @@ def add_doubt_column(
                             "36",
                             "895",
                             "9582",
-#                            "744",
-#                            "9202",
-#                            "9714",
-#                            "832",
-#                            "9602",
-#                            "9730",
+                            #                            "744",
+                            #                            "9202",
+                            #                            "9714",
+                            #                            "832",
+                            #                            "9602",
+                            #                            "9730",
                         ]
                     )
                 )

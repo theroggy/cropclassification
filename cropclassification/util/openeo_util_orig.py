@@ -6,14 +6,14 @@ import pprint
 import time
 from typing import List, Optional, Tuple
 
+from osgeo import gdal
+# ... and suppress errors
+gdal.PushErrorHandler('CPLQuietErrorHandler')
 import geofileops as gfo
 import openeo
 import openeo.rest.job
 import pyproj
 
-from osgeo import gdal
-# ... and suppress errors
-gdal.PushErrorHandler('CPLQuietErrorHandler')
 import rasterio
 
 # First define/init some general variables/constants

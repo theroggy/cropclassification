@@ -28,11 +28,11 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     tmp_dir = Path(tmpdir) / "raw"
     try:
         start_time = datetime.now()
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         calc_ts.calc_stats_per_image(
             features_path=input_features_path,
             id_column="UID",
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            images_bands=images_bands,
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",
@@ -57,11 +57,11 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     tmp_dir = Path(tmpdir) / "tif"
     try:
         start_time = datetime.now()
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         calc_ts.calc_stats_per_image(
             features_path=input_features_path,
             id_column="UID",
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            images_bands=images_bands,
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",

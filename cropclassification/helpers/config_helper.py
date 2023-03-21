@@ -7,7 +7,10 @@ import configparser
 import json
 from pathlib import Path
 import pprint
-from typing import List, Optional
+import tempfile
+from typing import Dict, List, Optional
+
+from cropclassification.util.ImageProfile import ImageProfile
 
 # -------------------------------------------------------------
 # The real work
@@ -43,11 +46,13 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     if not data_dir.is_absolute():
         if default_basedir is None:
             raise Exception(
-                f"Config parameter dirs.data_dir is relative, but no default_basedir supplied!"
+                "Config parameter dirs.data_dir is relative, but no default_basedir "
+                "supplied!"
             )
         data_dir_absolute = (default_basedir / data_dir).resolve()
         print(
-            f"Config parameter dirs.data_dir was relative, so is now resolved to {data_dir_absolute}"
+            "Config parameter dirs.data_dir was relative, so is now resolved to "
+            f"{data_dir_absolute}"
         )
         config["dirs"]["data_dir"] = data_dir_absolute.as_posix()
 
@@ -57,13 +62,19 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     if not marker_basedir.is_absolute():
         if default_basedir is None:
             raise Exception(
-                f"Config parameter dirs.marker_basedir is relative, but no default_basedir supplied!"
+                "Config parameter dirs.marker_basedir is relative, but no "
+                "default_basedir supplied!"
             )
         marker_basedir_absolute = (default_basedir / marker_basedir).resolve()
         print(
-            f"Config parameter dirs.marker_basedir was relative, so is now resolved to {marker_basedir_absolute}"
+            "Config parameter dirs.marker_basedir was relative, so is now resolved to "
+            f"{marker_basedir_absolute}"
         )
         config["dirs"]["marker_basedir"] = marker_basedir_absolute.as_posix()
+
+    # Fill out placeholder in the temp_dir (if it is there)
+    tmp_dir_str = tempfile.gettempdir()
+    config["dirs"]["temp_dir"] = config["dirs"]["temp_dir"].format(tmp_dir=tmp_dir_str)
 
     global config_paths_used
     config_paths_used = config_paths
@@ -89,6 +100,61 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     columns = config["columns"]
     global dirs
     dirs = config["dirs"]
+
+    global image_profiles
+    image_profiles = _get_raster_profiles()
+
+
+def _get_raster_profiles() -> Dict[str, ImageProfile]:
+    # TODO: this should move to a config file
+    profiles = {}
+    profiles["s2-agri"] = ImageProfile(
+        name="s2-agri",
+        satellite="s2",
+        collection="TERRASCOPE_S2_TOC_V2",
+        bands=["B02", "B03", "B04", "B08", "B11", "B12"],
+        # Use the "min" reducer filters out "lightly clouded areas"
+        process_options={"time_dimension_reducer": "min", "cloud_filter_band": "SCL"},
+    )
+    profiles["s2-ndvi"] = ImageProfile(
+        name="s2-ndvi",
+        satellite="s2",
+        collection="TERRASCOPE_S2_NDVI_V2",
+        bands=["B02", "B03", "B04", "B08", "B11", "B12"],
+        process_options={
+            "time_dimension_reducer": "max",
+            "cloud_filter_band": "SCENECLASSIFICATION_20M",
+        },
+    )
+    profiles["s1-asc"] = ImageProfile(
+        name="s1-asc",
+        satellite="s1",
+        collection="S1_GRD_SIGMA0_ASCENDING",
+        bands=["VV", "VH", "angle"],
+        process_options={
+            "time_dimension_reducer": "min",
+        },
+    )
+    profiles["s1-desc"] = ImageProfile(
+        name="s1-desc",
+        satellite="s1",
+        collection="S1_GRD_SIGMA0_DESCENDING",
+        bands=["VV", "VH", "angle"],
+        process_options={
+            "time_dimension_reducer": "min",
+        },
+    )
+    profiles["s1-coh"] = ImageProfile(
+        name="s1-coh",
+        satellite="s1",
+        collection="TERRASCOPE_S1_SLC_COHERENCE_V1",
+        bands=["VV", "VH"],
+        process_options={
+            "time_dimension_reducer": "min",
+        },
+    )
+
+    return profiles
 
 
 def pformat_config():
