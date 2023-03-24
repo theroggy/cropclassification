@@ -37,14 +37,18 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: performantie van rasterstats vergelijken met wat andere bibs:
-#   - https://pygis.io/docs/f_rs_extraction.html
-#   - pyQGIS (GPL): https://gis.stackexchange.com/questions/421556/performance-problem-with-getting-average-pixel-values-within-buffered-circles
-#   - pyjeo (GPL): https://pyjeo.readthedocs.io/en/latest/2_tutorial.html#tutorial-on-extract-calculating-regional-statistics
-#   - pygeoprocessing: https://pygeoprocessing.readthedocs.io/en/latest/api/pygeoprocessing.html#pygeoprocessing.zonal_statistics
 #   - rastrio manual: https://pysal.org/scipy2019-intermediate-gds/deterministic/gds2-rasters.html
+#   - pygeoprocessing (open?): https://pygeoprocessing.readthedocs.io/en/latest/api/pygeoprocessing.html#pygeoprocessing.zonal_statistics
+#   - pyjeo (GPL): https://pyjeo.readthedocs.io/en/latest/2_tutorial.html#tutorial-on-extract-calculating-regional-statistics
+#   - pyQGIS (GPL): https://gis.stackexchange.com/questions/421556/performance-problem-with-getting-average-pixel-values-within-buffered-circles
+#       -> is snel, maar lastig om te installeren op een server.
+#       -> src: https://github.com/qgis/QGIS/blob/d5626d92360efffb4b8085389c8d64072ef65833/src/analysis/vector/qgszonalstatistics.cpp#L266
+#   - https://pygis.io/docs/f_rs_extraction.html
 #
-# Dit zijn bibs die ook gedeeltelijke pixels meenemen, niet ideaal hier wss...
+# Dit zijn bibs die ook gedeeltelijke pixels meenemen op basis van opp overlapping,
+# wat niet ideaal is hiervoor...
 #   - xagg: https://github.com/ks905383/xagg
+#   - exactextract (apache2): https://github.com/isciences/exactextract
 def calc_stats_per_image(
     features_path: Path,
     id_column: str,
@@ -79,8 +83,6 @@ def calc_stats_per_image(
     # TODO: maybe passing the executor pool to a calc_stats_for_image function can have
     # both the advantage of not creating loads of processes + keep the cleanup logic
     # after calculation together with the processing logic
-
-    images_bands = images_bands[0:1]
 
     # Some checks on the input parameters
     nb_todo = len(images_bands)
