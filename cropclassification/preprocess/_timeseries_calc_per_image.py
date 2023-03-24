@@ -37,9 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: performantie van rasterstats vergelijken met wat andere bibs:
+#   - https://pygis.io/docs/f_rs_extraction.html
 #   - pyQGIS (GPL): https://gis.stackexchange.com/questions/421556/performance-problem-with-getting-average-pixel-values-within-buffered-circles
 #   - pyjeo (GPL): https://pyjeo.readthedocs.io/en/latest/2_tutorial.html#tutorial-on-extract-calculating-regional-statistics
 #   - pygeoprocessing: https://pygeoprocessing.readthedocs.io/en/latest/api/pygeoprocessing.html#pygeoprocessing.zonal_statistics
+#   - rastrio manual: https://pysal.org/scipy2019-intermediate-gds/deterministic/gds2-rasters.html
 #
 # Dit zijn bibs die ook gedeeltelijke pixels meenemen, niet ideaal hier wss...
 #   - xagg: https://github.com/ks905383/xagg
