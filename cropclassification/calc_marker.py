@@ -16,7 +16,7 @@ from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
 from cropclassification.helpers import log_helper
 from cropclassification.helpers import model_helper as mh
-from cropclassification.preprocess import _timeseries_helper as ts_util
+from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.preprocess import classification_preprocess as class_pre
 from cropclassification.predict import classification
@@ -165,7 +165,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     imagedata_input_parcel_path = (
         input_preprocessed_dir / imagedata_input_parcel_filename
     )
-    ts_util.prepare_input(
+    ts_helper.prepare_input(
         input_parcel_path=input_parcel_path,
         output_imagedata_parcel_input_path=imagedata_input_parcel_path,
         output_parcel_nogeo_path=input_parcel_nogeo_path,
