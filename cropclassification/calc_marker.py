@@ -16,7 +16,7 @@ from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
 from cropclassification.helpers import log_helper
 from cropclassification.helpers import model_helper as mh
-from cropclassification.preprocess import timeseries_util as ts_util
+from cropclassification.preprocess import _timeseries_helper as ts_util
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.preprocess import classification_preprocess as class_pre
 from cropclassification.predict import classification
