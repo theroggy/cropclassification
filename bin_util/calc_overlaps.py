@@ -7,11 +7,8 @@ import os
 from pathlib import Path
 import pprint
 
-# If not installed as package + it is higher in dir hierarchy, add root to sys.path
-import sys
 import sqlite3
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.log_helper as log_helper
 
@@ -34,10 +31,7 @@ def main():
     logger.info(pprint.pformat(dict(os.environ)))
 
     # Init variables
-    # parcels_path = r"X:\GIS\GIS DATA\Percelen_ALP\Vlaanderen\Perc_VL_2019_2019-07-28\perc_2019_met_k_2019-07-28.shp"
-    # overlap_path = r"X:\Monitoring\OrthoSeg\sealedsurfaces\output_vector\sealedsurfaces_10\sealedsurfaces_10_orig.gpkg"
     input_preprocessed_dir = conf.dirs.getpath("input_preprocessed_dir")
-    parcels_path = input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
     overlap_path = input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
 
     # Read parcels file to memory (isn't that large...)
@@ -74,12 +68,14 @@ def main():
         logger.info(f"Table: {row}")
 
     c.execute(
-        """SELECT t.uid, t.fid, MbrMinX(t.geom), ST_GeometryType(t.geom), ST_AsText(GeomFromGPB(t.geom))
-                 FROM info t
-                 JOIN rtree_info_geom r ON t.fid = r.id
-                 WHERE r.minx >= 50000
-                   AND r.maxx <= 51000
-            """
+        """
+        SELECT t.uid, t.fid, MbrMinX(t.geom), ST_GeometryType(t.geom)
+              ,ST_AsText(GeomFromGPB(t.geom))
+          FROM info t
+          JOIN rtree_info_geom r ON t.fid = r.id
+         WHERE r.minx >= 50000
+           AND r.maxx <= 51000
+    """
     )
     """SELECT t.fid, ST_AsText(t.geom)
             FROM info t
@@ -95,7 +91,7 @@ def main():
             AND r.maxy >= 201000
     """
 
-    logger.info(f"test")
+    logger.info("test")
     for i, row in enumerate(c):
         logger.info(f"test: {row}")
         if i >= 10:

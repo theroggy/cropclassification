@@ -1,11 +1,6 @@
 # -----Example Python Program to alter an SQLite Table-----
 
-import glob
-import os
 from pathlib import Path
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parent / ".."))
 
 from cropclassification.helpers import pandas_helper as pdh
 

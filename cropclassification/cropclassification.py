@@ -7,7 +7,7 @@ import argparse
 import configparser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 from pathlib import Path
 import sys
 

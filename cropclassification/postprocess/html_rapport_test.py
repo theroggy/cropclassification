@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
-import sys
 
-[sys.path.append(i) for i in [".", ".."]]
 import cropclassification.postprocess.classification_reporting as class_report
 
 base_dir = Path("x:/Monitoring/Markers/PlayGround/JoeBro")

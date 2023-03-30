@@ -139,9 +139,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # Fast-24h <- 2021-02-23 -> NRT-3H
         productTimelinessCategory = (
             "Fast-24h"
-            if dateutil.parser.isoparse(
-                image_info.extra["acquisition_date"]
-            ).timestamp()
+            if dateutil.parser.isoparse(image_info["acquisition_date"]).timestamp()
             < esaSwitchedProcessingMethod
             else "NRT-3h"
         )
@@ -149,9 +147,8 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # If sentinel1 and wrong productTimelinessCategory, skip: we only
         # want 1 type to evade images used twice
         if (
-            image_info.imagetype.startswith("S1")
-            and image_info.extra["productTimelinessCategory"]
-            != productTimelinessCategory
+            image_info["satellite"].startswith("S1")
+            and image_info["productTimelinessCategory"] != productTimelinessCategory
         ):
             logger.info(
                 f"SKIP image, productTimelinessCategory should be "

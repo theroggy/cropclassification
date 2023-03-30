@@ -23,7 +23,8 @@ def main_log_init(log_dir: Path, log_basefilename: str, log_level: str = "INFO")
         handler.flush()
         handler.close()
 
-    # Remove all handlers and add the ones I want again, so a new log file is created for each run
+    # Remove all handlers and add the ones I want again, so a new log file is created
+    # for each run.
     # Remark: the function removehandler doesn't seem to work?
     logger.handlers = []
 

@@ -8,9 +8,7 @@ TODO: Recently hasn't been tested anymore!!!
 
 import logging
 from pathlib import Path
-import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / ".."))
 import cropclassification.helpers.pandas_helper as pdh
 
 # -------------------------------------------------------------
@@ -53,26 +51,28 @@ def show(input_parcel_path: Path, filter_id: str):
     df.reset_index(inplace=True)
 
     """
-    df.rename(columns={'index':'polarization_date'}, inplace=True)
+    df.rename(columns={"index": "polarization_date"}, inplace=True)
 
     # Split the date and the polarization, the drop the original column
-    df.insert(0, 'polarization', df['polarization_date'].str.split('_').str.get(0))
-    #df['polarization'] = df['polarization_date'].str.split('_').str.get(0)
-    df.insert(1, 'date', df['polarization_date'].str.split('_').str.get(1))
-    #df['date'] = df['polarization_date'].str.split('_').str.get(1)
-    df = df.drop(columns='polarization_date')
+    df.insert(0, "polarization", df["polarization_date"].str.split("_").str.get(0))
+    # df['polarization'] = df['polarization_date'].str.split('_').str.get(0)
+    df.insert(1, "date", df["polarization_date"].str.split("_").str.get(1))
+    # df['date'] = df['polarization_date'].str.split('_').str.get(1)
+    df = df.drop(columns="polarization_date")
 
     logger.info(df)
 
     # Pivot to put VV and VH in seperate columns
-    df = df.pivot(index='date', columns='polarization')
-    #df.unstack(level=-1)
-    #df.set_index('date', inplace=True)
+    df = df.pivot(index="date", columns="polarization")
+    # df.unstack(level=-1)
+    # df.set_index('date', inplace=True)
 
     df = df[filter_id]
-    df[SENSORDATA_VH + '/' + SENSORDATA_VV] = np.log10(df[SENSORDATA_VH] / df[SENSORDATA_VV])*10
-    df[SENSORDATA_VH] = np.log10(df[SENSORDATA_VH])*10
-    df[SENSORDATA_VV] = np.log10(df[SENSORDATA_VV])*10
+    df[SENSORDATA_VH + "/" + SENSORDATA_VV] = (
+        np.log10(df[SENSORDATA_VH] / df[SENSORDATA_VV]) * 10
+    )
+    df[SENSORDATA_VH] = np.log10(df[SENSORDATA_VH]) * 10
+    df[SENSORDATA_VV] = np.log10(df[SENSORDATA_VV]) * 10
 
     for column in df:
         logger.info(column)

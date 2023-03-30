@@ -26,11 +26,10 @@ def rename_table(sqlite_path: str, tablename_src: str, tablename_dest: str):
 
 
 def main():
-    # dir = r"X:\Monitoring\Markers\playground\_timeseries_per_image\Prc_BEFL_2019_2019-06-25_bufm5"
-    # dir = r"X:\Monitoring\Markers\playground\_timeseries_per_image\Prc_BEFL_2018_2019-06-14_bufm5"
-    dir = r"X:\Monitoring\Markers\playground\_timeseries_per_image\Prc_BEFL_2018_2019-07-02_bufm5"
-    # dir = r"/home/pierog/playground/_timeseries_per_image/Prc_BEFL_2019_2019-06-25_bufm5"
-    # dir = r"/home/pierog/playground/_timeseries_per_image/Prc_BEFL_2018_2019-06-14_bufm5"
+    dir = (
+        "X:/Monitoring/Markers/playground/_timeseries_per_image/"
+        "Prc_BEFL_2018_2019-07-02_bufm5"
+    )
     glob_search = os.path.join(dir, "*.sqlite")
 
     sqlite_files = glob.glob(glob_search)
