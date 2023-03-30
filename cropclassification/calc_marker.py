@@ -10,7 +10,7 @@ import shutil
 from typing import List
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
@@ -58,7 +58,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
-    logger = log_helper.main_log_init(run_dir, __name__, log_level)      
+    logger = log_helper.main_log_init(run_dir, __name__, log_level)
     logger.info(f"Run dir with reuse_last_run_dir: {reuse_last_run_dir}, {run_dir}")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
@@ -257,7 +257,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     parcel_test_path = None
     parcel_predictions_proba_test_path = None
     if input_model_to_use_path is None:
-
         # Create the training sample...
         # Remark: this creates a list of representative test parcel + a list of
         # (candidate) training parcel

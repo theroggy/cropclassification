@@ -6,16 +6,13 @@ Calaculate the timeseries data per week based on per image data.
 from datetime import datetime
 import os
 from pathlib import Path
-import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 import cropclassification.preprocess.timeseries_util as ts_util
 
 
 def main():
-
     config_paths = [Path("config/general.ini"), Path("config/local_overrule.ini")]
     year = 2018
 

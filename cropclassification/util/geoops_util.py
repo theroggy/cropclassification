@@ -37,7 +37,6 @@ def zonal_stats(
     boundless: bool = True,
     force: bool = False,
 ):
-
     # Init
     if output_path.exists():
         if force is True:

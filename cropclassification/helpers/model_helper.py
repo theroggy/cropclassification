@@ -439,7 +439,6 @@ class ModelCheckpointExt(kr.callbacks.Callback):
 
 
 if __name__ == "__main__":
-
     # raise Exception("Not implemented")
 
     # General inits

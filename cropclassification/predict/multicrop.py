@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 def detect_multicrop(input_parcel_path: Path, input_parcel_timeseries_data_path: Path):
-
     """
     logger.info(f"Read input file: {input_parcel_path}")
     df_input_parcel = pd.read_csv(input_parcel_path, low_memory=False)
@@ -44,24 +43,40 @@ def detect_multicrop(input_parcel_path: Path, input_parcel_timeseries_data_path:
     """
     # Prepare the data to send to prediction logic...
     logger.info("Join train sample with the classification data")
-    df_input_parcel_for_detect = (df_input_parcel#[[gs.id_column, gs.class_column]]
-                                   .join(df_timeseries_data
-                                         , how='inner', on=gs.id_column))
+    df_input_parcel_for_detect = (
+        df_input_parcel.join(  # [[gs.id_column, gs.class_column]]
+            df_timeseries_data, how="inner", on=gs.id_column
+        )
+    )
 
     # Only keep the parcels with relevant crops/production types
-    productiontype_column = 'GESP_PM'
+    productiontype_column = "GESP_PM"
     if productiontype_column in df_input_parcel_for_detect.columns:
         # Serres, tijdelijke overkappingen en loodsen
-        df_input_parcel_for_detect.loc[~df_input_parcel_for_detect[productiontype_column].isin(['SER', 'SGM'])]
-        df_input_parcel_for_detect.loc[~df_input_parcel_for_detect[productiontype_column].isin(['PLA', 'PLO', 'NPO'])]
-        df_input_parcel_for_detect.loc[df_input_parcel_for_detect[productiontype_column] != 'LOO']     # Een loods is hetzelfde als een stal...
-        df_input_parcel_for_detect.loc[df_input_parcel_for_detect[productiontype_column] != 'CON']    # Containers, niet op volle grond...
+        df_input_parcel_for_detect.loc[
+            ~df_input_parcel_for_detect[productiontype_column].isin(["SER", "SGM"])
+        ]
+        df_input_parcel_for_detect.loc[
+            ~df_input_parcel_for_detect[productiontype_column].isin(
+                ["PLA", "PLO", "NPO"]
+            )
+        ]
+        df_input_parcel_for_detect.loc[
+            df_input_parcel_for_detect[productiontype_column] != "LOO"
+        ]  # Een loods is hetzelfde als een stal...
+        df_input_parcel_for_detect.loc[
+            df_input_parcel_for_detect[productiontype_column] != "CON"
+        ]  # Containers, niet op volle grond...
 
-    crop_columnname = 'GWSCOD_H'
-    df_input_parcel_for_detect.loc[~df_input_parcel_for_detect[crop_columnname].isin(['1', '2', '3'])]
+    crop_columnname = "GWSCOD_H"
+    df_input_parcel_for_detect.loc[
+        ~df_input_parcel_for_detect[crop_columnname].isin(["1", "2", "3"])
+    ]
 
     # Keep the parcels with the 1000 largest stdDev
-    df_largest = df_input_parcel_for_detect.nlargest(1000, columns='max_stddev', keep='first')
+    df_largest = df_input_parcel_for_detect.nlargest(
+        1000, columns="max_stddev", keep="first"
+    )
     """
 
     # df_result = df_timeseries_data['max_stddev'].to_frame()

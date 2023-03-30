@@ -350,7 +350,9 @@ def create_train_test_sample(
         )
         if len(train_capped_df) > 0:
             train_df = train_df.append(
-                train_capped_df.apply(pd.DataFrame.sample, oversample_count, replace=True)
+                train_capped_df.apply(
+                    pd.DataFrame.sample, oversample_count, replace=True
+                )
             )
 
     elif balancing_strategy == "BALANCING_STRATEGY_PROPORTIONAL_GROUPS":
@@ -388,7 +390,7 @@ def create_train_test_sample(
         if len(train_limit2_df) > 0:
             train_df = train_df.append(
                 train_limit2_df.apply(pd.DataFrame.sample, upper_train_limit2)
-        )
+            )
         upper_count_limit3 = 20000
         upper_train_limit3 = 10000
         logger.info(
