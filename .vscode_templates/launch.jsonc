@@ -10,10 +10,9 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            // Ook breakpoints in onderliggende bibliotheken kunnen zetten
+            // Enable breakpoints in libraries used
             "justMyCode": false,
-            // De workspace folder als pythonpath gebruiken zodat dat path niet overal
-            // in code toegevoegd moet worden.
+            // Add workspace folder to pythonpath
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
@@ -27,7 +26,8 @@
                 "-t",
                 "x:/monitoring/markers/playground/_tasks_pierog"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
