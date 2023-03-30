@@ -21,14 +21,13 @@ import cropclassification.helpers.log_helper as log_helper
 
 
 def main():
-
     # Read the configuration
     segment_config_paths = [Path("../config/general.ini")]
     conf.read_config(segment_config_paths)
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
-    logger = log_helper.main_log_init(conf.dirs.getpath('log_dir'), __name__, log_level)      
+    logger = log_helper.main_log_init(conf.dirs.getpath("log_dir"), __name__, log_level)
     logger.info("Start")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
@@ -38,12 +37,8 @@ def main():
     # parcels_path = r"X:\GIS\GIS DATA\Percelen_ALP\Vlaanderen\Perc_VL_2019_2019-07-28\perc_2019_met_k_2019-07-28.shp"
     # overlap_path = r"X:\Monitoring\OrthoSeg\sealedsurfaces\output_vector\sealedsurfaces_10\sealedsurfaces_10_orig.gpkg"
     input_preprocessed_dir = conf.dirs.getpath("input_preprocessed_dir")
-    parcels_path = (
-        input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
-    )
-    overlap_path = (
-        input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
-    )
+    parcels_path = input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
+    overlap_path = input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
 
     # Read parcels file to memory (isn't that large...)
     # parcels_gpd = geofile_helper.read_file(parcels_path)

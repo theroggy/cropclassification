@@ -219,7 +219,6 @@ def calculate_periodic_timeseries(
     # Loop over the data we need to get
     id_column = conf.columns["id"]
     for sensordata_type in sensordata_to_get:
-
         logger.debug(
             "Get files we need based on start- & stopdates, sensordata_to_get,..."
         )
@@ -289,7 +288,6 @@ def calculate_periodic_timeseries(
         start_week = int(datetime.strftime(start_date, "%W"))
         end_week = int(datetime.strftime(end_date, "%W"))
         for period_index in range(start_week, end_week):
-
             # Get the date of the first day of period period_index
             # (eg. monday for a week)
             period_date = datetime.strptime(
@@ -319,7 +317,6 @@ def calculate_periodic_timeseries(
             period_data_df = None
             gc.collect()  # Try to evade memory errors
             for band, orbit in [(band, orbit) for band in bands for orbit in orbits]:
-
                 # Get list of files needed for this period, band
                 period_files_df = needed_inputfiles_df.loc[
                     (needed_inputfiles_df.week == period_index)
@@ -346,7 +343,6 @@ def calculate_periodic_timeseries(
                     "std": [],
                 }
                 for j, imagedata_path in enumerate(period_files_df.path.tolist()):
-
                     # If file has filesize == 0, skip
                     imagedata_path = Path(imagedata_path)
                     if imagedata_path.stat().st_size == 0:

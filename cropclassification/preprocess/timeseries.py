@@ -181,7 +181,6 @@ def collect_and_prepare_timeseries_data(
         # Loop over columns to check if there are columns that need to be dropped.
         columns_to_rename = {}
         for column in data_read_df.columns:
-
             # If it is the id column, continue
             if column == conf.columns["id"]:
                 continue

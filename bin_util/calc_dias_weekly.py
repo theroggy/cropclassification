@@ -13,7 +13,6 @@ import cropclassification.preprocess._timeseries_helper as ts_helper
 
 
 def main():
-
     config_paths = [Path("config/general.ini"), Path("config/local_overrule.ini")]
     year = 2018
 

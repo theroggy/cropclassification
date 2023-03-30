@@ -269,7 +269,6 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
         # exist yet. If the file doesn't exist yet in right projection, read original
         # input file to reproject/write to new file with correct epsg
         if not (image_unzipped_path_busy.exists() or image_unzipped_path.exists()):
-
             # Create temp dir if it doesn't exist yet
             os.makedirs(temp_dir, exist_ok=True)
 
@@ -277,7 +276,6 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
             # working on it. If function returns true, there isn't any other
             # thread/process already working on it
             if io_util.create_file_atomic(image_unzipped_path_busy):
-
                 try:
                     logger.info(
                         f"Unzip image {image_path} to local location {temp_dir}"
@@ -303,7 +301,6 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
 
 
 def _get_image_info_card(image_path: Path) -> ImageInfo:
-
     # This is a sentinel 1 image (GRD or coherence)
     # First extract and fill out some basic info
     imagetype = image_path.stem.split("_")[0]
@@ -372,7 +369,6 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
     extra = {}
     nb_safefiles = len(manifest_xml_paths)
     if nb_safefiles == 1:
-
         # Now parse the .safe file
         manifest_xml_path = manifest_xml_paths[0]
 
@@ -600,7 +596,6 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
 
 
 def _get_image_info_safe(image_path: Path) -> ImageInfo:
-
     # First extract and fill out some basic info
     imagetype = image_path.stem.split("_")[0]
     filetype = "SAFE"
@@ -733,7 +728,6 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
 
 
 def _get_image_info_tif(image_path: Path) -> ImageInfo:
-
     with rasterio.open(image_path) as src:
         image_bounds = tuple(src.bounds)
         image_affine = src.transform
@@ -751,7 +745,7 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
                 path=str(image_path),
                 relative_path=None,
                 filename=image_path.name,
-                bandindex=band_idx-1,
+                bandindex=band_idx - 1,
             )
 
     footprint = {}

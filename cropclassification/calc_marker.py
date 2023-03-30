@@ -254,7 +254,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     parcel_test_path = None
     parcel_predictions_proba_test_path = None
     if input_model_to_use_path is None:
-
         # Create the training sample...
         # Remark: this creates a list of representative test parcel + a list of
         # (candidate) training parcel

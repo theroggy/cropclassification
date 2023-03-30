@@ -122,7 +122,6 @@ def calc_top3_and_consolidation(
 
     # Create final output file with the most important info
     if output_predictions_output_path is not None:
-
         # First add some aditional columns specific for the export
         pred_df["markercode"] = conf.marker["markertype"]
         pred_df["run_id"] = conf.general["run_id"]
@@ -181,7 +180,6 @@ def calc_top3_and_consolidation(
 
 
 def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
-
     # Calculate the top 3 predictions
     logger.info("Calculate top3")
     proba_tmp_df = proba_df.copy()
@@ -237,7 +235,6 @@ def add_doubt_column(
     apply_doubt_min_nb_pixels: bool,
     apply_doubt_marker_specific: bool,
 ):
-
     # Calculate predictions with doubt column
     classes_to_ignore = conf.marker.getlist("classes_to_ignore")
 

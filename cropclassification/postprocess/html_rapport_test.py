@@ -11,9 +11,7 @@ class_base_dir = base_dir / "HTML"
 input_groundtruth_path = input_dir / "Prc_BEFL_2018_groundTruth.csv"
 parcel_pixcount_path = input_dir / "BEFL2018_bufm10_weekly_pixcount.csv"
 
-parcel_predictions_all_path = (
-    class_base_dir / "BEFL2018_bufm10_weekly_predict_all.csv"
-)
+parcel_predictions_all_path = class_base_dir / "BEFL2018_bufm10_weekly_predict_all.csv"
 groundtruth_path = class_base_dir / "Prc_BEFL_2018_groundTruth_classes.csv"
 report_txt = class_base_dir / "testje_accuracy_report.txt"
 report_html = Path(str(report_txt).replace(".txt", ".html"))

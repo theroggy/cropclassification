@@ -10,7 +10,6 @@ from pathlib import Path
 
 
 def main_log_init(log_dir: Path, log_basefilename: str, log_level: str = "INFO"):
-
     # Make sure the log dir exists
     if not log_dir.exists():
         os.makedirs(log_dir, exist_ok=True)

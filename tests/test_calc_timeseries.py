@@ -12,7 +12,6 @@ def get_testdata_dir() -> Path:
 
 
 def test_calc_stats_per_image_s1_bs(tmpdir):
-
     # Test raw version
     input_features_path = Path(
         "/srv/data/playground/_inputdata_preprocessed/"

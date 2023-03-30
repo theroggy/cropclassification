@@ -1,4 +1,4 @@
-#%%
+# %%
 # -*- coding: utf-8 -*-
 """
 Show the timeseries for a parcel.
@@ -29,7 +29,6 @@ SENSORDATA_VH = "VH"  # Vertical Horizontal
 
 
 def show(input_parcel_path: Path, filter_id: str):
-
     # Load input data...
     df = pdh.read_file(input_parcel_path)
 
@@ -87,7 +86,6 @@ def show(input_parcel_path: Path, filter_id: str):
 
 # If the script is run directly...
 if __name__ == "__main__":
-
     local_data_basedir = Path("X:/Monitoring/Markers/playground/pierog")
     local_data_dir = local_data_basedir / "2019_LANDCOVER/Run_2019-08-19_001"
     input_parcel_path = (
@@ -96,4 +94,4 @@ if __name__ == "__main__":
     show(input_parcel_path, filter_id="0000280800C79F930000000C")
 
 
-#%%
+# %%

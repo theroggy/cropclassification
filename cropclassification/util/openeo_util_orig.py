@@ -7,8 +7,9 @@ import time
 from typing import List, Optional, Tuple
 
 from osgeo import gdal
+
 # ... and suppress errors
-gdal.PushErrorHandler('CPLQuietErrorHandler')
+gdal.PushErrorHandler("CPLQuietErrorHandler")
 import geofileops as gfo
 import openeo
 import openeo.rest.job
@@ -283,7 +284,6 @@ def calc_periodic_mosaic(
     raise_errors: bool = True,
     force: bool = False,
 ) -> List[Path]:
-
     # Prepare period_name:
     if period_name is None:
         if days_per_period == 7:
@@ -315,7 +315,7 @@ def calc_periodic_mosaic(
         "north": roi_bounds[3],
     }
 
-    # Connect with openeo backend as configured OPENEO_CLIENT_CONFIG 
+    # Connect with openeo backend as configured OPENEO_CLIENT_CONFIG
     conn = openeo.connect()
 
     # Save periodic aggregate of asked images
@@ -579,7 +579,6 @@ def get_job_results(
 
 
 def add_overviews(path: Path):
-
     # Add overviews
     with rasterio.open(path, "r+") as dst:
         factors = []

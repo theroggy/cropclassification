@@ -382,7 +382,6 @@ def get_job_results(
 
 
 def add_overviews(path: Path):
-
     # Add overviews
     with rasterio.open(path, "r+") as dst:
         factors = []

@@ -36,7 +36,6 @@ class SensorData:
 
 
 def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None):
-
     # Read the configuration
     global config
     config = configparser.ConfigParser(

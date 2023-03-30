@@ -115,7 +115,6 @@ def calc_stats_per_image(
         # Keep looping. At the end of the loop there are checks when to
         # break out of the loop...
         while True:
-
             # Start preparation for calculation on next image + features combo
             # If not all images aren't prepared for processing yet, and there
             # aren't too many busy yet, prepare the next one
@@ -221,7 +220,6 @@ def calc_stats_per_image(
             for image_path_str in filter_on_status(
                 image_dict, "IMAGE_PREPARE_CALC_BUSY"
             ):
-
                 # If still running, go to next
                 image = image_dict[image_path_str]
                 if image["prepare_calc_future"].running():
@@ -358,7 +356,6 @@ def calc_stats_per_image(
 
             # Loop through busy image calculations
             for image_path_str in filter_on_status(image_dict, "IMAGE_CALC_BUSY"):
-
                 # If still batches busy for this image, continue to next image
                 batches_busy = False
                 for calc_stats_batch_id in filter_on_status(
@@ -735,12 +732,10 @@ def load_features_file(
     # reproject/write to new file with correct epsg
     features_gdf = None
     if not (features_prepr_path_busy.exists() or features_prepr_path.exists()):
-
         # Create lock file in an atomic way, so we are sure we are the only process
         # working on it. If function returns true, there isn't any other thread/process
         # already working on it
         if io_util.create_file_atomic(features_prepr_path_busy):
-
             try:
                 # Read (all) original features + remove unnecessary columns...
                 logger.info(f"Read original file {features_path}")
@@ -804,7 +799,6 @@ def load_features_file(
     # If there exists already a file with the features in the right projection, we can
     # just read the data
     if features_gdf is None:
-
         # If a "busy file" still exists, the file isn't ready yet, but another process
         # is working on it, so wait till it disappears
         wait_secs_max = 600

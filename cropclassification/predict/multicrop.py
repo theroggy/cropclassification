@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 def detect_multicrop(input_parcel_path: Path, input_parcel_timeseries_data_path: Path):
-
     """
     logger.info(f"Read input file: {input_parcel_path}")
     df_input_parcel = pd.read_csv(input_parcel_path, low_memory=False)

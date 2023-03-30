@@ -1002,6 +1002,5 @@ def prepare_input_most_popular_crop(
 
 # If the script is run directly...
 if __name__ == "__main__":
-
     logger.critical("Not implemented exception!")
     raise Exception("Not implemented")
