@@ -8,8 +8,6 @@ import os
 from pathlib import Path
 from typing import List
 
-import pandas as pd
-
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.preprocess.timeseries_util as ts_util
@@ -66,20 +64,7 @@ def calc_timeseries_data(
         f"date {end_date_str} as well: {end_date}"
     )
     timeseries_calc_type = conf.timeseries["timeseries_calc_type"]
-    if timeseries_calc_type == "gee":
-        # Start!
-        import cropclassification.preprocess.timeseries_calc_gee as ts_calc_gee
-
-        return ts_calc_gee.calc_timeseries_data(
-            input_parcel_path=input_parcel_path,
-            input_country_code=input_country_code,
-            start_date_str=start_date_monday,
-            end_date_str=end_date_monday,
-            sensordata_to_get=sensordata_to_get,
-            base_filename=base_filename,
-            dest_data_dir=dest_data_dir,
-        )
-    elif timeseries_calc_type == "onda":
+    if timeseries_calc_type == "onda":
         # Start!
         # TODO: start calculation of per image data on DIAS
         # import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as
