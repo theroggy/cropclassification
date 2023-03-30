@@ -51,7 +51,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     calc_month_stop = end_date.month
 
     # Init logging
-    base_log_dir = conf.dirs.getpath('log_dir')
+    base_log_dir = conf.dirs.getpath("log_dir")
     log_level = conf.general.get("log_level")
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
@@ -133,17 +133,13 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             image_info = raster_helper.get_image_info(input_image_path)
         except Exception:
             # If not possible to get info for image, log and skip it
-            logger.exception(
-                f"SKIP image: error getting info for {input_image_path}"
-            )
+            logger.exception(f"SKIP image: error getting info for {input_image_path}")
             continue
 
         # Fast-24h <- 2021-02-23 -> NRT-3H
         productTimelinessCategory = (
             "Fast-24h"
-            if dateutil.parser.isoparse(
-                image_info["acquisition_date"]
-            ).timestamp()
+            if dateutil.parser.isoparse(image_info["acquisition_date"]).timestamp()
             < esaSwitchedProcessingMethod
             else "NRT-3h"
         )
@@ -152,8 +148,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # want 1 type to evade images used twice
         if (
             image_info["satellite"].startswith("S1")
-            and image_info["productTimelinessCategory"]
-            != productTimelinessCategory
+            and image_info["productTimelinessCategory"] != productTimelinessCategory
         ):
             logger.info(
                 f"SKIP image, productTimelinessCategory should be "
@@ -229,9 +224,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             image_info = raster_helper.get_image_info(input_image_path)
         except Exception:
             # If not possible to get info for image, log and skip it
-            logger.exception(
-                f"SKIP image: error getting info for {input_image_path}"
-            )
+            logger.exception(f"SKIP image: error getting info for {input_image_path}")
             continue
 
         # If sentinel2 and cloud coverage too high... skip

@@ -36,7 +36,7 @@ def read_file(
                 str(path),
                 usecols=columns,  # type: ignore
                 low_memory=False,
-                encoding="ANSI"
+                encoding="ANSI",
             )
         return data_read_df
     elif ext_lower == ".tsv":

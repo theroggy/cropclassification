@@ -124,7 +124,7 @@ def prepare_input(
     # Export buffered geometries that result in empty geometries
     logger.info("Export parcels that are empty after buffer")
     parceldata_buf_empty_df = parceldata_buf_gdf.loc[
-        parceldata_buf_gdf[conf.columns["geom"]].is_empty == True
+        parceldata_buf_gdf[conf.columns["geom"]].is_empty is True
     ]
     if len(parceldata_buf_empty_df.index) > 0:
         parceldata_buf_empty_df.drop(conf.columns["geom"], axis=1, inplace=True)
@@ -135,7 +135,7 @@ def prepare_input(
 
     # Export parcels that don't result in a (multi)polygon
     parceldata_buf_notempty_gdf = parceldata_buf_gdf.loc[
-        parceldata_buf_gdf[conf.columns["geom"]].is_empty == False
+        parceldata_buf_gdf[conf.columns["geom"]].is_empty is False
     ]
     parceldata_buf_nopoly_gdf = parceldata_buf_notempty_gdf.loc[
         ~parceldata_buf_notempty_gdf[conf.columns["geom"]].geom_type.isin(
@@ -216,7 +216,7 @@ def calculate_periodic_data(
 
     # Prepare output dir
     test = False
-    if test is True:
+    if test:
         dest_data_dir = Path(f"{str(dest_data_dir)}_test")
     if not dest_data_dir.exists():
         os.mkdir(dest_data_dir)
@@ -235,14 +235,13 @@ def calculate_periodic_data(
     # Loop over the data we need to get
     id_column = conf.columns["id"]
     for sensordata_type in sensordata_to_get:
-
         logger.debug(
             "Get files we need based on start- & stopdates, sensordata_to_get,..."
         )
         orbits = [None]
         if sensordata_type == conf.general["SENSORDATA_S1_ASCDESC"]:
             # Filter files to the ones we need
-            satellitetype = "S1"
+            # satellitetype = "S1"
             imagetype = IMAGETYPE_S1_GRD
             bands = ["VV", "VH"]
             orbits = ["ASC", "DESC"]
@@ -254,7 +253,7 @@ def calculate_periodic_data(
                 & (all_inputfiles_df.orbit.isin(orbits))
             ]
         elif sensordata_type == conf.general["SENSORDATA_S2gt95"]:
-            satellitetype = "S2"
+            # satellitetype = "S2"
             imagetype = IMAGETYPE_S2_L2A
             bands = ["B02-10m", "B03-10m", "B04-10m", "B08-10m", "B11-20m", "B12-20m"]
             needed_inputfiles_df = all_inputfiles_df.loc[
@@ -264,7 +263,7 @@ def calculate_periodic_data(
                 & (all_inputfiles_df.band.isin(bands))
             ]
         elif sensordata_type == conf.general["SENSORDATA_S1_COHERENCE"]:
-            satellitetype = "S1"
+            # satellitetype = "S1"
             imagetype = IMAGETYPE_S1_COHERENCE
             bands = ["VV", "VH"]
             orbits = ["ASC", "DESC"]
@@ -285,7 +284,6 @@ def calculate_periodic_data(
         start_week = int(datetime.strftime(start_date, "%W"))
         end_week = int(datetime.strftime(end_date, "%W"))
         for period_index in range(start_week, end_week):
-
             # Get the date of the first day of period period_index
             # (eg. monday for a week)
             period_date = datetime.strptime(
@@ -294,7 +292,10 @@ def calculate_periodic_data(
 
             # New file name
             period_date_str_long = period_date.strftime("%Y-%m-%d")
-            period_data_filename = f"{input_parcel_path.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
+            period_data_filename = (
+                f"{input_parcel_path.stem}_weekly_{period_date_str_long}_"
+                f"{sensordata_type}{output_ext}"
+            )
             period_data_path = dest_data_dir / period_data_filename
 
             # Check if output file exists already
@@ -312,7 +313,6 @@ def calculate_periodic_data(
             period_data_df = None
             gc.collect()  # Try to evade memory errors
             for band, orbit in [(band, orbit) for band in bands for orbit in orbits]:
-
                 # Get list of files needed for this period, band
                 period_files_df = needed_inputfiles_df.loc[
                     (needed_inputfiles_df.week == period_index)
@@ -339,7 +339,6 @@ def calculate_periodic_data(
                     "std": [],
                 }
                 for j, imagedata_path in enumerate(period_files_df.path.tolist()):
-
                     # If file has filesize == 0, skip
                     imagedata_path = Path(imagedata_path)
                     if imagedata_path.stat().st_size == 0:
@@ -501,7 +500,6 @@ def get_file_info(path: Path) -> dict:
     try:
         # Split name on parcelinfo versus imageinfo
         filename_splitted = path.stem.split("__")
-        filename_parcelinfo = filename_splitted[0]
         filename_imageinfo = filename_splitted[1]
 
         # Extract imageinfo

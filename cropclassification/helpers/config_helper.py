@@ -15,7 +15,6 @@ from typing import List, Optional
 
 
 def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None):
-
     # Read the configuration
     global config
     config = configparser.ConfigParser(
@@ -43,11 +42,13 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     if not data_dir.is_absolute():
         if default_basedir is None:
             raise Exception(
-                f"Config parameter dirs.data_dir is relative, but no default_basedir supplied!"
+                "Config parameter dirs.data_dir is relative, but no default_basedir "
+                "supplied!"
             )
         data_dir_absolute = (default_basedir / data_dir).resolve()
         print(
-            f"Config parameter dirs.data_dir was relative, so is now resolved to {data_dir_absolute}"
+            "Config parameter dirs.data_dir was relative, so is now resolved to "
+            f"{data_dir_absolute}"
         )
         config["dirs"]["data_dir"] = data_dir_absolute.as_posix()
 
@@ -57,11 +58,13 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     if not marker_basedir.is_absolute():
         if default_basedir is None:
             raise Exception(
-                f"Config parameter dirs.marker_basedir is relative, but no default_basedir supplied!"
+                "Config parameter dirs.marker_basedir is relative, but no "
+                "default_basedir supplied!"
             )
         marker_basedir_absolute = (default_basedir / marker_basedir).resolve()
         print(
-            f"Config parameter dirs.marker_basedir was relative, so is now resolved to {marker_basedir_absolute}"
+            "Config parameter dirs.marker_basedir was relative, so is now resolved to "
+            f"{marker_basedir_absolute}"
         )
         config["dirs"]["marker_basedir"] = marker_basedir_absolute.as_posix()
 

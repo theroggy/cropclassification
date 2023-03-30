@@ -122,7 +122,6 @@ def calc_top3_and_consolidation(
 
     # Create final output file with the most important info
     if output_predictions_output_path is not None:
-
         # First add some aditional columns specific for the export
         pred_df["markercode"] = conf.marker["markertype"]
         pred_df["run_id"] = conf.general["run_id"]
@@ -181,7 +180,6 @@ def calc_top3_and_consolidation(
 
 
 def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
-
     # Calculate the top 3 predictions
     logger.info("Calculate top3")
     proba_tmp_df = proba_df.copy()
@@ -237,7 +235,6 @@ def add_doubt_column(
     apply_doubt_min_nb_pixels: bool,
     apply_doubt_marker_specific: bool,
 ):
-
     # Calculate predictions with doubt column
     classes_to_ignore = conf.marker.getlist("classes_to_ignore")
 
@@ -425,7 +422,7 @@ def add_doubt_column(
                 new_pred_column,
             ] = "RISKY_DOUBT:HERBS-UNCONFIRMED"
 
-            # If parcel was declared as 'aardbeien', but is not confirmed as 
+            # If parcel was declared as 'aardbeien', but is not confirmed as
             # MON_LC_ARABLE classified as such: doubt
             # Remark: - those gave > 50% false positives for marker LANDCOVER-EARLY
             #         - gave 33-50% false positives for marker LANDCOVER
@@ -466,7 +463,7 @@ def add_doubt_column(
             ] = "RISKY_DOUBT:BOOM/FRUITKWEEK-UNCONFIRMED"
 
             # Parcel was declared as one of the following + classified as GRASSES
-            # 
+            #
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (
@@ -475,12 +472,12 @@ def add_doubt_column(
                             "36",
                             "895",
                             "9582",
-#                            "744",
-#                            "9202",
-#                            "9714",
-#                            "832",
-#                            "9602",
-#                            "9730",
+                            #                            "744",
+                            #                            "9202",
+                            #                            "9714",
+                            #                            "832",
+                            #                            "9602",
+                            #                            "9730",
                         ]
                     )
                 )

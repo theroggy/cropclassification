@@ -80,7 +80,6 @@ def get_image_data(
 
 
 def get_image_info(image_path: Path) -> dict:
-
     image_info = {}
 
     # First determine general info of image
@@ -91,7 +90,6 @@ def get_image_info(image_path: Path) -> dict:
 
     # Specific code per image type
     if image_ext.upper() == ".CARD":
-
         # This is a sentinel 1 image (GRD or coherence)
         # First extract and fill out some basic info
         image_info["image_type"] = "CARD"
@@ -162,7 +160,6 @@ def get_image_info(image_path: Path) -> dict:
         # The number of .safe indicates whether it is a GRD or a Coherence image
         nb_safefiles = len(manifest_xml_paths)
         if nb_safefiles == 1:
-
             # Now parse the .safe file
             manifest_xml_path = manifest_xml_paths[0]
 
@@ -628,7 +625,6 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
         # exist yet. If the file doesn't exist yet in right projection, read original
         # input file to reproject/write to new file with correct epsg
         if not (image_unzipped_path_busy.exists() or image_unzipped_path.exists()):
-
             # Create temp dir if it doesn't exist yet
             os.makedirs(temp_dir, exist_ok=True)
 
@@ -636,7 +632,6 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
             # working on it. If function returns true, there isn't any other
             # thread/process already working on it
             if io_util.create_file_atomic(image_unzipped_path_busy):
-
                 try:
                     logger.info(
                         f"Unzip image {image_path} to local location {temp_dir}"

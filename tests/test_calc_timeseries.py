@@ -1,9 +1,7 @@
 from datetime import datetime
 import logging
 from pathlib import Path
-import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
 
 
@@ -12,7 +10,6 @@ def get_testdata_dir() -> Path:
 
 
 def test_calc_stats_per_image_s1_bs(tmpdir):
-
     # Test raw version
     input_features_path = Path(
         "/srv/data/playground/_inputdata_preprocessed/"

@@ -7,7 +7,7 @@ import argparse
 import configparser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 from pathlib import Path
 import sys
 
@@ -24,7 +24,6 @@ __version__ = _get_version()
 
 
 def main():
-
     # Interprete arguments
     parser = argparse.ArgumentParser(add_help=False)
 
@@ -62,7 +61,6 @@ def main():
 
 
 def cropclassification(tasksdir: Path):
-
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
     for task_path in task_paths:

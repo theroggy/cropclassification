@@ -124,7 +124,6 @@ def write_full_report(
 
     # Build and write report...
     with open(output_report_txt, "w") as outputfile:
-
         outputfile.write(
             "************************************************************\n"
         )
@@ -1564,7 +1563,6 @@ def _write_OA_per_pixcount(
     nb_predictions_total = len(df_parcel_predictions.index)
     with open(output_report_txt, "w") as outputfile:
         for i in range(40):
-
             df_result_cur_pixcount = df_parcel_predictions[
                 df_parcel_predictions[conf.columns["pixcount_s1s2"]] == i
             ]

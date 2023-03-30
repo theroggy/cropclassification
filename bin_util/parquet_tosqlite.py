@@ -1,17 +1,11 @@
 # -----Example Python Program to alter an SQLite Table-----
 
-import glob
-import os
 from pathlib import Path
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parent / ".."))
 
 from cropclassification.helpers import pandas_helper as pdh
 
 
 def main():
-
     dir = Path(
         "X:/Monitoring/Markers/playground/pierog/tmp/Run_2019-06-25_007_imported"
     )
@@ -19,7 +13,6 @@ def main():
 
     # Convert all files found
     for in_path in in_paths:
-
         # Read input file
         print(f"Read {in_path}")
         df = pdh.read_file(in_path)

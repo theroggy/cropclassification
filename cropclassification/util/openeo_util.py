@@ -84,7 +84,6 @@ def calc_periodic_mosaic(
 
     period_start_date = start_date
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
-
         for sensordata_type in sensordata_to_get:
             # Period in openeo is inclusive for startdate and excludes enddate
             period_end_date = period_start_date + timedelta(days=days_per_period)
@@ -161,14 +160,16 @@ def calc_periodic_mosaic(
 
                 if save_landcover:
                     job_title = f"{output_basestem}_{band}.tif"
-                    if job_title == "S2_mosaic_weekly_2021-11-29_2021-12-06_landcover.tif":
+                    if (
+                        job_title
+                        == "S2_mosaic_weekly_2021-11-29_2021-12-06_landcover.tif"
+                    ):
                         period_start_date = period_end_date
                         continue
 
                     output_path = output_dir / job_title
                     result_paths.append(output_path)
                     if check_output_file(output_path, force):
-
                         # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
                         s2_cube_scl = s2_cube.filter_bands(bands=["SCL"])
                         s2_cube_scl_data = s2_cube_scl.rename_labels(
@@ -192,7 +193,6 @@ def calc_periodic_mosaic(
                 output_path = output_dir / job_title
                 result_paths.append(output_path)
                 if check_output_file(output_path, force):
-
                     # Load cube of relevant S2 images
                     # You can look which layers are available here:
                     #    https://openeo.cloud/data-collections/
@@ -309,7 +309,6 @@ def get_job_results(
 
 
 def add_overviews(path: Path):
-
     # Add overviews
     with rasterio.open(path, "r+") as dst:
         factors = []
