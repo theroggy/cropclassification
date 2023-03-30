@@ -9,7 +9,7 @@ from pathlib import Path
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-import cropclassification.preprocess.timeseries_util as ts_util
+import cropclassification.preprocess._timeseries_helper as ts_helper
 
 
 def main():
@@ -46,7 +46,7 @@ def main():
 
     # Calculate!
     input_parcel_path = conf.dirs.getpath("input_dir") / input_features_filename
-    ts_util.calculate_periodic_data(
+    ts_helper.calculate_periodic_data(
         input_parcel_path=input_parcel_path,
         input_base_dir=timeseries_per_image_dir,
         start_date_str=f"{year}-03-15",

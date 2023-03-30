@@ -10,7 +10,7 @@ from typing import List
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
-import cropclassification.preprocess.timeseries_util as ts_util
+import cropclassification.preprocess._timeseries_helper as ts_helper
 
 # -------------------------------------------------------------
 # First define/init some general variables/constants
@@ -52,10 +52,10 @@ def calc_timeseries_data(
         os.makedirs(dest_data_dir)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_util.get_monday(
+    start_date = ts_helper.get_monday(
         start_date_str
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_util.get_monday(end_date_str)
+    end_date = ts_helper.get_monday(end_date_str)
 
     logger.info(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
@@ -70,7 +70,7 @@ def calc_timeseries_data(
         timeseries_per_image_dir = conf.dirs.getpath("timeseries_per_image_dir")
 
         # Now all image data is available per image, calculate periodic data
-        return ts_util.calculate_periodic_data(
+        return ts_helper.calculate_periodic_data(
             input_parcel_path=input_parcel_path,
             input_base_dir=timeseries_per_image_dir,
             start_date_str=start_date_str,
