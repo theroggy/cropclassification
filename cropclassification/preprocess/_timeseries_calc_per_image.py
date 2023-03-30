@@ -132,9 +132,12 @@ def calc_stats_per_image(
 
                 image_info = raster_helper.get_image_info(image_path)
                 # Create base output filename
+                # TODO: hoort hier niet echt thuis
                 orbit = None
-                if image_info.imagetype.upper() in ("S1-ASC", "S1-DESC"):
-                    orbit = image_info.extra["orbit_properties_pass"]
+                if image_info.imagetype.lower() == "s1-grd-sigma0-asc":
+                    orbit = "ASCENDING"
+                elif image_info.imagetype.lower() == "s1-grd-sigma0-desc":
+                    orbit = "DESCENDING"
                 output_base_path = format_output_path(
                     features_path,
                     image_path,
@@ -186,6 +189,7 @@ def calc_stats_per_image(
 
                 # Start the prepare processing assync
                 # TODO: possibly it is cleaner to do this per band...
+                logger.info(f"Start calculation for image {output_base_path}")
                 future = pool.submit(
                     prepare_calc,
                     features_path,

@@ -16,7 +16,7 @@ from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
 from cropclassification.helpers import log_helper
 from cropclassification.helpers import model_helper as mh
-from cropclassification.preprocess import _timeseries_util as ts_util
+from cropclassification.preprocess import _timeseries_helper as ts_util
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.preprocess import classification_preprocess as class_pre
 from cropclassification.predict import classification
@@ -177,9 +177,10 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     # Result: data is put in files in timeseries_periodic_dir, in one file per
     #         date/period
     timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
+    timeseries_periodic_dir = timeseries_periodic_dir / imagedata_input_parcel_path.stem
     start_date_str = conf.marker["start_date_str"]
     end_date_str = conf.marker["end_date_str"]
-    sensordata_to_use = conf.marker.getlist("sensordata_to_use")
+    sensordata_to_use = conf.parse_sensordata_to_use(conf.marker["sensordata_to_use"])
     parceldata_aggregations_to_use = conf.marker.getlist(
         "parceldata_aggregations_to_use"
     )
@@ -208,13 +209,12 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
     base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
-    parcel_pixcount_path = (
-        timeseries_periodic_dir / f"{base_filename}_pixcount{data_ext}"
-    )
     class_pre.prepare_input(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
-        input_parcel_pixcount_path=parcel_pixcount_path,
+        timeseries_periodic_dir=timeseries_periodic_dir,
+        base_filename=base_filename,
+        data_ext=data_ext,
         classtype_to_prepare=classtype_to_prepare,
         classes_refe_path=classes_refe_path,
         output_parcel_path=parcel_path,
@@ -350,7 +350,9 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
         class_pre.prepare_input(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
-            input_parcel_pixcount_path=parcel_pixcount_path,
+            timeseries_periodic_dir=timeseries_periodic_dir,
+            base_filename=base_filename,
+            data_ext=data_ext,
             classtype_to_prepare=conf.preprocess["classtype_to_prepare_groundtruth"],
             classes_refe_path=classes_refe_path,
             output_parcel_path=groundtruth_path,

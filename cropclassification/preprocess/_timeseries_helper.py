@@ -3,7 +3,7 @@
 Calculates periodic timeseries for input parcels.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import gc
 import os
@@ -168,9 +168,9 @@ def prepare_input(
     return True
 
 
-def calculate_periodic_data(
-    input_parcel_path: Path,
-    input_base_dir: Path,
+def calculate_periodic_timeseries(
+    parcel_path: Path,
+    timeseries_per_image_dir: Path,
     start_date: datetime,
     end_date: datetime,
     sensordata_to_get: List[str],
@@ -178,14 +178,13 @@ def calculate_periodic_data(
     force: bool = False,
 ):
     """
-    This function creates a file that is a weekly summarize of timeseries images from
-    DIAS.
+    This function creates a file that is a weekly aggregation of timeseries files.
 
     TODO: add possibility to choose which values to extract (mean, min, max,...)?
 
     Args:
-        input_parcel_path (Path): [description]
-        input_base_dir (Path): [description]
+        parcel_path (Path): [description]
+        timeseries_per_image_dir (Path): [description]
         start_date (datetime): Start date. Needs to be aligned
             already on the periods wanted + data on this date is included.
         end_date (datetime): End date. Needs to be aligned already on
@@ -197,8 +196,6 @@ def calculate_periodic_data(
     logger.info("calculate_periodic_data")
 
     # Init
-    input_dir = input_base_dir / input_parcel_path.stem
-
     # TODO: in config?
     input_ext = ".sqlite"
     output_ext = ".sqlite"
@@ -211,10 +208,10 @@ def calculate_periodic_data(
     # Create Dataframe with all files with their info
     logger.debug("Create Dataframe with all files and their properties")
     file_info_list = []
-    for filename in os.listdir(input_dir):
+    for filename in os.listdir(timeseries_per_image_dir):
         if filename.endswith(input_ext):
             # Get seperate filename parts
-            file_info = get_file_info(input_dir / filename)
+            file_info = get_fileinfo_timeseries(input_dir / filename)
             file_info_list.append(file_info)
 
     all_inputfiles_df = pd.DataFrame(file_info_list)
@@ -285,7 +282,7 @@ def calculate_periodic_data(
             raise ValueError(f"Unsupported sensordata_type: {sensordata_type}")
 
         # There should also be one pixcount file
-        pixcount_filename = f"{input_parcel_path.stem}_weekly_pixcount{output_ext}"
+        pixcount_filename = f"{parcel_path.stem}_weekly_pixcount{output_ext}"
         pixcount_path = dest_data_dir / pixcount_filename
 
         # For each week
@@ -301,7 +298,10 @@ def calculate_periodic_data(
 
             # New file name
             period_date_str_long = period_date.strftime("%Y-%m-%d")
-            period_data_filename = f"{input_parcel_path.stem}_weekly_{period_date_str_long}_{sensordata_type}{output_ext}"
+            period_data_filename = (
+                f"{parcel_path.stem}_weekly_{period_date_str_long}_{sensordata_type}"
+                f"{output_ext}"
+            )
             period_data_path = dest_data_dir / period_data_filename
 
             # Check if output file exists already
@@ -494,7 +494,7 @@ def calculate_periodic_data(
                     pdh.to_file(pixcount_df, pixcount_path)
 
 
-def get_file_info(path: Path) -> dict:
+def get_fileinfo_timeseries(path: Path) -> dict:
     """
     This function gets info of a timeseries data file.
 
@@ -508,46 +508,70 @@ def get_file_info(path: Path) -> dict:
     try:
         # Split name on parcelinfo versus imageinfo
         filename_splitted = path.stem.split("__")
-        filename_parcelinfo = filename_splitted[0]
-        filename_imageinfo = filename_splitted[1]
+        parcel_part = filename_splitted[0]
+        imageinfo_part = filename_splitted[1]
 
         # Extract imageinfo
-        imageinfo_values = filename_imageinfo.split("_")
+        imageinfo_values = imageinfo_part.split("_")
+        orbit = None
+        image_profile = None
+        if "-" in imageinfo_values[0]:
+            # OpenEO mosaic filename format
+            image_profile = imageinfo_values[0]
+            imageprofile_parts = image_profile.split("-")
+            satellite = imageprofile_parts[0]
+            product = imageprofile_parts[1]
+            if satellite == "s1":
+                if product in ["asc", "desc"]:
+                    imagetype = IMAGETYPE_S1_GRD
+                    orbit = product
+                else:
+                    imagetype = IMAGETYPE_S1_COHERENCE
+            elif satellite == "s2":
+                imagetype = IMAGETYPE_S2_L2A
+            else:
+                raise ValueError(f"invalid imageprofile in {path}")
 
-        # Satellite
-        satellite = imageinfo_values[0]
+            start_date = datetime.fromisoformat(imageinfo_values[1])
+            end_date = datetime.fromisoformat(imageinfo_values[1])
+            band = imageinfo_values[-1]  # =last value
 
-        # Get the date taken from the filename, depending on the satellite type
-        # Remark: the datetime is in this format: '20180101T055812'
-        imagetype = None
-        filedatetime = None
-        if satellite.startswith("S1"):
-            # Check if it is a GRDH image
-            if imageinfo_values[2] == "GRDH":
-                imagetype = IMAGETYPE_S1_GRD
-                filedatetime = imageinfo_values[4]
-            elif imageinfo_values[1].startswith("S1"):
-                imagetype = IMAGETYPE_S1_COHERENCE
-                filedatetime = imageinfo_values[2]
-        elif satellite.startswith("S2"):
-            imagetype = IMAGETYPE_S2_L2A
-            filedatetime = imageinfo_values[2]
-
-        if imagetype is None or filedatetime is None:
-            raise Exception(f"Unsupported file: {path}")
-
-        filedate = filedatetime.split("T")[0]
-        parseddate = datetime.strptime(filedate, "%Y%m%d")
-        fileweek = int(parseddate.strftime("%W"))
-
-        # Get the band
-        fileband = imageinfo_values[-1]  # =last value
-
-        # For S1 images, get the orbit
-        if satellite.startswith("S1"):
-            fileorbit = imageinfo_values[-2]  # =2nd last value
         else:
-            fileorbit = None
+            # ONDA/ESA filename format
+            # Satellite
+            satellite = imageinfo_values[0].lower()
+            # Get the date taken from the filename, depending on the satellite type
+            # Remark: the datetime is in this format: '20180101T055812'
+            if satellite.startswith("s1"):
+                # Check if it is a GRDH image
+                if imageinfo_values[2] == "GRDH":
+                    imagetype = IMAGETYPE_S1_GRD
+                    filedatetime = imageinfo_values[4]
+                elif imageinfo_values[1].startswith("S1"):
+                    imagetype = IMAGETYPE_S1_COHERENCE
+                    filedatetime = imageinfo_values[2]
+                else:
+                    raise ValueError(f"Unsupported file: {path}")
+                # Also get the orbit
+                orbit = imageinfo_values[-2].lower()  # =2nd last value
+
+            elif satellite.startswith("s2"):
+                imagetype = IMAGETYPE_S2_L2A
+                filedatetime = imageinfo_values[2]
+            else:
+                raise ValueError(f"Unsupported file: {path}")
+
+            # Parse the data found
+            filedate = filedatetime.split("T")[0]
+            parseddate = datetime.strptime(filedate, "%Y%m%d")
+            start_date = parseddate
+            end_date = start_date
+
+            # Get the band
+            band = imageinfo_values[-1]  # =last value
+
+        # Week
+        fileweek = int(start_date.strftime("%W"))
 
         # The file paths of these files sometimes are longer than 256
         # characters, so use trick on windows to support this anyway
@@ -558,22 +582,59 @@ def get_file_info(path: Path) -> dict:
             else:
                 path_safe = f"//?/{path_safe}"
 
-        filenameparts = {
+        image_metadata = {
             "path": path_safe,
+            "parcel_stem": parcel_part,
             "imagetype": imagetype,
             "filestem": path.stem,
-            "date": parseddate,
+            "start_date": start_date,
+            "end_date": end_date,
             "week": fileweek,
-            "band": fileband,
-            "orbit": fileorbit,
-        }  # ASC/DESC
+            "band": band,
+            "orbit": orbit,  # ASC/DESC
+        }
+        if image_profile is not None:
+            image_metadata["image_profile"] = image_profile
 
     except Exception as ex:
         message = f"Error extracting info from filename {path}"
         logger.exception(message)
         raise Exception(message) from ex
 
-    return filenameparts
+    return image_metadata
+
+
+def get_fileinfo_timeseries_periods(path: Path) -> dict:
+    """
+    This function gets info of a period timeseries data file.
+
+    Args:
+        path (Path): The path to the file to get info about.
+
+    Returns:
+        dict: a dict containing info about the file
+    """
+    # If there is no double underscore in name: "old file type"
+    if "__" not in path.stem:
+        stem_parts = path.stem.split("_")
+        if len(stem_parts) < 4:
+            raise ValueError(f"stem doesn't contain enough parts: {path.name}")
+        period_name = stem_parts[-3]
+        start_date = datetime.fromisoformat(stem_parts[-2])
+        if period_name.lower() == "weekly":
+            end_date = start_date + timedelta(days=6)
+        else:
+            raise ValueError(f"unsupported period_name in {path}")
+        return {
+            "path": path,
+            "parcel_stem": "_".join(stem_parts[0:-3]),
+            "period_name": period_name,
+            "start_date": start_date,
+            "end_date": end_date,
+            "image_profile": stem_parts[-1],
+        }
+
+    return get_fileinfo_timeseries(path)
 
 
 def get_monday(date: Union[str, datetime]) -> datetime:

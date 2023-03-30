@@ -10,11 +10,29 @@ import pprint
 import tempfile
 from typing import Dict, List, Optional
 
-from cropclassification.util.ImageProfile import ImageProfile
+from cropclassification.util.openeo_util import ImageProfile
 
 # -------------------------------------------------------------
 # The real work
 # -------------------------------------------------------------
+
+
+class SensorData:
+    def __init__(
+        self,
+        imageprofile_name: str,
+        imageprofile: Optional[ImageProfile] = None,
+        bands: Optional[List[str]] = None,
+    ):
+        self.imageprofile_name = imageprofile_name
+        if imageprofile is not None:
+            self.imageprofile = imageprofile
+        else:
+            self.imageprofile = image_profiles[imageprofile_name]
+        if bands is not None:
+            self.bands = bands
+        else:
+            self.bands = self.imageprofile.bands
 
 
 def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None):
@@ -105,6 +123,41 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     image_profiles = _get_raster_profiles()
 
 
+def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
+    result = None
+    sensordata_parsed = None
+    try:
+        sensordata_parsed = json.loads(input)
+    except Exception:
+        pass
+
+    if sensordata_parsed is not None:
+        # It was a json object, so parse as such
+        result = {}
+        for imageprofile in sensordata_parsed:
+            if isinstance(imageprofile, str):
+                result[imageprofile] = SensorData(imageprofile)
+            elif isinstance(imageprofile, dict):
+                if len(imageprofile) != 1:
+                    raise ValueError(
+                        "invalid sensordata_to_use: this should be a single key dict: "
+                        f"{imageprofile}"
+                    )
+                imageprofile_name = list(imageprofile.keys())[0]
+                bands = list(imageprofile.values())[0]
+                result[imageprofile_name] = SensorData(imageprofile_name, bands=bands)
+            else:
+                raise ValueError(
+                    "invalid sensordata_to_use: only str or dict elements allowed, "
+                    f"not: {imageprofile}"
+                )
+    else:
+        # It was no json object, so it must be a list
+        result = {i.strip(): SensorData(i.strip()) for i in input.split(",")}
+
+    return result
+
+
 def _get_raster_profiles() -> Dict[str, ImageProfile]:
     # TODO: this should move to a config file
     profiles = {}
@@ -120,14 +173,14 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         name="s2-ndvi",
         satellite="s2",
         collection="TERRASCOPE_S2_NDVI_V2",
-        bands=["B02", "B03", "B04", "B08", "B11", "B12"],
+        bands=["NDVI"],
         process_options={
             "time_dimension_reducer": "max",
             "cloud_filter_band": "SCENECLASSIFICATION_20M",
         },
     )
-    profiles["s1-asc"] = ImageProfile(
-        name="s1-asc",
+    profiles["s1-grd-sigma0-asc"] = ImageProfile(
+        name="s1-grd-sigma0-asc",
         satellite="s1",
         collection="S1_GRD_SIGMA0_ASCENDING",
         bands=["VV", "VH", "angle"],
@@ -135,8 +188,8 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
             "time_dimension_reducer": "min",
         },
     )
-    profiles["s1-desc"] = ImageProfile(
-        name="s1-desc",
+    profiles["s1-grd-sigma0-desc"] = ImageProfile(
+        name="s1-grd-sigma0-desc",
         satellite="s1",
         collection="S1_GRD_SIGMA0_DESCENDING",
         bands=["VV", "VH", "angle"],

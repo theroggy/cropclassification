@@ -269,8 +269,8 @@ def prepare_input_cropgroup(
     classes_df = pdh.read_file(classes_refe_path)
     logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
-    # Because the file was read as ansi, and gewas is int, so the data needs to be converted to
-    # unicode to be able to do comparisons with the other data
+    # Because the file was read as ansi, and gewas is int, so the data needs to be
+    # converted to unicode to be able to do comparisons with the other data
     classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("unicode")
 
     # Map column with the classname to orig classname

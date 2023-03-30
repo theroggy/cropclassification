@@ -6,7 +6,7 @@ from typing import List
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import openeo_util
-from cropclassification.util.ImageProfile import ImageProfile
+from cropclassification.util.openeo_util import ImageProfile
 import cropclassification.preprocess._timeseries_calc_per_image as ts_per_image
 
 # First define/init some general variables/constants
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # -------------------------------------------------------------
 
 
-def calc_timeseries_data(
+def calculate_periodic_timeseries(
     input_parcel_path: Path,
     start_date: datetime,
     end_date: datetime,

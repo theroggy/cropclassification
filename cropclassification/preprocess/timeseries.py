@@ -3,14 +3,15 @@
 This module contains general functions that apply to timeseries data...
 """
 
+from datetime import datetime
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
-import cropclassification.preprocess._timeseries_util as ts_util
+import cropclassification.preprocess._timeseries_helper as ts_helper
 
 # First define/init some general variables/constants
 # -------------------------------------------------------------
@@ -26,7 +27,7 @@ def calc_timeseries_data(
     input_parcel_path: Path,
     start_date_str: str,
     end_date_str: str,
-    sensordata_to_get: List[str],
+    sensordata_to_get: Dict[str, conf.SensorData],
     dest_data_dir: Path,
 ):
     """
@@ -37,7 +38,7 @@ def calc_timeseries_data(
         start_date_str (str): [description]
         end_date_str (str): [description]
         sensordata_to_get (List[str]): an array with data you want to be calculated:
-                check out the constants starting with DATA_TO_GET... for the options.
+            check out the constants starting with DATA_TO_GET... for the options.
         dest_data_dir (str): [description]
     """
     # Check some variables...
@@ -47,21 +48,20 @@ def calc_timeseries_data(
         dest_data_dir.mkdir(parents=True, exist_ok=True)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_util.get_monday(
+    start_date = ts_helper.get_monday(
         start_date_str
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_util.get_monday(end_date_str)
+    end_date = ts_helper.get_monday(end_date_str)
 
     logger.info(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
         f"date {end_date_str} as well: {end_date}"
     )
-    openeo_supported = ["s2-ndvi", "s2-agri", "s1-asc", "s1-desc", "s1-coh"]
     sensordata_to_get_onda = [
-        sensor for sensor in sensordata_to_get if sensor not in openeo_supported
+        sensor for sensor in sensordata_to_get if sensor not in conf.image_profiles
     ]
     sensordata_to_get_openeo = [
-        sensor for sensor in sensordata_to_get if sensor in openeo_supported
+        sensor for sensor in sensordata_to_get if sensor in conf.image_profiles
     ]
 
     if len(sensordata_to_get_onda) > 0:
@@ -71,9 +71,9 @@ def calc_timeseries_data(
         # ts_calc
 
         # Now all image data is available per image, calculate periodic data
-        ts_util.calculate_periodic_data(
-            input_parcel_path=input_parcel_path,
-            input_base_dir=conf.dirs.getpath("timeseries_per_image_dir"),
+        ts_helper.calculate_periodic_timeseries(
+            parcel_path=input_parcel_path,
+            timeseries_per_image_dir=conf.dirs.getpath("timeseries_per_image_dir"),
             start_date=start_date,
             end_date=end_date,
             sensordata_to_get=sensordata_to_get_onda,
@@ -87,24 +87,12 @@ def calc_timeseries_data(
             conf.image_profiles[sensordatatype]
             for sensordatatype in sensordata_to_get_openeo
         ]
-        ts_calc_openeo.calc_timeseries_data(
+        ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
             start_date=start_date,
             end_date=end_date,
             sensordata_to_get=sensordata_to_get_info_openeo,
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
-            dest_data_dir=conf.dirs.getpath("timeseries_per_image_dir"),
-        )
-
-        raise Exception("STOP")
-
-        # Now all image data is available per image, calculate periodic data
-        ts_util.calculate_periodic_data(
-            input_parcel_path=input_parcel_path,
-            input_base_dir=conf.dirs.getpath("timeseries_per_image_dir"),
-            start_date=start_date,
-            end_date=end_date,
-            sensordata_to_get=sensordata_to_get_openeo,
             dest_data_dir=dest_data_dir,
         )
 
@@ -116,7 +104,7 @@ def collect_and_prepare_timeseries_data(
     output_path: Path,
     start_date_str: str,
     end_date_str: str,
-    sensordata_to_use: List[str],
+    sensordata_to_use: Dict[str, conf.SensorData],
     parceldata_aggregations_to_use: List[str],
     force: bool = False,
 ):
@@ -131,6 +119,8 @@ def collect_and_prepare_timeseries_data(
             f"Output file already exists and force == False, so stop: {output_path}"
         )
         return
+    start_date = datetime.fromisoformat(start_date_str)
+    end_date = datetime.fromisoformat(end_date_str)
 
     # Init the result with the id's of the parcels we want to treat
     result_df = pdh.read_file(input_parcel_path, columns=[conf.columns["id"]])
@@ -141,25 +131,27 @@ def collect_and_prepare_timeseries_data(
     logger.setLevel(logging.DEBUG)
 
     # Loop over all input timeseries data to find the data we really need
-    data_ext = conf.general["data_ext"]
-    path_start = timeseries_dir / f"{base_filename}_{start_date_str}{data_ext}"
-    path_end = timeseries_dir / f"{base_filename}_{end_date_str}{data_ext}"
-    logger.debug(f"path_start_date: {path_start}")
-    logger.debug(f"path_end_date: {path_end}")
+    glob_pattern = f"*{conf.general['data_ext']}"
+    ts_data_paths = list(timeseries_dir.glob(glob_pattern))
+    if len(ts_data_paths) == 0:
+        raise ValueError(f"No timeseries data found for pattern {glob_pattern}")
 
-    ts_data_files = timeseries_dir.glob(f"{base_filename}_*{data_ext}")
-    for curr_path in sorted(ts_data_files):
-
+    for curr_path in sorted(ts_data_paths):
         # Only process data that is of the right sensor types
-        sensor_type = curr_path.stem.split("_")[-1]
-        if sensor_type not in sensordata_to_use:
+        fileinfo = ts_helper.get_fileinfo_timeseries_periods(curr_path)
+        image_profile = fileinfo["image_profile"].lower()
+        if image_profile not in sensordata_to_use:
             logger.debug(
                 f"SKIP: file not needed (only {sensordata_to_use}): {curr_path}"
             )
             continue
         # The only data we want to process is the data in the range of dates
-        if (str(curr_path) < str(path_start)) or (str(curr_path) >= str(path_end)):
-            logger.debug(f"SKIP: File is not in date range asked: {curr_path}")
+        if fileinfo["start_date"] < start_date or fileinfo["end_date"] >= end_date:
+            logger.debug(f"SKIP: file doesn't match the period asked: {curr_path}")
+            continue
+        band = fileinfo["band"]
+        if band not in sensordata_to_use[image_profile].bands:
+            logger.debug(f"SKIP: file doesn't match the bands asked: {curr_path}")
             continue
         # An empty file signifies that there wasn't any valable data for that
         # period/sensor/...
@@ -187,6 +179,7 @@ def collect_and_prepare_timeseries_data(
             data_read_df.set_index(conf.columns["id"], inplace=True)
 
         # Loop over columns to check if there are columns that need to be dropped.
+        columns_to_rename = {}
         for column in data_read_df.columns:
 
             # If it is the id column, continue
@@ -198,7 +191,13 @@ def collect_and_prepare_timeseries_data(
             for parceldata_aggregation in parceldata_aggregations_to_use:
                 if column.endswith("_" + parceldata_aggregation):
                     column_ok = True
-            if column_ok is False:
+                elif column == parceldata_aggregation:
+                    curr_start_date_str = fileinfo["start_date"].strftime("%Y%m%d")
+                    columns_to_rename[
+                        column
+                    ] = f"{image_profile}_{curr_start_date_str}_{band}_{column}"
+                    column_ok = True
+            if not column_ok:
                 # Drop column if it doesn't end with something in
                 # parcel_data_aggregations_to_use
                 logger.debug(
@@ -220,24 +219,32 @@ def collect_and_prepare_timeseries_data(
                 )
                 data_read_df.drop(column, axis=1, inplace=True)
 
+        # If there are columns that need renaming, do so
+        if len(columns_to_rename) > 0:
+            data_read_df = data_read_df.rename(columns=columns_to_rename)
+
         # If S2, rescale data
-        if sensor_type.startswith("S2"):
+        if image_profile.startswith("s2"):
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column with S2 data: scale it by dividing by 10.000: {column}"
+                    f"Column with s2 data: scale it by dividing by 10.000: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 10000
 
-        # If S1 coherence, rescale data
-        if sensor_type == "S1Coh":
+        # If s1 coherence, rescale data
+        if image_profile in ["s1coh", "s1-coh"]:
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column with S1 Coherence: scale it by dividing by 300: {column}"
+                    f"Column with s1 coherence: scale it by dividing by 300: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 300
 
         # Join the data to the result...
         result_df = result_df.join(data_read_df, how="left")
+
+    # No timeseries data was found, so stop
+    if len(result_df.columns) == 0:
+        raise ValueError("data collection resulted in 0 columns")
 
     # Remove rows with many null values from result
     max_number_null = int(0.6 * len(result_df.columns))
