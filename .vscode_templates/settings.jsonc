@@ -1,24 +1,23 @@
 {
-    // Deze settings kunnen/moeten normaal door iedereen overgenomen worden
-    // --------------------------------------------------------------------
-    // Conda environment activeren bij openen project
+    // These settings are in general directly applicable
+    // -------------------------------------------------
+    // Activate conda environment when project is opened
     "python.terminal.activateEnvironment": true,
-    // Alle files checken op fouten
+    // Lint all files in workspace
     "python.analysis.diagnosticMode": "workspace",
-    // Formatting toepassen bij opslaan
+    // Apply formatting on save
     "editor.formatOnSave": true,
-    // Lijntje tonen op 88e lijn
+    // Visualize 88e line i editor
     "editor.rulers": [
         88
     ],
-    // Black als formatter gebruiken
+    // Use Black as formatter
     "python.formatting.provider": "black",
-    // De workspace folder als pythonpath gebruiken zodat dat path niet overal
-    // in code toegevoegd moet worden.
+    // Use workspace directory as pythonpath
     "terminal.integrated.env.windows": {
         "PYTHONPATH": "${workspaceFolder}"
     },
-    // Klassieke cmd gebruiken in terminal, powershell geeft issues met conda
+    // Use classing cmd in terminal, powershell gives issues with conda
     "terminal.integrated.profiles.windows": {
         "Command Prompt": {
             "path": [
@@ -30,8 +29,8 @@
         }
     },
     "terminal.integrated.defaultProfile.windows": "Command Prompt",
-    // Deze settings moeten soms aangepast worden aan je eigen situatie
-    // --------------------------------------------------------------------
-    // De conda environment die moet gebruikt worden
+    // These settings often need to be customized
+    // ------------------------------------------
+    // Conda environment to use
     "python.defaultInterpreterPath": "%userprofile%\\Miniconda3\\envs\\cropclassdev\\python.exe"
 }
