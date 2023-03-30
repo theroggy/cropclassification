@@ -10,9 +10,9 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            // Enable breakpoints in libraries used<
+            // Enable breakpoints in libraries used
             "justMyCode": false,
-            // Add workspace folder to pythonpath<
+            // Add workspace folder to pythonpath
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
