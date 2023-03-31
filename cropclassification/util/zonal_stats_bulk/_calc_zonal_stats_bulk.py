@@ -36,19 +36,6 @@ from cropclassification.util import io_util
 logger = logging.getLogger(__name__)
 
 
-# TODO: performantie van rasterstats vergelijken met wat andere bibs:
-#   - rastrio manual: https://pysal.org/scipy2019-intermediate-gds/deterministic/gds2-rasters.html  # noqa: E501
-#   - pygeoprocessing (open?): https://pygeoprocessing.readthedocs.io/en/latest/api/pygeoprocessing.html#pygeoprocessing.zonal_statistics  # noqa: E501
-#   - pyjeo (GPL): https://pyjeo.readthedocs.io/en/latest/2_tutorial.html#tutorial-on-extract-calculating-regional-statistics  # noqa: E501
-#   - pyQGIS (GPL): https://gis.stackexchange.com/questions/421556/performance-problem-with-getting-average-pixel-values-within-buffered-circles  # noqa: E501
-#       -> is snel, maar lastig om te installeren op een server.
-#       -> src: https://github.com/qgis/QGIS/blob/d5626d92360efffb4b8085389c8d64072ef65833/src/analysis/vector/qgszonalstatistics.cpp#L266  # noqa: E501
-#   - https://pygis.io/docs/f_rs_extraction.html
-#
-# Dit zijn bibs die ook gedeeltelijke pixels meenemen op basis van opp overlapping,
-# wat niet ideaal is hiervoor...
-#   - xagg: https://github.com/ks905383/xagg
-#   - exactextract (apache2): https://github.com/isciences/exactextract
 def zonal_stats(
     features_path: Path,
     id_column: str,
@@ -62,7 +49,7 @@ def zonal_stats(
     force: bool = False,
 ):
     """
-    Calculate the statistics.
+    Calculate zonal statistics.
 
     Args:
         features_path (Path): _description_
