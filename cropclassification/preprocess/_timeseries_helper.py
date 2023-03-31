@@ -65,11 +65,11 @@ def prepare_input(
         and (output_parcel_nogeo_path is None or output_parcel_nogeo_path.exists())
     ):
         logger.warning(
-            "prepare_input: force == False and output files exist, so stop: "
+            "prepare_input: force is False and output files exist, so stop: "
             + f"{output_imagedata_parcel_input_path}, "
             + f"{output_parcel_nogeo_path}"
         )
-        return
+        return False
 
     logger.info(f"Process input file {input_parcel_path}")
 
@@ -106,7 +106,7 @@ def prepare_input(
     # If force == False Check and the output file exists already, stop.
     if force is False and output_imagedata_parcel_input_path.exists():
         logger.warning(
-            "prepare_input: force == False and output files exist, so stop: "
+            "prepare_input: force is False and output files exist, so stop: "
             f"{output_imagedata_parcel_input_path}"
         )
         return False

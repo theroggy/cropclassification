@@ -7,7 +7,7 @@ from typing import List
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import openeo_util
 from cropclassification.util.openeo_util import ImageProfile
-import cropclassification.preprocess._timeseries_calc_per_image as ts_per_image
+from cropclassification.util import zonal_stats_bulk
 
 # First define/init some general variables/constants
 # -------------------------------------------------------------
@@ -54,7 +54,7 @@ def calculate_periodic_timeseries(
     temp_dir = conf.dirs.getpath("temp_dir")
     if temp_dir == "None":
         temp_dir = Path(tempfile.gettempdir())
-    ts_per_image.calc_stats_per_image(
+    zonal_stats_bulk.zonal_stats(
         features_path=input_parcel_path,
         id_column=conf.columns["id"],
         images_bands=images_bands,

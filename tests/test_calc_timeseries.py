@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from cropclassification.preprocess import _timeseries_calc_per_image as calc_ts
+from cropclassification.util import zonal_stats_bulk
 
 
 def get_testdata_dir() -> Path:
@@ -26,7 +26,7 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     try:
         start_time = datetime.now()
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
-        calc_ts.calc_stats_per_image(
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column="UID",
             images_bands=images_bands,
@@ -55,7 +55,7 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     try:
         start_time = datetime.now()
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
-        calc_ts.calc_stats_per_image(
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column="UID",
             images_bands=images_bands,

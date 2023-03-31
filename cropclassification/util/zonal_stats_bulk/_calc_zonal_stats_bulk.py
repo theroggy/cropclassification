@@ -26,10 +26,10 @@ import geopandas as gpd
 import geofileops as gfo
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
-from rasterstats import zonal_stats
+import rasterstats
 
 from cropclassification.helpers import pandas_helper as pdh
-from cropclassification.helpers import raster_helper
+from . import _image_helper
 from cropclassification.util import io_util
 
 # General init
@@ -37,19 +37,19 @@ logger = logging.getLogger(__name__)
 
 
 # TODO: performantie van rasterstats vergelijken met wat andere bibs:
-#   - rastrio manual: https://pysal.org/scipy2019-intermediate-gds/deterministic/gds2-rasters.html
-#   - pygeoprocessing (open?): https://pygeoprocessing.readthedocs.io/en/latest/api/pygeoprocessing.html#pygeoprocessing.zonal_statistics
-#   - pyjeo (GPL): https://pyjeo.readthedocs.io/en/latest/2_tutorial.html#tutorial-on-extract-calculating-regional-statistics
-#   - pyQGIS (GPL): https://gis.stackexchange.com/questions/421556/performance-problem-with-getting-average-pixel-values-within-buffered-circles
+#   - rastrio manual: https://pysal.org/scipy2019-intermediate-gds/deterministic/gds2-rasters.html  # noqa: E501
+#   - pygeoprocessing (open?): https://pygeoprocessing.readthedocs.io/en/latest/api/pygeoprocessing.html#pygeoprocessing.zonal_statistics  # noqa: E501
+#   - pyjeo (GPL): https://pyjeo.readthedocs.io/en/latest/2_tutorial.html#tutorial-on-extract-calculating-regional-statistics  # noqa: E501
+#   - pyQGIS (GPL): https://gis.stackexchange.com/questions/421556/performance-problem-with-getting-average-pixel-values-within-buffered-circles  # noqa: E501
 #       -> is snel, maar lastig om te installeren op een server.
-#       -> src: https://github.com/qgis/QGIS/blob/d5626d92360efffb4b8085389c8d64072ef65833/src/analysis/vector/qgszonalstatistics.cpp#L266
+#       -> src: https://github.com/qgis/QGIS/blob/d5626d92360efffb4b8085389c8d64072ef65833/src/analysis/vector/qgszonalstatistics.cpp#L266  # noqa: E501
 #   - https://pygis.io/docs/f_rs_extraction.html
 #
 # Dit zijn bibs die ook gedeeltelijke pixels meenemen op basis van opp overlapping,
 # wat niet ideaal is hiervoor...
 #   - xagg: https://github.com/ks905383/xagg
 #   - exactextract (apache2): https://github.com/isciences/exactextract
-def calc_stats_per_image(
+def zonal_stats(
     features_path: Path,
     id_column: str,
     images_bands: List[Tuple[Path, List[str]]],
@@ -120,7 +120,7 @@ def calc_stats_per_image(
             # aren't too many busy yet, prepare the next one
             if (
                 image_idx < len(images_bands)
-                and len(filter_on_status(image_dict, "IMAGE_PREPARE_CALC_BUSY"))
+                and len(_filter_on_status(image_dict, "IMAGE_PREPARE_CALC_BUSY"))
                 < nb_parallel_max
             ):
                 # Not too many busy preparing, so get next image_path to start
@@ -129,7 +129,7 @@ def calc_stats_per_image(
                 image_path_str = str(image_path)
                 image_idx += 1
 
-                image_info = raster_helper.get_image_info(image_path)
+                image_info = _image_helper.get_image_info(image_path)
                 # Create base output filename
                 # TODO: hoort hier niet echt thuis
                 orbit = None
@@ -137,7 +137,7 @@ def calc_stats_per_image(
                     orbit = "ASCENDING"
                 elif image_info.imagetype.lower() == "s1-grd-sigma0-desc":
                     orbit = "DESCENDING"
-                output_base_path = format_output_path(
+                output_base_path = _format_output_path(
                     features_path,
                     image_path,
                     output_dir,
@@ -150,10 +150,10 @@ def calc_stats_per_image(
                 if bands is None:
                     bands = image_info.bands
                     assert bands is not None
-                bands_done = 0
+                bands_todo = {}
                 for band in bands:
                     # Prepare the output paths...
-                    output_band_path = format_output_path(
+                    output_band_path = _format_output_path(
                         features_path,
                         image_path,
                         output_dir,
@@ -173,12 +173,13 @@ def calc_stats_per_image(
                             logger.debug(
                                 f"Output file for band exists {output_band_path}"
                             )
-                            bands_done += 1
+                            continue
                         else:
                             output_band_path.unlink()
+                    bands_todo[band] = output_band_path
 
                 # If all bands already processed, skip image...
-                if len(bands) == bands_done:
+                if len(bands_todo) == 0:
                     logger.info(
                         "SKIP image: output files for all bands exist already for "
                         f"{output_base_path}"
@@ -190,7 +191,7 @@ def calc_stats_per_image(
                 # TODO: possibly it is cleaner to do this per band...
                 logger.info(f"Start calculation for image {output_base_path}")
                 future = pool.submit(
-                    prepare_calc,
+                    _prepare_calc,
                     features_path,
                     id_column,
                     image_path,
@@ -203,6 +204,7 @@ def calc_stats_per_image(
                     "features_path": features_path,
                     "image_path": image_path,
                     "bands": bands,
+                    "bands_todo": bands_todo,
                     "prepare_calc_future": future,
                     "image_info": image_info,
                     "prepare_calc_starttime": datetime.now(),
@@ -217,7 +219,7 @@ def calc_stats_per_image(
             # For images busy preparing: if ready: start real calculation in batches
 
             # Loop through the busy preparations
-            for image_path_str in filter_on_status(
+            for image_path_str in _filter_on_status(
                 image_dict, "IMAGE_PREPARE_CALC_BUSY"
             ):
                 # If still running, go to next
@@ -227,31 +229,15 @@ def calc_stats_per_image(
 
                 # Extract the result from the preparation
                 try:
-                    # Get the result from the completed  prepare_inputs
+                    # Get the result from the completed prepare_inputs
                     prepare_calc_result = image["prepare_calc_future"].result()
 
                     # If nb_features to be treated is 0... create (empty) output
                     # files and continue with next...
                     if prepare_calc_result["nb_features_to_calc_total"] == 0:
-                        for band in image["bands"]:
-                            # Prepare the output path...
-                            orbit = None
-                            if image["image_info"].imagetype.upper() in (
-                                "S1-ASC",
-                                "S1-DESC",
-                            ):
-                                orbit = image["image_info"].extra[
-                                    "orbit_properties_pass"
-                                ]
-                            output_band_path = format_output_path(
-                                features_path,
-                                image["image_path"],
-                                output_dir,
-                                orbit,
-                                band,
-                            )
-
+                        for band in image["bands_todo"]:
                             # Create output file
+                            output_band_path = image["bands_todo"][band]
                             logger.info(
                                 "No features found in image: create done file: "
                                 f"{output_band_path}"
@@ -281,16 +267,16 @@ def calc_stats_per_image(
                     # Now loop through all prepared feature batches to start the
                     # statistics calculation for each
                     logger.info(f"Start statistics calculation for {image_path_str}")
-                    for features_batch in image["feature_batches"]:
-                        bands = image["bands"]
-                        # If bands shouldn't be calculated in parallel...
-                        if not calc_bands_parallel:
-                            bands = [image["bands"]]
+                    bands = image["bands_todo"]
+                    # If bands shouldn't be calculated in parallel...
+                    if not calc_bands_parallel:
+                        bands = [bands]
 
-                        for band in bands:
+                    for band in bands:
+                        for features_batch in image["feature_batches"]:
                             start_time_batch = datetime.now()
                             future = pool.submit(
-                                calc_stats_image_gdf,
+                                _zonal_stats_image_gdf,
                                 features_batch["path"],
                                 id_column,
                                 image["image_prepared_path"],
@@ -320,7 +306,7 @@ def calc_stats_per_image(
                         raise Exception(message) from ex
 
             # For batches with calc busy, check if there are ready ones
-            for calc_stats_batch_id in filter_on_status(
+            for calc_stats_batch_id in _filter_on_status(
                 calc_stats_batch_dict, "BATCH_CALC_BUSY"
             ):
                 # If it is not done yet, continue
@@ -355,10 +341,10 @@ def calc_stats_per_image(
             # For images with calc busy, check if they are ready
 
             # Loop through busy image calculations
-            for image_path_str in filter_on_status(image_dict, "IMAGE_CALC_BUSY"):
+            for image_path_str in _filter_on_status(image_dict, "IMAGE_CALC_BUSY"):
                 # If still batches busy for this image, continue to next image
                 batches_busy = False
-                for calc_stats_batch_id in filter_on_status(
+                for calc_stats_batch_id in _filter_on_status(
                     calc_stats_batch_dict, "BATCH_CALC_BUSY"
                 ):
                     path = calc_stats_batch_dict[calc_stats_batch_id]["image_path"]
@@ -388,7 +374,7 @@ def calc_stats_per_image(
                 # Move the (completed) output files
                 output_base_path = Path(image["output_base_path"])
                 output_base_busy_path = Path(image["output_base_busy_path"])
-                for band in image["bands"]:
+                for band in image["bands_todo"]:
                     # TODO: creating the output paths should probably be cleaner
                     # centralised
                     output_band_path = (
@@ -417,7 +403,7 @@ def calc_stats_per_image(
                 logger.info(f"Ready processing image: {image_path_str}")
                 nb_done_latestbatch = 1
                 nb_done_total += nb_done_latestbatch
-                progress_msg = format_progress_message(
+                progress_msg = _format_progress_message(
                     nb_todo,
                     nb_done_total,
                     nb_done_latestbatch,
@@ -430,12 +416,12 @@ def calc_stats_per_image(
 
             # This is the case if:
             #     - no processing is needed (= empty image_dict)
-            #     - OR if all processing is started + is done
+            #     - OR if all (possible) processing is started + everything is done
             #       (= status IMAGE_CALC_DONE)
             if len(image_dict) == 0 or (
-                image_idx == nb_todo
+                image_idx == len(images_bands)
                 and len(image_dict)
-                == len(filter_on_status(image_dict, "IMAGE_CALC_DONE"))
+                == len(_filter_on_status(image_dict, "IMAGE_CALC_DONE"))
             ):
                 if nb_errors == 0:
                     # Ready, so jump out of unending while loop
@@ -473,7 +459,7 @@ def calc_stats_per_image(
     )
 
 
-def filter_on_status(dict: dict, status_to_check: str) -> List[str]:
+def _filter_on_status(dict: dict, status_to_check: str) -> List[str]:
     """
     Function to check the number of images that are being prepared for processing
     """
@@ -484,7 +470,7 @@ def filter_on_status(dict: dict, status_to_check: str) -> List[str]:
     return keys_with_status
 
 
-def format_output_path(
+def _format_output_path(
     features_path: Path,
     image_path: Path,
     output_dir: Path,
@@ -515,7 +501,7 @@ def format_output_path(
     return output_path
 
 
-def format_progress_message(
+def _format_progress_message(
     nb_todo: int,
     nb_done_total: int,
     nb_done_latestbatch: int,
@@ -562,7 +548,7 @@ def format_progress_message(
     return message
 
 
-def prepare_calc(
+def _prepare_calc(
     features_path: Path,
     id_column: str,
     image_path: Path,
@@ -600,13 +586,13 @@ def prepare_calc(
 
     # Prepare the image
     logger.info(f"Start prepare_image for {image_path} to {temp_dir}")
-    image_prepared_path = raster_helper.prepare_image(image_path, temp_dir)
+    image_prepared_path = _image_helper.prepare_image(image_path, temp_dir)
     logger.debug(f"Preparing ready, result: {image_prepared_path}")
     ret_val["image_prepared_path"] = image_prepared_path
 
     # Get info about the image
     logger.info(f"Start get_image_info for {image_prepared_path}")
-    image_info = raster_helper.get_image_info(image_prepared_path)
+    image_info = _image_helper.get_image_info(image_prepared_path)
     logger.info(f"image_info: {image_info}")
 
     # Load the features that overlap with the image.
@@ -620,7 +606,7 @@ def prepare_calc(
     if image_info.image_epsg == "NONE":
         raise Exception(f"target_epsg == NONE: {image_info}")
 
-    features_gdf = load_features_file(
+    features_gdf = _load_features_file(
         features_path=features_path,
         target_epsg=image_info.image_epsg,
         columns_to_retain=[id_column, "geometry"],
@@ -676,7 +662,7 @@ def prepare_calc(
     return ret_val
 
 
-def load_features_file(
+def _load_features_file(
     features_path: Path,
     columns_to_retain: List[str],
     target_epsg: int,
@@ -870,7 +856,7 @@ def load_features_file(
     return features_gdf
 
 
-def calc_stats_image_gdf(
+def _zonal_stats_image_gdf(
     features,
     id_column: str,
     image_path: Path,
@@ -974,7 +960,7 @@ def calc_stats_image_gdf(
             "cloud_mediumproba",
             "cloud_highproba",
         ]
-        image_data = raster_helper.get_image_data(
+        image_data = _image_helper.get_image_data(
             image_path,
             bounds=features_total_bounds,
             bands=[cloud_filter_band],
@@ -983,7 +969,7 @@ def calc_stats_image_gdf(
         # Before zonal_stats, do reset_index so index is "clean", otherwise the
         # concat/insert/... later on gives wrong results
         features.reset_index(drop=True, inplace=True)
-        features_stats = zonal_stats(
+        features_stats = rasterstats.zonal_stats(
             features,
             image_data[cloud_filter_band]["data"],
             affine=image_data[cloud_filter_band]["transform"],
@@ -1048,7 +1034,7 @@ def calc_stats_image_gdf(
 
         # Get the image data and calculate statistics
         logger.info(f"Read band {band} for bounds {features_total_bounds}")
-        image_data = raster_helper.get_image_data(
+        image_data = _image_helper.get_image_data(
             image_path, bounds=features_total_bounds, bands=[band], pixel_buffer=1
         )
 
@@ -1071,7 +1057,7 @@ def calc_stats_image_gdf(
         # Before zonal_stats, do reset_index so index is "clean", otherwise the
         # concat/insert/... later on gives wrong results
         features.reset_index(drop=True, inplace=True)
-        features_stats = zonal_stats(
+        features_stats = rasterstats.zonal_stats(
             features,
             image_data_upsampled,
             affine=affine_upsampled,

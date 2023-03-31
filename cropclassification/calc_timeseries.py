@@ -16,8 +16,7 @@ import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-from cropclassification.helpers import raster_helper
-from cropclassification.preprocess import _timeseries_calc_per_image as calc_ts
+from cropclassification.util import zonal_stats_bulk
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 
 
@@ -130,7 +129,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         input_image_path = Path(input_image_path)
         # Get more detailed info about the image
         try:
-            image_info = raster_helper.get_image_info(input_image_path)
+            image_info = zonal_stats_bulk.get_image_info(input_image_path)
         except Exception:
             # If not possible to get info for image, log and skip it
             logger.exception(f"SKIP image: error getting info for {input_image_path}")
@@ -139,7 +138,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # Fast-24h <- 2021-02-23 -> NRT-3H
         productTimelinessCategory = (
             "Fast-24h"
-            if dateutil.parser.isoparse(image_info["acquisition_date"]).timestamp()
+            if dateutil.parser.isoparse(
+                image_info.extra["acquisition_date"]
+            ).timestamp()
             < esaSwitchedProcessingMethod
             else "NRT-3h"
         )
@@ -147,8 +148,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # If sentinel1 and wrong productTimelinessCategory, skip: we only
         # want 1 type to evade images used twice
         if (
-            image_info["satellite"].startswith("S1")
-            and image_info["productTimelinessCategory"] != productTimelinessCategory
+            image_info.imagetype.startswith("S1")
+            and image_info.extra["productTimelinessCategory"]
+            != productTimelinessCategory
         ):
             logger.info(
                 f"SKIP image, productTimelinessCategory should be "
@@ -172,7 +174,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
 
     try:
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
-        calc_ts.calc_stats_per_image(
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column=conf.columns["id"],
             images_bands=images_bands,
@@ -221,7 +223,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
 
         # Get more detailed info about the image
         try:
-            image_info = raster_helper.get_image_info(input_image_path)
+            image_info = zonal_stats_bulk.get_image_info(input_image_path)
         except Exception:
             # If not possible to get info for image, log and skip it
             logger.exception(f"SKIP image: error getting info for {input_image_path}")
@@ -245,7 +247,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     try:
         bands = conf.timeseries.getlist("s2bands")
         images_bands = [(path, bands) for path in input_image_paths]
-        calc_ts.calc_stats_per_image(
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column=conf.columns["id"],
             images_bands=images_bands,
@@ -289,7 +291,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
 
     try:
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
-        calc_ts.calc_stats_per_image(
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column=conf.columns["id"],
             images_bands=images_bands,
