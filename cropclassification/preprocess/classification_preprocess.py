@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 def prepare_input(
     input_parcel_path: Path,
     input_parcel_filetype: str,
-    input_parcel_pixcount_path: Path,
+    timeseries_periodic_dir: Path,
+    base_filename: str,
+    data_ext: str,
     classtype_to_prepare: str,
     classes_refe_path: Path,
     output_parcel_path: Path,
@@ -41,7 +43,7 @@ def prepare_input(
     """
 
     # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_parcel_path) is True:
+    if not force and output_parcel_path.exists():
         logger.warning(
             f"prepare_input: output file exists + force is False: {output_parcel_path}"
         )
@@ -69,9 +71,20 @@ def prepare_input(
         raise Exception(message)
 
     # Load pixcount data and join it
-    logger.info(f"Read pixcount file {input_parcel_pixcount_path}")
-    df_pixcount = pdh.read_file(input_parcel_pixcount_path)
-    logger.debug(f"Read pixcount file ready, shape: {df_pixcount.shape}")
+    parcel_pixcount_path = (
+        timeseries_periodic_dir / f"{base_filename}_pixcount{data_ext}"
+    )
+    if parcel_pixcount_path.exists():
+        logger.info(f"Read pixcount file {parcel_pixcount_path}")
+        df_pixcount = pdh.read_file(parcel_pixcount_path)
+        logger.debug(f"Read pixcount file ready, shape: {df_pixcount.shape}")
+    else:
+        parcel_pixcount_path = next(timeseries_periodic_dir.glob("*s2*.sqlite"))
+        df_pixcount = pdh.read_file(parcel_pixcount_path)
+        df_pixcount = df_pixcount[[conf.columns["id"], "count"]].rename(
+            columns={"count": conf.columns["pixcount_s1s2"]}
+        )
+
     if df_pixcount.index.name != conf.columns["id"]:
         df_pixcount.set_index(conf.columns["id"], inplace=True)
 

@@ -16,8 +16,7 @@ import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-from cropclassification.helpers import raster_helper
-from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
+from cropclassification.util import zonal_stats_bulk
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 
 
@@ -130,7 +129,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         input_image_path = Path(input_image_path)
         # Get more detailed info about the image
         try:
-            image_info = raster_helper.get_image_info(input_image_path)
+            image_info = zonal_stats_bulk.get_image_info(input_image_path)
         except Exception:
             # If not possible to get info for image, log and skip it
             logger.exception(f"SKIP image: error getting info for {input_image_path}")
@@ -139,7 +138,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # Fast-24h <- 2021-02-23 -> NRT-3H
         productTimelinessCategory = (
             "Fast-24h"
-            if dateutil.parser.isoparse(image_info["acquisition_date"]).timestamp()
+            if dateutil.parser.isoparse(
+                image_info.extra["acquisition_date"]
+            ).timestamp()
             < esaSwitchedProcessingMethod
             else "NRT-3h"
         )
@@ -147,13 +148,14 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # If sentinel1 and wrong productTimelinessCategory, skip: we only
         # want 1 type to evade images used twice
         if (
-            image_info["satellite"].startswith("S1")
-            and image_info["productTimelinessCategory"] != productTimelinessCategory
+            image_info.imagetype.startswith("S1")
+            and image_info.extra["productTimelinessCategory"]
+            != productTimelinessCategory
         ):
             logger.info(
                 f"SKIP image, productTimelinessCategory should be "
                 f"'{productTimelinessCategory}', but is: "
-                f"{image_info['productTimelinessCategory']} for "
+                f"{image_info.extra['productTimelinessCategory']} for "
                 f"{input_image_path}"
             )
             continue
@@ -171,11 +173,11 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         )
 
     try:
-        calc_ts.calc_stats_per_image(
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column=conf.columns["id"],
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            images_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
@@ -221,7 +223,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
 
         # Get more detailed info about the image
         try:
-            image_info = raster_helper.get_image_info(input_image_path)
+            image_info = zonal_stats_bulk.get_image_info(input_image_path)
         except Exception:
             # If not possible to get info for image, log and skip it
             logger.exception(f"SKIP image: error getting info for {input_image_path}")
@@ -230,12 +232,12 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # If sentinel2 and cloud coverage too high... skip
         if (
             max_cloudcover_pct >= 0
-            and image_info["satellite"].startswith("S2")
-            and image_info["Cloud_Coverage_Assessment"] > max_cloudcover_pct
+            and image_info.imagetype.startswith("S2")
+            and image_info.extra["Cloud_Coverage_Assessment"] > max_cloudcover_pct
         ):
             logger.info(
                 "SKIP image, Cloud_Coverage_Assessment: "
-                f"{image_info['Cloud_Coverage_Assessment']:0.2f} > "
+                f"{image_info.extra['Cloud_Coverage_Assessment']:0.2f} > "
                 f"{max_cloudcover_pct} for {input_image_path}"
             )
             continue
@@ -243,11 +245,12 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         tmp_input_image_paths.append(input_image_path)
 
     try:
-        calc_ts.calc_stats_per_image(
+        bands = conf.timeseries.getlist("s2bands")
+        images_bands = [(path, bands) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column=conf.columns["id"],
-            image_paths=input_image_paths,
-            bands=conf.timeseries.getlist("s2bands"),
+            images_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
@@ -287,11 +290,11 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     ]
 
     try:
-        calc_ts.calc_stats_per_image(
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column=conf.columns["id"],
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            images_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,

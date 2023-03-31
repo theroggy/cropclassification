@@ -82,6 +82,10 @@ def train_test_predict(
     if input_parcel_classification_data_df.index.name != conf.columns["id"]:
         input_parcel_classification_data_df.set_index(conf.columns["id"], inplace=True)
     logger.debug("Read classification data file ready")
+    if len(input_parcel_classification_data_df.columns) == 0:
+        raise ValueError(
+            f"no classification data found in {input_parcel_classification_data_path}"
+        )
 
     # Train the classification
     output_classifier_path = train(

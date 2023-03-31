@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
+from cropclassification.util import zonal_stats_bulk
 
 
 def get_testdata_dir() -> Path:
@@ -25,11 +25,11 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     tmp_dir = Path(tmpdir) / "raw"
     try:
         start_time = datetime.now()
-        calc_ts.calc_stats_per_image(
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column="UID",
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            images_bands=images_bands,
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",
@@ -54,11 +54,11 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
     tmp_dir = Path(tmpdir) / "tif"
     try:
         start_time = datetime.now()
-        calc_ts.calc_stats_per_image(
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
             features_path=input_features_path,
             id_column="UID",
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            images_bands=images_bands,
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",

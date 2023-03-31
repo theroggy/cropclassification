@@ -23,7 +23,7 @@ Once you have anaconda installed, you can open an anaconda terminal window and f
       ```
       2. Install the dependencies for the crop classification scripts:
       ```
-      conda install python=3.9 geopandas geofileops "h5py<3" psutil rasterio "rasterstats<0.16.0" scikit-learn
+      conda install python=3.9 geopandas geofileops "h5py<3" openeo psutil rasterio rasterstats scikit-learn
       ```
       3. If it was the first time you installed anaconda/geopandas, you might have to restart your computer to proceed
       4. Start the anaconda terminal window again and activate the environment
