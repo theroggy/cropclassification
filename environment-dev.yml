@@ -2,17 +2,17 @@ name: cropclass-dev
 channels:
   - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   # required
   - fiona
   - geofileops
   - geopandas>=0.11
-  - h5py <3
+  - h5py
   - numpy
   # Openeo >=0.14 +- doesn't work on windows.
   # More info here: https://github.com/Open-EO/openeo-python-client/issues/387
-  - openeo <0.14
+  - openeo
   - pandas
   - psutil
   - pyproj
@@ -26,3 +26,5 @@ dependencies:
   - black
   - flake8
   - pre-commit
+  - pip:
+    - tensorflow-cpu
