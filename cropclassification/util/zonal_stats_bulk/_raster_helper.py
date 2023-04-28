@@ -10,10 +10,10 @@ from osgeo import gdal
 # Suppress gdal warnings/errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
 
-import rasterio
-import shapely.geometry as sh_geom
+import rasterio  # noqa: E402
+import shapely.geometry as sh_geom  # noqa: E402
 
-from cropclassification.util import io_util
+from cropclassification.util import io_util  # noqa: E402
 
 # General init
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class BandInfo:
     def __init__(
         self,
         path: str,
-        relative_path: str,
+        relative_path: Optional[str],
         filename: str,
         bandindex: int,
         bounds: Optional[Tuple[float, float, float]] = None,
@@ -48,7 +48,7 @@ class ImageInfo:
         filetype: str,
         image_id: str,
         filename: str,
-        footprint: dict,
+        footprint: Optional[dict],
         image_epsg: int,
         image_crs: str,
         image_bounds: Tuple[float, float, float],
@@ -306,6 +306,8 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
     imagetype = image_path.stem.split("_")[0]
     filetype = "CARD"
     image_id = image_path.stem
+    image_bounds = None
+    image_affine = None
 
     # Read info from the metadata file
     metadata_xml_path = image_path / "metadata.xml"
@@ -356,7 +358,7 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
         # get epsg
         epsg = metadata_root.find("imageProjection/EPSG")
         assert epsg is not None and epsg.text is not None
-        image_epsg = float(epsg.text)
+        image_epsg = int(epsg.text)
         image_crs = f"EPSG:{epsg.text}"
     except Exception as ex:
         raise Exception(f"Exception extracting info from {metadata_xml_path}") from ex
@@ -580,6 +582,11 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
         logger.error(message)
         raise Exception(message)
 
+    assert filename is not None
+    assert image_epsg is not None
+    assert image_bounds is not None
+    assert image_affine is not None
+
     return ImageInfo(
         imagetype=imagetype,
         filetype=filetype,
@@ -601,6 +608,7 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
     filetype = "SAFE"
     image_id = image_path.stem
     extra = {}
+    image_bounds = None
 
     # Read info from the manifest.safe file
     metadata_xml_path = image_path / "MTD_MSIL2A.xml"
@@ -712,6 +720,9 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
             epsg=band_epsg,
         )
 
+    assert image_crs is not None
+    assert image_bounds is not None
+
     return ImageInfo(
         imagetype=imagetype,
         filetype=filetype,
@@ -731,9 +742,10 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
     with rasterio.open(image_path) as src:
         image_bounds = tuple(src.bounds)
         image_affine = src.transform
-        if src.crs is not None:
-            image_crs = src.crs.to_string()
-            image_epsg = src.crs.to_epsg()
+        if src.crs is None:
+            raise ValueError(f"image doesn't have crs: {image_path}")
+        image_crs = src.crs.to_string()
+        image_epsg = src.crs.to_epsg()
 
         # Add all bands
         bands = {}
@@ -761,6 +773,7 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
             extra["orbit_properties_pass"] = "ASCENDING"
         elif orbit == "DESC":
             extra["orbit_properties_pass"] = "DESCENDING"
+
     return ImageInfo(
         imagetype=imagetype,
         filetype="TIF",
