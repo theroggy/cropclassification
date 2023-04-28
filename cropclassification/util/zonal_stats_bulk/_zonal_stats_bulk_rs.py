@@ -22,14 +22,14 @@ from osgeo import gdal
 gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 from affine import Affine
-import geopandas as gpd
-import geofileops as gfo
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
 import rasterstats
 
 from cropclassification.helpers import pandas_helper as pdh
-from . import _image_helper
+from . import _general_helper
+from . import _raster_helper
+from . import _vector_helper
 from cropclassification.util import io_util
 
 # General init
@@ -116,7 +116,7 @@ def zonal_stats(
                 image_path_str = str(image_path)
                 image_idx += 1
 
-                image_info = _image_helper.get_image_info(image_path)
+                image_info = _raster_helper.get_image_info(image_path)
                 # Create base output filename
                 # TODO: hoort hier niet echt thuis
                 orbit = None
@@ -124,7 +124,7 @@ def zonal_stats(
                     orbit = "ASCENDING"
                 elif image_info.imagetype.lower() == "s1-grd-sigma0-desc":
                     orbit = "DESCENDING"
-                output_base_path = _format_output_path(
+                output_base_path = _general_helper._format_output_path(
                     features_path,
                     image_path,
                     output_dir,
@@ -140,7 +140,7 @@ def zonal_stats(
                 bands_todo = {}
                 for band in bands:
                     # Prepare the output paths...
-                    output_band_path = _format_output_path(
+                    output_band_path = _general_helper._format_output_path(
                         features_path,
                         image_path,
                         output_dir,
@@ -390,7 +390,7 @@ def zonal_stats(
                 logger.info(f"Ready processing image: {image_path_str}")
                 nb_done_latestbatch = 1
                 nb_done_total += nb_done_latestbatch
-                progress_msg = _format_progress_message(
+                progress_msg = _general_helper._format_progress_message(
                     nb_todo,
                     nb_done_total,
                     nb_done_latestbatch,
@@ -457,84 +457,6 @@ def _filter_on_status(dict: dict, status_to_check: str) -> List[str]:
     return keys_with_status
 
 
-def _format_output_path(
-    features_path: Path,
-    image_path: Path,
-    output_dir: Path,
-    orbit_properties_pass: Optional[str],
-    band: Optional[str],
-) -> Path:
-    """
-    Prepare the output path.
-    """
-    # Interprete the orbit...
-    if orbit_properties_pass is not None:
-        if orbit_properties_pass == "ASCENDING":
-            orbit = "_ASC"
-        elif orbit_properties_pass == "DESCENDING":
-            orbit = "_DESC"
-        else:
-            message = f"Unknown orbit_properties_pass: {orbit_properties_pass}"
-            logger.error(message)
-            raise Exception(message)
-    else:
-        orbit = ""
-
-    # Format + return output path
-    output_stem = f"{features_path.stem}__{image_path.stem}{orbit}"
-    if band is not None:
-        output_stem = f"{output_stem}_{band}"
-    output_path = output_dir / f"{output_stem}.sqlite"
-    return output_path
-
-
-def _format_progress_message(
-    nb_todo: int,
-    nb_done_total: int,
-    nb_done_latestbatch: int,
-    start_time: datetime,
-    start_time_latestbatch: datetime,
-) -> str:
-    """
-    Returns a progress message based on the input.
-
-    Args
-        nb_todo: total number of items that need(ed) to be processed
-        nb_done_total: total number of items that have been processed already
-        nb_done_latestbatch: number of items that were processed in the latest batch
-        start_time: datetime the processing started
-        start_time_latestbatch: datetime the latest batch started
-    """
-    time_passed_s = (datetime.now() - start_time).total_seconds()
-    time_passed_latestbatch_s = (
-        datetime.now() - start_time_latestbatch
-    ).total_seconds()
-
-    # Calculate the overall progress
-    large_number = 9999999999
-    if time_passed_s > 0:
-        nb_per_hour = (nb_done_total / time_passed_s) * 3600
-    else:
-        nb_per_hour = large_number
-    hours_to_go = (int)((nb_todo - nb_done_total) / nb_per_hour)
-    min_to_go = (int)((((nb_todo - nb_done_total) / nb_per_hour) % 1) * 60)
-
-    # Calculate the speed of the latest batch
-    if time_passed_latestbatch_s > 0:
-        nb_per_hour_latestbatch = (
-            nb_done_latestbatch / time_passed_latestbatch_s
-        ) * 3600
-    else:
-        nb_per_hour_latestbatch = large_number
-
-    # Return formatted message
-    message = (
-        f"{hours_to_go}:{min_to_go} left for {nb_todo-nb_done_total} todo at "
-        f"{nb_per_hour:0.0f}/h ({nb_per_hour_latestbatch:0.0f}/h last batch)"
-    )
-    return message
-
-
 def _prepare_calc(
     features_path: Path,
     id_column: str,
@@ -573,13 +495,13 @@ def _prepare_calc(
 
     # Prepare the image
     logger.info(f"Start prepare_image for {image_path} to {temp_dir}")
-    image_prepared_path = _image_helper.prepare_image(image_path, temp_dir)
+    image_prepared_path = _raster_helper.prepare_image(image_path, temp_dir)
     logger.debug(f"Preparing ready, result: {image_prepared_path}")
     ret_val["image_prepared_path"] = image_prepared_path
 
     # Get info about the image
     logger.info(f"Start get_image_info for {image_prepared_path}")
-    image_info = _image_helper.get_image_info(image_prepared_path)
+    image_info = _raster_helper.get_image_info(image_prepared_path)
     logger.info(f"image_info: {image_info}")
 
     # Load the features that overlap with the image.
@@ -593,7 +515,7 @@ def _prepare_calc(
     if image_info.image_epsg == "NONE":
         raise Exception(f"target_epsg == NONE: {image_info}")
 
-    features_gdf = _load_features_file(
+    features_gdf = _vector_helper._load_features_file(
         features_path=features_path,
         target_epsg=image_info.image_epsg,
         columns_to_retain=[id_column, "geometry"],
@@ -647,200 +569,6 @@ def _prepare_calc(
 
     # Ready... return
     return ret_val
-
-
-def _load_features_file(
-    features_path: Path,
-    columns_to_retain: List[str],
-    target_epsg: int,
-    bbox=None,
-    polygon=None,
-) -> gpd.GeoDataFrame:
-    """
-    Load the features and reproject to the target crs.
-
-    Remarks:
-        * Reprojected version is "cached" so on a next call, it can be directly read.
-        * Locking and waiting is used to ensure correct results if used in parallel.
-
-    Args
-        features_path:
-        columns_to_retain:
-        target_srs:
-        bbox: bounds of the area to be loaded, in the target_epsg
-    """
-    # Load parcel file and preprocess it: remove excess columns + reproject if needed.
-    # By convention, the features filename should end on the projection... so extract
-    # epsg from filename
-    start_time = datetime.now()
-    """
-    features_epsg = None
-    if features_path.stem.find("_") != -1:
-        splitted = features_path.stem.split("_")
-        features_epsg = splitted[len(splitted) - 1]
-        try:
-            features_epsg = int(features_epsg)
-        except Exception:
-            logger.info(
-                f"features_epsg {features_epsg } could not be cast to int for "
-                f"{features_path.name}"
-            )
-            features_epsg = None
-    """
-    features_epsg = gfo.get_layerinfo(features_path).crs.to_epsg()
-
-    # Determine the correct filename for the input features in the correct projection.
-    if features_epsg != target_epsg:
-        features_prepr_path = (
-            features_path.parent / f"{features_path.stem}_{target_epsg:.0f}.gpkg"
-        )
-    else:
-        features_prepr_path = features_path
-
-    # Prepare filename for a "busy file" to ensure proper behaviour in a parallel
-    # processing context
-    features_prepr_path_busy = Path(f"{str(features_prepr_path)}_busy")
-
-    # If the file doesn't exist yet in right projection, read original input file to
-    # reproject/write to new file with correct epsg
-    features_gdf = None
-    if not (features_prepr_path_busy.exists() or features_prepr_path.exists()):
-        # Create lock file in an atomic way, so we are sure we are the only process
-        # working on it. If function returns true, there isn't any other thread/process
-        # already working on it
-        if io_util.create_file_atomic(features_prepr_path_busy):
-            try:
-                # Read (all) original features + remove unnecessary columns...
-                logger.info(f"Read original file {features_path}")
-                start_time = datetime.now()
-                logging.getLogger("fiona.ogrext").setLevel(logging.INFO)
-                features_gdf = gfo.read_file(features_path)
-                logger.info(
-                    f"Read ready, found {len(features_gdf.index)} features, "
-                    f"crs: {features_gdf.crs}, took "
-                    f"{(datetime.now()-start_time).total_seconds()} s"
-                )
-                for column in features_gdf.columns:
-                    if column not in columns_to_retain and column not in [
-                        "geometry",
-                        "x_ref",
-                    ]:
-                        features_gdf.drop(columns=column, inplace=True)
-
-                # Reproject them
-                logger.info(
-                    f"Reproject features from {features_gdf.crs} to epsg {target_epsg}"
-                )
-                features_gdf = features_gdf.to_crs(epsg=target_epsg)
-                logger.info("Reprojected, now sort on x_ref")
-
-                if features_gdf is None:
-                    raise Exception("features_gdf is None")
-                # Order features on x coordinate
-                if "x_ref" not in features_gdf.columns:
-                    features_gdf["x_ref"] = features_gdf.geometry.bounds.minx
-                features_gdf.sort_values(by=["x_ref"], inplace=True)
-                features_gdf.reset_index(inplace=True)
-
-                # Cache the file for future use
-                logger.info(
-                    f"Write {len(features_gdf.index)} reprojected features to "
-                    f"{features_prepr_path}"
-                )
-                gfo.to_file(
-                    features_gdf, features_prepr_path, index=False  # type: ignore
-                )
-                logger.info("Reprojected features written")
-
-            except Exception as ex:
-                # If an exception occurs...
-                message = f"Delete possibly incomplete file: {features_prepr_path}"
-                logger.exception(message)
-                gfo.remove(features_prepr_path)
-                raise Exception(message) from ex
-            finally:
-                # Remove lock file as everything is ready for other processes to use it
-                features_prepr_path_busy.unlink()
-
-            # Now filter the parcels that are in bbox provided
-            if bbox is not None:
-                logger.info(f"bbox provided, so filter features in the bbox of {bbox}")
-                xmin, ymin, xmax, ymax = bbox
-                features_gdf = features_gdf.cx[xmin:xmax, ymin:ymax]
-                logger.info(f"Found {len(features_gdf.index)} features in bbox")
-
-    # If there exists already a file with the features in the right projection, we can
-    # just read the data
-    if features_gdf is None:
-        # If a "busy file" still exists, the file isn't ready yet, but another process
-        # is working on it, so wait till it disappears
-        wait_secs_max = 600
-        wait_start_time = datetime.now()
-        while features_prepr_path_busy.exists():
-            time.sleep(1)
-            wait_secs = (datetime.now() - wait_start_time).total_seconds()
-            if wait_secs > wait_secs_max:
-                raise Exception(
-                    f"Waited {wait_secs} for busy file "
-                    f"{features_prepr_path_busy} and it is still there!"
-                )
-
-        logger.info(f"Read {features_prepr_path}")
-        start_time = datetime.now()
-        features_gdf = gfo.read_file(features_prepr_path, bbox=bbox)
-        logger.info(
-            f"Read ready, found {len(features_gdf.index)} features, crs: "
-            f"{features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s"
-        )
-
-        # Order features on x_ref to (probably) have more clustering of features in
-        # further action...
-        if "x_ref" not in features_gdf.columns:
-            features_gdf["x_ref"] = features_gdf.geometry.bounds.minx
-        features_gdf.sort_values(by=["x_ref"], inplace=True)
-        features_gdf.reset_index(inplace=True)
-
-        # To be sure, remove the columns anyway...
-        for column in features_gdf.columns:
-            if column not in columns_to_retain and column not in ["geometry"]:
-                features_gdf.drop(columns=column, inplace=True)
-
-    # If there is a polygon provided, filter on the polygon (as well)
-    if polygon is not None:
-        logger.info("Filter polygon provided, start filter")
-        polygon_gdf = gpd.GeoDataFrame(
-            geometry=[polygon], crs="EPSG:4326", index=[0]  # type: ignore
-        )
-        logger.debug(f"polygon_gdf: {polygon_gdf}")
-        logger.debug(
-            f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}"
-        )
-        polygon_gdf = polygon_gdf.to_crs(features_gdf.crs)
-        assert polygon_gdf is not None
-        logger.debug(f"polygon_gdf, after reproj: {polygon_gdf}")
-        logger.debug(
-            f"polygon_gdf.crs: {polygon_gdf.crs}, features_gdf.crs: {features_gdf.crs}"
-        )
-        features_gdf = gpd.sjoin(
-            features_gdf, polygon_gdf, how="inner", predicate="within"
-        )
-
-        # Drop column added by sjoin
-        features_gdf.drop(columns="index_right", inplace=True)
-        """
-        spatial_index = gdf.sindex
-        possible_matches_index = list(spatial_index.intersection(polygon.bounds))
-        possible_matches = gdf.iloc[possible_matches_index]
-        precise_matches = possible_matches[possible_matches.intersects(polygon)]
-        """
-        logger.info(f"Filter ready, found {len(features_gdf.index)}")
-
-    # Ready, so return result...
-    logger.debug(
-        f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}"
-    )
-    assert isinstance(features_gdf, gpd.GeoDataFrame)
-    return features_gdf
 
 
 def _zonal_stats_image_gdf(
@@ -947,7 +675,7 @@ def _zonal_stats_image_gdf(
             "cloud_mediumproba",
             "cloud_highproba",
         ]
-        image_data = _image_helper.get_image_data(
+        image_data = _raster_helper.get_image_data(
             image_path,
             bounds=features_total_bounds,
             bands=[cloud_filter_band],
@@ -1021,7 +749,7 @@ def _zonal_stats_image_gdf(
 
         # Get the image data and calculate statistics
         logger.info(f"Read band {band} for bounds {features_total_bounds}")
-        image_data = _image_helper.get_image_data(
+        image_data = _raster_helper.get_image_data(
             image_path, bounds=features_total_bounds, bands=[band], pixel_buffer=1
         )
 
