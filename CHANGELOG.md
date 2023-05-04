@@ -8,7 +8,7 @@
 - Improve performance of zonal_stats_bulk (#38)
 - Use black to comply to pep8 + minor general improvements (#13)
 - Upgrade all dependencies (#12)
-- Add support for pandas 2.0 (#41)
+- Add support for pandas 2.0 (#21)
 
 ### Bugs fixed
 
