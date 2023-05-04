@@ -212,8 +212,10 @@ def prepare_image_path(
     name = f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}.tif"
 
     # If the image metadata file doesn't exist, create it
-    image_path = dir / name
-    imagemeta_path = dir / f"{name}.json"
+    image_dir = dir / imageprofile
+    image_dir.mkdir(parents=True, exist_ok=True)
+    image_path = image_dir / name
+    imagemeta_path = image_dir / f"{name}.json"
     if not imagemeta_path.exists():
         imageprofile_parts = imageprofile.split("-")
         satellite = imageprofile_parts[0].lower()

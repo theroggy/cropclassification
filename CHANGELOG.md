@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- Add support to use openeo for image retrieval/calculation (#36)
 - Improve performance of zonal_stats_bulk (#38)
 - Use black to comply to pep8 + minor general improvements (#13)
 - Upgrade all dependencies (#12)
