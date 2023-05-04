@@ -375,7 +375,9 @@ def calculate_periodic_timeseries(
                         .agg({column: "mean" for column in statistic_columns_dict})
                     )
                     image_data_df = image_data_df.loc[~image_data_df.index.duplicated()]
-                    image_data_df.append(image_data_recalculate_df)
+                    image_data_df = pd.concat(
+                        [image_data_df, image_data_recalculate_df]
+                    )
 
                     # Rename columns so column names stay unique
                     for statistic_column in statistic_columns_dict:

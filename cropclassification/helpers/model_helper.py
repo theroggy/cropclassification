@@ -301,15 +301,22 @@ def save_and_clean_models(
         new_model_path = model_save_dir / new_model_filename
 
         # Append model to the retrieved models...
-        model_info_df = model_info_df.append(
-            {
-                "path": new_model_path,
-                "filename": new_model_filename,
-                "acc_combined": new_model_acc_combined,
-                "acc_train": new_model_acc_train,
-                "acc_val": new_model_acc_val,
-                "epoch": new_model_epoch,
-            },
+        model_info_df = pd.concat(
+            [
+                model_info_df,
+                pd.DataFrame(
+                    [
+                        {
+                            "path": new_model_path,
+                            "filename": new_model_filename,
+                            "acc_combined": new_model_acc_combined,
+                            "acc_train": new_model_acc_train,
+                            "acc_val": new_model_acc_val,
+                            "epoch": new_model_epoch,
+                        }
+                    ]
+                ),
+            ],
             ignore_index=True,
         )
 
