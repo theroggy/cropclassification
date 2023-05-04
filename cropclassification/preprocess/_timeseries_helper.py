@@ -123,7 +123,7 @@ def prepare_input(
     # Export buffered geometries that result in empty geometries
     logger.info("Export parcels that are empty after buffer")
     parceldata_buf_empty_df = parceldata_buf_gdf.loc[
-        parceldata_buf_gdf[conf.columns["geom"]].is_empty is True
+        parceldata_buf_gdf[conf.columns["geom"]].is_empty
     ]
     if len(parceldata_buf_empty_df.index) > 0:
         parceldata_buf_empty_df.drop(conf.columns["geom"], axis=1, inplace=True)
@@ -134,7 +134,7 @@ def prepare_input(
 
     # Export parcels that don't result in a (multi)polygon
     parceldata_buf_notempty_gdf = parceldata_buf_gdf.loc[
-        parceldata_buf_gdf[conf.columns["geom"]].is_empty is False
+        parceldata_buf_gdf[conf.columns["geom"]].is_empty
     ]
     parceldata_buf_nopoly_gdf = parceldata_buf_notempty_gdf.loc[
         ~parceldata_buf_notempty_gdf[conf.columns["geom"]].geom_type.isin(
