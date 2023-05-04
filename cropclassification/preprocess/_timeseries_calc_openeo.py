@@ -55,13 +55,12 @@ def calculate_periodic_timeseries(
     if temp_dir == "None":
         temp_dir = Path(tempfile.gettempdir())
     zonal_stats_bulk.zonal_stats(
-        features_path=input_parcel_path,
+        vector_path=input_parcel_path,
         id_column=conf.columns["id"],
-        images_bands=images_bands,
+        rasters_bands=images_bands,
         output_dir=dest_data_dir,
-        temp_dir=temp_dir,
-        log_dir=conf.dirs.getpath("log_dir"),
-        log_level=conf.general.get("log_level"),
+        stats=["count", "mean", "median", "std", "min", "max"],
+        engine="pyqgis",
     )
 
     """

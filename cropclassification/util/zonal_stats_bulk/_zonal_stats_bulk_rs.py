@@ -14,7 +14,7 @@ import shutil
 import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
-from typing import List, Optional, Tuple, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 from osgeo import gdal
 
@@ -37,13 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 def zonal_stats(
-    features_path: Path,
+    vector_path: Path,
     id_column: str,
-    images_bands: List[Tuple[Path, List[str]]],
+    rasters_bands: List[Tuple[Path, List[str]]],
     output_dir: Path,
-    temp_dir: Path,
-    log_dir: Path,
-    log_level: Union[str, int],
+    stats: Literal["count", "mean", "median", "std", "min", "max"],
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     force: bool = False,
@@ -72,15 +70,16 @@ def zonal_stats(
     # after calculation together with the processing logic
 
     # Some checks on the input parameters
-    nb_todo = len(images_bands)
+    nb_todo = len(rasters_bands)
     if nb_todo == 0:
         logger.info("No image paths... so nothing to do, so return")
         return
 
     # General init
     output_dir.mkdir(parents=True, exist_ok=True)
-    log_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = io_util.create_tempdir("calc_stats_per_image", parent_dir=temp_dir)
+    temp_dir = io_util.create_tempdir("zonal_stats_rs")
+    log_dir = temp_dir
+    log_level = logger.level
 
     # Create process pool for parallelisation...
     nb_parallel_max = multiprocessing.cpu_count()
@@ -106,13 +105,13 @@ def zonal_stats(
             # If not all images aren't prepared for processing yet, and there
             # aren't too many busy yet, prepare the next one
             if (
-                image_idx < len(images_bands)
+                image_idx < len(rasters_bands)
                 and len(_filter_on_status(image_dict, "IMAGE_PREPARE_CALC_BUSY"))
                 < nb_parallel_max
             ):
                 # Not too many busy preparing, so get next image_path to start
                 # prepare on
-                image_path, bands = images_bands[image_idx]
+                image_path, bands = rasters_bands[image_idx]
                 image_path_str = str(image_path)
                 image_idx += 1
 
@@ -125,7 +124,7 @@ def zonal_stats(
                 elif image_info.imagetype.lower() == "s1-grd-sigma0-desc":
                     orbit = "DESCENDING"
                 output_base_path = _general_helper._format_output_path(
-                    features_path,
+                    vector_path,
                     image_path,
                     output_dir,
                     orbit,
@@ -141,7 +140,7 @@ def zonal_stats(
                 for band in bands:
                     # Prepare the output paths...
                     output_band_path = _general_helper._format_output_path(
-                        features_path,
+                        vector_path,
                         image_path,
                         output_dir,
                         orbit,
@@ -179,16 +178,16 @@ def zonal_stats(
                 logger.info(f"Start calculation for image {output_base_path}")
                 future = pool.submit(
                     _prepare_calc,
-                    features_path,
-                    id_column,
-                    image_path,
-                    temp_dir,
-                    log_dir,
-                    log_level,
-                    nb_parallel_max,
+                    features_path=vector_path,
+                    id_column=id_column,
+                    image_path=image_path,
+                    temp_dir=temp_dir,
+                    log_dir=log_dir,
+                    log_level=log_level,
+                    nb_parallel_max=nb_parallel_max,
                 )
                 image_dict[image_path_str] = {
-                    "features_path": features_path,
+                    "features_path": vector_path,
                     "image_path": image_path,
                     "bands": bands,
                     "bands_todo": bands_todo,
@@ -264,15 +263,15 @@ def zonal_stats(
                             start_time_batch = datetime.now()
                             future = pool.submit(
                                 _zonal_stats_image_gdf,
-                                features_batch["path"],
-                                id_column,
-                                image["image_prepared_path"],
-                                band,
-                                image["output_base_busy_path"],
-                                log_dir,
-                                log_level,
-                                start_time_batch,
-                                cloud_filter_band,
+                                features=features_batch["path"],
+                                id_column=id_column,
+                                image_path=image["image_prepared_path"],
+                                band=band,
+                                output_base_path=image["output_base_busy_path"],
+                                log_dir=log_dir,
+                                log_level=log_level,
+                                future_start_time=start_time_batch,
+                                cloud_filter_band=cloud_filter_band,
                             )
                             band_id = band if isinstance(band, str) else "-".join(band)
                             batch_id = f"{features_batch['id']}_{band_id}"
@@ -393,9 +392,9 @@ def zonal_stats(
                 progress_msg = _general_helper._format_progress_message(
                     nb_todo,
                     nb_done_total,
-                    nb_done_latestbatch,
                     start_time,
-                    image["calc_starttime"],
+                    nb_done_latestbatch,
+                    start_time_latestbatch=image["calc_starttime"],
                 )
                 logger.info(progress_msg)
 
@@ -406,7 +405,7 @@ def zonal_stats(
             #     - OR if all (possible) processing is started + everything is done
             #       (= status IMAGE_CALC_DONE)
             if len(image_dict) == 0 or (
-                image_idx == len(images_bands)
+                image_idx == len(rasters_bands)
                 and len(image_dict)
                 == len(_filter_on_status(image_dict, "IMAGE_CALC_DONE"))
             ):
@@ -463,7 +462,7 @@ def _prepare_calc(
     image_path: Path,
     temp_dir: Path,
     log_dir: Path,
-    log_level: Union[str, int],
+    log_level: int,
     nb_parallel_max: int = 16,
 ) -> dict:
     """
@@ -476,10 +475,8 @@ def _prepare_calc(
     # When running in parallel processes, the logging needs to be write to seperate
     # files + no console logging
     if len(logging.getLogger().handlers) == 0:
-        log_path = (
-            log_dir
-            / f"{datetime.now():%Y-%m-%d_%H-%M-%S}_prepare_calc_{os.getpid()}.log"
-        )
+        log_name = f"{datetime.now():%Y-%m-%d_%H-%M-%S}_prepare_calc_{os.getpid()}.log"
+        log_path = log_dir / log_name
         filehandler = logging.FileHandler(filename=log_path)
         filehandler.setLevel(log_level)
         log_format = "%(asctime)s|%(levelname)s|%(name)s|%(funcName)s|%(message)s"

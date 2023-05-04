@@ -27,9 +27,9 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
         start_time = datetime.now()
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         zonal_stats_bulk.zonal_stats(
-            features_path=input_features_path,
+            vector_path=input_features_path,
             id_column="UID",
-            images_bands=images_bands,
+            rasters_bands=images_bands,
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",
@@ -56,9 +56,9 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
         start_time = datetime.now()
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         zonal_stats_bulk.zonal_stats(
-            features_path=input_features_path,
+            vector_path=input_features_path,
             id_column="UID",
-            images_bands=images_bands,
+            rasters_bands=images_bands,
             output_dir=tmp_dir,
             temp_dir=tmp_dir / "tmp",
             log_dir=tmp_dir / "log",
