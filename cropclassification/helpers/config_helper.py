@@ -182,7 +182,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         name="s1-grd-sigma0-asc",
         satellite="s1",
         collection="S1_GRD_SIGMA0_ASCENDING",
-        bands=["VV", "VH", "angle"],
+        bands=["VV", "VH"],
         process_options={
             "time_dimension_reducer": "min",
         },
@@ -191,7 +191,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         name="s1-grd-sigma0-desc",
         satellite="s1",
         collection="S1_GRD_SIGMA0_DESCENDING",
-        bands=["VV", "VH", "angle"],
+        bands=["VV", "VH"],
         process_options={
             "time_dimension_reducer": "min",
         },
