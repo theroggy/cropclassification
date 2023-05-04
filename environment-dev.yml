@@ -17,6 +17,7 @@ dependencies:
   - psutil
   - pyproj
   - scikit-learn
+  - qgis
   - rasterio
   - rasterstats
   # testing
@@ -27,4 +28,5 @@ dependencies:
   - flake8
   - pre-commit
   - pip:
-    - tensorflow-cpu
+    # Loading the classification model gives an error with 2.12?
+    - tensorflow <2.12

@@ -175,9 +175,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     try:
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         zonal_stats_bulk.zonal_stats(
-            features_path=input_features_path,
+            vector_path=input_features_path,
             id_column=conf.columns["id"],
-            images_bands=images_bands,
+            rasters_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
@@ -248,9 +248,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         bands = conf.timeseries.getlist("s2bands")
         images_bands = [(path, bands) for path in input_image_paths]
         zonal_stats_bulk.zonal_stats(
-            features_path=input_features_path,
+            vector_path=input_features_path,
             id_column=conf.columns["id"],
-            images_bands=images_bands,
+            rasters_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
@@ -292,9 +292,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     try:
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         zonal_stats_bulk.zonal_stats(
-            features_path=input_features_path,
+            vector_path=input_features_path,
             id_column=conf.columns["id"],
-            images_bands=images_bands,
+            rasters_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,

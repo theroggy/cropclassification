@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ def _format_output_path(
     image_path: Path,
     output_dir: Path,
     orbit_properties_pass: Optional[str],
-    band: Optional[str],
+    band: Optional[Union[str, int]],
 ) -> Path:
     """
     Prepare the output path.
@@ -40,9 +40,9 @@ def _format_output_path(
 def _format_progress_message(
     nb_todo: int,
     nb_done_total: int,
-    nb_done_latestbatch: int,
     start_time: datetime,
-    start_time_latestbatch: datetime,
+    nb_done_latestbatch: Optional[int] = None,
+    start_time_latestbatch: Optional[datetime] = None,
 ) -> str:
     """
     Returns a progress message based on the input.
@@ -55,9 +55,11 @@ def _format_progress_message(
         start_time_latestbatch: datetime the latest batch started
     """
     time_passed_s = (datetime.now() - start_time).total_seconds()
-    time_passed_latestbatch_s = (
-        datetime.now() - start_time_latestbatch
-    ).total_seconds()
+    time_passed_latestbatch_s = None
+    if start_time_latestbatch is not None:
+        time_passed_latestbatch_s = (
+            datetime.now() - start_time_latestbatch
+        ).total_seconds()
 
     # Calculate the overall progress
     large_number = 9999999999
@@ -68,17 +70,20 @@ def _format_progress_message(
     hours_to_go = (int)((nb_todo - nb_done_total) / nb_per_hour)
     min_to_go = (int)((((nb_todo - nb_done_total) / nb_per_hour) % 1) * 60)
 
-    # Calculate the speed of the latest batch
-    if time_passed_latestbatch_s > 0:
+    # Format message
+    message = (
+        f"{hours_to_go}:{min_to_go} left for {nb_todo-nb_done_total} todo at "
+        f"{nb_per_hour:0.0f}/h"
+    )
+    # Add speed of the latest batch to message if appropriate
+    if (
+        time_passed_latestbatch_s is not None
+        and nb_done_latestbatch is not None
+        and time_passed_latestbatch_s > 0
+    ):
         nb_per_hour_latestbatch = (
             nb_done_latestbatch / time_passed_latestbatch_s
         ) * 3600
-    else:
-        nb_per_hour_latestbatch = large_number
+        message = f"{message} ({nb_per_hour_latestbatch:0.0f}/h last batch)"
 
-    # Return formatted message
-    message = (
-        f"{hours_to_go}:{min_to_go} left for {nb_todo-nb_done_total} todo at "
-        f"{nb_per_hour:0.0f}/h ({nb_per_hour_latestbatch:0.0f}/h last batch)"
-    )
     return message
