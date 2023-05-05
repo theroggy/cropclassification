@@ -124,7 +124,7 @@ def prepare_input(
     logger.info("Export parcels that are empty after buffer")
     parceldata_buf_empty_df = parceldata_buf_gdf.loc[
         parceldata_buf_gdf[conf.columns["geom"]].is_empty
-    ]
+    ].copy()
     if len(parceldata_buf_empty_df.index) > 0:
         parceldata_buf_empty_df.drop(conf.columns["geom"], axis=1, inplace=True)
         temp_empty_path = (
@@ -143,11 +143,13 @@ def prepare_input(
     ]
     if len(parceldata_buf_nopoly_gdf.index) > 0:
         logger.info("Export parcels that are no (multi)polygons after buffer")
-        parceldata_buf_nopoly_gdf.drop(conf.columns["geom"], axis=1, inplace=True)
+        parceldata_buf_nopoly_df = parceldata_buf_nopoly_gdf.drop(
+            conf.columns["geom"], axis=1
+        )
         temp_nopoly_path = (
             temp_output_dir / f"{output_imagedata_parcel_input_path.stem}_nopoly.sqlite"
         )
-        gfo.to_file(parceldata_buf_nopoly_gdf, temp_nopoly_path)
+        pdh.to_file(parceldata_buf_nopoly_df, temp_nopoly_path)
 
     # Export parcels that are (multi)polygons after buffering
     parceldata_buf_poly_gdf = parceldata_buf_notempty_gdf.loc[
@@ -162,7 +164,9 @@ def prepare_input(
         "Export parcels that are (multi)polygons after buffer to"
         f"{output_imagedata_parcel_input_path}"
     )
-    gfo.to_file(parceldata_buf_poly_gdf, output_imagedata_parcel_input_path)
+    parceldata_buf_poly_gdf.to_file(
+        output_imagedata_parcel_input_path, engine="pyogrio"
+    )
     logger.info(parceldata_buf_poly_gdf)
 
     return True
