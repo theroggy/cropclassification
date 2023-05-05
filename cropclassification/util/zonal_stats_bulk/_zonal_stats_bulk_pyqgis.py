@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 from typing import List, Literal, Tuple, Union
@@ -18,7 +19,6 @@ import pandas as pd
 import qgis.core  # type: ignore
 import qgis.analysis  # type: ignore
 
-from cropclassification.util import io_util
 from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper as general_helper
 from . import _raster_helper as raster_helper
@@ -72,7 +72,9 @@ def zonal_stats(
 
     # General init
     output_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = io_util.create_tempdir("zonal_stats_pyqgis")
+    tmp_dir = Path(tempfile.gettempdir()) / "zonal_stats_bulk_pyqgis"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(dir=tmp_dir))
 
     start_time = datetime.now()
     nb_todo = 0
@@ -100,7 +102,7 @@ def zonal_stats(
                 orbit,
                 band=None,
             )
-            output_base_busy_path = temp_dir / f"BUSY_{output_base_path.name}"
+            output_base_busy_path = tmp_dir / f"BUSY_{output_base_path.name}"
 
             # Check for which bands there is a valid output file already
             if bands is None:
@@ -117,7 +119,7 @@ def zonal_stats(
                     orbit,
                     band,
                 )
-                output_band_busy_path = temp_dir / f"BUSY_{output_band_path.name}"
+                output_band_busy_path = tmp_dir / f"BUSY_{output_band_path.name}"
 
                 # If a busy output file exists, remove it, otherwise we can get
                 # double data in it...
@@ -148,6 +150,7 @@ def zonal_stats(
                     raster_path=raster_path,
                     band=band,
                     stats=stats,
+                    tmp_dir=tmp_dir,
                     columns=columns,
                     output_band_path=output_band_path,
                 )
@@ -179,14 +182,16 @@ def zonal_stats(
             logger.info(progress_msg)
     finally:
         pool.shutdown()
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def zonal_stats_band(
     vector_path,
     raster_path: Path,
     band: str,
+    tmp_dir: Path,
     stats: List[Statistic],
-    columns: List[str] = [],
+    columns: List[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Init
     stats_mask = 0
@@ -197,7 +202,6 @@ def zonal_stats_band(
     image_info = raster_helper.get_image_info(raster_path)
 
     # Reproject the vector data
-    tmp_dir = Path(tempfile.gettempdir()) / "zonal_stats_bulk"
     tmp_dir.mkdir(exist_ok=True, parents=True)
     vector_proj_path = vector_helper.reproject_synced(
         path=vector_path,
@@ -260,6 +264,7 @@ def zonal_stats_band_tofile(
     raster_path: Path,
     output_band_path: Path,
     band: str,
+    tmp_dir: Path,
     stats: List[Statistic],
     columns: List[str],
     force: bool = False,
@@ -275,6 +280,7 @@ def zonal_stats_band_tofile(
         raster_path=raster_path,
         band=band,
         stats=stats,
+        tmp_dir=tmp_dir,
         columns=columns,
     )
     # Remove rows with empty data
