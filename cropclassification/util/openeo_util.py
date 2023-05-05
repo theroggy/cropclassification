@@ -53,6 +53,9 @@ def calc_periodic_mosaic(
     raise_errors: bool = True,
     force: bool = False,
 ) -> List[Tuple[Path, ImageProfile]]:
+    if end_date > datetime.now():
+        logger.warning(f"end_date is in the future: {end_date}")
+
     # Validate time_dimension_reducer
     for imageprofile in images_to_get:
         reducer = imageprofile.process_options.get("time_dimension_reducer", None)
@@ -135,12 +138,19 @@ def calc_periodic_mosaic(
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
         # Period in openeo is inclusive for startdate and excludes enddate
         period_end_date = period_start_date + timedelta(days=days_per_period)
+        if period_end_date > datetime.now():
+            logger.info(
+                f"skip period ({period_start_date}, {period_end_date}): it is in the "
+                "future!"
+            )
+            break
+
         for imageprofile in images_to_get:
             # Prepare path. Remark: in the image path the end_date should be inclusive.
             end_date_incl = period_end_date
             if days_per_period > 1:
                 end_date_incl = period_end_date - timedelta(days=1)
-            image_path = prepare_image_path(
+            image_path, image_relative_path = prepare_image_path(
                 imageprofile.name,
                 start_date=period_start_date,
                 end_date=end_date_incl,
@@ -160,7 +170,7 @@ def calc_periodic_mosaic(
                     end_date=period_end_date,
                     bands=imageprofile.bands,
                     time_dimension_reducer=reducer,
-                    output_name=image_path.name,
+                    output_name=image_relative_path,
                     job_options=job_options,
                     process_options=process_options,
                 ).start_job()
@@ -186,7 +196,7 @@ def prepare_image_path(
     end_date: datetime,
     bands: List[str],
     dir: Path,
-) -> Path:
+) -> Tuple[Path, str]:
     """
     Returns an image_path + saves a metadata file for the image as f"{image_path}.json".
 
@@ -201,7 +211,7 @@ def prepare_image_path(
         ValueError: _description_
 
     Returns:
-        Path: _description_
+        Tuple[Path, str]: the full path + the relative path
     """
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
@@ -237,7 +247,7 @@ def prepare_image_path(
         with open(imagemeta_path, "w") as outfile:
             outfile.write(json.dumps(metadata, indent=4))
 
-    return image_path
+    return (image_path, f"{imageprofile}/{name}")
 
 
 def create_mosaic_job(
