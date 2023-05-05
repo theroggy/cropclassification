@@ -111,11 +111,11 @@ def prepare_input(
         )
         return False
 
-    logger.info("Apply buffer on parcel")
+    # Apply buffer
     parceldata_buf_gdf = parceldata_gdf.copy()
-
     # resolution = number of segments per circle
     buffer_size = -conf.marker.getint("buffer")
+    logger.info(f"Apply buffer of {buffer_size} on parcel")
     parceldata_buf_gdf[conf.columns["geom"]] = parceldata_buf_gdf[
         conf.columns["geom"]
     ].buffer(buffer_size, resolution=5)
@@ -132,9 +132,9 @@ def prepare_input(
         )
         pdh.to_file(parceldata_buf_empty_df, temp_empty_path)
 
-    # Export parcels that don't result in a (multi)polygon
+    # Export parcels that don't result in an empty geometry
     parceldata_buf_notempty_gdf = parceldata_buf_gdf.loc[
-        parceldata_buf_gdf[conf.columns["geom"]].is_empty
+        ~parceldata_buf_gdf[conf.columns["geom"]].is_empty
     ]
     parceldata_buf_nopoly_gdf = parceldata_buf_notempty_gdf.loc[
         ~parceldata_buf_notempty_gdf[conf.columns["geom"]].geom_type.isin(
