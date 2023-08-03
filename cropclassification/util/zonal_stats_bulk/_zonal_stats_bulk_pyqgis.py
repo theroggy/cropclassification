@@ -218,9 +218,7 @@ def zonal_stats_band(
     #   - improved performance
     #   - QgsZonalStatistics actually adds the data to the input file, so copy needed
     vector = qgis.core.QgsVectorLayer(str(vector_proj_path), layer, "ogr")
-    vector_mem = vector.materialize(
-        qgis.core.QgsFeatureRequest().setFilterFids(vector.allFeatureIds())
-    )
+    vector_mem = vector.materialize(qgis.core.QgsFeatureRequest())
     del vector
 
     # Calculates zonal stats with raster
