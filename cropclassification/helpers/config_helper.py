@@ -166,7 +166,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B02", "B03", "B04", "B08", "B11", "B12"],
         # Use the "min" reducer filters out "lightly clouded areas"
-        process_options={"time_dimension_reducer": "min", "cloud_filter_band": "SCL"},
+        process_options={"time_dimension_reducer": "median", "cloud_filter_band": "SCL"},
     )
     profiles["s2-ndvi"] = ImageProfile(
         name="s2-ndvi",
@@ -184,7 +184,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="S1_GRD_SIGMA0_ASCENDING",
         bands=["VV", "VH"],
         process_options={
-            "time_dimension_reducer": "min",
+            "time_dimension_reducer": "median",
         },
     )
     profiles["s1-grd-sigma0-desc"] = ImageProfile(
@@ -193,7 +193,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="S1_GRD_SIGMA0_DESCENDING",
         bands=["VV", "VH"],
         process_options={
-            "time_dimension_reducer": "min",
+            "time_dimension_reducer": "median",
         },
     )
     profiles["s1-coh"] = ImageProfile(
@@ -202,7 +202,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="TERRASCOPE_S1_SLC_COHERENCE_V1",
         bands=["VV", "VH"],
         process_options={
-            "time_dimension_reducer": "min",
+            "time_dimension_reducer": "median",
         },
     )
 
