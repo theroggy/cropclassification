@@ -226,9 +226,18 @@ def collect_and_prepare_timeseries_data(
         if image_profile.startswith("s2"):
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column with s2 data: scale it by dividing by 10.000: {column}"
+                    f"Column with s2 data: divide by 10.000, clip to upper=1: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 10000
+                data_read_df[column] = data_read_df[column].clip(upper=1)
+        
+        # If S1, rescale data
+        if image_profile.startswith("s1-grd"):
+            for column in data_read_df.columns:
+                logger.info(
+                    f"Column with s1-grd data: clip to upper=1: {column}"
+                )
+                data_read_df[column] = data_read_df[column].clip(upper=1)
 
         # If s1 coherence, rescale data
         if image_profile in ["s1coh", "s1-coh"]:
@@ -259,6 +268,14 @@ def collect_and_prepare_timeseries_data(
 
         # Now remove them from result
         result_df = result_df[result_df.isnull().sum(axis=1) <= max_number_null]
+
+    # Check if there are values not in the range -1 till 0
+    gt1_df = result_df[result_df > 1].dropna()
+    ltm1_df = result_df[result_df < -1].dropna()
+    if gt1_df.size > 0:
+        logger.warning(f"result_df containes values > 1: {gt1_df}")
+    if ltm1_df.size > 0:
+        logger.warning(f"result_df containes values < -1: {ltm1_df}")
 
     # For rows with some null values, set them to 0
     # TODO: first rough test of using interpolation doesn't give a difference, maybe
