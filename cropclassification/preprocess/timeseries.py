@@ -153,6 +153,23 @@ def collect_and_prepare_timeseries_data(
         if band not in sensordata_to_use[image_profile].bands:
             logger.debug(f"SKIP: file doesn't match the bands asked: {curr_path}")
             continue
+        time_dimension_reducer_asked = sensordata_to_use[
+            image_profile
+        ].imageprofile.process_options.get("time_dimension_reducer")
+        if time_dimension_reducer_asked is not None:
+            time_dimension_reducer = fileinfo.get("time_dimension_reducer")
+            if time_dimension_reducer is None:
+                logger.warning(
+                    f"SKIP: time_dimension_reducer {time_dimension_reducer_asked} "
+                    f"asked, but not known for file: {curr_path}"
+                )
+                continue
+            elif time_dimension_reducer != time_dimension_reducer_asked:
+                logger.debug(
+                    f"SKIP: file doesn't match the time reducer asked: {curr_path}"
+                )
+                continue
+
         # An empty file signifies that there wasn't any valable data for that
         # period/sensor/...
         if os.path.getsize(curr_path) == 0:
@@ -200,7 +217,8 @@ def collect_and_prepare_timeseries_data(
                 # Drop column if it doesn't end with something in
                 # parcel_data_aggregations_to_use
                 logger.debug(
-                    f"Drop column as it's column aggregation isn't to be used: {column}"
+                    "Drop column as it's column aggregation isn't to be used: "
+                    f"{curr_path.stem}.{column}"
                 )
                 data_read_df.drop(column, axis=1, inplace=True)
                 continue
@@ -214,7 +232,7 @@ def collect_and_prepare_timeseries_data(
                 logger.warn(
                     f"Drop column as it contains only {valid_input_data_pct:.2f}% real "
                     f"data compared to input (= not nan) which is "
-                    f"< {min_parcels_with_data_pct}%!: {column}"
+                    f"< {min_parcels_with_data_pct}%!: {curr_path.stem}.{column}"
                 )
                 data_read_df.drop(column, axis=1, inplace=True)
 
@@ -230,13 +248,11 @@ def collect_and_prepare_timeseries_data(
                 )
                 data_read_df[column] = data_read_df[column] / 10000
                 data_read_df[column] = data_read_df[column].clip(upper=1)
-        
-        # If S1, rescale data
+
+        # If s1 grd, rescale data
         if image_profile.startswith("s1-grd"):
             for column in data_read_df.columns:
-                logger.info(
-                    f"Column with s1-grd data: clip to upper=1: {column}"
-                )
+                logger.info(f"Column with s1-grd data: clip to upper=1: {column}")
                 data_read_df[column] = data_read_df[column].clip(upper=1)
 
         # If s1 coherence, rescale data
@@ -269,7 +285,7 @@ def collect_and_prepare_timeseries_data(
         # Now remove them from result
         result_df = result_df[result_df.isnull().sum(axis=1) <= max_number_null]
 
-    # Check if there are values not in the range -1 till 0
+    # Check if there are values not in the range -1 till +1
     gt1_df = result_df[result_df > 1].dropna()
     ltm1_df = result_df[result_df < -1].dropna()
     if gt1_df.size > 0:
