@@ -212,15 +212,14 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
 def pformat_config():
     message = f"Config files used: {pprint.pformat(config_paths_used)} \n"
     message += "Config info listing:\n"
-    message += pprint.pformat(
-        {section: dict(config[section]) for section in config.sections()}
-    )
+    message += pprint.pformat(as_dict())
+
     return message
 
 
 def as_dict():
     """
-    Converts a ConfigParser object into a dictionary.
+    Converts the config objects into a dictionary.
 
     The resulting dictionary has sections as keys which point to a dict of the
     sections options as key => value pairs.
@@ -230,4 +229,10 @@ def as_dict():
         the_dict[section] = {}
         for key, val in config.items(section):
             the_dict[section][key] = val
+    the_dict["image_profiles"] = {}
+    for image_profile in image_profiles:
+        the_dict["image_profiles"][image_profile] = image_profiles[
+            image_profile
+        ].__dict__
+
     return the_dict
