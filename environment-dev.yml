@@ -1,0 +1,32 @@
+name: cropclass-dev
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  # required
+  - fiona
+  - geofileops
+  - geopandas>=0.11
+  - h5py
+  - numpy
+  # Openeo >=0.14 +- doesn't work on windows.
+  # More info here: https://github.com/Open-EO/openeo-python-client/issues/387
+  - openeo
+  - pandas
+  - psutil
+  - pyproj
+  - scikit-learn
+  - qgis
+  - rasterio
+  - rasterstats
+  # testing
+  - pytest
+  - pytest-cov
+  # linting
+  - black
+  - flake8
+  - pre-commit
+  - pip:
+    # Loading the classification model gives an error with 2.12?
+    - tensorflow <2.12

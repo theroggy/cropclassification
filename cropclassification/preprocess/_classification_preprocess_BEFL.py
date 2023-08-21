@@ -37,8 +37,8 @@ def prepare_input(
     output_dir: Path,
 ):
     """
-    This function creates a file that is compliant with the assumptions used by the
-    rest of the classification functionality.
+    This function creates a file that is compliant with the assumptions used by the rest
+    of the classification functionality.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -422,7 +422,7 @@ def prepare_input_cropgroup(
         if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
             logger.info(
                 f"Class <{row[column_output_class]}> only contains {row['count']} "
-                f"elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
             )
             parceldata_df.loc[
                 parceldata_df[column_output_class] == row[column_output_class],
@@ -576,8 +576,8 @@ def prepare_input_fabaceae(
     #     temporary greenhouses but aren't correctly applied
     # 'MON_BRAAK': very low classification rate (< 1%), spread over a lot of classes,
     #     but most popular are MON_BOOM, MON_GRASSEN, MON_FRUIT
-    # 'MON_KLAVER': log classification rate (25%), spread over quite some classes,
-    #     but MON GRASSES has 20% as well.
+    # 'MON_KLAVER': log classification rate (25%), spread over quite some classes, but
+    #     MON GRASSES has 20% as well.
     # 'MON_MENGSEL': 25% correct classifications: rest spread over many other classes.
     #     Too heterogenous in group?
     # 'MON_POEL': 0% correct classifications: most are classified as MON_CONTAINER,

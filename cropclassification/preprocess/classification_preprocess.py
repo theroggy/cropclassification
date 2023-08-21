@@ -10,7 +10,7 @@ import shutil
 
 import pandas as pd
 
-import cropclassification.preprocess.classification_preprocess_BEFL as befl
+import cropclassification.preprocess._classification_preprocess_BEFL as befl
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 def prepare_input(
     input_parcel_path: Path,
     input_parcel_filetype: str,
-    input_parcel_pixcount_path: Path,
+    timeseries_periodic_dir: Path,
+    base_filename: str,
+    data_ext: str,
     classtype_to_prepare: str,
     classes_refe_path: Path,
     output_parcel_path: Path,
@@ -41,7 +43,7 @@ def prepare_input(
     """
 
     # If force == False Check and the output file exists already, stop.
-    if force is False and os.path.exists(output_parcel_path) is True:
+    if not force and output_parcel_path.exists():
         logger.warning(
             f"prepare_input: output file exists + force is False: {output_parcel_path}"
         )
@@ -69,9 +71,20 @@ def prepare_input(
         raise Exception(message)
 
     # Load pixcount data and join it
-    logger.info(f"Read pixcount file {input_parcel_pixcount_path}")
-    df_pixcount = pdh.read_file(input_parcel_pixcount_path)
-    logger.debug(f"Read pixcount file ready, shape: {df_pixcount.shape}")
+    parcel_pixcount_path = (
+        timeseries_periodic_dir / f"{base_filename}_pixcount{data_ext}"
+    )
+    if parcel_pixcount_path.exists():
+        logger.info(f"Read pixcount file {parcel_pixcount_path}")
+        df_pixcount = pdh.read_file(parcel_pixcount_path)
+        logger.debug(f"Read pixcount file ready, shape: {df_pixcount.shape}")
+    else:
+        parcel_pixcount_path = next(timeseries_periodic_dir.glob("*s2*.sqlite"))
+        df_pixcount = pdh.read_file(parcel_pixcount_path)
+        df_pixcount = df_pixcount[[conf.columns["id"], "count"]].rename(
+            columns={"count": conf.columns["pixcount_s1s2"]}
+        )
+
     if df_pixcount.index.name != conf.columns["id"]:
         df_pixcount.set_index(conf.columns["id"], inplace=True)
 
@@ -247,18 +260,24 @@ def create_train_test_sample(
             .apply(pd.DataFrame.sample, upper_limit)
         )
         # Middle classes use the number as they are
-        train_df = train_df.append(
-            train_base_df.groupby(class_balancing_column)
-            .filter(lambda x: len(x) < upper_limit)
-            .groupby(class_balancing_column)
-            .filter(lambda x: len(x) >= lower_limit)  # type: ignore
+        train_df = pd.concat(
+            [
+                train_df,
+                train_base_df.groupby(class_balancing_column)
+                .filter(lambda x: len(x) < upper_limit)
+                .groupby(class_balancing_column)
+                .filter(lambda x: len(x) >= lower_limit),
+            ]
         )
         # For smaller classes, oversample...
-        train_df = train_df.append(
-            train_base_df.groupby(class_balancing_column)
-            .filter(lambda x: len(x) < lower_limit)
-            .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, lower_limit, replace=True)  # type: ignore
+        train_df = pd.concat(
+            [
+                train_df,
+                train_base_df.groupby(class_balancing_column)
+                .filter(lambda x: len(x) < lower_limit)
+                .groupby(class_balancing_column, group_keys=False)
+                .apply(pd.DataFrame.sample, lower_limit, replace=True),
+            ]
         )
 
     elif balancing_strategy == "BALANCING_STRATEGY_MEDIUM2":
@@ -281,8 +300,8 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_capped_df) > 0:
-            train_df = train_df.append(
-                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit1)
+            train_df = pd.concat(
+                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit1)]
             )
 
         # Cap 2
@@ -300,8 +319,8 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_capped_df) > 0:
-            train_df = train_df.append(
-                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit2)
+            train_df = pd.concat(
+                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit2)]
             )
 
         # Cap 3
@@ -319,8 +338,8 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_capped_df) > 0:
-            train_df = train_df.append(
-                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit3)
+            train_df = pd.concat(
+                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit3)]
             )
 
         # Cap 4
@@ -338,8 +357,8 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_capped_df) > 0:
-            train_df = train_df.append(
-                train_capped_df.apply(pd.DataFrame.sample, cap_train_limit4)
+            train_df = pd.concat(
+                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit4)]
             )
 
         # Middle classes use the number as they are, smaller classes are oversampled
@@ -348,11 +367,14 @@ def create_train_test_sample(
             f"For classes between {cap_count_limit4} and {oversample_count}, just use "
             "all samples"
         )
-        train_df = train_df.append(
-            train_base_df.groupby(class_balancing_column)
-            .filter(lambda x: len(x) < cap_count_limit4)
-            .groupby(class_balancing_column)
-            .filter(lambda x: len(x) >= oversample_count)
+        train_df = pd.concat(
+            [
+                train_df,
+                train_base_df.groupby(class_balancing_column)
+                .filter(lambda x: len(x) < cap_count_limit4)
+                .groupby(class_balancing_column)
+                .filter(lambda x: len(x) >= oversample_count),
+            ]
         )
         # For smaller classes, oversample...
         logger.info(
@@ -365,10 +387,13 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_capped_df) > 0:
-            train_df = train_df.append(
-                train_capped_df.apply(
-                    pd.DataFrame.sample, oversample_count, replace=True
-                )
+            train_df = pd.concat(
+                [
+                    train_df,
+                    train_capped_df.apply(
+                        pd.DataFrame.sample, oversample_count, replace=True
+                    ),
+                ]
             )
 
     elif balancing_strategy == "BALANCING_STRATEGY_PROPORTIONAL_GROUPS":
@@ -405,10 +430,11 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_limit2_df) > 0:
-            train_df = train_df.append(
-                train_limit2_df.apply(
-                    pd.DataFrame.sample, upper_train_limit2  # type: ignore
-                )
+            train_df = pd.concat(
+                [
+                    train_df,
+                    train_limit2_df.apply(pd.DataFrame.sample, upper_train_limit2),
+                ]
             )
         upper_count_limit3 = 20000
         upper_train_limit3 = 10000
@@ -424,10 +450,11 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_limit3_df) > 0:
-            train_df = train_df.append(
-                train_limit3_df.apply(
-                    pd.DataFrame.sample, upper_train_limit3  # type: ignore
-                )
+            train_df = pd.concat(
+                [
+                    train_df,
+                    train_limit3_df.apply(pd.DataFrame.sample, upper_train_limit3),
+                ]
             )
         upper_count_limit4 = 10000
         upper_train_limit4 = 5000
@@ -443,16 +470,20 @@ def create_train_test_sample(
             .groupby(class_balancing_column, group_keys=False)
         )
         if len(train_limit4_df) > 0:
-            train_df = train_df.append(
-                train_limit4_df.apply(
-                    pd.DataFrame.sample, upper_train_limit4  # type: ignore
-                )
+            train_df = pd.concat(
+                [
+                    train_df,
+                    train_limit4_df.apply(pd.DataFrame.sample, upper_train_limit4),
+                ]
             )
         # For smaller balancing classes, just use all samples
-        train_df = train_df.append(
-            train_base_df.groupby(class_balancing_column).filter(
-                lambda x: len(x) < upper_count_limit4
-            )  # type: ignore
+        train_df = pd.concat(
+            [
+                train_df,
+                train_base_df.groupby(class_balancing_column).filter(
+                    lambda x: len(x) < upper_count_limit4
+                ),
+            ]
         )
 
     elif balancing_strategy == "BALANCING_STRATEGY_UPPER_LIMIT":
@@ -473,10 +504,13 @@ def create_train_test_sample(
             .apply(pd.DataFrame.sample, upper_limit)
         )
         # For smaller classes, just use all samples
-        train_df = train_df.append(
-            train_base_df.groupby(class_balancing_column).filter(
-                lambda x: len(x) < upper_limit
-            )  # type: ignore
+        train_df = pd.concat(
+            [
+                train_df,
+                train_base_df.groupby(class_balancing_column).filter(
+                    lambda x: len(x) < upper_limit
+                ),
+            ]
         )
 
     elif balancing_strategy == "BALANCING_STRATEGY_EQUAL":
@@ -528,5 +562,5 @@ def create_train_test_sample(
     logger.info("Write the output files")
     train_df.set_index(conf.columns["id"], inplace=True)
     test_df.set_index(conf.columns["id"], inplace=True)
-    pdh.to_file(train_df, output_parcel_train_path)  # type: ignore
-    pdh.to_file(test_df, output_parcel_test_path)  # type: ignore
+    pdh.to_file(train_df, output_parcel_train_path)  # The ID column is the index...
+    pdh.to_file(test_df, output_parcel_test_path)  # The ID column is the index...

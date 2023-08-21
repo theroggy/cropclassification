@@ -14,11 +14,6 @@ local/
 
 .vs/*
 .vscode/*
-!.vscode/settings_template.jsonc
-!.vscode/tasks.json
-!.vscode/launch_template.jsonc
-!.vscode/extensions.json
-!.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
 .history/

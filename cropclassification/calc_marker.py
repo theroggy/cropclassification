@@ -10,13 +10,13 @@ import shutil
 from typing import List
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
 from cropclassification.helpers import log_helper
 from cropclassification.helpers import model_helper as mh
-from cropclassification.preprocess import timeseries_util as ts_util
+from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.preprocess import classification_preprocess as class_pre
 from cropclassification.predict import classification
@@ -102,7 +102,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     # Read the info about the run
     input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
     input_parcel_filetype = conf.calc_marker_params["input_parcel_filetype"]
-    country_code = conf.calc_marker_params["country_code"]
     classes_refe_filename = conf.calc_marker_params.getpath("classes_refe_filename")
     input_groundtruth_filename = conf.calc_marker_params.getpath(
         "input_groundtruth_filename"
@@ -166,7 +165,7 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     imagedata_input_parcel_path = (
         input_preprocessed_dir / imagedata_input_parcel_filename
     )
-    ts_util.prepare_input(
+    ts_helper.prepare_input(
         input_parcel_path=input_parcel_path,
         output_imagedata_parcel_input_path=imagedata_input_parcel_path,
         output_parcel_nogeo_path=input_parcel_nogeo_path,
@@ -174,24 +173,22 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
 
     # STEP 2: Get the timeseries data needed for the classification
     # -------------------------------------------------------------
-    # Get the time series data (S1 and S2) to be used for the classification
+    # Get the time series data (eg. S1, S2,...) to be used for the classification
     # Result: data is put in files in timeseries_periodic_dir, in one file per
     #         date/period
     timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
+    timeseries_periodic_dir = timeseries_periodic_dir / imagedata_input_parcel_path.stem
     start_date_str = conf.marker["start_date_str"]
     end_date_str = conf.marker["end_date_str"]
-    sensordata_to_use = conf.marker.getlist("sensordata_to_use")
+    sensordata_to_use = conf.parse_sensordata_to_use(conf.marker["sensordata_to_use"])
     parceldata_aggregations_to_use = conf.marker.getlist(
         "parceldata_aggregations_to_use"
     )
-    base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
     ts.calc_timeseries_data(
         input_parcel_path=imagedata_input_parcel_path,
-        input_country_code=country_code,
         start_date_str=start_date_str,
         end_date_str=end_date_str,
         sensordata_to_get=sensordata_to_use,
-        base_filename=base_filename,
         dest_data_dir=timeseries_periodic_dir,
     )
 
@@ -211,13 +208,13 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
-    parcel_pixcount_path = (
-        timeseries_periodic_dir / f"{base_filename}_pixcount{data_ext}"
-    )
+    base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
     class_pre.prepare_input(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
-        input_parcel_pixcount_path=parcel_pixcount_path,
+        timeseries_periodic_dir=timeseries_periodic_dir,
+        base_filename=base_filename,
+        data_ext=data_ext,
         classtype_to_prepare=classtype_to_prepare,
         classes_refe_path=classes_refe_path,
         output_parcel_path=parcel_path,
@@ -257,7 +254,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     parcel_test_path = None
     parcel_predictions_proba_test_path = None
     if input_model_to_use_path is None:
-
         # Create the training sample...
         # Remark: this creates a list of representative test parcel + a list of
         # (candidate) training parcel
@@ -353,7 +349,9 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
         class_pre.prepare_input(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
-            input_parcel_pixcount_path=parcel_pixcount_path,
+            timeseries_periodic_dir=timeseries_periodic_dir,
+            base_filename=base_filename,
+            data_ext=data_ext,
             classtype_to_prepare=conf.preprocess["classtype_to_prepare_groundtruth"],
             classes_refe_path=classes_refe_path,
             output_parcel_path=groundtruth_path,

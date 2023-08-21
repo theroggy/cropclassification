@@ -5,7 +5,7 @@ Module with helper functions to expand on some features of pandas.
 
 from pathlib import Path
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import pandas as pd
 import sqlite3
@@ -36,7 +36,7 @@ def read_file(
                 str(path),
                 usecols=columns,  # type: ignore
                 low_memory=False,
-                encoding="ANSI"
+                encoding="ANSI",
             )
         return data_read_df
     elif ext_lower == ".tsv":
@@ -78,7 +78,7 @@ def read_file(
 
 
 def to_file(
-    df: pd.DataFrame,
+    df: Union[pd.DataFrame, pd.Series],
     path: Path,
     table_name: str = "info",
     index: bool = True,

@@ -335,7 +335,9 @@ def predict_proba(
         logger.info(f"Resulting Columns for predicting data: {parcel_data_df.columns}")
 
     # Load the classifier and predict
-    model = tf.keras.models.load_model(classifier_path)
+    model = tf.keras.models.load_model(str(classifier_path))
+    if model is None:
+        raise RuntimeError(f"Error loading model {classifier_path}")
     logger.info(f"Predict classes with probabilities: {len(parcel_df.index)} rows")
     class_proba = model.predict(parcel_data_df)
     logger.info("Predict classes with probabilities ready")

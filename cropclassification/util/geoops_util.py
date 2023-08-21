@@ -1,4 +1,5 @@
 from concurrent import futures
+import datetime
 import logging
 import math
 import multiprocessing
@@ -13,6 +14,11 @@ import geopandas as gpd
 from geofileops.util import _io_util
 import psutil
 from psutil._common import bytes2human
+from osgeo import gdal
+
+# ... and suppress errors
+gdal.PushErrorHandler("CPLQuietErrorHandler")
+import rasterio
 import rasterstats
 
 logger = logging.getLogger()
@@ -37,6 +43,10 @@ def zonal_stats(
     boundless: bool = True,
     force: bool = False,
 ):
+    # TODO: GDAL logging was disabled to get rid of this warning, fix it.
+    # Warning 1: TIFFReadDirectory:Sum of Photometric type-related color channels and
+    # ExtraSamples doesn't match SamplesPerPixel. Defining non-color channels as
+    # ExtraSamples.
 
     # Init
     if output_path.exists():
@@ -46,26 +56,29 @@ def zonal_stats(
             logger.info(f"Output file exists already and force is False: {output_path}")
             return
 
+    start_time = datetime.datetime.now()
     tmp_dir = _io_util.create_tempdir("zonal_stats")
     output_temp_path = tmp_dir / f"{output_path.name}"
 
     info = gfo.get_layerinfo(input_vector_path)
+
     max_nb_per_batch = 10000
     nb_batches = math.ceil(info.featurecount / max_nb_per_batch)
     nb_per_batch = math.floor(info.featurecount / nb_batches)
+    nb_batches_done = 0
 
     nb_parallel = multiprocessing.cpu_count()
     future_infos = {}
 
     logger.info(
-        f"calculate zonal_stats for {input_vector_path.name}, in {nb_batches} batches, "
-        f"with {nb_parallel} workers"
+        f"calculate zonal_stats in {nb_batches} batches, with {nb_parallel} workers, "
+        f"for {input_vector_path.name} on {input_raster_path.name}"
     )
     try:
         with futures.ProcessPoolExecutor(
             max_workers=nb_parallel, initializer=setprocessnice(15)
         ) as calculate_pool:
-            # calculate per batch  to manage memory usage
+            # calculate per batch to manage memory usage
             batch_start = 0
             for batch_id in range(nb_batches):
                 # Prepare the slice for this batch
@@ -119,7 +132,6 @@ def zonal_stats(
                         output_temp_partial_path.exists()
                         and output_temp_partial_path.stat().st_size > 0
                     ):
-                        logger.info(f"Write result for batch {future_info['batch_id']}")
                         gfo.append_to(
                             src=output_temp_partial_path,
                             dst=output_temp_path,
@@ -131,6 +143,15 @@ def zonal_stats(
                     logger.exception(f"Error executing {batch_id}")
                     raise
 
+                nb_batches_done += 1
+                progress = format_progress(
+                    start_time=start_time,
+                    nb_done=nb_batches_done,
+                    nb_todo=nb_batches,
+                    operation="zonal_stats",
+                    nb_parallel=nb_parallel,
+                )
+                print(progress)
                 logger.info(
                     "Available virtual memory: "
                     f"{bytes2human(psutil.virtual_memory().available)}, "
@@ -214,7 +235,52 @@ def zonal_stats_ext(
         geojson_out=geojson_out,
         boundless=boundless,
     )
-    result_gdf = gpd.GeoDataFrame.from_features(result)
+    result_gdf = gpd.GeoDataFrame.from_features(result, crs=vector_gdf.crs)
     gfo.to_file(result_gdf, output_path)
 
     return True
+
+
+def format_progress(
+    start_time: datetime.datetime,
+    nb_done: int,
+    nb_todo: int,
+    operation: Optional[str] = None,
+    nb_parallel: int = 1,
+) -> Optional[str]:
+    # Init
+    time_passed = (datetime.datetime.now() - start_time).total_seconds()
+    pct_progress = 100.0 - (nb_todo - nb_done) * 100 / nb_todo
+    nb_todo_str = f"{nb_todo:n}"
+    nb_decimal = len(nb_todo_str)
+
+    # If we haven't really started yet, don't report time estimate yet
+    if nb_done == 0:
+        return (
+            f" ?: ?: ? left, {operation} done on {nb_done:{nb_decimal}n} of "
+            f"{nb_todo:{nb_decimal}n} ({pct_progress:3.2f}%)    "
+        )
+    else:
+        pct_progress = 100.0 - (nb_todo - nb_done) * 100 / nb_todo
+        if time_passed > 0:
+            # Else, report progress properly...
+            processed_per_hour = (nb_done / time_passed) * 3600
+            # Correct the nb processed per hour if running parallel
+            if nb_done < nb_parallel:
+                processed_per_hour = round(processed_per_hour * nb_parallel / nb_done)
+            hours_to_go = (int)((nb_todo - nb_done) / processed_per_hour)
+            min_to_go = (int)((((nb_todo - nb_done) / processed_per_hour) % 1) * 60)
+            secs_to_go = (int)(
+                ((((nb_todo - nb_done) / processed_per_hour) % 1) * 3600) % 60
+            )
+            time_left_str = f"{hours_to_go:02d}:{min_to_go:02d}:{secs_to_go:02d}"
+            nb_left_str = f"{nb_done:{nb_decimal}n} of {nb_todo:{nb_decimal}n}"
+            pct_str = f"({pct_progress:3.2f}%)    "
+        elif pct_progress >= 100:
+            time_left_str = "00:00:00"
+            nb_left_str = f"{nb_done:{nb_decimal}n} of {nb_todo:{nb_decimal}n}"
+            pct_str = f"({pct_progress:3.2f}%)    "
+        else:
+            return None
+        message = f"{time_left_str} left, {operation} done on {nb_left_str} {pct_str}"
+        return message

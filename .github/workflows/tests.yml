@@ -1,0 +1,69 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Tests
+
+on:
+  push:
+    branches: [ main, v0.** ]
+  pull_request:
+    branches: [ main, v0.** ]
+  schedule:
+    - cron: "0 0 * * *"
+
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Linting:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - uses: pre-commit/action@v3.0.0
+
+  Test:
+    needs: Linting
+    name: ${{ matrix.os }}, ${{ matrix.env }}
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        dev: [false]
+        env:
+          - ci/envs/38-latest-conda-forge.yaml
+          - ci/envs/39-latest-conda-forge.yaml
+          - ci/envs/310-latest-conda-forge.yaml
+          - ci/envs/311-latest-conda-forge.yaml
+        include:
+          - env: ci/envs/38-minimal.yaml
+            os: ubuntu-latest
+            dev: false
+          - env: ci/envs/39-latest-conda-forge.yaml
+            os: macos-latest
+            dev: false
+          - env: ci/envs/39-latest-conda-forge.yaml
+            os: windows-latest
+            dev: false
+            
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Conda environment with Micromamba
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: ${{ matrix.env }}
+
+      - name: Test
+        run: |
+          pytest --color=yes --cov=geofileops --cov-append --cov-report term-missing --cov-report xml tests/
+
+      - uses: codecov/codecov-action@v3
+      

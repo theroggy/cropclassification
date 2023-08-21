@@ -9,14 +9,15 @@ import os
 from pathlib import Path
 import shutil
 from typing import List
+import dateutil.parser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
+import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-from cropclassification.preprocess import timeseries_calc_dias_onda_per_image as calc_ts
-from cropclassification.preprocess import timeseries_util as ts_util
+from cropclassification.util import zonal_stats_bulk
+from cropclassification.preprocess import _timeseries_helper as ts_helper
 
 
 def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
@@ -38,10 +39,10 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     test = conf.calc_timeseries_params.getboolean("test")
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_util.get_monday(
+    start_date = ts_helper.get_monday(
         conf.marker["start_date_str"]
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_util.get_monday(conf.marker["end_date_str"])
+    end_date = ts_helper.get_monday(conf.marker["end_date_str"])
 
     calc_year_start = start_date.year
     calc_year_stop = end_date.year
@@ -49,7 +50,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     calc_month_stop = end_date.month
 
     # Init logging
-    base_log_dir = conf.dirs.getpath('log_dir')
+    base_log_dir = conf.dirs.getpath("log_dir")
     log_level = conf.general.get("log_level")
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
@@ -103,19 +104,6 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         # By adding a / at the end, only the contents are recursively deleted
         shutil.rmtree(str(temp_dir) + os.sep)
 
-    """
-    # TEST to extract exact footprint from S1 image...
-    path = "/mnt/NAS3/CARD/FLANDERS/S1A/L1TC/2017/01/01/S1A_IW_GRDH_1SDV_20170101T055005_20170101T055030_014634_017CB9_Orb_RBN_RTN_Cal_TC.CARD/S1A_IW_GRDH_1SDV_20170101T055005_20170101T055030_014634_017CB9_Orb_RBN_RTN_Cal_TC.data/Gamma0_VH.img"
-    image = rasterio.open(path)
-    geoms = list(rasterio.features.dataset_features(src=image, as_mask=True, precision=5))
-    footprint = gpd.GeoDataFrame.from_features(geoms)
-    logger.info(footprint)
-    footprint = footprint.simplify(0.00001)
-    logger.info(footprint)
-    logger.info("Ready")
-    # Start calculation
-    """
-
     # Process S1 GRD images
     input_image_paths = []
     for year in range(calc_year_start, calc_year_stop + 1):
@@ -133,6 +121,49 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
                 f"/mnt/NAS*/CARD/FLANDERS/S1*/L1TC/{year}/{month:02d}/*/*.CARD"
             )
             input_image_paths.extend(glob.glob(input_image_searchstr))
+    logger.info(f"Found {len(input_image_paths)} S1 GRD images in the time period")
+
+    # Verify which S1 images we actually want to process...
+    tmp_input_image_paths = []
+    esaSwitchedProcessingMethod = dateutil.parser.isoparse("2021-02-23").timestamp()
+    for input_image_path in input_image_paths:
+        input_image_path = Path(input_image_path)
+        # Get more detailed info about the image
+        try:
+            image_info = zonal_stats_bulk.get_image_info(input_image_path)
+        except Exception:
+            # If not possible to get info for image, log and skip it
+            logger.exception(f"SKIP image: error getting info for {input_image_path}")
+            continue
+
+        # Fast-24h <- 2021-02-23 -> NRT-3H
+        productTimelinessCategory = (
+            "Fast-24h"
+            if dateutil.parser.isoparse(
+                image_info.extra["acquisition_date"]
+            ).timestamp()
+            < esaSwitchedProcessingMethod
+            else "NRT-3h"
+        )
+
+        # If sentinel1 and wrong productTimelinessCategory, skip: we only
+        # want 1 type to evade images used twice
+        if (
+            image_info.imagetype.startswith("S1")
+            and image_info.extra["productTimelinessCategory"]
+            != productTimelinessCategory
+        ):
+            logger.info(
+                f"SKIP image, productTimelinessCategory should be "
+                f"'{productTimelinessCategory}', but is: "
+                f"{image_info.extra['productTimelinessCategory']} for "
+                f"{input_image_path}"
+            )
+            continue
+
+        tmp_input_image_paths.append(input_image_path)
+
+    input_image_paths = tmp_input_image_paths
     logger.info(f"Found {len(input_image_paths)} S1 GRD images to process")
 
     if test:
@@ -142,20 +173,18 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             f"As we are only testing, process only {len(input_image_paths)} test images"
         )
 
-    input_image_paths = [
-        Path(input_image_path) for input_image_path in input_image_paths
-    ]
-
+    nb_parallel = conf.general.getint("nb_parallel", -1)
     try:
-        calc_ts.calc_stats_per_image(
-            features_path=input_features_path,
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
+            vector_path=input_features_path,
             id_column=conf.columns["id"],
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            rasters_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
             log_level=log_level,
+            nb_parallel=nb_parallel,
         )
     except Exception as ex:
         logger.exception(ex)
@@ -190,21 +219,46 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     # TODO: refactor underlying code so the SCL band is used regardless of it being
     # passed here
     max_cloudcover_pct = conf.timeseries.getfloat("max_cloudcover_pct")
-    input_image_paths = [
-        Path(input_image_path) for input_image_path in input_image_paths
-    ]
+    # Verify which S1 images we actually want to process...
+    tmp_input_image_paths = []
+    for input_image_path in input_image_paths:
+        input_image_path = Path(input_image_path)
+
+        # Get more detailed info about the image
+        try:
+            image_info = zonal_stats_bulk.get_image_info(input_image_path)
+        except Exception:
+            # If not possible to get info for image, log and skip it
+            logger.exception(f"SKIP image: error getting info for {input_image_path}")
+            continue
+
+        # If sentinel2 and cloud coverage too high... skip
+        if (
+            max_cloudcover_pct >= 0
+            and image_info.imagetype.startswith("S2")
+            and image_info.extra["Cloud_Coverage_Assessment"] > max_cloudcover_pct
+        ):
+            logger.info(
+                "SKIP image, Cloud_Coverage_Assessment: "
+                f"{image_info.extra['Cloud_Coverage_Assessment']:0.2f} > "
+                f"{max_cloudcover_pct} for {input_image_path}"
+            )
+            continue
+
+        tmp_input_image_paths.append(input_image_path)
 
     try:
-        calc_ts.calc_stats_per_image(
-            features_path=input_features_path,
+        bands = conf.timeseries.getlist("s2bands")
+        images_bands = [(path, bands) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
+            vector_path=input_features_path,
             id_column=conf.columns["id"],
-            image_paths=input_image_paths,
-            bands=conf.timeseries.getlist("s2bands"),
+            rasters_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
             log_level=log_level,
-            max_cloudcover_pct=max_cloudcover_pct,
+            nb_parallel=nb_parallel,
         )
     except Exception as ex:
         logger.exception(ex)
@@ -240,11 +294,11 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     ]
 
     try:
-        calc_ts.calc_stats_per_image(
-            features_path=input_features_path,
+        images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
+        zonal_stats_bulk.zonal_stats(
+            vector_path=input_features_path,
             id_column=conf.columns["id"],
-            image_paths=input_image_paths,
-            bands=["VV", "VH"],
+            rasters_bands=images_bands,
             output_dir=output_dir,
             temp_dir=temp_dir,
             log_dir=log_dir,
