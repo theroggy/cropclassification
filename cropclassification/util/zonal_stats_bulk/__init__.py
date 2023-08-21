@@ -13,6 +13,7 @@ def zonal_stats(
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     engine: str = "rasterstats",
+    nb_parallel: int = -1,
     force: bool = False,
 ):
     """
@@ -23,6 +24,8 @@ def zonal_stats(
         id_column (str): _description_
         rasters_bands (List[Tuple[Path, List[str]]]): _description_
         output_dir (Path): _description_
+        nb_parallel (int, optional): the number of parallel processes to use.
+            Defaults to -1: use all available processors.
         force (bool, optional): _description_. Defaults to False.
 
     Raises:
@@ -41,6 +44,7 @@ def zonal_stats(
             output_dir=output_dir,
             stats=stats,
             columns=[id_column],
+            nb_parallel=nb_parallel,
             force=force,
         )
     elif engine == "rasterstats":
@@ -54,6 +58,7 @@ def zonal_stats(
             stats=stats,
             cloud_filter_band=cloud_filter_band,
             calc_bands_parallel=calc_bands_parallel,
+            nb_parallel=nb_parallel,
             force=force,
         )
     else:

@@ -49,6 +49,7 @@ def zonal_stats(
     rasters_bands: List[Tuple[Path, List[str]]],
     output_dir: Path,
     stats: List[Statistic] = DEFAULT_STATS,
+    nb_parallel: int = -1,
     force: bool = False,
 ):
     """
@@ -60,6 +61,8 @@ def zonal_stats(
         images_bands (List[Tuple[Path, List[str]]]): _description_
         stats (List[Statistic])
         output_dir (Path): _description_
+        nb_parallel (int, optional): the number of parallel processes to use.
+            Defaults to -1: use all available processors.
         force (bool, optional): _description_. Defaults to False.
 
     Raises:
@@ -79,8 +82,8 @@ def zonal_stats(
     start_time = datetime.now()
     nb_todo = 0
     nb_done_total = 0
-    nb_parallel_max = multiprocessing.cpu_count()
-    nb_parallel = nb_parallel_max
+    if nb_parallel < 1:
+        nb_parallel = multiprocessing.cpu_count()
 
     # Loop over all images and bands to calculate zonal stats in parallel...
     calc_queue = {}

@@ -172,6 +172,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             f"As we are only testing, process only {len(input_image_paths)} test images"
         )
 
+    nb_parallel = conf.general.getint("nb_parallel", -1)
     try:
         images_bands = [(path, ["VV", "VH"]) for path in input_image_paths]
         zonal_stats_bulk.zonal_stats(
@@ -182,6 +183,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             temp_dir=temp_dir,
             log_dir=log_dir,
             log_level=log_level,
+            nb_parallel=nb_parallel,
         )
     except Exception as ex:
         logger.exception(ex)
@@ -255,6 +257,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             temp_dir=temp_dir,
             log_dir=log_dir,
             log_level=log_level,
+            nb_parallel=nb_parallel,
         )
     except Exception as ex:
         logger.exception(ex)

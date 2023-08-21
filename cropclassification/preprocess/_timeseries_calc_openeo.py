@@ -26,6 +26,7 @@ def calculate_periodic_timeseries(
     sensordata_to_get: List[ImageProfile],
     dest_image_data_dir: Path,
     dest_data_dir: Path,
+    nb_parallel: int,
 ):
     """
     Calculate timeseries data for the input parcels.
@@ -61,6 +62,7 @@ def calculate_periodic_timeseries(
         output_dir=dest_data_dir,
         stats=["count", "mean", "median", "std", "min", "max"],
         engine="pyqgis",
+        nb_parallel=nb_parallel,
     )
 
     """

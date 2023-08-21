@@ -94,6 +94,7 @@ def calc_timeseries_data(
             sensordata_to_get=sensordata_to_get_info_openeo,
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
             dest_data_dir=dest_data_dir,
+            nb_parallel=conf.general.getint("nb_parallel", -1),
         )
 
 
