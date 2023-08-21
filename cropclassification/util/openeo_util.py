@@ -222,7 +222,8 @@ def prepare_image_path(
     weeks = list(
         range(int(start_date.strftime("%W")), int(start_date.strftime("%W")) + 1)
     )
-    bands_str = "-".join(bands)
+    # Concat bands, but remove all chars used as separators
+    bands_str = "-".join([band.replace("_", "").replace("-", "") for band in bands])
     name = (
         f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_"
         f"{time_dimension_reducer}.tif"
