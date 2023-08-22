@@ -8,6 +8,7 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 import geofileops as gfo
 
@@ -27,6 +28,11 @@ column_BEFL_crop_declared = "GWSCOD_H_A"
 column_BEFL_crop_gt_verified = "HOOFDTEELT_CTRL_COD"
 column_BEFL_crop_gt_unverified = "HOOFDTEELT_CTRL_COD_ORIG"
 column_BEFL_latecrop = "GWSCOD_N"
+column_BEFL_latecrop2 = "GWSCOD_N2"
+column_BEFL_latecrop_gt_verified = "NATEELT_CTRL_COD"
+column_BEFL_latecrop_gt_unverified = "NATEELT_CTRL_COD_ORIG"
+column_BEFL_latecrop2_gt_verified = "NATEELT2_CTRL_COD"
+column_BEFL_latecrop2_gt_unverified = "NATEELT2_CTRL_COD_ORIG"
 
 # BEFL specific columns we want keep
 columns_BEFL_to_keep = [
@@ -39,6 +45,12 @@ columns_BEFL_to_keep = [
     column_BEFL_crop,
     column_BEFL_crop_declared,
     column_BEFL_latecrop,
+    column_BEFL_latecrop2,
+    column_BEFL_latecrop_gt_verified,
+    column_BEFL_latecrop_gt_unverified,
+    column_BEFL_latecrop2_gt_verified,
+    column_BEFL_latecrop2_gt_unverified,
+    "nateelt_ctrl_datum",
 ]
 
 ndvi_latecrop_count = "latecrop_ndvi_count"
@@ -204,37 +216,37 @@ def prepare_input(
     elif classtype_to_prepare == "LATECROP-EARLY":
         return prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["late_crop"],
-            column_BEFL_latecrop2=conf.columns["late_crop2"],
-            column_BEFL_maincrop=conf.columns["main_crop"],
+            column_BEFL_latecrop=column_BEFL_latecrop,
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LATECROP":
         return prepare_input_latecrop(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["late_crop"],
-            column_BEFL_latecrop2=conf.columns["late_crop2"],
-            column_BEFL_maincrop=conf.columns["main_crop"],
+            column_BEFL_latecrop=column_BEFL_latecrop,
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LATECROP-EARLY-GROUNDTRUTH":
         return prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["late_crop"],
-            column_BEFL_latecrop2=conf.columns["late_crop2"],
-            column_BEFL_maincrop=conf.columns["main_crop"],
-            column_output_class=conf.columns["class"],
+            column_BEFL_latecrop=column_BEFL_latecrop_gt_verified,
+            column_BEFL_latecrop2=None,
+            column_BEFL_maincrop=column_BEFL_crop,
+            column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
         return prepare_input_latecrop(
             parceldata_df=parceldata_df,
-            column_BEFL_latecrop=conf.columns["crop_declared"],
-            column_BEFL_latecrop2=column_BEFL_latecrop2,
-            column_BEFL_maincrop=conf.columns["main_crop_declared"],
-            column_output_class=conf.columns["class_declared"],
+            column_BEFL_latecrop=column_BEFL_latecrop_gt_verified,
+            column_BEFL_latecrop2=None,
+            column_BEFL_maincrop=column_BEFL_crop,
+            column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
         )
     elif classtype_to_prepare == "FABACEAE":
@@ -680,7 +692,7 @@ def prepare_input_fabaceae(
 def prepare_input_latecrop(
     parceldata_df,
     column_BEFL_latecrop: str,
-    column_BEFL_latecrop2: str,
+    column_BEFL_latecrop2: Optional[str],
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
@@ -746,36 +758,44 @@ def prepare_input_latecrop(
                 conf.columns["class"],
                 ndvi_latecrop_count,
                 ndvi_latecrop_median,
+                "MON_CROPGROUP",
+                "IS_PERM_BEDEKKING",
             ]
-            and column not in ["MON_CROPGROUP", "IS_PERM_BEDEKKING", "IS_BOUWLAND"]
+            and column not in columns_BEFL_to_keep
         ):
             classes_df.drop(column, axis=1, inplace=True)
-
-    # Set the index
-    classes_df.set_index(column_BEFL_latecrop, inplace=True, verify_integrity=True)
 
     # Get only the columns in the classes_df that don't exist yet in parceldata_df
     cols_to_join = classes_df.columns.difference(parceldata_df.columns)
 
     # Join/merge the classname
     logger.info("Add the classes to the parceldata")
+    # Set the index
+    classes_latecrop_df = classes_df.set_index(
+        column_BEFL_latecrop, verify_integrity=True
+    )
     parceldata_df = parceldata_df.merge(
-        classes_df[cols_to_join],
+        classes_latecrop_df[cols_to_join],
         how="left",
         left_on=column_BEFL_latecrop,
         right_index=True,
         validate="many_to_one",
     )
-    parceldata_df = parceldata_df.merge(
-        classes_df[cols_to_join],
-        how="left",
-        left_on=column_BEFL_latecrop2,
-        right_index=True,
-        validate="many_to_one",
-        suffixes=(None, "_LATECROP2"),
+    if column_BEFL_latecrop2 is not None:
+        parceldata_df = parceldata_df.merge(
+            classes_latecrop_df[cols_to_join],
+            how="left",
+            left_on=column_BEFL_latecrop2,
+            right_index=True,
+            validate="many_to_one",
+            suffixes=(None, "_LATECROP2"),
+        )
+    # Set the index
+    classes_maincrop_df = classes_df.set_index(
+        column_BEFL_latecrop, verify_integrity=True
     )
     parceldata_df = parceldata_df.merge(
-        classes_df[cols_to_join],
+        classes_maincrop_df[cols_to_join],
         how="left",
         left_on=column_BEFL_maincrop,
         right_index=True,
@@ -921,7 +941,7 @@ def prepare_input_latecrop(
             and column not in conf.preprocess.getlist("extra_export_columns")
             and column not in columns_BEFL_to_keep
         ):
-            parceldata_df.drop(column, axis=1, inplace=True)
+            parceldata_df.drop(columns=[column], inplace=True)
         elif column == column_BEFL_gesp_pm:
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
                 column_BEFL_gesp_pm
@@ -933,7 +953,7 @@ def prepare_input_latecrop(
 def prepare_input_latecrop_early(
     parceldata_df,
     column_BEFL_latecrop: str,
-    column_BEFL_latecrop2: str,
+    column_BEFL_latecrop2: Optional[str],
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
