@@ -104,7 +104,7 @@ def calc_top3_and_consolidation(
     pred_df[conf.columns["prediction_cons_status"]].fillna("NOK", inplace=True)
 
     # Output to geo file
-    input_parcel_gdf = gfo.read_file(input_parcel_geopath).set_index("UID")
+    input_parcel_gdf = gfo.read_file(input_parcel_geopath).set_index(conf.columns["id"])
     pred_gdf = input_parcel_gdf[["geometry"]].join(pred_df, how="inner")
     pred_gdf.to_file(output_predictions_geopath, engine="pyogrio")
 
