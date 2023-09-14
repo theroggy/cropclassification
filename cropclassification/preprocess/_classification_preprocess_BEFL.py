@@ -221,6 +221,7 @@ def prepare_input(
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "LATECROP":
         return prepare_input_latecrop(
@@ -230,6 +231,7 @@ def prepare_input(
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "LATECROP-EARLY-GROUNDTRUTH":
         return prepare_input_latecrop_early(
@@ -239,6 +241,7 @@ def prepare_input(
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
         return prepare_input_latecrop(
@@ -248,6 +251,7 @@ def prepare_input(
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "FABACEAE":
         parceldata_df = prepare_input_fabaceae(
@@ -304,7 +308,7 @@ def prepare_input_cropgroup(
     if column_BEFL_cropcode in parceldata_df.columns:
         parceldata_df[column_BEFL_cropcode] = parceldata_df[
             column_BEFL_cropcode
-        ].astype("unicode")
+        ].astype("string")
 
     # Read and cleanup the mapping table from crop codes to classes
     # --------------------------------------------------------------------------
@@ -314,7 +318,7 @@ def prepare_input_cropgroup(
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
-    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("unicode")
+    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("string")
 
     # Map column with the classname to orig classname
     column_output_class_orig = conf.columns["class"] + "_orig"
@@ -507,7 +511,7 @@ def prepare_input_fabaceae(
     if column_BEFL_cropcode in parceldata_df.columns:
         parceldata_df[column_BEFL_cropcode] = parceldata_df[
             column_BEFL_cropcode
-        ].astype("unicode")
+        ].astype("string")
 
     # Read and cleanup the mapping table from crop codes to classes
     # --------------------------------------------------------------------------
@@ -517,7 +521,7 @@ def prepare_input_fabaceae(
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
-    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("unicode")
+    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("string")
 
     # Map column with the classname to orig classname
     column_output_class_orig = conf.columns["class"] + "_orig"
@@ -696,6 +700,7 @@ def prepare_input_latecrop(
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
+    is_groundtruth: bool,
 ):
     """
     This function creates a file that is compliant with the assumptions used by the rest
@@ -718,15 +723,15 @@ def prepare_input_latecrop(
     if column_BEFL_latecrop in parceldata_df.columns:
         parceldata_df[column_BEFL_latecrop] = parceldata_df[
             column_BEFL_latecrop
-        ].astype("unicode")
+        ].astype("string")
     if column_BEFL_latecrop2 in parceldata_df.columns:
         parceldata_df[column_BEFL_latecrop2] = parceldata_df[
             column_BEFL_latecrop2
-        ].astype("unicode")
+        ].astype("string")
     if column_BEFL_maincrop in parceldata_df.columns:
         parceldata_df[column_BEFL_maincrop] = parceldata_df[
             column_BEFL_maincrop
-        ].astype("unicode")
+        ].astype("string")
 
     # Read and cleanup the mapping table from crop codes to classes
     # -------------------------------------------------------------
@@ -736,9 +741,9 @@ def prepare_input_latecrop(
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
-    classes_df[column_BEFL_latecrop] = classes_df["CROPCODE"].astype("unicode")
-    classes_df[column_BEFL_latecrop2] = classes_df["CROPCODE"].astype("unicode")
-    classes_df[column_BEFL_maincrop] = classes_df["CROPCODE"].astype("unicode")
+    classes_df[column_BEFL_latecrop] = classes_df["CROPCODE"].astype("string")
+    classes_df[column_BEFL_latecrop2] = classes_df["CROPCODE"].astype("string")
+    classes_df[column_BEFL_maincrop] = classes_df["CROPCODE"].astype("string")
 
     # Map column with the classname to orig classname
     column_output_class_orig = conf.columns["class"] + "_orig"
@@ -902,7 +907,10 @@ def prepare_input_latecrop(
             ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
     # Add copy of class as class_declared
-    parceldata_df[conf.columns["class_declared"]] = parceldata_df[column_output_class]
+    if not is_groundtruth:
+        parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+            column_output_class
+        ]
 
     # If the median ndvi <= 0.3 parcel is still a bare field (for training)
     if ndvi_latecrop_median in parceldata_df.columns:
@@ -957,6 +965,7 @@ def prepare_input_latecrop_early(
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
+    is_groundtruth: bool,
 ):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname
@@ -970,6 +979,7 @@ def prepare_input_latecrop_early(
         column_BEFL_maincrop=column_BEFL_maincrop,
         column_output_class=column_output_class,
         classes_refe_path=classes_refe_path,
+        is_groundtruth=is_groundtruth,
     )
 
     # Set crops not in early crops to ignore
@@ -1058,7 +1068,7 @@ def prepare_input_landcover(
     if column_BEFL_cropcode in parceldata_df.columns:
         parceldata_df[column_BEFL_cropcode] = parceldata_df[
             column_BEFL_cropcode
-        ].astype("unicode")
+        ].astype("string")
 
     # Read and cleanup the mapping table from crop codes to classes
     # -------------------------------------------------------------
@@ -1068,7 +1078,7 @@ def prepare_input_landcover(
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
-    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("unicode")
+    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("string")
 
     # Map column MON_group to orig classname
     column_output_class_orig = column_output_class + "_orig"
