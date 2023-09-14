@@ -11,21 +11,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import geofileops as gfo
-import geopandas as gpd
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
-
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
 
 
 def calc_top3_and_consolidation(
