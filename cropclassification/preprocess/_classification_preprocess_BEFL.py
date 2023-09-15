@@ -50,7 +50,7 @@ columns_BEFL_to_keep = [
     column_BEFL_latecrop_gt_unverified,
     column_BEFL_latecrop2_gt_verified,
     column_BEFL_latecrop2_gt_unverified,
-    "nateelt_ctrl_datum",
+    "NATEELT_CTRL_DATUM",
 ]
 
 ndvi_latecrop_count = "latecrop_ndvi_count"
@@ -992,12 +992,13 @@ def prepare_input_latecrop_early(
         ),
         column_output_class,
     ] = "IGNORE_LATE_MAINCROP"
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_maincrop].isin(
-            ["396", "201", "202", "71", "91", "8532", "9532"]
-        ),
-        conf.columns["class_declared"],
-    ] = "IGNORE_LATE_MAINCROP"
+    if not is_groundtruth:
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_maincrop].isin(
+                ["396", "201", "202", "71", "91", "8532", "9532"]
+            ),
+            conf.columns["class_declared"],
+        ] = "IGNORE_LATE_MAINCROP"
 
     return parceldata_df
 
