@@ -31,9 +31,10 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
             id_column="UID",
             rasters_bands=images_bands,
             output_dir=tmp_dir,
-            temp_dir=tmp_dir / "tmp",
-            log_dir=tmp_dir / "log",
-            log_level=logging.INFO,
+            stats=["mean"],
+            # temp_dir=tmp_dir / "tmp",
+            # log_dir=tmp_dir / "log",
+            # log_level=logging.INFO,
         )
         print(
             "calc_stats_per_image ready in "
@@ -72,9 +73,3 @@ def test_calc_stats_per_image_s1_bs(tmpdir):
         raise Exception(
             f"Exception calculating for {input_features_path} on {input_image_paths}"
         ) from ex
-
-
-if __name__ == "__main__":
-    tmpdir = "/srv/data/playground/tmp"  # tempfile.gettempdir()
-    print(f"tmpdir used for test: {tmpdir}")
-    test_calc_stats_per_image_s1_bs(tmpdir)
