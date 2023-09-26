@@ -44,6 +44,7 @@ def zonal_stats(
     stats: Literal["count", "mean", "median", "std", "min", "max"],
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
+    nb_parallel: int = -1,
     force: bool = False,
 ):
     """
@@ -57,6 +58,8 @@ def zonal_stats(
         temp_dir (Path): _description_
         log_dir (Path): _description_
         log_level (Union[str, int]): _description_
+        nb_parallel (int, optional): the number of parallel processes to use.
+            Defaults to -1: use all available processors.
         force (bool, optional): _description_. Defaults to False.
 
     Raises:
@@ -82,8 +85,8 @@ def zonal_stats(
     log_level = logger.level
 
     # Create process pool for parallelisation...
-    nb_parallel_max = multiprocessing.cpu_count()
-    nb_parallel = nb_parallel_max
+    if nb_parallel < 1:
+        nb_parallel = multiprocessing.cpu_count()
 
     # Loop over all images to start the data preparation for each of them in
     # parallel...
@@ -107,7 +110,7 @@ def zonal_stats(
             if (
                 image_idx < len(rasters_bands)
                 and len(_filter_on_status(image_dict, "IMAGE_PREPARE_CALC_BUSY"))
-                < nb_parallel_max
+                < nb_parallel
             ):
                 # Not too many busy preparing, so get next image_path to start
                 # prepare on
@@ -184,7 +187,7 @@ def zonal_stats(
                     temp_dir=temp_dir,
                     log_dir=log_dir,
                     log_level=log_level,
-                    nb_parallel_max=nb_parallel_max,
+                    nb_parallel=nb_parallel,
                 )
                 image_dict[image_path_str] = {
                     "features_path": vector_path,

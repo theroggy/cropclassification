@@ -158,6 +158,8 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
 
 
 def _get_raster_profiles() -> Dict[str, ImageProfile]:
+    # Cropclassification gives best results with time_dimension_reducer "mean" for both
+    # sentinel 2 and sentinel 1 images.
     # TODO: this should move to a config file
     profiles = {}
     profiles["s2-agri"] = ImageProfile(
@@ -166,7 +168,10 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B02", "B03", "B04", "B08", "B11", "B12"],
         # Use the "min" reducer filters out "lightly clouded areas"
-        process_options={"time_dimension_reducer": "min", "cloud_filter_band": "SCL"},
+        process_options={
+            "time_dimension_reducer": "mean",
+            "cloud_filter_band": "SCL",
+        },
     )
     profiles["s2-ndvi"] = ImageProfile(
         name="s2-ndvi",
@@ -174,7 +179,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="TERRASCOPE_S2_NDVI_V2",
         bands=["NDVI"],
         process_options={
-            "time_dimension_reducer": "max",
+            "time_dimension_reducer": "mean",
             "cloud_filter_band": "SCENECLASSIFICATION_20M",
         },
     )
@@ -184,7 +189,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="S1_GRD_SIGMA0_ASCENDING",
         bands=["VV", "VH"],
         process_options={
-            "time_dimension_reducer": "min",
+            "time_dimension_reducer": "mean",
         },
     )
     profiles["s1-grd-sigma0-desc"] = ImageProfile(
@@ -193,7 +198,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="S1_GRD_SIGMA0_DESCENDING",
         bands=["VV", "VH"],
         process_options={
-            "time_dimension_reducer": "min",
+            "time_dimension_reducer": "mean",
         },
     )
     profiles["s1-coh"] = ImageProfile(
@@ -202,7 +207,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         collection="TERRASCOPE_S1_SLC_COHERENCE_V1",
         bands=["VV", "VH"],
         process_options={
-            "time_dimension_reducer": "min",
+            "time_dimension_reducer": "mean",
         },
     )
 
@@ -212,15 +217,14 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
 def pformat_config():
     message = f"Config files used: {pprint.pformat(config_paths_used)} \n"
     message += "Config info listing:\n"
-    message += pprint.pformat(
-        {section: dict(config[section]) for section in config.sections()}
-    )
+    message += pprint.pformat(as_dict())
+
     return message
 
 
 def as_dict():
     """
-    Converts a ConfigParser object into a dictionary.
+    Converts the config objects into a dictionary.
 
     The resulting dictionary has sections as keys which point to a dict of the
     sections options as key => value pairs.
@@ -230,4 +234,10 @@ def as_dict():
         the_dict[section] = {}
         for key, val in config.items(section):
             the_dict[section][key] = val
+    the_dict["image_profiles"] = {}
+    for image_profile in image_profiles:
+        the_dict["image_profiles"][image_profile] = image_profiles[
+            image_profile
+        ].__dict__
+
     return the_dict

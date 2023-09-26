@@ -155,6 +155,9 @@ def calc_periodic_mosaic(
                 start_date=period_start_date,
                 end_date=end_date_incl,
                 bands=imageprofile.bands,
+                time_dimension_reducer=imageprofile.process_options[
+                    "time_dimension_reducer"
+                ],
                 dir=output_dir,
             )
             if not file_exists(image_path, force):
@@ -195,6 +198,7 @@ def prepare_image_path(
     start_date: datetime,
     end_date: datetime,
     bands: List[str],
+    time_dimension_reducer: str,
     dir: Path,
 ) -> Tuple[Path, str]:
     """
@@ -219,7 +223,10 @@ def prepare_image_path(
         range(int(start_date.strftime("%W")), int(start_date.strftime("%W")) + 1)
     )
     bands_str = "-".join(bands)
-    name = f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}.tif"
+    name = (
+        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_"
+        f"{time_dimension_reducer}.tif"
+    )
 
     # If the image metadata file doesn't exist, create it
     image_dir = dir / imageprofile
@@ -236,6 +243,7 @@ def prepare_image_path(
             "end_date": end_date_str,
             "weeks": weeks,
             "bands": bands,
+            "time_dimension_reducer": time_dimension_reducer,
             "path": image_path.as_posix(),
         }
         if imageprofile.lower() == "s1-grd-sigma0-asc":
