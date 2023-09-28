@@ -816,25 +816,6 @@ def prepare_input_latecrop(
     # For rows with no class, set to UNKNOWN
     parceldata_df.fillna(value={column_output_class: "UNKNOWN"}, inplace=True)
 
-    # Add ignore_for_training column: if 1, ignore for training
-    parceldata_df["ignore_for_training"] = 0
-
-    # If ndvi_latecrop_count data columns available, use them
-    if ndvi_latecrop_count in parceldata_df.columns:
-        # If no NDVI data avalable, not possible to determine bare soil
-        # -> ignore parcel in training
-        parceldata_df.loc[
-            parceldata_df[ndvi_latecrop_count] < 10, "ignore_for_training"
-        ] = 1
-    else:
-        logger.warning(
-            f"No column {ndvi_latecrop_count} available to set ignore_for_training"
-        )
-
-    # TODO: MON_BRAAK opkuisen met Timo?
-    # TODO: controle obv ndvi > 0.3 => geen braak?
-    #       braak van in de zomer => geen "braak" meer vanwege onkruid
-
     """
     # If permanent grassland, there will typically still be grass on the parcels
     # BUT: 60 is in ECO_430_GRASLAND_KLAVER_LUZ_GRAAN!!!
@@ -912,6 +893,26 @@ def prepare_input_latecrop(
             column_output_class
         ]
 
+    """
+    # Add ignore_for_training column: if 1, ignore for training
+    parceldata_df["ignore_for_training"] = 0
+
+    # If ndvi_latecrop_count data columns available, use them
+    if ndvi_latecrop_count in parceldata_df.columns:
+        # If no NDVI data avalable, not possible to determine bare soil
+        # -> ignore parcel in training
+        parceldata_df.loc[
+            parceldata_df[ndvi_latecrop_count] < 10, "ignore_for_training"
+        ] = 1
+    else:
+        logger.warning(
+            f"No column {ndvi_latecrop_count} available to set ignore_for_training"
+        )
+
+    # TODO: MON_BRAAK opkuisen met Timo?
+    # TODO: controle obv ndvi > 0.3 => geen braak?
+    #       braak van in de zomer => geen "braak" meer vanwege onkruid
+
     # If the median ndvi <= 0.3 parcel is still a bare field (for training)
     if ndvi_latecrop_median in parceldata_df.columns:
         # If also no grass, train as MON_BRAAK
@@ -932,6 +933,7 @@ def prepare_input_latecrop(
         logger.warning(
             f"No column {ndvi_latecrop_count} available to set ignore_for_training"
         )
+    """
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
