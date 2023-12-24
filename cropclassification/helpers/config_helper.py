@@ -177,7 +177,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         name="s2-ndvi",
         satellite="s2",
         collection="TERRASCOPE_S2_NDVI_V2",
-        bands=["NDVI"],
+        bands=["NDVI_10M"],
         process_options={
             "time_dimension_reducer": "mean",
             "cloud_filter_band": "SCENECLASSIFICATION_20M",
