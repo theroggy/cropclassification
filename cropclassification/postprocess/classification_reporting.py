@@ -1259,7 +1259,7 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     """Add some columns with groundtruth conclusions."""
 
     # Add the new column with a fixed value first
-    gt_vs_input_column = f"gt_vs_input_{prediction_column_to_use}"
+    gt_vs_declared_column = f"gt_vs_input_{prediction_column_to_use}"
     gt_vs_prediction_column = f"gt_vs_prediction_{prediction_column_to_use}"
     gt_conclusion_column = f"gt_conclusion_{prediction_column_to_use}"
     all_classes_to_ignore = conf.marker.getlist(
@@ -1267,56 +1267,66 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     ) + conf.marker.getlist("classes_to_ignore")
 
     # Calculate gt_vs_input_column
+    # ----------------------------
     # If ground truth same as input class, farmer OK, unless it is an ignore class
-    in_df[gt_vs_input_column] = "UNDEFINED"
+    in_df[gt_vs_declared_column] = "UNDEFINED"
     in_df.loc[
-        (in_df[gt_vs_input_column] == "UNDEFINED")
+        (in_df[gt_vs_declared_column] == "UNDEFINED")
         & (
             in_df[conf.columns["class_declared"]]
             == in_df[conf.columns["class_groundtruth"]]
         )
         & (in_df[conf.columns["class_groundtruth"]].isin(all_classes_to_ignore)),
-        gt_vs_input_column,
+        gt_vs_declared_column,
     ] = "FARMER-CORRECT:IGNORE:DECLARED=GROUNDTRUTH=" + in_df[
         conf.columns["class_groundtruth"]
     ].map(
         str
     )
     in_df.loc[
-        (in_df[gt_vs_input_column] == "UNDEFINED")
+        (in_df[gt_vs_declared_column] == "UNDEFINED")
         & (
             in_df[conf.columns["class_declared"]]
             == in_df[conf.columns["class_groundtruth"]]
         ),
-        gt_vs_input_column,
+        gt_vs_declared_column,
     ] = "FARMER-CORRECT"
+    if conf.columns["class_declared2"] in in_df.columns:
+        in_df.loc[
+            (in_df[gt_vs_declared_column] == "UNDEFINED")
+            & (
+                in_df[conf.columns["class_declared2"]]
+                == in_df[conf.columns["class_groundtruth"]]
+            ),
+            gt_vs_declared_column,
+        ] = "FARMER-CORRECT"
+
+    """
     in_df.loc[
-        (in_df[gt_vs_input_column] == "UNDEFINED")
+        (in_df[gt_vs_declared_column] == "UNDEFINED")
         & (in_df[conf.columns["class_declared"]].isin(all_classes_to_ignore)),
-        gt_vs_input_column,
+        gt_vs_declared_column,
     ] = "FARMER-WRONG:IGNORE:DECLARED=" + in_df[conf.columns["class_declared"]].map(str)
     in_df.loc[
-        (in_df[gt_vs_input_column] == "UNDEFINED")
+        (in_df[gt_vs_declared_column] == "UNDEFINED")
         & (in_df[conf.columns["class_groundtruth"]].isin(all_classes_to_ignore)),
-        gt_vs_input_column,
+        gt_vs_declared_column,
     ] = "FARMER-WRONG:IGNORE:GROUNDTRUTH=" + in_df[
         conf.columns["class_groundtruth"]
     ].map(
         str
     )
+    """
 
     # If conclusion still UNDEFINED, farmer was simply wrong
     in_df.loc[
-        in_df[gt_vs_input_column] == "UNDEFINED", gt_vs_input_column
+        in_df[gt_vs_declared_column] == "UNDEFINED", gt_vs_declared_column
     ] = "FARMER-WRONG"
 
     # Calculate gt_vs_prediction_column
-    # If ground truth same as prediction, prediction OK
+    # ---------------------------------
+    # If ground truth same as prediction but it is IGNORED, correct but ignore
     in_df[gt_vs_prediction_column] = "UNDEFINED"
-    in_df.loc[
-        (in_df[prediction_column_to_use] == in_df[conf.columns["class_groundtruth"]]),
-        gt_vs_prediction_column,
-    ] = "PRED-CORRECT"
     in_df.loc[
         (in_df[prediction_column_to_use] == in_df[conf.columns["class_groundtruth"]])
         & (in_df[prediction_column_to_use].isin(all_classes_to_ignore)),
@@ -1326,13 +1336,43 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     ].map(
         str
     )
-
-    # If declared class in ignored for trainig and/or prediction: an ignore conclusion
+    # If not set yet and ground truth same as prediction, prediction OK
     in_df.loc[
         (in_df[gt_vs_prediction_column] == "UNDEFINED")
-        & (in_df[conf.columns["class_declared"]].isin(all_classes_to_ignore)),
+        & (in_df[prediction_column_to_use] == in_df[conf.columns["class_groundtruth"]]),
         gt_vs_prediction_column,
-    ] = "PRED-WRONG:IGNORE:DECLARED=" + in_df[conf.columns["class_declared"]].map(str)
+    ] = "PRED-CORRECT"
+    # If there is a second declared crop, also compare the prediction with the declared
+    # crops in addition to the groundtruth
+    if conf.columns["class_declared2"] in in_df.columns:
+        in_df.loc[
+            (in_df[gt_vs_prediction_column] == "UNDEFINED")
+            & (
+                in_df[prediction_column_to_use]
+                == in_df[conf.columns["class_declared2"]]
+            ),
+            gt_vs_prediction_column,
+        ] = "PRED-CORRECT"
+        in_df.loc[
+            (in_df[gt_vs_prediction_column] == "UNDEFINED")
+            & (
+                in_df[prediction_column_to_use] == in_df[conf.columns["class_declared"]]
+            ),
+            gt_vs_prediction_column,
+        ] = "PRED-CORRECT"
+
+    # If declared class in ignored + DOUBT: doubt conclusion
+    in_df.loc[
+        (in_df[gt_vs_prediction_column] == "UNDEFINED")
+        & (in_df[conf.columns["class_declared"]].isin(all_classes_to_ignore))
+        & (in_df[prediction_column_to_use].str.startswith("DOUBT")),
+        gt_vs_prediction_column,
+    ] = (
+        "PRED-DOUBT:REASON="
+        + in_df[prediction_column_to_use].map(str)
+        + ":DECLARED="
+        + in_df[conf.columns["class_declared"]].map(str)
+    )
 
     # If conclusion still UNDEFINED, check if DOUBT
     in_df.loc[
@@ -1377,33 +1417,33 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     # Declared class was correct
     in_df[gt_conclusion_column] = "UNDEFINED"
     in_df.loc[
-        (in_df[gt_vs_input_column] == "FARMER-CORRECT")
+        (in_df[gt_vs_declared_column] == "FARMER-CORRECT")
         & (in_df[gt_vs_prediction_column] == "PRED-WRONG"),
         gt_conclusion_column,
     ] = "FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA"
     in_df.loc[
         (in_df[gt_conclusion_column] == "UNDEFINED")
-        & (in_df[gt_vs_input_column] == "FARMER-CORRECT"),
+        & (in_df[gt_vs_declared_column] == "FARMER-CORRECT"),
         gt_conclusion_column,
     ] = "FARMER-CORRECT_" + in_df[gt_vs_prediction_column].map(str)
 
     # Declared class was not correct
     in_df.loc[
         (in_df[gt_conclusion_column] == "UNDEFINED")
-        & (in_df[gt_vs_input_column] == "FARMER-WRONG")
+        & (in_df[gt_vs_declared_column] == "FARMER-WRONG")
         & (in_df[conf.columns["class_declared"]] == in_df[prediction_column_to_use]),
         gt_conclusion_column,
     ] = "FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA"
     in_df.loc[
         (in_df[gt_conclusion_column] == "UNDEFINED")
-        & (in_df[gt_vs_input_column] == "FARMER-WRONG"),
+        & (in_df[gt_vs_declared_column] == "FARMER-WRONG"),
         gt_conclusion_column,
     ] = "FARMER-WRONG_" + in_df[gt_vs_prediction_column].map(str)
 
     # Declared or groundtruth class was ignore
     in_df.loc[
         (in_df[gt_conclusion_column] == "UNDEFINED"), gt_conclusion_column
-    ] = in_df[gt_vs_input_column].map(str)
+    ] = in_df[gt_vs_declared_column].map(str)
 
 
 def _get_errors_per_column(

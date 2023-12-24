@@ -773,7 +773,7 @@ def prepare_input_latecrop(
     # Get only the columns in the classes_df that don't exist yet in parceldata_df
     cols_to_join = classes_df.columns.difference(parceldata_df.columns)
 
-    # Join/merge the classname
+    # Join/merge the 1st late crop to the classname
     logger.info("Add the classes to the parceldata")
     # Set the index
     classes_latecrop_df = classes_df.set_index(
@@ -795,6 +795,7 @@ def prepare_input_latecrop(
             validate="many_to_one",
             suffixes=(None, "_LATECROP2"),
         )
+
     # Set the index
     classes_maincrop_df = classes_df.set_index(
         column_BEFL_latecrop, verify_integrity=True
@@ -812,6 +813,12 @@ def prepare_input_latecrop(
     parceldata_df.insert(
         loc=0, column=column_output_class, value=parceldata_df[column_output_class_orig]
     )
+    if column_BEFL_latecrop2 is not None:
+        parceldata_df.insert(
+            loc=0,
+            column=conf.columns["class_declared2"],
+            value=parceldata_df[f"{column_output_class_orig}_LATECROP2"],
+        )
 
     # For rows with no class, set to UNKNOWN
     parceldata_df.fillna(value={column_output_class: "UNKNOWN"}, inplace=True)
@@ -871,24 +878,24 @@ def prepare_input_latecrop(
         )
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    for _, row in (
-        parceldata_df.groupby(column_output_class)
-        .size()
-        .reset_index(name="count")
-        .iterrows()
-    ):
-        if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
-            logger.info(
-                f"Class <{row[column_output_class]}> only contains {row['count']} "
-                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
-            )
-            parceldata_df.loc[
-                parceldata_df[column_output_class] == row[column_output_class],
-                column_output_class,
-            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
-
-    # Add copy of class as class_declared
     if not is_groundtruth:
+        for _, row in (
+            parceldata_df.groupby(column_output_class)
+            .size()
+            .reset_index(name="count")
+            .iterrows()
+        ):
+            if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+                logger.info(
+                    f"Class <{row[column_output_class]}> only contains {row['count']} "
+                    "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+                )
+                parceldata_df.loc[
+                    parceldata_df[column_output_class] == row[column_output_class],
+                    column_output_class,
+                ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+
+        # Add copy of class as class_declared
         parceldata_df[conf.columns["class_declared"]] = parceldata_df[
             column_output_class
         ]
@@ -944,6 +951,7 @@ def prepare_input_latecrop(
                 conf.columns["id"],
                 conf.columns["class_groundtruth"],
                 conf.columns["class_declared"],
+                conf.columns["class_declared2"],
                 ndvi_latecrop_count,
                 ndvi_latecrop_median,
                 "ignore_for_training",

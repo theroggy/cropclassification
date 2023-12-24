@@ -233,6 +233,13 @@ def add_doubt_column(
     # Init with the standard prediction
     pred_df[new_pred_column] = "UNDEFINED"
 
+    # If declared is UNKNOWN, retain it
+    pred_df.loc[
+        (pred_df[new_pred_column] == "UNDEFINED")
+        & (pred_df[conf.columns["class_declared"]] == "UNKNOWN"),
+        new_pred_column,
+    ] = "IGNORE_NOT_DECLARED"
+
     # If NODATA OR ignore class, retained those from pred1
     pred_df.loc[
         (pred_df[new_pred_column] == "UNDEFINED")
