@@ -18,7 +18,7 @@ from osgeo import gdal
 
 # ... and suppress errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
-import rasterio
+import rasterio  # noqa: E402
 
 
 # Get a logger...
@@ -49,7 +49,7 @@ def calc_periodic_mosaic(
     images_to_get: List[ImageProfile],
     output_dir: Path,
     period_name: Optional[str] = None,
-    delete_existing_openeo_jobs: bool = True,
+    delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
 ) -> List[Tuple[Path, ImageProfile]]:
@@ -118,8 +118,11 @@ def calc_periodic_mosaic(
         if len(jobs) > 0:
             for job in jobs:
                 batch_job = openeo.rest.job.BatchJob(job["id"], conn)
-                logger.info(f"delete job '{job['title']}', id: {job['id']}")
-                batch_job.delete_job()
+                logger.info(f"delete job {job.get('title')}, id: {job['id']}")
+                try:
+                    batch_job.delete()
+                except Exception as ex:
+                    logger.warning(ex)
     else:
         # Process jobs that are still on the server
         image_paths, job_errors = get_job_results(conn, output_dir)
@@ -132,7 +135,7 @@ def calc_periodic_mosaic(
     job_options = {
         "executor-memory": "4G",
         "executor-memoryOverhead": "2G",
-        "executor-cores": "2",
+        "executor-cores": "1",
     }
     result = []
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
@@ -295,6 +298,7 @@ def create_mosaic_job(
         spatial_extent=spatial_extent,
         temporal_extent=period,  # type: ignore
         bands=bands_to_load,
+        max_cloud_cover=80,
     )
 
     # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
@@ -355,7 +359,8 @@ def get_job_results(
 
         jobs_per_status = defaultdict(list)
         for job in jobs:
-            jobs_per_status[job["status"]].append(job)
+            if "title" in job:
+                jobs_per_status[job["status"]].append(job)
 
         message = "jobs: "
         message += f"{','.join(f'{k}: {len(v)}' for k, v in jobs_per_status.items())}"
@@ -367,17 +372,26 @@ def get_job_results(
             # If there is no title specified, delete job
             if "title" not in job:
                 logger.info(f"job {job} doesn't have a title, so just delete it")
-                batch_job.delete_job()
+                try:
+                    batch_job.delete()
+                except Exception as ex:
+                    logger.warning(ex)
             else:
                 # Download results + delete job
                 output_path = output_dir / job["title"]
                 logger.info(f"job {job} finished, so download results")
-                batch_job.get_results().download_file(target=output_path)
-                batch_job.delete_job()
-                output_paths.append(output_path)
+                try:
+                    batch_job.get_results().download_file(target=output_path)
+                    batch_job.delete()
+                    output_paths.append(output_path)
+                except Exception as ex:
+                    raise RuntimeError(f"Error downloading {output_path}: {ex}")
 
         # As long as processing is needed, keep polling
         if "queued" in jobs_per_status or "running" in jobs_per_status:
+            print(
+                f"Waiting for {jobs_per_status['queued']} and {jobs_per_status['running']}"
+            )
             time.sleep(30)
         else:
             # We are ready, so deal with error jobs and break
@@ -386,12 +400,12 @@ def get_job_results(
                 logger.error(f"Error processing job '{job['title']}', id: {job['id']}")
                 errorlog = pprint.pformat(batch_job.logs())
                 logger.error(errorlog)
-                batch_job.delete_job()
+                batch_job.delete()
                 errors.append(f"Error for job '{job['title']}', id: {job['id']}")
             for job in jobs_per_status["created"]:
                 batch_job = openeo.rest.job.BatchJob(job["id"], conn)
                 logger.info(f"delete created job '{job['title']}', id: {job['id']}")
-                batch_job.delete_job()
+                batch_job.delete()
 
             break
 
