@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class ImageProfile:
+    """
+    Profile of the image to be processed via openeo.
+    """
+
     def __init__(
         self,
         name: str,
@@ -33,16 +37,31 @@ class ImageProfile:
         collection: str,
         bands: List[str],
         process_options: dict,
+        job_options: dict,
     ):
+        """
+        Constructor of ImageProfile.
+
+        Args:
+            name (str): name of the image profile.
+            satellite (str): name of the satellite.
+            collection (str): collection on openeo to load to create this image.
+            bands (List[str]): bands of the collection to include in the image.
+            process_options (dict): process options.
+            job_options (dict): job options. Job options available on the VITO OpenEO
+                backend are documented here: https://docs.openeo.cloud/federation/#customizing-batch-job-resources-on-terrascope
+        """
         self.name = name
         self.satellite = satellite
         self.collection = collection
         self.bands = bands
         self.process_options = process_options
+        self.job_options = job_options
 
 
 def calc_periodic_mosaic(
-    roi_path: Path,
+    roi_bounds: Tuple[float, float, float, float],
+    roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
     days_per_period: int,
@@ -53,8 +72,43 @@ def calc_periodic_mosaic(
     raise_errors: bool = True,
     force: bool = False,
 ) -> List[Tuple[Path, ImageProfile]]:
+    """
+    Download a periodic mosaic.
+
+    Args:
+        roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
+            of the region of interest to download the mosaic for.
+        roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
+        start_date (datetime): start date, included.
+        end_date (datetime): end date, excluded.
+        days_per_period (int): number of days per period.
+        images_to_get (List[ImageProfile]): list of imageprofiles to create the mosaic
+            with.
+        output_dir (Path): directory to save the images to.
+        period_name (Optional[str], optional): name of the period. If None, default
+            names are used: if ``days_per_period=7``: "weekly", if
+            ``days_per_period=14``: "biweekly", for other values of ``days_per_period``
+            a ValueError is thrown. Defaults to None.
+        delete_existing_openeo_jobs (bool, optional): True to delete existing openeo
+            jobs. If False, they are just left running and the results are downloaded if
+            they are ready like other jobs. Defaults to False.
+        raise_errors (bool, optional): True to raise if an error occurs. If False,
+            errors are only logged. Defaults to True.
+        force (bool, optional): True to force recreation of existing output files.
+            Defaults to False.
+
+    Raises:
+        ValueError: _description_
+        Exception: _description_
+        RuntimeError: _description_
+        RuntimeError: _description_
+
+    Returns:
+        List[Tuple[Path, ImageProfile]]: _description_
+    """
     if end_date > datetime.now():
         logger.warning(f"end_date is in the future: {end_date}")
+    roi_bounds = list(roi_bounds)
 
     # Validate time_dimension_reducer
     for imageprofile in images_to_get:
@@ -75,14 +129,13 @@ def calc_periodic_mosaic(
             raise Exception("Unknown period name, please specify")
 
     # Determine bbox of roi
-    roi_info = gfo.get_layerinfo(roi_path)
-    roi_bounds = list(roi_info.total_bounds)
-    if roi_info.crs is None:
+    if roi_crs is None:
         logger.info("The crs of the roi is None, so it is assumed to be WGS84")
-    elif roi_info.crs.to_epsg() != 4326:
-        transformer = pyproj.Transformer.from_crs(
-            roi_info.crs, "epsg:4326", always_xy=True
-        )
+    else:
+        roi_crs = pyproj.CRS(roi_crs)
+
+    if roi_crs.to_epsg() != 4326:
+        transformer = pyproj.Transformer.from_crs(roi_crs, "epsg:4326", always_xy=True)
         roi_bounds[0], roi_bounds[1] = transformer.transform(
             roi_bounds[0], roi_bounds[1]
         )
@@ -132,11 +185,7 @@ def calc_periodic_mosaic(
             raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
     period_start_date = start_date
-    job_options = {
-        "executor-memory": "4G",
-        "executor-memoryOverhead": "2G",
-        "executor-cores": "1",
-    }
+
     result = []
     while period_start_date <= (end_date - timedelta(days=days_per_period)):
         # Period in openeo is inclusive for startdate and excludes enddate
@@ -177,7 +226,7 @@ def calc_periodic_mosaic(
                     bands=imageprofile.bands,
                     time_dimension_reducer=reducer,
                     output_name=image_relative_path,
-                    job_options=job_options,
+                    job_options=imageprofile.job_options,
                     process_options=process_options,
                 ).start_job()
             result.append((image_path, imageprofile))
@@ -284,12 +333,26 @@ def create_mosaic_job(
 
     bands_to_load = list(bands)
     cloud_filter_band = None
+    cloud_filter_band_dilated = None
     for option in process_options:
         if option == "cloud_filter_band":
-            cloud_filter_band = process_options[option]
-            bands_to_load.append(cloud_filter_band)
+            band = process_options[option]
+            cloud_filter_band = band
+            if band not in bands_to_load:
+                bands_to_load.append(band)
+        elif option == "cloud_filter_band_dilated":
+            band = process_options[option]
+            cloud_filter_band_dilated = band
+            if band not in bands_to_load:
+                bands_to_load.append(band)
         else:
             raise ValueError(f"unknown processing option: {option}")
+
+    if cloud_filter_band is not None and cloud_filter_band_dilated is not None:
+        raise ValueError(
+            "process_option cloud_filter_band and cloud_filter_band_dilated cannot be "
+            "used together"
+        )
 
     # Load cube of relevant images
     # You can look which layers are available here:
@@ -303,12 +366,27 @@ def create_mosaic_job(
     )
 
     # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
-    if cloud_filter_band is not None:
+    if cloud_filter_band_dilated is not None:
         cube = cube.process(
             "mask_scl_dilation",
             data=cube,
             scl_band_name=cloud_filter_band,
         )
+    elif cloud_filter_band is not None:
+        # Select the scl band from the data cube
+        scl_band = cube.band(cloud_filter_band)
+        # Build mask to mask out everything but classes
+        #   - 4: vegetation
+        #   - 5: non vegetated
+        #   - 6: water
+        mask = ~((scl_band == 4) | (scl_band == 5) | (scl_band == 6))
+
+        # The mask needs to have the same "ground sample distance" as the cube it is
+        # applied to.
+        mask = mask.resample_cube_spatial(cube)
+
+        # Apply the mask
+        cube = cube.mask(mask)
 
     cube = cube.filter_bands(bands=bands)
     cube = cube.reduce_dimension(dimension="t", reducer=time_dimension_reducer)
@@ -379,12 +457,28 @@ def get_job_results(
                     logger.warning(ex)
             else:
                 # Download results + delete job
-                output_path = output_dir / job["title"]
-                logger.info(f"job {job} finished, so download results")
                 try:
-                    batch_job.get_results().download_file(target=output_path)
+                    logger.info(f"job {job} finished, so download results")
+
+                    # Download to tmp file first so we are sure download was complete
+                    output_path = output_dir / job["title"]
+                    output_tmp_path = output_dir / f"{job['title']}.download"
+                    if output_path.exists():
+                        output_path.unlink()
+                    if output_tmp_path.exists():
+                        output_tmp_path.unlink()
+
+                    # Use chunk size 50 MB to see some progress
+                    batch_job.get_results().get_asset().download(
+                        target=output_tmp_path, chunk_size=50 * 1024 * 1024
+                    )
+
+                    # Ready, now we can rename tmp file
+                    output_tmp_path.rename(output_path)
+
                     batch_job.delete()
                     output_paths.append(output_path)
+
                 except Exception as ex:
                     raise RuntimeError(f"Error downloading {output_path}: {ex}")
 
