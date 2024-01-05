@@ -118,9 +118,6 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     global dirs
     dirs = config["dirs"]
 
-    global image_profiles
-    image_profiles = _get_raster_profiles()
-
 
 def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     result = None
@@ -161,6 +158,13 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     # Cropclassification gives best results with time_dimension_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # TODO: this should move to a config file
+
+    job_options_extra_memory = {
+        "executor-memory": "4G",
+        "executor-memoryOverhead": "2G",
+        "executor-cores": "2",
+    }
+
     profiles = {}
     profiles["s2-agri"] = ImageProfile(
         name="s2-agri",
@@ -170,8 +174,22 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         # Use the "min" reducer filters out "lightly clouded areas"
         process_options={
             "time_dimension_reducer": "mean",
+            "cloud_filter_band_dilated": "SCL",
+        },
+        job_options=None,
+    )
+    profiles["s2-scl"] = ImageProfile(
+        name="s2-scl",
+        satellite="s2",
+        collection="TERRASCOPE_S2_TOC_V2",
+        bands=["SCL"],
+        # Use the "min" reducer filters out "lightly clouded areas"
+        process_options={
+            "time_dimension_reducer": "max",
+            # "cloud_filter_band_dilated": "SCL",
             "cloud_filter_band": "SCL",
         },
+        job_options=None,
     )
     profiles["s2-ndvi"] = ImageProfile(
         name="s2-ndvi",
@@ -180,8 +198,10 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         bands=["NDVI_10M"],
         process_options={
             "time_dimension_reducer": "mean",
+            # "cloud_filter_band_dilated": "SCENECLASSIFICATION_20M",
             "cloud_filter_band": "SCENECLASSIFICATION_20M",
         },
+        job_options=job_options_extra_memory,
     )
     profiles["s1-grd-sigma0-asc"] = ImageProfile(
         name="s1-grd-sigma0-asc",
@@ -191,6 +211,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         process_options={
             "time_dimension_reducer": "mean",
         },
+        job_options=None,
     )
     profiles["s1-grd-sigma0-desc"] = ImageProfile(
         name="s1-grd-sigma0-desc",
@@ -200,6 +221,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         process_options={
             "time_dimension_reducer": "mean",
         },
+        job_options=None,
     )
     profiles["s1-coh"] = ImageProfile(
         name="s1-coh",
@@ -209,6 +231,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
         process_options={
             "time_dimension_reducer": "mean",
         },
+        job_options=None,
     )
 
     return profiles
@@ -241,3 +264,6 @@ def as_dict():
         ].__dict__
 
     return the_dict
+
+
+image_profiles = _get_raster_profiles()
