@@ -169,6 +169,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     profiles["s2-agri"] = ImageProfile(
         name="s2-agri",
         satellite="s2",
+        image_source="openeo",
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B02", "B03", "B04", "B08", "B11", "B12"],
         # Use the "min" reducer filters out "lightly clouded areas"
@@ -181,6 +182,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     profiles["s2-scl"] = ImageProfile(
         name="s2-scl",
         satellite="s2",
+        image_source="openeo",
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["SCL"],
         # Use the "min" reducer filters out "lightly clouded areas"
@@ -194,6 +196,16 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     profiles["s2-ndvi"] = ImageProfile(
         name="s2-ndvi",
         satellite="s2",
+        image_source="local",
+        collection=None,
+        bands=None,
+        process_options=None,
+        job_options=None,
+    )
+    profiles["s2-ndvi-openeo"] = ImageProfile(
+        name="s2-ndvi",
+        satellite="s2",
+        image_source="openeo",
         collection="TERRASCOPE_S2_NDVI_V2",
         bands=["NDVI_10M"],
         process_options={
@@ -206,6 +218,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     profiles["s1-grd-sigma0-asc"] = ImageProfile(
         name="s1-grd-sigma0-asc",
         satellite="s1",
+        image_source="openeo",
         collection="S1_GRD_SIGMA0_ASCENDING",
         bands=["VV", "VH"],
         process_options={
@@ -216,6 +229,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     profiles["s1-grd-sigma0-desc"] = ImageProfile(
         name="s1-grd-sigma0-desc",
         satellite="s1",
+        image_source="openeo",
         collection="S1_GRD_SIGMA0_DESCENDING",
         bands=["VV", "VH"],
         process_options={
@@ -226,6 +240,7 @@ def _get_raster_profiles() -> Dict[str, ImageProfile]:
     profiles["s1-coh"] = ImageProfile(
         name="s1-coh",
         satellite="s1",
+        image_source="openeo",
         collection="TERRASCOPE_S1_SLC_COHERENCE_V1",
         bands=["VV", "VH"],
         process_options={

@@ -12,8 +12,8 @@ def main():
 
     # Init some variables
     days_per_period = 7
-    start_date = datetime(2023, 8, 1)
-    end_date = datetime(2023, 10, 1)
+    start_date = datetime(2022, 2, 25)
+    end_date = datetime(2022, 6, 5)
     dest_image_data_dir = Path("//dg3.be/alp/Datagis/satellite_periodic/BEFL")
     sensordata_to_get = [conf.image_profiles["s2-agri"]]
 

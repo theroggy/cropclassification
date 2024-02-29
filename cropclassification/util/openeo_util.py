@@ -3,16 +3,15 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 import json
 import logging
-
 from pathlib import Path
 import pprint
 import time
 from typing import List, Optional, Tuple
 
-import geofileops as gfo
 import openeo
 import openeo.rest.job
 import pyproj
+import rioxarray
 
 from osgeo import gdal
 
@@ -34,6 +33,7 @@ class ImageProfile:
         self,
         name: str,
         satellite: str,
+        image_source: str,
         collection: str,
         bands: List[str],
         process_options: dict,
@@ -45,6 +45,7 @@ class ImageProfile:
         Args:
             name (str): name of the image profile.
             satellite (str): name of the satellite.
+            image_source (str): source of the image.
             collection (str): collection on openeo to load to create this image.
             bands (List[str]): bands of the collection to include in the image.
             process_options (dict): process options.
@@ -53,6 +54,7 @@ class ImageProfile:
         """
         self.name = name
         self.satellite = satellite
+        self.image_source = image_source
         self.collection = collection
         self.bands = bands
         self.process_options = process_options
@@ -106,6 +108,8 @@ def calc_periodic_mosaic(
     Returns:
         List[Tuple[Path, ImageProfile]]: _description_
     """
+    if start_date == end_date:
+        raise ValueError(f"start date and end date are the same: {start_date}")
     if end_date > datetime.now():
         logger.warning(f"end_date is in the future: {end_date}")
     roi_bounds = list(roi_bounds)
@@ -213,6 +217,8 @@ def calc_periodic_mosaic(
                 dir=output_dir,
             )
             if not file_exists(image_path, force):
+                # time_dimension_reducer is expected as a parameter rather than in the
+                # process_options, so extract it...
                 process_options = deepcopy(imageprofile.process_options)
                 reducer = process_options["time_dimension_reducer"]
                 del process_options["time_dimension_reducer"]
