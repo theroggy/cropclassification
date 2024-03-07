@@ -11,11 +11,11 @@ from cropclassification.helpers import config_helper as conf
         ("s2-ndvi"),
         ("s1-grd-sigma0-asc"),
         ("s1-grd-sigma0-desc"),
-        ("s1-coh")
-    ]
+        ("s1-coh"),
+    ],
 )
 def test_get_raster_profiles(raster_profile: str):
     raster_profiles = conf._get_raster_profiles()
-    
+
     profile = raster_profiles.get(raster_profile)
     assert profile is not None

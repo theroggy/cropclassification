@@ -154,25 +154,23 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     return result
 
 
-def _get_raster_profiles() -> Dict[str, ImageProfile]:  
+def _get_raster_profiles() -> Dict[str, ImageProfile]:
     # Cropclassification gives best results with time_dimension_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # Init
     project_dir = Path(__file__).resolve().parent
     config_path = project_dir / "raster_profiles.ini"
     if not config_path.exists():
-        raise ValueError(
-            f"Config file specified does not exist: {config_path}"
-        )
+        raise ValueError(f"Config file specified does not exist: {config_path}")
 
     # Read config file...
     profiles_config = configparser.ConfigParser(
         interpolation=configparser.ExtendedInterpolation(),
         converters={
             "list": lambda x: [i.strip() for i in x.split(",")],
-            "dict": lambda x: None if x == 'None' else json.loads(x),
+            "dict": lambda x: None if x == "None" else json.loads(x),
         },
-        allow_no_value=True
+        allow_no_value=True,
     )
     profiles_config.read(config_path)
 
