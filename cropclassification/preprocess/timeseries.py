@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module contains general functions that apply to timeseries data...
 """
@@ -230,7 +229,7 @@ def collect_and_prepare_timeseries_data(
             ) * 100
             if valid_input_data_pct < min_parcels_with_data_pct:
                 # If the number of nan values for the column > x %, drop column
-                logger.warn(
+                logger.warning(
                     f"Drop column as it contains only {valid_input_data_pct:.2f}% real "
                     f"data compared to input (= not nan) which is "
                     f"< {min_parcels_with_data_pct}%!: {curr_path.stem}.{column}"
@@ -277,7 +276,7 @@ def collect_and_prepare_timeseries_data(
     if len(parcel_many_null_df.index) > 0:
         # Write the rows with empty data to a file
         parcel_many_null_path = Path(f"{str(output_path)}_rows_many_null.sqlite")
-        logger.warn(
+        logger.warning(
             f"Write {len(parcel_many_null_df.index)} rows with > {max_number_null} of "
             f"{len(result_df.columns)} columns==null to {parcel_many_null_path}"
         )

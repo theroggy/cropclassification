@@ -21,8 +21,8 @@ from . import _vector_helper as vector_helper
 # Set path for qgis
 qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
 sys.path.insert(0, str(qgis_path))
-import qgis.core  # type: ignore  # noqa: E402
-import qgis.analysis  # type: ignore  # noqa: E402
+import qgis.core  # noqa: E402
+import qgis.analysis  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +257,7 @@ def zonal_stats_band(
         stats_df["geometry"] = gpd.GeoSeries.from_wkt(stats_df["geometry"])
         stats_df = gpd.GeoDataFrame(
             stats_df, geometry="geometry", crs=vector_mem.crs().toWkt()
-        )  # type: ignore
+        )
 
     return stats_df
 
@@ -290,7 +290,7 @@ def zonal_stats_band_tofile(
     # stats_df.dropna(inplace=True)
 
     logger.info(
-        f"Write data for {len(stats_df.index)} parcels found to " f"{output_band_path}"
+        f"Write data for {len(stats_df.index)} parcels found to {output_band_path}"
     )
     pdh.to_file(stats_df, output_band_path, index=False)
     return output_band_path

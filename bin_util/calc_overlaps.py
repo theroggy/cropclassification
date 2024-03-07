@@ -10,7 +10,7 @@ import pprint
 import sqlite3
 
 import cropclassification.helpers.config_helper as conf
-import cropclassification.helpers.log_helper as log_helper
+from cropclassification.helpers import log_helper
 
 # -------------------------------------------------------------
 # The real work

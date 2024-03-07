@@ -619,7 +619,7 @@ def _zonal_stats_image_gdf(
         )
 
     # If the features_gdf is a string, use it as file path to unpickle geodataframe...
-    if isinstance(features, str) or isinstance(features, Path):
+    if isinstance(features, (str, Path)):
         features_gdf_pkl_path = features
         logger.info(f"Read pickle: {features_gdf_pkl_path}")
         features = pd.read_pickle(features_gdf_pkl_path)

@@ -134,7 +134,7 @@ def calc_top3_and_consolidation(
         pdh.to_file(
             pred_df,
             output_predictions_output_path,
-            index=False,  # type: ignore
+            index=False,
         )
 
         # Write oracle sqlldr file
