@@ -18,9 +18,6 @@ from typing import List, Literal, Optional, Tuple, Union
 
 from osgeo import gdal
 
-# Suppress gdal warnings/errors
-gdal.PushErrorHandler("CPLQuietErrorHandler")
-
 from affine import Affine
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
@@ -31,6 +28,9 @@ from . import _general_helper
 from . import _raster_helper
 from . import _vector_helper
 from cropclassification.util import io_util
+
+# Suppress gdal warnings/errors
+gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 # General init
 logger = logging.getLogger(__name__)

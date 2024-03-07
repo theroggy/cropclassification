@@ -215,7 +215,7 @@ def calculate_periodic_timeseries(
     for filename in os.listdir(timeseries_per_image_dir):
         if filename.endswith(input_ext):
             # Get seperate filename parts
-            file_info = get_fileinfo_timeseries(input_dir / filename)
+            file_info = get_fileinfo_timeseries(timeseries_per_image_dir / filename)
             file_info_list.append(file_info)
 
     all_inputfiles_df = pd.DataFrame(file_info_list)
@@ -241,7 +241,7 @@ def calculate_periodic_timeseries(
                 & (all_inputfiles_df.orbit.isin(orbits))
             ]
         elif sensordata_type == "S1Coh":
-            satellitetype = "S1"
+            # satellitetype = "S1"
             imagetype = IMAGETYPE_S1_COHERENCE
             bands = ["VV", "VH"]
             orbits = ["ASC", "DESC"]
@@ -252,7 +252,7 @@ def calculate_periodic_timeseries(
                 & (all_inputfiles_df.band.isin(bands))
             ]
         elif sensordata_type == "S2gt95":
-            satellitetype = "S2"
+            # satellitetype = "S2"
             imagetype = IMAGETYPE_S2_L2A
             bands = ["B02-10m", "B03-10m", "B04-10m", "B08-10m", "B11-20m", "B12-20m"]
             needed_inputfiles_df = all_inputfiles_df.loc[
@@ -262,7 +262,7 @@ def calculate_periodic_timeseries(
                 & (all_inputfiles_df.band.isin(bands))
             ]
         elif sensordata_type == "S2-landcover":
-            satellitetype = "S2"
+            # satellitetype = "S2"
             imagetype = IMAGETYPE_S2_L2A
             bands = ["landcover"]
             needed_inputfiles_df = all_inputfiles_df.loc[
@@ -272,7 +272,7 @@ def calculate_periodic_timeseries(
                 & (all_inputfiles_df.band.isin(bands))
             ]
         elif sensordata_type == "S2-ndvi":
-            satellitetype = "S2"
+            # satellitetype = "S2"
             imagetype = IMAGETYPE_S2_L2A
             bands = ["ndvi"]
             needed_inputfiles_df = all_inputfiles_df.loc[

@@ -40,7 +40,7 @@ def calculate_periodic_timeseries(
     # As we want a weekly calculation, get nearest monday for start and stop day
     days_per_period = 7
     roi_info = gfo.get_layerinfo(input_parcel_path)
-    
+
     periodic_images_result = openeo_util.calc_periodic_mosaic(
         roi_bounds=tuple(roi_info.total_bounds),
         roi_crs=roi_info.crs,
