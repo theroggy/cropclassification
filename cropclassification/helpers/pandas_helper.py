@@ -30,13 +30,13 @@ def read_file(
             data_read_df = pd.read_csv(
                 str(path),
                 usecols=columns,
-                low_memory=False,  # type: ignore
+                low_memory=False,
             )
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
             data_read_df = pd.read_csv(
                 str(path),
-                usecols=columns,  # type: ignore
+                usecols=columns,
                 low_memory=False,
                 encoding="ANSI",
             )
@@ -47,13 +47,13 @@ def read_file(
                 str(path),
                 usecols=columns,
                 sep="\t",
-                low_memory=False,  # type: ignore
+                low_memory=False,
             )
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
             data_read_df = pd.read_csv(
                 str(path),
-                usecols=columns,  # type: ignore
+                usecols=columns,
                 sep="\t",
                 low_memory=False,
                 encoding="ANSI",
