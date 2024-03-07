@@ -155,6 +155,8 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
 
 
 def _get_raster_profiles() -> Dict[str, ImageProfile]:  
+    # Cropclassification gives best results with time_dimension_reducer "mean" for both
+    # sentinel 2 and sentinel 1 images.
     # Init
     project_dir = Path(__file__).resolve().parent
     config_path = project_dir / "raster_profiles.ini"
