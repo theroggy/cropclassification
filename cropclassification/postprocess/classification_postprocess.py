@@ -11,21 +11,12 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import geofileops as gfo
-import geopandas as gpd
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
-
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
 
 
 def calc_top3_and_consolidation(
@@ -112,30 +103,24 @@ def calc_top3_and_consolidation(
     ] = "OK"
     pred_df[conf.columns["prediction_cons_status"]].fillna("NOK", inplace=True)
 
-    logger.info("Write full prediction data to file")
-    pdh.to_file(pred_df, output_predictions_path)
-
     # Output to geo file
-    input_parcel_gdf = gfo.read_file(input_parcel_geopath)
-    pred_gdf = gpd.GeoDataFrame(input_parcel_gdf.merge(pred_df, how="inner"))
+    input_parcel_gdf = gfo.read_file(input_parcel_geopath).set_index(conf.columns["id"])
+    pred_gdf = input_parcel_gdf[["geometry"]].join(pred_df, how="inner")
     pred_gdf.to_file(output_predictions_geopath, engine="pyogrio")
 
     # Create final output file with the most important info
     if output_predictions_output_path is not None:
         # First add some aditional columns specific for the export
-        pred_df["markercode"] = conf.marker["markertype"]
-        pred_df["run_id"] = conf.general["run_id"]
+        pred_output_df = pred_df.copy()
+        pred_output_df["markercode"] = conf.marker["markertype"]
+        pred_output_df["run_id"] = conf.general["run_id"]
         today = datetime.date.today()
-        pred_df["cons_date"] = today
-        pred_df["modify_date"] = today
+        pred_output_df["cons_date"] = today
+        pred_output_df["modify_date"] = today
         logger.info("Write final output prediction data to file")
-        pred_df.reset_index(inplace=True)
-        pred_df = pred_df[conf.columns.getlist("output_columns")]
-        pdh.to_file(
-            pred_df,
-            output_predictions_output_path,
-            index=False,
-        )
+        pred_output_df.reset_index(inplace=True)
+        pred_output_df = pred_output_df[conf.columns.getlist("output_columns")]
+        pdh.to_file(pred_output_df, output_predictions_output_path, index=False)
 
         # Write oracle sqlldr file
         table_name = None
@@ -179,6 +164,9 @@ def calc_top3_and_consolidation(
                 # A tab as seperator is apparently X'9'
                 ctlfile.write("FIELDS TERMINATED BY X'9'\n")
                 ctlfile.write(f"({table_columns})\n")
+
+    logger.info("Write full prediction data to file")
+    pdh.to_file(pred_df, output_predictions_path)
 
 
 def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
@@ -242,6 +230,13 @@ def add_doubt_column(
 
     # Init with the standard prediction
     pred_df[new_pred_column] = "UNDEFINED"
+
+    # If declared is UNKNOWN, retain it
+    pred_df.loc[
+        (pred_df[new_pred_column] == "UNDEFINED")
+        & (pred_df[conf.columns["class_declared"]] == "UNKNOWN"),
+        new_pred_column,
+    ] = "IGNORE_NOT_DECLARED"
 
     # If NODATA OR ignore class, retained those from pred1
     pred_df.loc[
