@@ -132,7 +132,9 @@ def calc_top3_and_consolidation(
         pred_df.reset_index(inplace=True)
         pred_df = pred_df[conf.columns.getlist("output_columns")]
         pdh.to_file(
-            pred_df, output_predictions_output_path, index=False  # type: ignore
+            pred_df,
+            output_predictions_output_path,
+            index=False,  # type: ignore
         )
 
         # Write oracle sqlldr file

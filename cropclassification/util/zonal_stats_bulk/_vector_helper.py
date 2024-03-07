@@ -178,7 +178,9 @@ def _load_features_file(
     if polygon is not None:
         logger.info("Filter polygon provided, start filter")
         polygon_gdf = gpd.GeoDataFrame(
-            geometry=[polygon], crs="EPSG:4326", index=[0]  # type: ignore
+            geometry=[polygon],
+            crs="EPSG:4326",
+            index=[0],  # type: ignore
         )
         logger.debug(f"polygon_gdf: {polygon_gdf}")
         logger.debug(

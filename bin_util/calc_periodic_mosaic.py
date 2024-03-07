@@ -21,7 +21,7 @@ def main():
     start_date = ts_helper.get_monday(start_date)
     end_date = ts_helper.get_monday(end_date)
 
-    periodic_images_result = openeo_util.calc_periodic_mosaic(
+    _ = openeo_util.calc_periodic_mosaic(
         roi_bounds=[20_000, 150_000, 260_000, 245_000],
         roi_crs=31370,
         start_date=start_date,

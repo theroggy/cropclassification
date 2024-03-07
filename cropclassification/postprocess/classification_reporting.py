@@ -441,9 +441,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context(
-            "display.max_rows", None, "display.max_columns", None
-        ):  # type: ignore
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -475,9 +473,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context(
-            "display.max_rows", None, "display.max_columns", None
-        ):  # type: ignore
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -600,7 +596,10 @@ def write_full_report(
             count_per_class.insert(loc=1, column="pct", value=values)
 
             with pd.option_context(
-                "display.max_rows", None, "display.max_columns", None  # type: ignore
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,  # type: ignore
             ):
                 outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
@@ -628,7 +627,10 @@ def write_full_report(
             count_per_class.insert(loc=1, column="pct", value=values)
 
             with pd.option_context(
-                "display.max_rows", None, "display.max_columns", None  # type: ignore
+                "display.max_rows",
+                None,
+                "display.max_columns",
+                None,  # type: ignore
             ):
                 outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
@@ -1279,9 +1281,7 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
         gt_vs_input_column,
     ] = "FARMER-CORRECT:IGNORE:DECLARED=GROUNDTRUTH=" + in_df[
         conf.columns["class_groundtruth"]
-    ].map(
-        str
-    )
+    ].map(str)
     in_df.loc[
         (in_df[gt_vs_input_column] == "UNDEFINED")
         & (
@@ -1301,9 +1301,7 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
         gt_vs_input_column,
     ] = "FARMER-WRONG:IGNORE:GROUNDTRUTH=" + in_df[
         conf.columns["class_groundtruth"]
-    ].map(
-        str
-    )
+    ].map(str)
 
     # If conclusion still UNDEFINED, farmer was simply wrong
     in_df.loc[
@@ -1323,9 +1321,7 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
         gt_vs_prediction_column,
     ] = "PRED-CORRECT:IGNORE:PREDICTION=GROUNDTRUTH=" + in_df[
         prediction_column_to_use
-    ].map(
-        str
-    )
+    ].map(str)
 
     # If declared class in ignored for trainig and/or prediction: an ignore conclusion
     in_df.loc[
@@ -1508,11 +1504,9 @@ def _get_errors_per_column(
     df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
 
     values = (
-        (
-            100
-            * df_alfa_per_column[f"count_error_{error_type}_cumulative"]
-            / df_alfa_per_column[f"count_error_{error_type}"].sum()
-        )
+        100
+        * df_alfa_per_column[f"count_error_{error_type}_cumulative"]
+        / df_alfa_per_column[f"count_error_{error_type}"].sum()
     ).to_frame(f"pct_error_{error_type}_of_{error_type}_cumulative")
     # df_alfa_per_column.insert(
     #     loc=len(df_alfa_per_column.columns),
@@ -1522,11 +1516,9 @@ def _get_errors_per_column(
     df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
 
     values = (
-        (
-            100
-            * df_alfa_per_column[f"count_error_{error_type}_cumulative"]
-            / df_alfa_per_column["count_all"].sum()
-        )
+        100
+        * df_alfa_per_column[f"count_error_{error_type}_cumulative"]
+        / df_alfa_per_column["count_all"].sum()
     ).to_frame(f"pct_error_{error_type}_of_all_cumulative")
     # df_alfa_per_column.insert(
     #     loc=len(df_alfa_per_column.columns),
