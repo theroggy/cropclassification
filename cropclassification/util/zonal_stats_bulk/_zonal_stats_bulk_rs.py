@@ -18,9 +18,6 @@ from typing import List, Literal, Optional, Tuple, Union
 
 from osgeo import gdal
 
-# Suppress gdal warnings/errors
-gdal.PushErrorHandler("CPLQuietErrorHandler")
-
 from affine import Affine
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
@@ -31,6 +28,9 @@ from . import _general_helper
 from . import _raster_helper
 from . import _vector_helper
 from cropclassification.util import io_util
+
+# Suppress gdal warnings/errors
+gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 # General init
 logger = logging.getLogger(__name__)
@@ -619,7 +619,7 @@ def _zonal_stats_image_gdf(
         )
 
     # If the features_gdf is a string, use it as file path to unpickle geodataframe...
-    if isinstance(features, str) or isinstance(features, Path):
+    if isinstance(features, (str, Path)):
         features_gdf_pkl_path = features
         logger.info(f"Read pickle: {features_gdf_pkl_path}")
         features = pd.read_pickle(features_gdf_pkl_path)

@@ -18,8 +18,7 @@ from osgeo import gdal
 
 # ... and suppress errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
-import rasterio
-import rasterstats
+import rasterstats  # noqa: E402
 
 logger = logging.getLogger()
 

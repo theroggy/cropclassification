@@ -98,7 +98,7 @@ def reproject_synced(
                 f"Write {len(vector_gdf.index)} reprojected features to "
                 f"{vector_prepr_path}"
             )
-            gfo.to_file(vector_gdf, vector_prepr_path, index=False)  # type: ignore
+            gfo.to_file(vector_gdf, vector_prepr_path, index=False)
             logger.info("Reprojected features written")
 
         except Exception as ex:
@@ -178,7 +178,9 @@ def _load_features_file(
     if polygon is not None:
         logger.info("Filter polygon provided, start filter")
         polygon_gdf = gpd.GeoDataFrame(
-            geometry=[polygon], crs="EPSG:4326", index=[0]  # type: ignore
+            geometry=[polygon],
+            crs="EPSG:4326",
+            index=[0],
         )
         logger.debug(f"polygon_gdf: {polygon_gdf}")
         logger.debug(

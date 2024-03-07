@@ -120,9 +120,7 @@ def calc_top3_and_consolidation(
         logger.info("Write final output prediction data to file")
         pred_output_df.reset_index(inplace=True)
         pred_output_df = pred_output_df[conf.columns.getlist("output_columns")]
-        pdh.to_file(
-            pred_output_df, output_predictions_output_path, index=False  # type: ignore
-        )
+        pdh.to_file(pred_output_df, output_predictions_output_path, index=False)
 
         # Write oracle sqlldr file
         table_name = None

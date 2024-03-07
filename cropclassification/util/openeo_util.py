@@ -9,7 +9,6 @@ import pprint
 import time
 from typing import List, Optional, Tuple
 
-import geofileops as gfo
 import openeo
 import openeo.rest.job
 import pyproj
@@ -360,7 +359,7 @@ def create_mosaic_job(
     cube = conn.load_collection(
         collection,
         spatial_extent=spatial_extent,
-        temporal_extent=period,  # type: ignore
+        temporal_extent=period,
         bands=bands_to_load,
         max_cloud_cover=80,
     )
@@ -485,7 +484,8 @@ def get_job_results(
         # As long as processing is needed, keep polling
         if "queued" in jobs_per_status or "running" in jobs_per_status:
             print(
-                f"Waiting for {jobs_per_status['queued']} and {jobs_per_status['running']}"
+                f"Waiting for {jobs_per_status['queued']} and "
+                f"{jobs_per_status['running']}"
             )
             time.sleep(30)
         else:

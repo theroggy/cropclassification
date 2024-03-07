@@ -185,7 +185,7 @@ def get_models(
     for path in model_weight_paths:
         model_info_list.append(parse_model_filename(Path(path)))
 
-    return pd.DataFrame.from_dict(model_info_list)  # type: ignore
+    return pd.DataFrame.from_dict(model_info_list)
 
 
 def get_best_model(
@@ -225,13 +225,9 @@ def get_best_model(
 
     if len(model_info_df) > 0:
         if acc_metric_mode == "max":
-            return model_info_df.loc[
-                model_info_df["acc_combined"].values.argmax()  # type: ignore
-            ]
+            return model_info_df.loc[model_info_df["acc_combined"].values.argmax()]
         else:
-            return model_info_df.loc[
-                model_info_df["acc_combined"].values.argmin()  # type: ignore
-            ]
+            return model_info_df.loc[model_info_df["acc_combined"].values.argmin()]
     else:
         return None
 

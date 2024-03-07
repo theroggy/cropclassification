@@ -115,9 +115,7 @@ def get_image_data(
                 window_to_read = projected_bounds_to_window(
                     bounds, src.transform, src.width, src.height, pixel_buffer
                 )
-                image_data[band][
-                    "transform"
-                ] = rasterio.windows.transform(  # type: ignore
+                image_data[band]["transform"] = rasterio.windows.transform(
                     window_to_read, src.transform
                 )
                 image_data[band]["nodata"] = src.nodata
@@ -195,7 +193,7 @@ def projected_bounds_to_window(
     """
     # Take bounds of the features + convert to image pixels
     xmin, ymin, xmax, ymax = projected_bounds
-    window_to_read_raw = rasterio.windows.from_bounds(  # type: ignore
+    window_to_read_raw = rasterio.windows.from_bounds(
         xmin, ymin, xmax, ymax, image_transform
     )
 
@@ -227,9 +225,7 @@ def projected_bounds_to_window(
         height = image_pixel_height - row_off
 
     # Ready... prepare to return...
-    window_to_read = rasterio.windows.Window(  # type: ignore
-        col_off, row_off, width, height
-    )
+    window_to_read = rasterio.windows.Window(col_off, row_off, width, height)
 
     # Debug info
     """
@@ -318,7 +314,7 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
 
     try:
         # Get the filename
-        filename = metadata_root.find("productFilename").text  # type: ignore
+        filename = metadata_root.find("productFilename").text
 
         # Get the footprint
         footprint = {}
@@ -401,24 +397,24 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
                 "s1sarl1:standAloneProductInformation/"
                 "s1sarl1:productTimelinessCategory",
                 ns,
-            ).text  # type: ignore
+            ).text
 
             extra["instrument_mode"] = manifest_root.find(
                 "metadataSection/metadataObject/metadataWrap/xmlData/"
                 "safe:platform/safe:instrument/safe:extension/"
                 "s1sarl1:instrumentMode/s1sarl1:mode",
                 ns,
-            ).text  # type: ignore
+            ).text
             extra["orbit_properties_pass"] = manifest_root.find(
                 "metadataSection/metadataObject/metadataWrap/xmlData/"
                 "safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass",
                 ns,
-            ).text  # type: ignore
+            ).text
             extra["acquisition_date"] = manifest_root.find(
                 "metadataSection/metadataObject/metadataWrap/xmlData/"
                 "safe:acquisitionPeriod/safe:startTime",
                 ns,
-            ).text  # type: ignore
+            ).text
 
             # Now have a look in the files themselves to get band info,...
             # TODO: probably cleaner/easier to read from metadata files...
@@ -479,7 +475,7 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
                 f"Exception extracting info from {manifest_xml_path}"
             ) from ex
 
-    elif nb_safefiles == 2 or nb_safefiles == 3:
+    elif nb_safefiles in (2, 3):
         # 2 safe files -> coherence
         # Now parse the first .safe file
         # TODO: maybe check if the info in all safe files  are the same or?.?
@@ -512,23 +508,23 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
                 "s1sarl1:standAloneProductInformation/"
                 "s1sarl1:productTimelinessCategory",
                 ns,
-            ).text  # type: ignore
+            ).text
             extra["instrument_mode"] = manifest_root.find(
                 "metadataSection/metadataObject/metadataWrap/xmlData/"
                 "safe:platform/safe:instrument/safe:extension/"
                 "s1sarl1:instrumentMode/s1sarl1:mode",
                 ns,
-            ).text  # type: ignore
+            ).text
             extra["orbit_properties_pass"] = manifest_root.find(
                 "metadataSection/metadataObject/metadataWrap/xmlData/"
                 "safe:orbitReference/safe:extension/s1:orbitProperties/s1:pass",
                 ns,
-            ).text  # type: ignore
+            ).text
             extra["acquisition_date"] = manifest_root.find(
                 "metadataSection/metadataObject/metadataWrap/xmlData/"
                 "safe:acquisitionPeriod/safe:startTime",
                 ns,
-            ).text  # type: ignore
+            ).text
 
             # Now have a look in the files themselves to get band info,...
             # TODO: probably cleaner/easier to read from metadata files...
@@ -628,11 +624,11 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
         extra["Cloud_Coverage_Assessment"] = float(
             metadata_root.find(
                 "n1:Quality_Indicators_Info/Cloud_Coverage_Assessment", ns
-            ).text  # type: ignore
+            ).text
         )
         extra["acquisition_date"] = metadata_root.find(
             "n1:General_Info/Product_Info/PRODUCT_START_TIME", ns
-        ).text  # type: ignore
+        ).text
 
     except Exception as ex:
         raise Exception(f"Exception extracting info from {metadata_xml_path}") from ex
@@ -641,7 +637,7 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
     image_datadir = image_path / "GRANULE"
     band_paths = list(image_datadir.rglob("*.jp2"))
 
-    metadata_path = list(image_datadir.rglob("MTD_TL.xml"))[0]
+    metadata_path = next(iter(image_datadir.rglob("MTD_TL.xml")))
     try:
         # read epsg
         metadata = ET.parse(str(metadata_path))
@@ -657,8 +653,8 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
 
         image_crs = metadata_root.find(
             "n1:Geometric_Info/Tile_Geocoding/HORIZONTAL_CS_CODE", ns
-        ).text  # type: ignore
-        image_epsg = int(image_crs.replace("EPSG:", ""))  # type: ignore
+        ).text
+        image_epsg = int(image_crs.replace("EPSG:", ""))
     except Exception as ex:
         raise Exception(f"Exception extracting info from {metadata_path}") from ex
 

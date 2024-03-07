@@ -21,20 +21,22 @@ def read_file(
     # TODO: think about if possible/how to support  adding optional parameter and pass
     # them to next function, example encoding, float_format,...
     """
-    if columns is not None and type(columns) is not list:
+    if columns is not None and not isinstance(columns, list):
         raise Exception(f"Parameter columns should be list, but is {type(columns)}")
 
     ext_lower = path.suffix.lower()
     if ext_lower == ".csv":
         try:
             data_read_df = pd.read_csv(
-                str(path), usecols=columns, low_memory=False  # type: ignore
+                str(path),
+                usecols=columns,
+                low_memory=False,
             )
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
             data_read_df = pd.read_csv(
                 str(path),
-                usecols=columns,  # type: ignore
+                usecols=columns,
                 low_memory=False,
                 encoding="ANSI",
             )
@@ -42,13 +44,16 @@ def read_file(
     elif ext_lower == ".tsv":
         try:
             data_read_df = pd.read_csv(
-                str(path), usecols=columns, sep="\t", low_memory=False  # type: ignore
+                str(path),
+                usecols=columns,
+                sep="\t",
+                low_memory=False,
             )
         except UnicodeDecodeError:
             # If a unicode decode error is thrown, try again using ANSI encoding
             data_read_df = pd.read_csv(
                 str(path),
-                usecols=columns,  # type: ignore
+                usecols=columns,
                 sep="\t",
                 low_memory=False,
                 encoding="ANSI",
