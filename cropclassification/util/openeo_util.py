@@ -9,7 +9,6 @@ import pprint
 import time
 from typing import List, Optional, Tuple
 
-import geofileops as gfo
 import openeo
 import openeo.rest.job
 import pyproj

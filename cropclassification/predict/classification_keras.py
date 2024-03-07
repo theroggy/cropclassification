@@ -116,7 +116,10 @@ def train(
         f"{train_data_df.shape}, labels shape: {train_classes_df.shape}"
     )
     with pd.option_context(
-        "display.max_rows", None, "display.max_columns", None  # type: ignore
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,  # type: ignore
     ):
         logger.info(
             f"Resulting Columns for training data: {list(train_data_df.columns)}"
@@ -330,7 +333,10 @@ def predict_proba(
         )
 
     with pd.option_context(
-        "display.max_rows", None, "display.max_columns", None  # type: ignore
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,  # type: ignore
     ):
         logger.info(f"Resulting Columns for predicting data: {parcel_data_df.columns}")
 

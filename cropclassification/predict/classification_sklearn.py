@@ -60,9 +60,7 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
         "Train file processed and rows with missing data removed, data shape: "
         f"{train_data_df.shape}, labels shape: {train_classes_df.shape}"
     )
-    with pd.option_context(
-        "display.max_rows", None, "display.max_columns", None
-    ):  # type: ignore
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
         logger.info(f"Resulting Columns for training data: {train_data_df.columns}")
     with open(output_classifier_datacolumns_path, "w") as file:
         file.write(str(list(train_data_df.columns)))
@@ -95,7 +93,10 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
         # cache_size=1000 (MB) should speed up training
         # probability=True is necessary to be able to use predict_proba
         classifier = SVC(
-            C=64.0, gamma=0.125, probability=True, cache_size=1000  # type: ignore
+            C=64.0,
+            gamma=0.125,
+            probability=True,
+            cache_size=1000,  # type: ignore
         )
     else:
         message = (
@@ -160,9 +161,7 @@ def predict_proba(
         "Train file processed and rows with missing data removed, data shape: "
         f"{parcel_data_df.shape}, labels shape: {parcel_classes_df.shape}"
     )
-    with pd.option_context(
-        "display.max_rows", None, "display.max_columns", None
-    ):  # type: ignore
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
         logger.info(f"Resulting Columns for training data: {parcel_data_df.columns}")
 
     # Check of the input data columns match the columns needed for the classifier

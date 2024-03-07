@@ -115,9 +115,7 @@ def get_image_data(
                 window_to_read = projected_bounds_to_window(
                     bounds, src.transform, src.width, src.height, pixel_buffer
                 )
-                image_data[band][
-                    "transform"
-                ] = rasterio.windows.transform(  # type: ignore
+                image_data[band]["transform"] = rasterio.windows.transform(  # type: ignore
                     window_to_read, src.transform
                 )
                 image_data[band]["nodata"] = src.nodata
