@@ -139,8 +139,8 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
                         "invalid sensordata_to_use: this should be a single key dict: "
                         f"{imageprofile}"
                     )
-                imageprofile_name = list(imageprofile.keys())[0]
-                bands = list(imageprofile.values())[0]
+                imageprofile_name = next(iter(imageprofile.keys()))
+                bands = next(iter(imageprofile.values()))
                 result[imageprofile_name] = SensorData(imageprofile_name, bands=bands)
             else:
                 raise ValueError(

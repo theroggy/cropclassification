@@ -66,8 +66,8 @@ def prepare_input(
     ):
         logger.warning(
             "prepare_input: force is False and output files exist, so stop: "
-            + f"{output_imagedata_parcel_input_path}, "
-            + f"{output_parcel_nogeo_path}"
+            f"{output_imagedata_parcel_input_path}, "
+            f"{output_parcel_nogeo_path}"
         )
         return False
 
@@ -334,7 +334,7 @@ def calculate_periodic_timeseries(
                     ]
 
                 if len(period_files_df) == 0:
-                    logger.warn("No input files found!")
+                    logger.warning("No input files found!")
 
                 # Loop all period_files
                 period_band_data_df = None
@@ -353,7 +353,7 @@ def calculate_periodic_timeseries(
                         continue
 
                     # Read the file (but only the columns we need)
-                    columns = [column for column in statistic_columns_dict]
+                    columns = list(statistic_columns_dict)
                     columns.append(id_column)
 
                     image_data_df = pdh.read_file(imagedata_path, columns=columns)
