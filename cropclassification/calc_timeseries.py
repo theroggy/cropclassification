@@ -54,9 +54,9 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     log_level = conf.general.get("log_level")
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
-        
+
         # Clean test log dir if it exist
-        if (base_log_dir.exists()):
+        if base_log_dir.exists():
             shutil.rmtree(base_log_dir)
 
     log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"

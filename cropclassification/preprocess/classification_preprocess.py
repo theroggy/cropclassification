@@ -400,7 +400,7 @@ def create_train_test_sample(
         #     results significantly less good.
 
         # For the larger classes, leave the samples larger but cap
-        df_train = pd.DataFrame()
+        train_df = pd.DataFrame()
         upper_count_limit1 = 100000
         upper_train_limit1 = 30000
         logger.info(
