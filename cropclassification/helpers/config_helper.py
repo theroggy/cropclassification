@@ -154,85 +154,38 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     return result
 
 
-def _get_raster_profiles() -> Dict[str, ImageProfile]:
-    # Cropclassification gives best results with time_dimension_reducer "mean" for both
-    # sentinel 2 and sentinel 1 images.
-    # TODO: this should move to a config file
+def _get_raster_profiles() -> Dict[str, ImageProfile]:  
+    # Init
+    project_dir = Path(__file__).resolve().parent
+    config_path = project_dir / "raster_profiles.ini"
+    if not config_path.exists():
+        raise ValueError(
+            f"Config file specified does not exist: {config_path}"
+        )
 
-    job_options_extra_memory = {
-        "executor-memory": "4G",
-        "executor-memoryOverhead": "2G",
-        "executor-cores": "2",
-    }
+    # Read config file...
+    profiles_config = configparser.ConfigParser(
+        interpolation=configparser.ExtendedInterpolation(),
+        converters={
+            "list": lambda x: [i.strip() for i in x.split(",")],
+            "dict": lambda x: None if x == 'None' else json.loads(x),
+        },
+        allow_no_value=True
+    )
+    profiles_config.read(config_path)
 
+    # Prepare data
     profiles = {}
-    profiles["s2-agri"] = ImageProfile(
-        name="s2-agri",
-        satellite="s2",
-        collection="TERRASCOPE_S2_TOC_V2",
-        bands=["B02", "B03", "B04", "B08", "B11", "B12"],
-        # Use the "min" reducer filters out "lightly clouded areas"
-        process_options={
-            "time_dimension_reducer": "mean",
-            "cloud_filter_band_dilated": "SCL",
-        },
-        job_options=None,
-    )
-    profiles["s2-scl"] = ImageProfile(
-        name="s2-scl",
-        satellite="s2",
-        collection="TERRASCOPE_S2_TOC_V2",
-        bands=["SCL"],
-        # Use the "min" reducer filters out "lightly clouded areas"
-        process_options={
-            "time_dimension_reducer": "max",
-            # "cloud_filter_band_dilated": "SCL",
-            "cloud_filter_band": "SCL",
-        },
-        job_options=None,
-    )
-    profiles["s2-ndvi"] = ImageProfile(
-        name="s2-ndvi",
-        satellite="s2",
-        collection="TERRASCOPE_S2_NDVI_V2",
-        bands=["NDVI_10M"],
-        process_options={
-            "time_dimension_reducer": "mean",
-            # "cloud_filter_band_dilated": "SCENECLASSIFICATION_20M",
-            "cloud_filter_band": "SCENECLASSIFICATION_20M",
-        },
-        job_options=job_options_extra_memory,
-    )
-    profiles["s1-grd-sigma0-asc"] = ImageProfile(
-        name="s1-grd-sigma0-asc",
-        satellite="s1",
-        collection="S1_GRD_SIGMA0_ASCENDING",
-        bands=["VV", "VH"],
-        process_options={
-            "time_dimension_reducer": "mean",
-        },
-        job_options=None,
-    )
-    profiles["s1-grd-sigma0-desc"] = ImageProfile(
-        name="s1-grd-sigma0-desc",
-        satellite="s1",
-        collection="S1_GRD_SIGMA0_DESCENDING",
-        bands=["VV", "VH"],
-        process_options={
-            "time_dimension_reducer": "mean",
-        },
-        job_options=None,
-    )
-    profiles["s1-coh"] = ImageProfile(
-        name="s1-coh",
-        satellite="s1",
-        collection="TERRASCOPE_S1_SLC_COHERENCE_V1",
-        bands=["VV", "VH"],
-        process_options={
-            "time_dimension_reducer": "mean",
-        },
-        job_options=None,
-    )
+    for profile in profiles_config.sections():
+        profiles[profile] = ImageProfile(
+            name=profiles_config[profile].get("name"),
+            satellite=profiles_config[profile].get("satellite"),
+            collection=profiles_config[profile].get("collection"),
+            bands=profiles_config[profile].getlist("bands"),
+            # Use the "min" reducer filters out "lightly clouded areas"
+            process_options=profiles_config[profile].getdict("process_options"),
+            job_options=profiles_config[profile].getdict("job_options"),
+        )
 
     return profiles
 
