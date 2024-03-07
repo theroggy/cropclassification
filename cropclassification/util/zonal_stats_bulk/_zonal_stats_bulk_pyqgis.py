@@ -9,20 +9,20 @@ import sys
 import tempfile
 from typing import List, Literal, Tuple, Union
 
-# Set path for qgis
-qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
-sys.path.insert(0, str(qgis_path))
-
 import geofileops as gfo
 import geopandas as gpd
 import pandas as pd
-import qgis.core  # type: ignore
-import qgis.analysis  # type: ignore
 
 from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper as general_helper
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
+
+# Set path for qgis
+qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
+sys.path.insert(0, str(qgis_path))
+import qgis.core  # type: ignore  # noqa: E402
+import qgis.analysis  # type: ignore  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
