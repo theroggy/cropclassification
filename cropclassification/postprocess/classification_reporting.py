@@ -159,7 +159,7 @@ def write_full_report(
         parameters_used_df = pd.DataFrame(
             parameter_list, columns=["parameter_type", "parameter", "value"]
         )
-        with pd.option_context(*pandas_option_context_list):  # type: ignore
+        with pd.option_context(*pandas_option_context_list):
             outputfile.write(f"\n{parameters_used_df}\n")
             logger.info(f"{parameters_used_df}\n")
             html_data["PARAMETERS_USED_TABLE"] = parameters_used_df.to_html(index=False)
@@ -219,7 +219,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context(*pandas_option_context_list):  # type: ignore
+        with pd.option_context(*pandas_option_context_list):
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -227,7 +227,7 @@ def write_full_report(
             ] = count_per_class.to_html()
             html_data[
                 "GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA"
-            ] = count_per_class.to_dict()  # type: ignore
+            ] = count_per_class.to_dict()
 
         # Output general accuracies
         outputfile.write("\n")
@@ -383,7 +383,7 @@ def write_full_report(
         overall_accuracies_df.set_index(
             keys=["parcels", "prediction_type"], inplace=True
         )
-        with pd.option_context(*pandas_option_context_list):  # type: ignore
+        with pd.option_context(*pandas_option_context_list):
             outputfile.write(f"\n{overall_accuracies_df}\n")
             logger.info(f"{overall_accuracies_df}\n")
             html_data["OVERALL_ACCURACIES_TABLE"] = overall_accuracies_df.to_html()
@@ -441,7 +441,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -473,7 +473,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -499,7 +499,7 @@ def write_full_report(
         )
         with pd.option_context(
             "display.max_rows", None, "display.max_columns", None, "display.width", 2000
-        ):  # type: ignore
+        ):
             outputfile.write(f"{df_confmatrix_ext}\n")
             html_data["CONFUSION_MATRICES_TABLE"] = df_confmatrix_ext.to_html()
             html_data["CONFUSION_MATRICES_DATA"] = df_confmatrix_ext.to_json()
@@ -515,7 +515,7 @@ def write_full_report(
         )
         with pd.option_context(
             "display.max_rows", None, "display.max_columns", None, "display.width", 2000
-        ):  # type: ignore
+        ):
             outputfile.write(f"{df_confmatrix_ext}\n\n")
             html_data[
                 "CONFUSION_MATRICES_CONSOLIDATED_TABLE"
@@ -530,7 +530,7 @@ def write_full_report(
                 str(output_report_txt) + "_OA_per_pixcount.txt"
             )
             _write_OA_per_pixcount(
-                df_parcel_predictions=df_predict,  # type: ignore
+                df_parcel_predictions=df_predict,
                 output_report_txt=pixcount_output_report_txt,
                 force=force,
             )
@@ -599,7 +599,7 @@ def write_full_report(
                 "display.max_rows",
                 None,
                 "display.max_columns",
-                None,  # type: ignore
+                None,
             ):
                 outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
@@ -630,7 +630,7 @@ def write_full_report(
                 "display.max_rows",
                 None,
                 "display.max_columns",
-                None,  # type: ignore
+                None,
             ):
                 outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
@@ -724,7 +724,7 @@ def write_full_report(
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error full: {alpha_numerator}/{alpha_denominator} = "
-                    + f"{(alpha_numerator/alpha_denominator):.02f}"
+                    f"{(alpha_numerator/alpha_denominator):.02f}"
                 )
             else:
                 message = f"Alpha error full: {alpha_numerator}/{alpha_denominator} = ?"
@@ -752,7 +752,7 @@ def write_full_report(
             if beta_denominator > 0:
                 message = (
                     f"Beta error full: {beta_numerator}/{beta_denominator} = "
-                    + f"{(beta_numerator/beta_denominator):.02f}"
+                    f"{(beta_numerator/beta_denominator):.02f}"
                 )
             else:
                 message = f"Beta error full: {beta_numerator}/{beta_denominator} = ?"
@@ -806,7 +806,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -840,7 +840,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -887,7 +887,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -921,7 +921,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -968,7 +968,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -1002,7 +1002,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -1052,7 +1052,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[
@@ -1087,7 +1087,7 @@ def write_full_report(
                     None,
                     "display.width",
                     2000,
-                ):  # type: ignore
+                ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data[

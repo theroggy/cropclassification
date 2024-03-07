@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Literal, Optional, Tuple
 
-from ._raster_helper import *  # noqa: F401, F403
+from ._raster_helper import *  # noqa: F403
 
 
 def zonal_stats(

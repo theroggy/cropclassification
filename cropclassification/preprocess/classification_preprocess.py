@@ -142,7 +142,7 @@ def create_train_test_sample(
     class_balancing_column = conf.columns["class_balancing"]
     class_column = conf.columns["class"]
 
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         count_per_class = df_in.groupby(class_balancing_column, as_index=False).size()
         logger.info(
             f"Number of elements per classname in input dataset:\n{count_per_class}"
@@ -196,7 +196,7 @@ def create_train_test_sample(
     ]
 
     # Print the train base result before applying any balancing
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         count_per_class = train_base_df.groupby(
             class_balancing_column, as_index=False
         ).size()
@@ -504,7 +504,7 @@ def create_train_test_sample(
         raise Exception(f"Unknown balancing strategy, STOP!: {balancing_strategy}")
 
     # Log the resulting numbers per class in the train sample
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         count_per_class = train_df.groupby(
             class_balancing_column, as_index=False
         ).size()
@@ -520,7 +520,7 @@ def create_train_test_sample(
             )
 
     # Log the resulting numbers per class in the test sample
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):  # type: ignore
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         count_per_class = test_df.groupby(class_balancing_column, as_index=False).size()
         logger.info(
             "Number of elements per class_balancing_column in test dataset:\n"
