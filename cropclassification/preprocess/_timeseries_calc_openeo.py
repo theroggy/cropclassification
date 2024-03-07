@@ -4,6 +4,8 @@ from pathlib import Path
 import tempfile
 from typing import List
 
+import geofileops as gfo
+
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import openeo_util
 from cropclassification.util.openeo_util import ImageProfile
@@ -37,8 +39,11 @@ def calculate_periodic_timeseries(
     """
     # As we want a weekly calculation, get nearest monday for start and stop day
     days_per_period = 7
+    roi_info = gfo.get_layerinfo(input_parcel_path)
+    
     periodic_images_result = openeo_util.calc_periodic_mosaic(
-        roi_path=input_parcel_path,
+        roi_bounds=tuple(roi_info.total_bounds),
+        roi_crs=roi_info.crs,
         start_date=start_date,
         end_date=end_date,
         days_per_period=days_per_period,
