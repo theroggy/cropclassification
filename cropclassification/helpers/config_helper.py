@@ -117,6 +117,10 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     columns = config["columns"]
     global dirs
     dirs = config["dirs"]
+    global image_profiles
+    image_profiles = _get_image_profiles(
+        marker.getpath("image_profiles_config_filepath")
+    )
 
 
 def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
@@ -154,12 +158,10 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     return result
 
 
-def _get_raster_profiles() -> Dict[str, ImageProfile]:
+def _get_image_profiles(config_path: Path) -> Dict[str, ImageProfile]:
     # Cropclassification gives best results with time_dimension_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # Init
-    project_dir = Path(__file__).resolve().parent
-    config_path = project_dir / "raster_profiles.ini"
     if not config_path.exists():
         raise ValueError(f"Config file specified does not exist: {config_path}")
 
@@ -217,6 +219,3 @@ def as_dict():
         ].__dict__
 
     return the_dict
-
-
-image_profiles = _get_raster_profiles()
