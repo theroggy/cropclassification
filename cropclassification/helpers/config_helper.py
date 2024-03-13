@@ -184,7 +184,6 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
             satellite=profiles_config[profile].get("satellite"),
             collection=profiles_config[profile].get("collection"),
             bands=profiles_config[profile].getlist("bands"),
-            # Use the "min" reducer filters out "lightly clouded areas"
             process_options=profiles_config[profile].getdict("process_options"),
             job_options=profiles_config[profile].getdict("job_options"),
         )
