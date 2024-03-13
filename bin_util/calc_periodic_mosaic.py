@@ -15,7 +15,11 @@ def main():
     start_date = datetime(2023, 8, 1)
     end_date = datetime(2023, 10, 1)
     dest_image_data_dir = Path("//dg3.be/alp/Datagis/satellite_periodic/BEFL")
-    sensordata_to_get = [conf.image_profiles["s2-agri"]]
+    sensordata_to_get = [
+        conf._get_image_profiles(
+            Path("x:/monitoring/markers/dev/_config/image_profiles.ini")
+        )["s2-agri"]
+    ]
 
     # As we want a weekly calculation, get nearest monday for start and stop day
     start_date = ts_helper.get_monday(start_date)
