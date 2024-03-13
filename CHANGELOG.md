@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## ???
+
+### Improvements
+
+- Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
+
 ## 0.1.1 (2023-08-08)
 
 ### Improvements

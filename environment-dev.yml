@@ -24,9 +24,8 @@ dependencies:
   - pytest
   - pytest-cov
   # linting
-  - black
-  - flake8
   - pre-commit
+  - ruff
   - pip:
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12
