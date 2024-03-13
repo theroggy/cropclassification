@@ -162,8 +162,8 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
     # Cropclassification gives best results with time_dimension_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # Init
-    if not config_path.exists():
-        raise ValueError(f"Config file specified does not exist: {config_path}")
+    if not image_profiles_path.exists():
+        raise ValueError(f"Config file specified does not exist: {image_profiles_path}")
 
     # Read config file...
     profiles_config = configparser.ConfigParser(
@@ -174,7 +174,7 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
         },
         allow_no_value=True,
     )
-    profiles_config.read(config_path)
+    profiles_config.read(image_profiles_path)
 
     # Prepare data
     profiles = {}
