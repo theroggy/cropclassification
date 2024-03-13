@@ -158,7 +158,7 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     return result
 
 
-def _get_image_profiles(config_path: Path) -> Dict[str, ImageProfile]:
+def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
     # Cropclassification gives best results with time_dimension_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # Init
