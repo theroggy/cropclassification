@@ -17,22 +17,7 @@ def main():
     end_date = datetime(2023, 10, 1)
     dest_image_data_dir = Path("//dg3.be/alp/Datagis/satellite_periodic/BEFL")
     # sensordata_to_get = [conf.image_profiles["s2-agri"]]
-    config = configparser.ConfigParser(
-        interpolation=configparser.ExtendedInterpolation(),
-        converters={
-            "path": lambda x: None if x is None else Path(x),
-        },
-        allow_no_value=True,
-    )
-
-    script_dir = Path(__file__).resolve().parent.parent
-    config_paths = [script_dir / "cropclassification/general.ini"]
-    config.read(config_paths)
-    # TODO: Replace the hardcoded path
-    image_profiles_path = Path("x:/monitoring/markers/dev/_config") / config[
-        "marker"
-    ].getpath("image_profiles_config_filepath")
-    sensordata_to_get = [conf._get_image_profiles(image_profiles_path)["s2-agri"]]
+    sensordata_to_get = [conf._get_image_profiles("x:/monitoring/markers/dev/_config/image_profiles.ini")["s2-agri"]]
 
     # As we want a weekly calculation, get nearest monday for start and stop day
     start_date = ts_helper.get_monday(start_date)
