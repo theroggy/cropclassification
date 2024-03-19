@@ -109,6 +109,12 @@ def cropclassification(tasksdir: Path):
             calc_timeseries.calc_timeseries_task(
                 config_paths=config_paths, default_basedir=default_basedir
             )
+        elif action == "calc_periodic_mosaic":
+            from cropclassification import calc_periodic_mosaic
+
+            calc_periodic_mosaic.calc_periodic_mosaic_task(
+                config_paths=config_paths, default_basedir=default_basedir
+            )
         else:
             raise Exception(f"Action not supported: {action}")
 
