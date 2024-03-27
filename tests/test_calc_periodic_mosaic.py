@@ -19,9 +19,9 @@ def test_1_init_testproject():
     shutil.copytree(test_helper.sampleprojects_dir, testprojects_dir)
 
 
-def test_2_calc_periodic_mosaic_task():
+def test_2_calc_periodic_mosaic_task(after="test_1_init_testproject"):
     # Create configparser and read task file!
-    task_path = tasks_dir / "task_2023_LANDCOVER_calc_periodic_mosaic.ini"
+    task_path = tasks_dir / "task_test_calc_periodic_mosaic.ini"
     task_config = configparser.ConfigParser(
         interpolation=configparser.ExtendedInterpolation(),
         converters={"list": lambda x: [i.strip() for i in x.split(",")]},
@@ -55,8 +55,3 @@ def test_2_calc_periodic_mosaic_task():
     )
 
     # cropclassification.cropclassification(tasksdir=tasks_dir)
-
-
-if __name__ == "__main__":
-    test_1_init_testproject()
-    test_2_calc_periodic_mosaic_task()

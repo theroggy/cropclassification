@@ -3,6 +3,10 @@ import pytest
 
 from cropclassification.helpers import config_helper as conf
 
+sampleprojects_dir = Path(__file__).resolve().parent.parent / "sample_projects"
+project_dir = sampleprojects_dir / "markers"
+config_dir = project_dir / "_config"
+
 
 @pytest.mark.parametrize(
     "sensor",
@@ -16,8 +20,7 @@ from cropclassification.helpers import config_helper as conf
     ],
 )
 def test_get_image_profiles(sensor: str):
-    data_dir = Path(__file__).resolve().parent / "data"
-    config_path = data_dir / "image_profiles.ini"
+    config_path = config_dir / "image_profiles.ini"
     image_profiles = conf._get_image_profiles(config_path)
 
     profile = image_profiles.get(sensor)
