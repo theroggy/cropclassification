@@ -6,7 +6,7 @@
 
 - Make image profiles to be used in a classification configurable in a config file (#56)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
-- Script to automate periodic download of images #67
+- Add task/action to automate periodic download of images (#67)
 
 ## 0.1.1 (2023-08-08)
 
