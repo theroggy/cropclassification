@@ -41,7 +41,7 @@ def calculate_periodic_timeseries(
     days_per_period = 7
     roi_info = gfo.get_layerinfo(input_parcel_path)
 
-    periodic_images_result = openeo_util.calc_periodic_mosaic(
+    periodic_images_result = openeo_util.get_images(
         roi_bounds=tuple(roi_info.total_bounds),
         roi_crs=roi_info.crs,
         start_date=start_date,
