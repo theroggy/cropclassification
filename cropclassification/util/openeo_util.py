@@ -1,7 +1,6 @@
 from collections import defaultdict
 from copy import deepcopy
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
 import logging
 from pathlib import Path
 import pprint
@@ -11,7 +10,6 @@ from typing import List, Optional, Tuple
 import openeo
 import openeo.rest.job
 import pyproj
-import rioxarray
 
 from osgeo import gdal
 
@@ -34,6 +32,7 @@ class ImageProfile:
         name: str,
         satellite: str,
         image_source: str,
+        base_image_profile: Optional[str],
         collection: str,
         bands: List[str],
         process_options: dict,
@@ -46,6 +45,8 @@ class ImageProfile:
             name (str): name of the image profile.
             satellite (str): name of the satellite.
             image_source (str): source of the image.
+            base_image_profile (str): image profile that this one is based on. None if
+                this is not applicable.
             collection (str): collection on openeo to load to create this image.
             bands (List[str]): bands of the collection to include in the image.
             process_options (dict): process options.
@@ -55,21 +56,16 @@ class ImageProfile:
         self.name = name
         self.satellite = satellite
         self.image_source = image_source
+        self.base_image_profile = base_image_profile
         self.collection = collection
         self.bands = bands
         self.process_options = process_options
         self.job_options = job_options
 
 
-def calc_periodic_mosaic(
-    roi_bounds: Tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
-    start_date: datetime,
-    end_date: datetime,
-    days_per_period: int,
-    images_to_get: List[ImageProfile],
-    output_dir: Path,
-    period_name: Optional[str] = None,
+def get_images(
+    images_to_get: List[dict],
+    output_base_dir: Path,
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
@@ -78,19 +74,9 @@ def calc_periodic_mosaic(
     Download a periodic mosaic.
 
     Args:
-        roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
-            of the region of interest to download the mosaic for.
-        roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
-        start_date (datetime): start date, included.
-        end_date (datetime): end date, excluded.
-        days_per_period (int): number of days per period.
-        images_to_get (List[ImageProfile]): list of imageprofiles to create the mosaic
-            with.
-        output_dir (Path): directory to save the images to.
-        period_name (Optional[str], optional): name of the period. If None, default
-            names are used: if ``days_per_period=7``: "weekly", if
-            ``days_per_period=14``: "biweekly", for other values of ``days_per_period``
-            a ValueError is thrown. Defaults to None.
+        images_to_get (List[dict]): list of dicts to get.
+        output_base_dir (Path): base directory to save the images to. The images will be
+            saved in a subdirectory based on the image profile name.
         delete_existing_openeo_jobs (bool, optional): True to delete existing openeo
             jobs. If False, they are just left running and the results are downloaded if
             they are ready like other jobs. Defaults to False.
@@ -108,51 +94,6 @@ def calc_periodic_mosaic(
     Returns:
         List[Tuple[Path, ImageProfile]]: _description_
     """
-    if start_date == end_date:
-        raise ValueError(f"start date and end date are the same: {start_date}")
-    if end_date > datetime.now():
-        logger.warning(f"end_date is in the future: {end_date}")
-    roi_bounds = list(roi_bounds)
-
-    # Validate time_dimension_reducer
-    for imageprofile in images_to_get:
-        reducer = imageprofile.process_options.get("time_dimension_reducer", None)
-        if reducer is None:
-            raise ValueError(
-                "process_options must contain a time_dimension_reducer for "
-                "calc_periodic_mosaic"
-            )
-
-    # Prepare period_name:
-    if period_name is None:
-        if days_per_period == 7:
-            period_name = "weekly"
-        elif days_per_period == 14:
-            period_name = "biweekly"
-        else:
-            raise Exception("Unknown period name, please specify")
-
-    # Determine bbox of roi
-    if roi_crs is None:
-        logger.info("The crs of the roi is None, so it is assumed to be WGS84")
-    else:
-        roi_crs = pyproj.CRS(roi_crs)
-
-    if roi_crs.to_epsg() != 4326:
-        transformer = pyproj.Transformer.from_crs(roi_crs, "epsg:4326", always_xy=True)
-        roi_bounds[0], roi_bounds[1] = transformer.transform(
-            roi_bounds[0], roi_bounds[1]
-        )
-        roi_bounds[2], roi_bounds[3] = transformer.transform(
-            roi_bounds[2], roi_bounds[3]
-        )
-    roi_extent = {
-        "west": roi_bounds[0],
-        "east": roi_bounds[2],
-        "south": roi_bounds[1],
-        "north": roi_bounds[3],
-    }
-
     # Connect with openeo backend as configured in file specified in the
     # OPENEO_CLIENT_CONFIG environment variable.
     #
@@ -162,12 +103,6 @@ def calc_periodic_mosaic(
     # More info on the configuration file format can be found here:
     # https://open-eo.github.io/openeo-python-client/configuration.html#configuration-files  # noqa: E501
     conn = openeo.connect()
-
-    # Save periodic aggregate of asked images
-    logger.info(
-        f"Download masked images for roi {roi_extent} per {days_per_period} days "
-        f"to {output_dir}"
-    )
 
     if delete_existing_openeo_jobs:
         # Delete all jobs that are running already
@@ -182,65 +117,64 @@ def calc_periodic_mosaic(
                     logger.warning(ex)
     else:
         # Process jobs that are still on the server
-        image_paths, job_errors = get_job_results(conn, output_dir)
+        image_paths, job_errors = get_job_results(conn, output_base_dir)
         for image_path in image_paths:
             add_overviews(image_path)
         if raise_errors and len(job_errors) > 0:
             raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
-    period_start_date = start_date
-
     result = []
-    while period_start_date <= (end_date - timedelta(days=days_per_period)):
-        # Period in openeo is inclusive for startdate and excludes enddate
-        period_end_date = period_start_date + timedelta(days=days_per_period)
-        if period_end_date > datetime.now():
-            logger.info(
-                f"skip period ({period_start_date}, {period_end_date}): it is in the "
-                "future!"
+    for image_to_get in images_to_get:
+        roi_bounds = list(image_to_get["roi_bounds"])
+
+        # Determine bbox of roi
+        roi_crs = image_to_get["roi_crs"]
+        if roi_crs is None:
+            logger.info("The crs of the roi is None, so it is assumed to be WGS84")
+        else:
+            roi_crs = pyproj.CRS(roi_crs)
+
+        if roi_crs.to_epsg() != 4326:
+            transformer = pyproj.Transformer.from_crs(
+                roi_crs, "epsg:4326", always_xy=True
             )
-            break
-
-        for imageprofile in images_to_get:
-            # Prepare path. Remark: in the image path the end_date should be inclusive.
-            end_date_incl = period_end_date
-            if days_per_period > 1:
-                end_date_incl = period_end_date - timedelta(days=1)
-            image_path, image_relative_path = prepare_image_path(
-                imageprofile.name,
-                start_date=period_start_date,
-                end_date=end_date_incl,
-                bands=imageprofile.bands,
-                time_dimension_reducer=imageprofile.process_options[
-                    "time_dimension_reducer"
-                ],
-                dir=output_dir,
+            roi_bounds[0], roi_bounds[1] = transformer.transform(
+                roi_bounds[0], roi_bounds[1]
             )
-            if not file_exists(image_path, force):
-                # time_dimension_reducer is expected as a parameter rather than in the
-                # process_options, so extract it...
-                process_options = deepcopy(imageprofile.process_options)
-                reducer = process_options["time_dimension_reducer"]
-                del process_options["time_dimension_reducer"]
+            roi_bounds[2], roi_bounds[3] = transformer.transform(
+                roi_bounds[2], roi_bounds[3]
+            )
+        roi_extent = {
+            "west": roi_bounds[0],
+            "east": roi_bounds[2],
+            "south": roi_bounds[1],
+            "north": roi_bounds[3],
+        }
 
-                create_mosaic_job(
-                    conn=conn,
-                    collection=imageprofile.collection,
-                    spatial_extent=roi_extent,
-                    start_date=period_start_date,
-                    end_date=period_end_date,
-                    bands=imageprofile.bands,
-                    time_dimension_reducer=reducer,
-                    output_name=image_relative_path,
-                    job_options=imageprofile.job_options,
-                    process_options=process_options,
-                ).start_job()
-            result.append((image_path, imageprofile))
+        # time_dimension_reducer is expected as a parameter rather than in the
+        # process_options, so extract it...
+        image_path = image_to_get["image_relative_path"]
+        imageprofile = image_to_get["imageprofile"]
+        process_options = deepcopy(imageprofile.process_options)
+        reducer = process_options["time_dimension_reducer"]
+        del process_options["time_dimension_reducer"]
 
-        period_start_date = period_end_date
+        create_mosaic_job(
+            conn=conn,
+            collection=imageprofile.collection,
+            spatial_extent=roi_extent,
+            start_date=image_to_get["start_date"],
+            end_date=image_to_get["end_date"],
+            bands=imageprofile.bands,
+            time_dimension_reducer=reducer,
+            output_name=image_path,
+            job_options=imageprofile.job_options,
+            process_options=process_options,
+        ).start_job()
+        result.append((image_path, imageprofile))
 
     # Get the results
-    image_paths, job_errors = get_job_results(conn, output_dir)
+    image_paths, job_errors = get_job_results(conn, output_base_dir)
 
     # TODO: ideally, all mosaic_paths would be checked if they have overviews.
     for image_path in image_paths:
@@ -249,72 +183,6 @@ def calc_periodic_mosaic(
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
     return result
-
-
-def prepare_image_path(
-    imageprofile: str,
-    start_date: datetime,
-    end_date: datetime,
-    bands: List[str],
-    time_dimension_reducer: str,
-    dir: Path,
-) -> Tuple[Path, str]:
-    """
-    Returns an image_path + saves a metadata file for the image as f"{image_path}.json".
-
-    Args:
-        imageprofile (str): _description_
-        start_date (datetime): _description_
-        end_date (datetime):
-        bands (List[str]): _description_
-        dir (Path): _description_
-
-    Raises:
-        ValueError: _description_
-
-    Returns:
-        Tuple[Path, str]: the full path + the relative path
-    """
-    start_date_str = start_date.strftime("%Y-%m-%d")
-    end_date_str = end_date.strftime("%Y-%m-%d")
-    weeks = list(
-        range(int(start_date.strftime("%W")), int(start_date.strftime("%W")) + 1)
-    )
-    # Concat bands, but remove all chars used as separators
-    bands_str = "-".join([band.replace("_", "").replace("-", "") for band in bands])
-    name = (
-        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_"
-        f"{time_dimension_reducer}.tif"
-    )
-
-    # If the image metadata file doesn't exist, create it
-    image_dir = dir / imageprofile
-    image_dir.mkdir(parents=True, exist_ok=True)
-    image_path = image_dir / name
-    imagemeta_path = image_dir / f"{name}.json"
-    if not imagemeta_path.exists():
-        imageprofile_parts = imageprofile.split("-")
-        satellite = imageprofile_parts[0].lower()
-        metadata = {
-            "imageprofile": imageprofile,
-            "satellite": satellite,
-            "start_date": start_date_str,
-            "end_date": end_date_str,
-            "weeks": weeks,
-            "bands": bands,
-            "time_dimension_reducer": time_dimension_reducer,
-            "path": image_path.as_posix(),
-        }
-        if imageprofile.lower() == "s1-grd-sigma0-asc":
-            metadata["orbit"] = "asc"
-        elif imageprofile.lower() == "s1-grd-sigma0-desc":
-            metadata["orbit"] = "desc"
-
-        # Write to file
-        with open(imagemeta_path, "w") as outfile:
-            outfile.write(json.dumps(metadata, indent=4))
-
-    return (image_path, f"{imageprofile}/{name}")
 
 
 def create_mosaic_job(
@@ -408,28 +276,6 @@ def create_mosaic_job(
     )
 
 
-def file_exists(path: Path, force: bool) -> bool:
-    """
-    Check if the output file exists already. If force is True, the file is removed.
-
-    Args:
-        path (Path): the file to check for.
-        force (bool): If True, remove the file if it exists.
-
-    Returns:
-        bool: True if the file exists.
-    """
-    if path.exists():
-        if force is True:
-            path.unlink()
-        else:
-            logger.info(f"{path.name} exists, so skip")
-            return True
-
-    logger.info(f"{path.name} doesn't exist")
-    return False
-
-
 def get_job_results(
     conn: openeo.Connection, output_dir: Path, ignore_errors: bool = False
 ) -> Tuple[List[Path], List[str]]:
@@ -474,10 +320,24 @@ def get_job_results(
                     if output_tmp_path.exists():
                         output_tmp_path.unlink()
 
+                    """
                     # Use chunk size 50 MB to see some progress
                     batch_job.get_results().get_asset().download(
                         target=output_tmp_path, chunk_size=50 * 1024 * 1024
                     )
+                    """
+
+                    asset = batch_job.get_results().get_asset()
+                    import requests
+                    import shutil
+
+                    def download_file(url, target):
+                        with requests.get(url, stream=True) as r:
+                            r.raw.decode_content = True
+                            with open(target, "wb") as f:
+                                shutil.copyfileobj(r.raw, f, length=1014 * 1024)
+
+                    download_file(asset.href, target=output_tmp_path)
 
                     # Ready, now we can rename tmp file
                     output_tmp_path.rename(output_path)
@@ -529,3 +389,10 @@ def add_overviews(path: Path):
         if len(factors) > 0:
             dst.build_overviews(factors, rasterio.enums.Resampling.average)
             dst.update_tags(ns="rio_overview", resampling="average")
+
+
+def add_band_descriptions(path: Path, band_descriptions: dict):
+    # Add overviews
+    with rasterio.open(path, "r+") as dst:
+        for index, band_description in band_descriptions.items():
+            dst.set_band_description(index, band_description)

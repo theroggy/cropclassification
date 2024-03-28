@@ -183,6 +183,7 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
             name=profiles_config[profile].get("name"),
             satellite=profiles_config[profile].get("satellite"),
             image_source=profiles_config[profile].get("image_source"),
+            base_image_profile=profiles_config[profile].get("base_image_profile"),
             collection=profiles_config[profile].get("collection"),
             bands=profiles_config[profile].getlist("bands"),
             process_options=profiles_config[profile].getdict("process_options"),
