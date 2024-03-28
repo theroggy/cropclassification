@@ -103,6 +103,8 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     calc_timeseries_params = config["calc_timeseries_params"]
     global calc_marker_params
     calc_marker_params = config["calc_marker_params"]
+    global calc_periodic_mosaic_params
+    calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
     global marker
     marker = config["marker"]
     global timeseries
