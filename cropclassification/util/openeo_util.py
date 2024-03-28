@@ -94,6 +94,9 @@ def get_images(
     Returns:
         List[Tuple[Path, ImageProfile]]: _description_
     """
+    if len(images_to_get) == 0:
+        return
+
     # Connect with openeo backend as configured in file specified in the
     # OPENEO_CLIENT_CONFIG environment variable.
     #

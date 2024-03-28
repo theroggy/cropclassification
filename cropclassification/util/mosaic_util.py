@@ -61,6 +61,7 @@ def calc_periodic_mosaic(
     Returns:
         List[Tuple[Path, ImageProfile]]: _description_
     """
+    # Split images to get by image_source.
     images_to_get_openeo = []
     images_to_get_local = []
     for image_to_get in images_to_get:
@@ -73,6 +74,7 @@ def calc_periodic_mosaic(
                 f"unsupported image_source in image_to_get: {image_to_get.image_source}"
             )
 
+    # Prepare the periods to calculate mosaic images for.
     periods = prepare_periods(
         start_date=start_date,
         end_date=end_date,
@@ -80,7 +82,7 @@ def calc_periodic_mosaic(
         period_name=period_name,
     )
 
-    # Fetch the images of openeo
+    # Process the mosaic images to be calculated on openeo.
     periodic_mosaic_params = []
     for period, imageprofile in zip(periods, images_to_get_openeo):
         image_path, image_relative_path = prepare_image_path(
@@ -115,7 +117,7 @@ def calc_periodic_mosaic(
         force=force,
     )
 
-    # Fetch the images of openeo
+    # Process the mosaic images to be calculated locally.
     for period, imageprofile in zip(periods, images_to_get_local):
         # Prepare index output file path
         index_path, index_relative_path = prepare_image_path(
