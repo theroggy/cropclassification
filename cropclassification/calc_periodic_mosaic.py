@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-import logging
 from pathlib import Path
 from typing import List
 
 import cropclassification.helpers.config_helper as conf
+from cropclassification.helpers import log_helper
 import cropclassification.preprocess._timeseries_helper as ts_helper
-from cropclassification.util import openeo_util
+from cropclassification.util import mosaic_util
 
 
 def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
@@ -24,7 +24,11 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
     # Read the configuration files
     conf.read_config(config_paths=config_paths, default_basedir=default_basedir)
 
-    logging.basicConfig(level=logging.INFO)
+    # Main initialisation of the logging
+    log_level = conf.general.get("log_level")
+    base_log_dir = conf.dirs.getpath("log_dir")
+    logger = log_helper.main_log_init(base_log_dir, __name__, log_level)
+    logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # Init some variables
     start_date = datetime.fromisoformat(
@@ -52,7 +56,7 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
     end_date = ts_helper.get_monday(end_date)
 
     if not conf.calc_periodic_mosaic_params.getboolean("simulate"):
-        _ = openeo_util.calc_periodic_mosaic(
+        _ = mosaic_util.calc_periodic_mosaic(
             roi_bounds=[161_000, 188_000, 162_000, 189_000],
             roi_crs=conf.calc_periodic_mosaic_params.getint("roi_crs"),
             start_date=start_date,
