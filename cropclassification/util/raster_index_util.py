@@ -44,8 +44,8 @@ def calc_index(
             index_data.name = "NDVI"
 
         elif index == "bsi":
-            # A Modified Bare Soil Index to Identify Bare Land Features during Agricultural
-            # Fallow-Period in Southeast Asia Using Landsat 8.
+            # A Modified Bare Soil Index to Identify Bare Land Features during
+            # Agricultural Fallow-Period in Southeast Asia Using Landsat 8.
             # Can Trong Nguyen, Amnat Chidthaisong, Phan Kieu Diem, Lian-Zhi Huo.
             # Land 2021, 10, 231. Page 3.
             # URL: https://www.mdpi.com/2073-445X/10/3/231/pdf
