@@ -19,6 +19,7 @@ dependencies:
   - scikit-learn
   - rasterio
   - rasterstats
+  - rioxarray
   # testing
   - pytest
   - pytest-cov

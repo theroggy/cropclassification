@@ -20,6 +20,7 @@ dependencies:
   - qgis
   - rasterio
   - rasterstats
+  - rioxarray
   # testing
   - pytest
   - pytest-cov
