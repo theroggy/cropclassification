@@ -24,10 +24,10 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
     # Read the configuration files
     conf.read_config(config_paths=config_paths, default_basedir=default_basedir)
 
-    # Main initialisation of the logging
+    # Initialisation of the logging
     log_level = conf.general.get("log_level")
-    base_log_dir = conf.dirs.getpath("log_dir")
-    logger = log_helper.main_log_init(base_log_dir, __name__, log_level)
+    log_dir = conf.dirs.getpath("log_dir")
+    logger = log_helper.main_log_init(log_dir, __name__, log_level)
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # Init some variables
