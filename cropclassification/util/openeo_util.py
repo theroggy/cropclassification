@@ -1,80 +1,53 @@
 from collections import defaultdict
-from copy import deepcopy
 from datetime import datetime
+import json
 import logging
 from pathlib import Path
 import pprint
 import time
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import openeo
 import openeo.rest.job
 import pyproj
 
-from osgeo import gdal
-
-# ... and suppress errors
-gdal.PushErrorHandler("CPLQuietErrorHandler")
-import rasterio  # noqa: E402
-
+from . import raster_util
+from .io_util import output_exists
 
 # Get a logger...
 logger = logging.getLogger(__name__)
 
 
-class ImageProfile:
-    """
-    Profile of the image to be processed via openeo.
-    """
-
-    def __init__(
-        self,
-        name: str,
-        satellite: str,
-        image_source: str,
-        base_image_profile: Optional[str],
-        collection: str,
-        bands: List[str],
-        process_options: dict,
-        job_options: dict,
-    ):
-        """
-        Constructor of ImageProfile.
-
-        Args:
-            name (str): name of the image profile.
-            satellite (str): name of the satellite.
-            image_source (str): source of the image.
-            base_image_profile (str): image profile that this one is based on. None if
-                this is not applicable.
-            collection (str): collection on openeo to load to create this image.
-            bands (List[str]): bands of the collection to include in the image.
-            process_options (dict): process options.
-            job_options (dict): job options. Job options available on the VITO OpenEO
-                backend are documented here: https://docs.openeo.cloud/federation/#customizing-batch-job-resources-on-terrascope
-        """
-        self.name = name
-        self.satellite = satellite
-        self.image_source = image_source
-        self.base_image_profile = base_image_profile
-        self.collection = collection
-        self.bands = bands
-        self.process_options = process_options
-        self.job_options = job_options
-
-
 def get_images(
-    images_to_get: List[dict],
-    output_base_dir: Path,
+    images_to_get: List[Dict[str, Any]],
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
-) -> List[Tuple[Path, ImageProfile]]:
+):
     """
-    Download a periodic mosaic.
+    Get a list of images from openeo.
+
+    ``images_to_get`` is a list with a dict for each image to get with the following
+    properties:
+
+      - path (Path): the path to save the image to.
+      - roi_bounds (Tuple): bounds of the image to get as Tuple[minx, miny, maxx, maxy].
+      - roi_crs (int): crs the roi bounds.
+      - collection (str): openeo collection to get the image from.
+      - start_date (datetime): start date for the images in the collection to use for
+        this image.
+      - end_date (datetime): exclusive end date for the images in the collection to use
+        for this image.
+      - bands (List[str]): the bands to get.
+      - time_dimension_reducer (str): the reducer to be used to aggregate the images in
+        the time dimension: one of "mean", "min", "max",...
+      - process_options (dict): process options to use for the image.
+      - job_options (dict): job options to pass to openeo.
+
 
     Args:
-        images_to_get (List[dict]): list of dicts to get.
+        images_to_get (List[Dict[str, Any]]): list of dicts with information about the
+            images to get.
         output_base_dir (Path): base directory to save the images to. The images will be
             saved in a subdirectory based on the image profile name.
         delete_existing_openeo_jobs (bool, optional): True to delete existing openeo
@@ -90,11 +63,14 @@ def get_images(
         Exception: _description_
         RuntimeError: _description_
         RuntimeError: _description_
-
-    Returns:
-        List[Tuple[Path, ImageProfile]]: _description_
     """
-    if len(images_to_get) == 0:
+    # If all images to get exist already, we can return
+    images_to_get_todo = {
+        image_to_get["path"]: image_to_get
+        for image_to_get in images_to_get
+        if not output_exists(image_to_get["path"], remove_if_exists=force)
+    }
+    if len(images_to_get_todo) == 0:
         return
 
     # Connect with openeo backend as configured in file specified in the
@@ -120,14 +96,16 @@ def get_images(
                     logger.warning(ex)
     else:
         # Process jobs that are still on the server
-        image_paths, job_errors = get_job_results(conn, output_base_dir)
+        image_paths, job_errors = get_job_results(conn)
         for image_path in image_paths:
-            add_overviews(image_path)
+            band_descriptions = None
+            if image_path in images_to_get:
+                band_descriptions = images_to_get[image_path]["bands"]
+            postprocess_image(image_path, band_descriptions)
         if raise_errors and len(job_errors) > 0:
             raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
-    result = []
-    for image_to_get in images_to_get:
+    for image_to_get in images_to_get_todo.values():
         roi_bounds = list(image_to_get["roi_bounds"])
 
         # Determine bbox of roi
@@ -154,38 +132,32 @@ def get_images(
             "north": roi_bounds[3],
         }
 
-        # time_dimension_reducer is expected as a parameter rather than in the
-        # process_options, so extract it...
-        image_path = image_to_get["image_relative_path"]
-        imageprofile = image_to_get["imageprofile"]
-        process_options = deepcopy(imageprofile.process_options)
-        reducer = process_options["time_dimension_reducer"]
-        del process_options["time_dimension_reducer"]
-
         create_mosaic_job(
             conn=conn,
-            collection=imageprofile.collection,
+            collection=image_to_get["collection"],
             spatial_extent=roi_extent,
             start_date=image_to_get["start_date"],
             end_date=image_to_get["end_date"],
-            bands=imageprofile.bands,
-            time_dimension_reducer=reducer,
-            output_name=image_path,
-            job_options=imageprofile.job_options,
-            process_options=process_options,
+            bands=image_to_get["bands"],
+            time_dimension_reducer=image_to_get["time_dimension_reducer"],
+            output_path=image_to_get["path"],
+            job_options=image_to_get.get("job_options", {}),
+            process_options=image_to_get.get("process_options", {}),
         ).start_job()
-        result.append((image_path, imageprofile))
 
     # Get the results
-    image_paths, job_errors = get_job_results(conn, output_base_dir)
+    image_paths, job_errors = get_job_results(conn)
 
-    # TODO: ideally, all mosaic_paths would be checked if they have overviews.
+    # Postprocess the images created
     for image_path in image_paths:
-        add_overviews(image_path)
+        band_descriptions = None
+        if image_path in images_to_get:
+            band_descriptions = images_to_get[image_path]["bands"]
+        postprocess_image(image_path, band_descriptions)
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
-    return result
+    return
 
 
 def create_mosaic_job(
@@ -195,12 +167,12 @@ def create_mosaic_job(
     start_date: datetime,
     end_date: datetime,
     bands: List[str],
-    output_name: str,
+    output_path: Path,
     time_dimension_reducer: str,
     job_options: dict,
     process_options: dict,
 ) -> openeo.BatchJob:
-    logger.info(f"schedule {output_name}")
+    logger.info(f"schedule {output_path}")
 
     # Check and process input params
     period = [
@@ -274,13 +246,13 @@ def create_mosaic_job(
 
     return cube.create_job(
         out_format="GTiff",
-        title=output_name,
+        title=output_path.as_posix(),
         job_options=job_options,
     )
 
 
 def get_job_results(
-    conn: openeo.Connection, output_dir: Path, ignore_errors: bool = False
+    conn: openeo.Connection, ignore_errors: bool = False
 ) -> Tuple[List[Path], List[str]]:
     """Get results of the completed jobs."""
 
@@ -316,19 +288,12 @@ def get_job_results(
                     logger.info(f"job {job} finished, so download results")
 
                     # Download to tmp file first so we are sure download was complete
-                    output_path = output_dir / job["title"]
-                    output_tmp_path = output_dir / f"{job['title']}.download"
+                    output_path = Path(job["title"])
+                    output_tmp_path = Path(f"{output_path}.download")
                     if output_path.exists():
                         output_path.unlink()
                     if output_tmp_path.exists():
                         output_tmp_path.unlink()
-
-                    """
-                    # Use chunk size 50 MB to see some progress
-                    batch_job.get_results().get_asset().download(
-                        target=output_tmp_path, chunk_size=50 * 1024 * 1024
-                    )
-                    """
 
                     asset = batch_job.get_results().get_asset()
                     import requests
@@ -340,13 +305,15 @@ def get_job_results(
                             with open(target, "wb") as f:
                                 shutil.copyfileobj(r.raw, f, length=1014 * 1024)
 
-                    download_file(asset.href, target=output_tmp_path)
+                    # Download result. If it fails, delete the job anyway
+                    try:
+                        download_file(asset.href, target=output_tmp_path)
 
-                    # Ready, now we can rename tmp file
-                    output_tmp_path.rename(output_path)
-
-                    batch_job.delete()
-                    output_paths.append(output_path)
+                        # Ready, now we can rename tmp file
+                        output_tmp_path.rename(output_path)
+                        output_paths.append(output_path)
+                    finally:
+                        batch_job.delete()
 
                 except Exception as ex:
                     raise RuntimeError(f"Error downloading {output_path}: {ex}")
@@ -380,22 +347,19 @@ def get_job_results(
     return output_paths, errors
 
 
-def add_overviews(path: Path):
-    # Add overviews
-    with rasterio.open(path, "r+") as dst:
-        factors = []
-        for power in range(1, 999):
-            factor = pow(2, power)
-            if dst.width / factor < 256 or dst.height / factor < 256:
-                break
-            factors.append(factor)
-        if len(factors) > 0:
-            dst.build_overviews(factors, rasterio.enums.Resampling.average)
-            dst.update_tags(ns="rio_overview", resampling="average")
+def postprocess_image(path: Path, band_descriptions: Optional[List[str]]):
+    raster_util.add_overviews(path)
 
+    # if band_descriptions is None, try to read them from the json metadata file.
+    if band_descriptions is None:
+        json_path = Path(f"{path}.json")
+        if json_path.exists():
+            with open(json_path) as file:
+                json_str = file.read()
+                data = json.loads(json_str)
+                band_descriptions = data["bands"]
 
-def add_band_descriptions(path: Path, band_descriptions: dict):
-    # Add overviews
-    with rasterio.open(path, "r+") as dst:
-        for index, band_description in band_descriptions.items():
-            dst.set_band_description(index, band_description)
+    if band_descriptions is not None:
+        raster_util.add_band_descriptions(path, band_descriptions)
+    else:
+        logger.warning(f"no band_descriptions specified for {path}")

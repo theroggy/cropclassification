@@ -1,7 +1,11 @@
+import logging
 import os
 from pathlib import Path
 import tempfile
 from typing import Optional
+
+# Get a logger...
+logger = logging.getLogger(__name__)
 
 
 def create_file_atomic(path: Path):
@@ -63,3 +67,37 @@ def create_tempdir(base_dirname: str, parent_dir: Optional[Path] = None) -> Path
         f"Wasn't able to create a temporary dir with basedir: "
         f"{parent_dir / base_dirname}"
     )
+
+
+def output_exists(
+    path: Path, remove_if_exists: bool, log_prefix: Optional[str] = None
+) -> bool:
+    """
+    Check if the output file exists.
+
+    If ``remove_if_exists`` is True, the file is removed and False is returned.
+
+    Args:
+        path (Path): Output file path to check.
+        remove_if_exists (bool): If True, remove the output file if it exists.
+        log_prefix (str, optional): Prefix to use when logging that the file already
+            exists. Can be used to give more context in the logging. Defaults to None.
+
+    Raises:
+        ValueError: raised when the output directory does not exist.
+
+    Returns:
+        bool: True if the file exists.
+    """
+    if not path.parent.exists():
+        raise ValueError(f"output directory does not exist: {path.parent}")
+    if path.exists():
+        if remove_if_exists:
+            path.unlink()
+            return False
+        else:
+            log_prefix = f"{log_prefix}: " if log_prefix is not None else ""
+            logger.info(f"{log_prefix}force is False and {path.name} exists already")
+            return True
+
+    return False

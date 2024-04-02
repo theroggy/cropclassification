@@ -45,11 +45,12 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
     if end_date_subtract_days is not None:
         end_date = end_date - timedelta(int(end_date_subtract_days))
 
-    sensors = conf.calc_periodic_mosaic_params.getlist("sensors")
+    imageprofiles_to_get = conf.calc_periodic_mosaic_params.getlist(
+        "imageprofiles_to_get"
+    )
     imageprofiles = conf._get_image_profiles(
         Path(conf.marker["image_profiles_config_filepath"])
     )
-    sensordata_to_get = [imageprofiles[i] for i in sensors if i in imageprofiles]
 
     # As we want a weekly calculation, get nearest monday for start and stop day
     start_date = ts_helper.get_monday(start_date)
@@ -63,6 +64,7 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
             end_date=end_date,
             days_per_period=conf.calc_periodic_mosaic_params.getint("days_per_period"),
             output_dir=Path(conf.calc_periodic_mosaic_params["dest_image_data_dir"]),
-            images_to_get=sensordata_to_get,
+            imageprofiles_to_get=imageprofiles_to_get,
+            imageprofiles=imageprofiles,
             force=False,
         )

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module that manages configuration data.
 """
@@ -10,7 +9,7 @@ import pprint
 import tempfile
 from typing import Dict, List, Optional
 
-from cropclassification.util.openeo_util import ImageProfile
+from cropclassification.util.mosaic_util import ImageProfile
 
 # -------------------------------------------------------------
 # The real work
@@ -184,6 +183,7 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
         profiles[profile] = ImageProfile(
             name=profiles_config[profile].get("name"),
             satellite=profiles_config[profile].get("satellite"),
+            index_type=profiles_config[profile].get("index_type"),
             image_source=profiles_config[profile].get("image_source"),
             base_image_profile=profiles_config[profile].get("base_image_profile"),
             collection=profiles_config[profile].get("collection"),

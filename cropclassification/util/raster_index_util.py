@@ -20,10 +20,17 @@ def calc_index(
         else:
             logger.info(f"output_path exists already: {output_path}")
             return
+    if not output_path.parent.exists():
+        raise ValueError(f"output directory doesn't exist: {output_path.parent}")
 
     # Open the image file and calculate indexes
     with rioxarray.open_rasterio(input_path, cache=False) as image_file:
         image = image_file.to_dataset("band")
+        if "long_name" not in image.attrs:
+            raise ValueError(
+                "input file doesn't have band descriptions (image.attrs['long_name']) "
+                f"specified: {input_path}"
+            )
         image = image.rename({i + 1: n for i, n in enumerate(image.attrs["long_name"])})
 
         # Allow division by 0
