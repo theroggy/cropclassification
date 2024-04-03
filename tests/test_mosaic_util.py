@@ -16,7 +16,7 @@ def test_calc_periodic_mosaic(tmp_path):
     start_date = datetime(2024, 3, 4)
     end_date = datetime(2024, 3, 11)
 
-    result_info = mosaic_util.calc_periodic_mosaic(
+    result_infos = mosaic_util.calc_periodic_mosaic(
         roi_bounds=[160_000, 188_000, 160_500, 188_500],
         roi_crs=31370,
         start_date=start_date,
@@ -29,7 +29,10 @@ def test_calc_periodic_mosaic(tmp_path):
         force=False,
     )
 
-    assert result_info is not None
+    assert result_infos is not None
+    assert len(result_infos) == 2
+    for result_info in result_infos:
+        assert result_info["path"].exists()
 
 
 @pytest.mark.parametrize(

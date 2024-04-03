@@ -192,7 +192,20 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
             job_options=profiles_config[profile].getdict("job_options"),
         )
 
+    # Do some extra validations on the profiles read.
+    _validate_image_profiles(profiles)
+
     return profiles
+
+
+def _validate_image_profiles(profiles: Dict[str, ImageProfile]):
+    # Check that all base_image_profile s are actually existing image profiles.
+    for profile in profiles:
+        base_image_profile = profiles[profile].base_image_profile
+        if base_image_profile is not None and base_image_profile not in profiles:
+            raise ValueError(
+                f"{base_image_profile=} not found for profile {profiles[profile]}"
+            )
 
 
 def pformat_config():

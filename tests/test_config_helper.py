@@ -1,3 +1,4 @@
+from copy import deepcopy
 import pytest
 
 from cropclassification.helpers import config_helper as conf
@@ -21,3 +22,16 @@ def test_get_image_profiles(sensor: str):
 
     profile = image_profiles.get(sensor)
     assert profile is not None
+
+
+def test_validate_image_profiles():
+    conf._validate_image_profiles(test_helper.IMAGEPROFILES)
+
+
+def test_validate_image_profiles_invalid():
+    test_profiles = deepcopy(test_helper.IMAGEPROFILES)
+    test_profiles["s2-ndvi"].base_image_profile = "invalid"
+    with pytest.raises(
+        ValueError, match="base_image_profile='invalid' not found for profile"
+    ):
+        conf._validate_image_profiles(test_profiles)

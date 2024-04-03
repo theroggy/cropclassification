@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import pyproj
 from . import raster_index_util
 from . import openeo_util
-from .io_util import output_exists
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -31,6 +30,52 @@ class ImageProfile:
     index_type: Optional[str] = None
     process_options: Optional[dict] = None
     job_options: Optional[dict] = None
+
+    def __init__(
+        self,
+        name: str,
+        satellite: str,
+        image_source: str,
+        collection: Optional[str] = None,
+        bands: Optional[List[str]] = None,
+        base_image_profile: Optional[str] = None,
+        index_type: Optional[str] = None,
+        process_options: Optional[dict] = None,
+        job_options: Optional[dict] = None,
+    ):
+        self.name = name
+        self.satellite = satellite
+        self.image_source = image_source
+        self.collection = collection
+        self.bands = bands
+        self.base_image_profile = base_image_profile
+        self.index_type = index_type
+        self.process_options = process_options
+        self.job_options = job_options
+
+        # Some data validations
+        if image_source == "local":
+            if collection is not None:
+                raise ValueError(f"collection must be None if {image_source=}, {self}")
+            elif bands is not None:
+                raise ValueError(f"bands must be None if {image_source=}, {self}")
+            elif index_type is None:
+                raise ValueError(f"index_type can't be None if {image_source=}, {self}")
+            elif base_image_profile is None:
+                raise ValueError(
+                    f"base_image_profile can't be None if {image_source=}, {self}"
+                )
+        elif image_source == "openeo":
+            if collection is None:
+                raise ValueError(f"collection can't be None if {image_source=}, {self}")
+            elif bands is None:
+                raise ValueError(f"bands can't be None if {image_source=}, {self}")
+            elif base_image_profile is not None:
+                raise ValueError(
+                    f"base_image_profile can't be None  if {image_source=}, {self}"
+                )
+        else:
+            raise ValueError(f"{image_source=} is not supported, {self}")
 
 
 def calc_periodic_mosaic(
@@ -80,12 +125,6 @@ def calc_periodic_mosaic(
         force (bool, optional): True to force recreation of existing output files.
             Defaults to False.
 
-    Raises:
-        ValueError: _description_
-        Exception: _description_
-        RuntimeError: _description_
-        RuntimeError: _description_
-
     Returns:
         List[Dict[str, Any]]: list with information about all mosaic image calculated.
     """
@@ -105,7 +144,6 @@ def calc_periodic_mosaic(
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
         output_base_dir=output_base_dir,
-        force=force,
     )
 
     # Split images to get by image_source.
@@ -217,7 +255,6 @@ def _prepare_periodic_mosaic_params(
     imageprofiles_to_get: List[str],
     imageprofiles: Dict[str, ImageProfile],
     output_base_dir: Path,
-    force: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Prepare the parameters needed to generate a list of periodic mosaics.
@@ -237,15 +274,14 @@ def _prepare_periodic_mosaic_params(
             imageprofiles_to_get.
         output_base_dir (Path): base directory to save the images to. The images will be
             saved in a subdirectory based on the image profile name.
-        force (bool, optional): True to force recreation of existing output files.
-            Defaults to False.
 
     Returns:
         List[Dict[str, Any]]: list of dicts with all neededparameters to generate the
             mosaic images.
     """
     # Prepare full list of image mosaics we want to calculate.
-    periodic_mosaic_params = []
+    # Use a dict indexed on path to avoid having duplicate mosaic_image_params.
+    periodic_mosaic_params: Dict[str, Dict[str, Any]] = {}
     for period, imageprofile in product(periods, imageprofiles_to_get):
         main_image_params = _prepare_mosaic_image_params(
             roi_bounds=roi_bounds,
@@ -256,16 +292,12 @@ def _prepare_periodic_mosaic_params(
             output_base_dir=output_base_dir,
         )
 
-        # Image exists already, so no processing needed
-        if output_exists(main_image_params["path"], force):
-            continue
-
-        # If the image isn't calculated locally, just add main image and continue
+        # If the image isn't calculated locally, just add main image and continue.
         if imageprofiles[imageprofile].image_source != "local":
-            periodic_mosaic_params.append(main_image_params)
+            periodic_mosaic_params[main_image_params["path"]] = main_image_params
             continue
 
-        # The image is calculated locally, so we need a base image
+        # Image calculated locally... so we need a base image.
         base_image_profile = imageprofiles[imageprofile].base_image_profile
         if base_image_profile is None:
             raise ValueError(
@@ -280,15 +312,13 @@ def _prepare_periodic_mosaic_params(
             time_dimension_reducer=time_dimension_reducer,
             output_base_dir=output_base_dir,
         )
-        # Base image doesn't exist yet, to add to list to be generated
-        if not output_exists(base_image_params["path"], force):
-            periodic_mosaic_params.append(base_image_params)
+        periodic_mosaic_params[base_image_params["path"]] = base_image_params
 
         # Add base image path to main image + add to list
         main_image_params["base_image_path"] = base_image_params["path"]
-        periodic_mosaic_params.append(main_image_params)
+        periodic_mosaic_params[main_image_params["path"]] = main_image_params
 
-    return periodic_mosaic_params
+    return list(periodic_mosaic_params.values())
 
 
 def _prepare_mosaic_image_params(
