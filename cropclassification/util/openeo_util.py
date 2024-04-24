@@ -360,6 +360,6 @@ def postprocess_image(path: Path, band_descriptions: Optional[List[str]]):
                 band_descriptions = data["bands"]
 
     if band_descriptions is not None:
-        raster_util.add_band_descriptions(path, band_descriptions)
+        raster_util.set_band_descriptions(path, band_descriptions)
     else:
         logger.warning(f"no band_descriptions specified for {path}")

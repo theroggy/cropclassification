@@ -27,20 +27,34 @@ def add_overviews(path: Path):
             dst.update_tags(ns="rio_overview", resampling="average")
 
 
-def add_band_descriptions(
-    path: Path, band_descriptions: Union[Iterable[str], Dict[int, str]]
+def set_band_descriptions(
+    path: Path,
+    band_descriptions: Union[Iterable[str], Dict[int, str], str],
+    overwrite: bool = True,
 ):
     """
     Add band decriptions to a raster file.
 
     Args:
         path (Path): the file to add band descriptions to
-        band_descriptions (Iterable[str]): an Iterable with the band descriptions or a
-            Dict with the band index as key (starting with 1) and the description as
-            value.
+        band_descriptions (Iterable, dict, str): an Iterable with the band descriptions,
+            a Dict with the band index as key (starting with 1) and the description
+            as value or a string if the file has a single band.
+        overwrite (bool): True to overwrite existing band descriptions. If False, if any
+            band does not have a description, all band descriptions are overwritten.
+            Defaults to True.
     """
+    # If band_descriptions is a string, make it a list to avoid each char being treated
+    # as a band name.
+    if isinstance(band_descriptions, str):
+        band_descriptions = [band_descriptions]
+
     # Add band descriptions
     with rasterio.open(path, "r+") as file:
+        # If force is False and all bands already have a description, return.
+        if not overwrite and all(file.descriptions):
+            return
+
         # If band_descriptions is no dict, there should be a description for each band.
         if not isinstance(band_descriptions, dict):
             if file.count != len(band_descriptions):
