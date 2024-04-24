@@ -69,6 +69,60 @@ def calc_index(
             )
             index_data.name = "BSI"
 
+        elif index == "dprvi":
+            # "New" dual-pol radar vegetation index for Sentinel-1.
+            # Paper:= https://www.sciencedirect.com/science/article/abs/pii/S0034425720303242
+            # Implementation derived from one of by Dr. Dipankar Mandal:
+            # https://custom-scripts.sentinel-hub.com/custom-scripts/sentinel-1/radar_vegetation_index/
+
+            if save_as_byte:
+                scale_factor = 0.004
+                add_offset = 0
+
+            vh = image["VH"]
+            vv = image["VV"]
+
+            # Calculate VH/VV ratio
+            # By default, dividing ints results in float64, but we only need float32
+            q = np.divide(vh, vv, dtype=np.float32)
+
+            # Calculate ~degree of polarization: co-pol purity parameter m
+            # (values are 0-1).
+            # For low vegetation conditions, the co-pol backscatter will be high and the
+            # cross-pol backscatter is low (i.e., q->0). As a consequence, one can
+            # observe that, for bare field conditions m is high, and decreases gradually
+            # with an increase in vegetation canopy density.
+            # m = np.divide((1 - q), (1 + q), dtype=np.float32)
+
+            # Further, the beta (normalized co-pol intensity parameter) can be expressed
+            # as, beta = 1/(1+q). where 0.5<beta<1.
+            # beta = np.divide(1, (1 + q), dtype=np.float32)
+
+            # Now, the overall purity of the co-pol component can be obtained by
+            # multiplying the co-pol purity parameter m and normalized co-pol intensity
+            # parameter beta. Subsequently, by subtracting overall purity, we obtain a
+            # quantitative measure of scattering randomness, as RVI4S1.
+            # with 0<RVI4S1<1.0.
+
+            # It quantifies impurity in the co-pol component of scattered wave. The
+            # index also separates urban areas and bare soil from the vegetated terrain.
+            # However, for very rough soil (likely after tillage) or water surface (high
+            # windy condition), the DOP would be lower, which turns the RVI4S1 to be
+            # quite higher than a smooth surface. Hence care should be taken with this
+            # particular condition. For example, RVI4S1 = 0 for a pure or point target
+            # scattering which corresponds to copol purity parameter m = 1, and beta =1.
+            # On the other extreme case m = 0 and beta = 0.5 for a completely random
+            # scattering. Therefore, RVI4S1=1 for a completely random scattering.
+            # DpRVIc = 1-(m*beta)
+            # Depolarization within the vegetation
+            # value = (Math.sqrt(dop)) * ((4 * (vh)) / (vv + vh))
+
+            # It can be written in fewer steps like this:
+            N = np.multiply(q, (q + 3), dtype=np.float32)
+            D = np.multiply((q + 1), (q + 1), dtype=np.float32)
+            index_data = np.divide(N, D, dtype=np.float32)
+            index_data.name = "DpRVI"
+
         else:
             raise ValueError(f"unsupported index type: {index}")
 
