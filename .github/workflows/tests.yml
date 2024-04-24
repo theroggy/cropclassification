@@ -74,3 +74,5 @@ jobs:
           pytest --color=yes --cov=cropclassification --cov-append --cov-report term-missing --cov-report xml tests/
 
       - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # required
