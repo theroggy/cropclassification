@@ -89,8 +89,6 @@ def output_exists(
     Returns:
         bool: True if the file exists.
     """
-    if not path.parent.exists():
-        raise ValueError(f"output directory does not exist: {path.parent}")
     if path.exists():
         if remove_if_exists:
             path.unlink()
@@ -99,5 +97,7 @@ def output_exists(
             log_prefix = f"{log_prefix}: " if log_prefix is not None else ""
             logger.info(f"{log_prefix}force is False and {path.name} exists already")
             return True
+    elif not path.parent.exists():
+        raise ValueError(f"output directory does not exist: {path.parent}")
 
     return False

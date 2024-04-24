@@ -1,8 +1,10 @@
 import logging
 from pathlib import Path
-import numpy as np
 
+import numpy as np
 import rioxarray
+
+import io_util
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +16,8 @@ def calc_index(
     save_as_byte: bool = True,
     force: bool = False,
 ):
-    if output_path.exists():
-        if force:
-            remove(output_path)
-        else:
-            logger.info(f"output_path exists already: {output_path}")
-            return
-    if not output_path.parent.exists():
-        raise ValueError(f"output directory doesn't exist: {output_path.parent}")
+    if io_util.output_exists(output_path, remove_if_exists=force):
+        return
 
     # Open the image file and calculate indexes
     with rioxarray.open_rasterio(input_path, cache=False) as image_file:
