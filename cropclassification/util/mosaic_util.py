@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pyproj
+
+from cropclassification.util import raster_util
 from . import raster_index_util
 from . import openeo_util
 
@@ -159,6 +161,13 @@ def calc_periodic_mosaic(
             images_local.append(image_params)
         else:
             raise ValueError(f"unsupported image_source in {image_params=}")
+
+    # Make sure band information is embedded in the image
+    for image in images_from_openeo:
+        if image["path"].exists():
+            raster_util.set_band_descriptions(
+                image["path"], band_descriptions=image["bands"], overwrite=False
+            )
 
     # First get all mosaic images from openeo
     _ = openeo_util.get_images(
