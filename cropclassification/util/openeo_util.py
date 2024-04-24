@@ -41,6 +41,8 @@ def get_images(
       - bands (List[str]): the bands to get.
       - time_dimension_reducer (str): the reducer to be used to aggregate the images in
         the time dimension: one of "mean", "min", "max",...
+      - max_cloud_cover (float): the maximum cloud cover images should have to be used.
+        If None, no cloud cover filtering is applied.
       - process_options (dict): process options to use for the image.
       - job_options (dict): job options to pass to openeo.
 
@@ -141,6 +143,7 @@ def get_images(
             bands=image_to_get["bands"],
             time_dimension_reducer=image_to_get["time_dimension_reducer"],
             output_path=image_to_get["path"],
+            max_cloud_cover=image_to_get.get("max_cloud_cover", None),
             job_options=image_to_get.get("job_options", {}),
             process_options=image_to_get.get("process_options", {}),
         ).start_job()
@@ -169,6 +172,7 @@ def create_mosaic_job(
     bands: List[str],
     output_path: Path,
     time_dimension_reducer: str,
+    max_cloud_cover: Optional[float],
     job_options: dict,
     process_options: dict,
 ) -> openeo.BatchJob:
@@ -211,7 +215,7 @@ def create_mosaic_job(
         spatial_extent=spatial_extent,
         temporal_extent=period,
         bands=bands_to_load,
-        max_cloud_cover=80,
+        max_cloud_cover=max_cloud_cover,
     )
 
     # Use mask_scl_dilation for "aggressive" cloud mask based on SCL

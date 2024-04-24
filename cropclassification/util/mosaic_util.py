@@ -28,6 +28,7 @@ class ImageProfile:
     bands: Optional[List[str]] = None
     base_image_profile: Optional[str] = None
     index_type: Optional[str] = None
+    max_cloud_cover: Optional[float] = None
     process_options: Optional[dict] = None
     job_options: Optional[dict] = None
 
@@ -40,6 +41,7 @@ class ImageProfile:
         bands: Optional[List[str]] = None,
         base_image_profile: Optional[str] = None,
         index_type: Optional[str] = None,
+        max_cloud_cover: Optional[float] = None,
         process_options: Optional[dict] = None,
         job_options: Optional[dict] = None,
     ):
@@ -50,6 +52,7 @@ class ImageProfile:
         self.bands = bands
         self.base_image_profile = base_image_profile
         self.index_type = index_type
+        self.max_cloud_cover = max_cloud_cover
         self.process_options = process_options
         self.job_options = job_options
 
@@ -366,6 +369,7 @@ def _prepare_mosaic_image_params(
         "imageprofile": imageprofile.name,
         "collection": imageprofile.collection,
         "index_type": imageprofile.index_type,
+        "max_cloud_cover": imageprofile.max_cloud_cover,
         "image_source": imageprofile.image_source,
         "satellite": satellite,
         "roi_bounds": roi_bounds,

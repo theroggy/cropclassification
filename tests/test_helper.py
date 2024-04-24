@@ -19,6 +19,7 @@ IMAGEPROFILES: Dict[str, ImageProfile] = {
         image_source="openeo",
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B02", "B03", "B04", "B08", "B11", "B12"],
+        max_cloud_cover=80,
     ),
     "s2-ndvi": ImageProfile(
         name="s2-ndvi",

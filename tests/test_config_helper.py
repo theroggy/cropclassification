@@ -6,22 +6,27 @@ from tests import test_helper
 
 
 @pytest.mark.parametrize(
-    "sensor",
+    "sensor, exp_max_cloud_cover",
     [
-        ("s2-agri"),
-        ("s2-scl"),
-        ("s2-ndvi"),
-        ("s1-grd-sigma0-asc"),
-        ("s1-grd-sigma0-desc"),
-        ("s1-coh"),
+        ("s2-agri", 80),
+        ("s2-scl", 80),
+        ("s2-ndvi", None),
+        ("s1-grd-sigma0-asc", None),
+        ("s1-grd-sigma0-desc", None),
+        ("s1-coh", None),
     ],
 )
-def test_get_image_profiles(sensor: str):
+def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float):
     config_path = test_helper.SampleDirs.config_dir / "image_profiles.ini"
     image_profiles = conf._get_image_profiles(config_path)
 
     profile = image_profiles.get(sensor)
     assert profile is not None
+    assert profile.name == sensor
+    if exp_max_cloud_cover is None:
+        profile.max_cloud_cover is None
+    else:
+        assert profile.max_cloud_cover == exp_max_cloud_cover
 
 
 def test_validate_image_profiles():
