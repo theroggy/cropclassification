@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import rioxarray
 
-import io_util
+from . import io_util
 
 logger = logging.getLogger(__name__)
 
