@@ -74,6 +74,60 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
         assert result_info["path"].exists()
 
 
+def test_ImageProfile_local():
+    image_profile = mosaic_util.ImageProfile(
+        name="s2-ndvi",
+        satellite="s2",
+        image_source="local",
+        index_type="ndvi",
+        base_image_profile="s2-agri",
+    )
+    assert image_profile.name == "s2-ndvi"
+    assert image_profile.index_type == "ndvi"
+    assert image_profile.base_image_profile == "s2-agri"
+
+
+@pytest.mark.parametrize(
+    "exp_error, name, image_source, collection, bands, base_image_profile, index_type",
+    [
+        ("collection must be None", "s2-ndvi", "local", "col", None, "s2-agri", "ndvi"),
+        ("bands must be None", "s2-ndvi", "local", None, ["ndvi"], "s2-agri", "ndvi"),
+        ("index_type can't be None", "s2-ndvi", "local", None, None, "s2-agri", None),
+        ("base_image_profile can't be None", "s2-n", "local", None, None, None, "ndvi"),
+        ("collection can't be None", "s2-agri", "openeo", None, ["B"], None, None),
+        ("bands can't be None", "s2-agri", "openeo", "col", None, None, None),
+        ("collection can't be None", "s2-agri", "openeo", None, ["B"], None, None),
+        ("base_image_profile must be None", "s2-a", "openeo", "col", ["B"], "pr", None),
+    ],
+)
+def test_ImageProfile_invalid(
+    name, image_source, collection, bands, base_image_profile, index_type, exp_error
+):
+    with pytest.raises(ValueError, match=exp_error):
+        mosaic_util.ImageProfile(
+            name=name,
+            satellite="s2",
+            image_source=image_source,
+            collection=collection,
+            bands=bands,
+            base_image_profile=base_image_profile,
+            index_type=index_type,
+        )
+
+
+def test_ImageProfile_openeo():
+    image_profile = mosaic_util.ImageProfile(
+        name="s2-agri",
+        satellite="s2",
+        image_source="openeo",
+        collection="TERRASCOPE_S2_TOC_V2",
+        bands=["B01", "B02"],
+    )
+    assert image_profile.name == "s2-agri"
+    assert image_profile.collection == "TERRASCOPE_S2_TOC_V2"
+    assert image_profile.bands == ["B01", "B02"]
+
+
 @pytest.mark.parametrize(
     "start_date, end_date, days_per_period, expected_nb_periods",
     [(datetime(2024, 1, 1), datetime(2024, 1, 17), 7, 2)],

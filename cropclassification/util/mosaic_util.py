@@ -77,7 +77,7 @@ class ImageProfile:
                 raise ValueError(f"bands can't be None if {image_source=}, {self}")
             elif base_image_profile is not None:
                 raise ValueError(
-                    f"base_image_profile can't be None  if {image_source=}, {self}"
+                    f"base_image_profile must be None if {image_source=}, {self}"
                 )
         else:
             raise ValueError(f"{image_source=} is not supported, {self}")
