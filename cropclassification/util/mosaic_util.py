@@ -216,7 +216,7 @@ def _prepare_periods(
         List[dict]: list of dicts with info about the images to get
     """
     if start_date == end_date:
-        raise ValueError(f"start date and end date are the same: {start_date}")
+        raise ValueError(f"start_date == end_date: this is not supported: {start_date}")
     if end_date > datetime.now():
         logger.warning(f"end_date is in the future: {end_date}")
 

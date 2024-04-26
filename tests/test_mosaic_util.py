@@ -140,6 +140,20 @@ def test_prepare_periods(start_date, end_date, days_per_period, expected_nb_peri
     assert len(result) == expected_nb_periods
 
 
+@pytest.mark.parametrize(
+    "exp_error, start_date, end_date, days_per_period",
+    [
+        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), 7),
+        ("Unknown period name", datetime(2024, 1, 1), datetime(2024, 1, 2), 3),
+    ],
+)
+def test_prepare_periods_invalid(exp_error, start_date, end_date, days_per_period):
+    with pytest.raises(ValueError, match=exp_error):
+        _ = mosaic_util._prepare_periods(
+            start_date, end_date, days_per_period=days_per_period
+        )
+
+
 def test_prepare_mosaic_image_path():
     # Very basic test, as otherwise the tests just reimplements all code
     result_path = mosaic_util._prepare_mosaic_image_path(
