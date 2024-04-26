@@ -88,24 +88,25 @@ def test_ImageProfile_local():
 
 
 @pytest.mark.parametrize(
-    "exp_error, name, image_source, collection, bands, base_image_profile, index_type",
+    "exp_error, image_source, collection, bands, base_image_profile, index_type",
     [
-        ("collection must be None", "s2-ndvi", "local", "col", None, "s2-agri", "ndvi"),
-        ("bands must be None", "s2-ndvi", "local", None, ["ndvi"], "s2-agri", "ndvi"),
-        ("index_type can't be None", "s2-ndvi", "local", None, None, "s2-agri", None),
-        ("base_image_profile can't be None", "s2-n", "local", None, None, None, "ndvi"),
-        ("collection can't be None", "s2-agri", "openeo", None, ["B"], None, None),
-        ("bands can't be None", "s2-agri", "openeo", "col", None, None, None),
-        ("collection can't be None", "s2-agri", "openeo", None, ["B"], None, None),
-        ("base_image_profile must be None", "s2-a", "openeo", "col", ["B"], "pr", None),
+        ("image_source='wrong' is not supported", "wrong", None, None, None, None),
+        ("collection must be None", "local", "collection", None, "s2-agri", "ndvi"),
+        ("bands must be None", "local", None, ["ndvi"], "s2-agri", "ndvi"),
+        ("index_type can't be None", "local", None, None, "s2-agri", None),
+        ("base_image_profile can't be None", "local", None, None, None, "ndvi"),
+        ("collection can't be None", "openeo", None, ["B"], None, None),
+        ("bands can't be None", "openeo", "col", None, None, None),
+        ("collection can't be None", "openeo", None, ["B"], None, None),
+        ("base_image_profile must be None", "openeo", "col", ["B"], "profile", None),
     ],
 )
 def test_ImageProfile_invalid(
-    name, image_source, collection, bands, base_image_profile, index_type, exp_error
+    exp_error, image_source, collection, bands, base_image_profile, index_type
 ):
     with pytest.raises(ValueError, match=exp_error):
         mosaic_util.ImageProfile(
-            name=name,
+            name="test-name",
             satellite="s2",
             image_source=image_source,
             collection=collection,
