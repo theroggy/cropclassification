@@ -48,7 +48,7 @@ def zonal_stats(
     columns: List[str],
     rasters_bands: List[Tuple[Path, List[str]]],
     output_dir: Path,
-    stats: List[Statistic] = DEFAULT_STATS,
+    stats: List[Statistic] = DEFAULT_STATS,  # type: ignore[assignment]
     nb_parallel: int = -1,
     force: bool = False,
 ):

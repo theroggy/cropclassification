@@ -41,8 +41,8 @@ def calculate_periodic_timeseries(
     days_per_period = 7
     roi_info = gfo.get_layerinfo(input_parcel_path)
 
-    periodic_images_result = openeo_util.get_images(
-        roi_bounds=tuple(roi_info.total_bounds),
+    periodic_images_result = openeo_util.calc_periodic_mosaic(
+        roi_bounds=roi_info.total_bounds,
         roi_crs=roi_info.crs,
         start_date=start_date,
         end_date=end_date,
@@ -65,7 +65,7 @@ def calculate_periodic_timeseries(
         id_column=conf.columns["id"],
         rasters_bands=images_bands,
         output_dir=dest_data_dir,
-        stats=["count", "mean", "median", "std", "min", "max"],
+        stats=["count", "mean", "median", "std", "min", "max"],  # type: ignore[arg-type]
         engine="pyqgis",
         nb_parallel=nb_parallel,
     )

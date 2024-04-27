@@ -7,13 +7,24 @@ import json
 from pathlib import Path
 import pprint
 import tempfile
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from cropclassification.util.mosaic_util import ImageProfile
 
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
+config: configparser.ConfigParser
+config_paths_used: List[Path]
+general: Any
+calc_timeseries_params: Any
+calc_marker_params: Any
+calc_periodic_mosaic_params: Any
+marker: Any
+timeseries: Any
+preprocess: Any
+classifier: Any
+postprocess: Any
+columns: Any
+dirs: Any
+image_profiles: Any
 
 
 class SensorData:
