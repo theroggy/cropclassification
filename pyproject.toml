@@ -2,6 +2,13 @@
 exclude = ["local_ignore"]
 reportGeneralTypeIssues = false
 
+[tool.mypy]
+exclude = ["local_ignore"]
+
+[[tool.mypy.overrides]]
+module = "cloudpickle.*,fiona.*,geopandas.*,matplotlib.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,setuptools.*,shapely.*,topojson.*"
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 88
 select = [
