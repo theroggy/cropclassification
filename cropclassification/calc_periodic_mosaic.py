@@ -57,7 +57,7 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
 
     if not conf.calc_periodic_mosaic_params.getboolean("simulate"):
         _ = openeo_util.calc_periodic_mosaic(
-            roi_bounds=[161_000, 188_000, 162_000, 189_000],
+            roi_bounds=(161_000, 188_000, 162_000, 189_000),
             roi_crs=conf.calc_periodic_mosaic_params.getint("roi_crs"),
             start_date=start_date,
             end_date=end_date,

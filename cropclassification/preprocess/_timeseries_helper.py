@@ -8,7 +8,7 @@ import logging
 import gc
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import geofileops as gfo
 import numpy as np
@@ -226,7 +226,7 @@ def calculate_periodic_timeseries(
         logger.debug(
             "Get files we need based on start- & stopdates, sensordata_to_get,..."
         )
-        orbits = [None]
+        orbits: List[Optional[str]] = [None]
         if sensordata_type == "S1AscDesc":
             # Filter files to the ones we need
             # satellitetype = "S1"
@@ -338,7 +338,7 @@ def calculate_periodic_timeseries(
 
                 # Loop all period_files
                 period_band_data_df = None
-                statistic_columns_dict = {
+                statistic_columns_dict: Dict[str, Any] = {
                     "count": [],
                     "max": [],
                     "mean": [],

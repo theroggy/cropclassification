@@ -1,8 +1,10 @@
+# mypy: disable-error-code="union-attr"
+
 import logging
 import os
 from pathlib import Path
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import xml.etree.ElementTree as ET
 
 from osgeo import gdal
@@ -96,7 +98,7 @@ def get_image_data(
     image_info = get_image_info(image_path)
 
     # Now get the data
-    image_data = {}  # Dict for the transforms and the data per band
+    image_data: Dict[str, Any] = {}  # Dict for the transforms and the data per band
     if image_info.filetype in ("CARD", "SAFE", "TIF"):
         # Loop over bands and get data
         for band in bands:
@@ -149,9 +151,6 @@ def get_image_info(image_path: Path) -> ImageInfo:
     Returns:
         ImageInfo: basic information about the image
     """
-
-    image_info = {}
-
     # Specific code per image type
     suffix_upper = image_path.suffix.upper()
     if suffix_upper == ".CARD":
@@ -364,7 +363,7 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
     manifest_xml_paths = list(image_path.glob(manifest_xml_searchstring))
 
     # The number of .safe indicates whether it is a GRD or a Coherence image
-    extra = {}
+    extra: Dict[str, Any] = {}
     nb_safefiles = len(manifest_xml_paths)
     if nb_safefiles == 1:
         # Now parse the .safe file
@@ -624,11 +623,11 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
         extra["Cloud_Coverage_Assessment"] = float(
             metadata_root.find(
                 "n1:Quality_Indicators_Info/Cloud_Coverage_Assessment", ns
-            ).text
+            ).text  # type: ignore[arg-type]
         )
         extra["acquisition_date"] = metadata_root.find(
             "n1:General_Info/Product_Info/PRODUCT_START_TIME", ns
-        ).text
+        ).text  # type: ignore[assignment]
 
     except Exception as ex:
         raise Exception(f"Exception extracting info from {metadata_xml_path}") from ex
@@ -756,12 +755,12 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
                 bandindex=band_idx - 1,
             )
 
-    footprint = {}
+    footprint: Dict[str, Any] = {}
     footprint["shape"] = None
     footprint["crs"] = None
     footprint["epsg"] = None
 
-    extra = {}
+    extra: Dict[str, Any] = {}
     imagetype = image_path.stem.split("_")[0].upper()
     if imagetype in ("S1-ASC", "S1-DESC"):
         orbit = imagetype.split("-")[1]

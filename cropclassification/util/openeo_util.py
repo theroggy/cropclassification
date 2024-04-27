@@ -107,7 +107,6 @@ def calc_periodic_mosaic(
     """
     if end_date > datetime.now():
         logger.warning(f"end_date is in the future: {end_date}")
-    roi_bounds = list(roi_bounds)
 
     # Validate time_dimension_reducer
     for imageprofile in images_to_get:
@@ -133,14 +132,14 @@ def calc_periodic_mosaic(
     else:
         roi_crs = pyproj.CRS(roi_crs)
 
-    if roi_crs.to_epsg() != 4326:
-        transformer = pyproj.Transformer.from_crs(roi_crs, "epsg:4326", always_xy=True)
-        roi_bounds[0], roi_bounds[1] = transformer.transform(
-            roi_bounds[0], roi_bounds[1]
-        )
-        roi_bounds[2], roi_bounds[3] = transformer.transform(
-            roi_bounds[2], roi_bounds[3]
-        )
+        if roi_crs.to_epsg() != 4326:
+            transformer = pyproj.Transformer.from_crs(
+                roi_crs, "epsg:4326", always_xy=True
+            )
+            xmin, ymin = transformer.transform(roi_bounds[0], roi_bounds[1])
+            xmax, ymax = transformer.transform(roi_bounds[2], roi_bounds[3])
+            roi_bounds = (xmin, ymin, xmax, ymax)
+
     roi_extent = {
         "west": roi_bounds[0],
         "east": roi_bounds[2],

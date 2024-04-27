@@ -24,8 +24,11 @@ dependencies:
   - pytest
   - pytest-cov
   # linting
+  - mypy
+  - pandas-stubs
   - pre-commit
   - ruff
+  - types-python-dateutil
   - pip:
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12
