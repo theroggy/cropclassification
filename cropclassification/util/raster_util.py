@@ -8,23 +8,26 @@ import rasterio
 gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 
-def add_overviews(path: Path):
+def add_overviews(path: Path, min_pixels=512, resampling="average"):
     """
     Add overviews to the file.
 
     Args:
         path (Path): path to the file.
+        min_pixels (int, optional): minimum number of pixels in a zoom level to
+            calculate overviews for. Defaults to 512.
+        resampling (str, optional): resampling method. Defaults to 'average'.
     """
     with rasterio.open(path, "r+") as dst:
         factors = []
         for power in range(1, 999):
             factor = pow(2, power)
-            if dst.width / factor < 256 or dst.height / factor < 256:
+            if dst.width / factor < min_pixels or dst.height / factor < min_pixels:
                 break
             factors.append(factor)
         if len(factors) > 0:
-            dst.build_overviews(factors, rasterio.enums.Resampling.average)
-            dst.update_tags(ns="rio_overview", resampling="average")
+            dst.build_overviews(factors, rasterio.enums.Resampling[resampling])
+            dst.update_tags(ns="rio_overview", resampling=resampling)
 
 
 def set_band_descriptions(

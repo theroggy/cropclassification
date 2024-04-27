@@ -9,6 +9,31 @@ from cropclassification.util import raster_util
 from tests import test_helper
 
 
+@pytest.mark.parametrize("resampling", ["average", "bilinear"])
+def test_add_overviews(tmp_path, resampling):
+    # Prepare test file
+    path = (
+        test_helper.SampleDirs.image_dir
+        / "roi_test/s2-agri"
+        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
+    )
+    test_path = tmp_path / path.name
+    shutil.copy(path, test_path)
+    with rasterio.open(test_path) as file:
+        for i in file.indexes:
+            assert len(file.overviews(i)) == 0
+        assert file.tags(ns="rio_overview").get("resampling") is None
+
+    # Test
+    raster_util.add_overviews(test_path, min_pixels=20, resampling=resampling)
+
+    # Validate results
+    with rasterio.open(test_path) as file:
+        for i in file.indexes:
+            assert len(file.overviews(i)) == 1
+        assert file.tags(ns="rio_overview").get("resampling") == resampling
+
+
 @pytest.mark.parametrize(
     "band_descriptions",
     [
@@ -18,7 +43,7 @@ from tests import test_helper
     ],
 )
 def test_set_band_descriptions(tmp_path, band_descriptions):
-    # Prepare and validate test file
+    # Prepare test file
     path = (
         test_helper.SampleDirs.image_dir
         / "roi_test/s2-agri"
