@@ -14,7 +14,7 @@ import shutil
 import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from osgeo import gdal
 
@@ -94,7 +94,7 @@ def zonal_stats(
     nb_errors_max = 10
     nb_errors = 0
 
-    image_dict = {}
+    image_dict: Dict[str, Any] = {}
     calc_stats_batch_dict = {}
     nb_done_total = 0
     image_idx = 0
@@ -114,6 +114,7 @@ def zonal_stats(
             ):
                 # Not too many busy preparing, so get next image_path to start
                 # prepare on
+                bands: List[Any]
                 image_path, bands = rasters_bands[image_idx]
                 image_path_str = str(image_path)
                 image_idx += 1
@@ -187,7 +188,7 @@ def zonal_stats(
                     temp_dir=temp_dir,
                     log_dir=log_dir,
                     log_level=log_level,
-                    nb_parallel=nb_parallel,
+                    nb_parallel_max=nb_parallel,
                 )
                 image_dict[image_path_str] = {
                     "features_path": vector_path,
@@ -269,7 +270,7 @@ def zonal_stats(
                                 features=features_batch["path"],
                                 id_column=id_column,
                                 image_path=image["image_prepared_path"],
-                                band=band,
+                                bands=band,
                                 output_base_path=image["output_base_busy_path"],
                                 log_dir=log_dir,
                                 log_level=log_level,
@@ -491,7 +492,7 @@ def _prepare_calc(
 
     global logger
     logger = logging.getLogger("prepare_calc")
-    ret_val = {}
+    ret_val: Dict[str, Any] = {}
 
     # Prepare the image
     logger.info(f"Start prepare_image for {image_path} to {temp_dir}")
@@ -553,7 +554,7 @@ def _prepare_calc(
     # Loop over the batches, pickle them and add the paths to the result...
     ret_val["feature_batches"] = []
     for batch_idx, features_gdf_batch in enumerate(features_gdf_batches):
-        batch_info = {}
+        batch_info: Dict[str, Any] = {}
         pickle_path = temp_features_dir / f"{batch_idx}.pkl"
         logger.info(
             f"Write pkl of {len(features_gdf_batch.index)} features: {pickle_path}"

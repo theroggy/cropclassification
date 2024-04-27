@@ -79,6 +79,7 @@ def zonal_stats(
         ) as calculate_pool:
             # calculate per batch to manage memory usage
             batch_start = 0
+            batch_id: Optional[int]
             for batch_id in range(nb_batches):
                 # Prepare the slice for this batch
                 if batch_id < nb_batches - 1:
@@ -122,8 +123,8 @@ def zonal_stats(
             for future in futures.as_completed(future_infos):
                 try:
                     future_info = future_infos[future]
-                    batch_id = future_info["batch_id"]
-                    output_temp_partial_path = future_info["output_temp_partial_path"]
+                    batch_id = future_info["batch_id"]  # type: ignore[assignment]
+                    output_temp_partial_path = future_info["output_temp_partial_path"]  # type: ignore[assignment]
                     _ = future.result()
 
                     # If the calculate gave results, copy to output

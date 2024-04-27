@@ -6,7 +6,7 @@ reportGeneralTypeIssues = false
 exclude = ["local_ignore"]
 
 [[tool.mypy.overrides]]
-module = "cloudpickle.*,fiona.*,geopandas.*,matplotlib.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,setuptools.*,shapely.*,topojson.*"
+module = "affine.*,cloudpickle.*,fiona.*,geopandas.*,joblib.*,matplotlib.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,qgis.*,rasterio.*,rasterstats.*,setuptools.*,shapely.*,sklearn.*,tensorflow.*,topojson.*"
 ignore_missing_imports = true
 
 [tool.ruff]
