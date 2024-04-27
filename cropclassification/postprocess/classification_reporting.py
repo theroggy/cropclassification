@@ -79,7 +79,7 @@ def write_full_report(
     # TODO: pretty ugly, hopefully becomes obsolete if pyogrio is used in gfo.to_file
     for column in df_predict.columns:
         try:
-            df_predict[column] = pd.to_numeric(df_predict[column], errors="ignore")
+            df_predict[column] = pd.to_numeric(df_predict[column], errors="ignore")  # type: ignore[call-overload]
         except Exception:
             _ = None
 
@@ -585,7 +585,7 @@ def write_full_report(
             count_per_class = (
                 df_parcel_gt.groupby(f"gt_conclusion_{conf.columns['prediction_cons']}")
                 .size()
-                .to_frame("count")
+                .to_frame("count")  # type: ignore[operator]
             )
             values = 100 * count_per_class["count"] / count_per_class["count"].sum()
             count_per_class.insert(loc=1, column="pct", value=values)
@@ -616,7 +616,7 @@ def write_full_report(
                     f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
                 )
                 .size()
-                .to_frame("count")
+                .to_frame("count")  # type: ignore[operator]
             )
             values = 100 * count_per_class["count"] / count_per_class["count"].sum()
             count_per_class.insert(loc=1, column="pct", value=values)

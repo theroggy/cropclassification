@@ -266,7 +266,7 @@ def zonal_stats(
                         for features_batch in image["feature_batches"]:
                             start_time_batch = datetime.now()
                             future = pool.submit(
-                                _zonal_stats_image_gdf,
+                                _zonal_stats_image_gdf,  # type: ignore[arg-type]
                                 features=features_batch["path"],
                                 id_column=id_column,
                                 image_path=image["image_prepared_path"],

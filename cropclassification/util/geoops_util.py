@@ -1,12 +1,12 @@
 from concurrent import futures
-import datetime
+from datetime import datetime
 import logging
 import math
 import multiprocessing
 import os
 from pathlib import Path
 import shutil
-from time import time
+import time
 from typing import Optional
 
 import geofileops as gfo
@@ -55,7 +55,7 @@ def zonal_stats(
             logger.info(f"Output file exists already and force is False: {output_path}")
             return
 
-    start_time = datetime.datetime.now()
+    start_time = datetime.now()
     tmp_dir = _io_util.create_tempdir("zonal_stats")
     output_temp_path = tmp_dir / f"{output_path.name}"
 
@@ -242,14 +242,14 @@ def zonal_stats_ext(
 
 
 def format_progress(
-    start_time: datetime.datetime,
+    start_time: datetime,
     nb_done: int,
     nb_todo: int,
     operation: Optional[str] = None,
     nb_parallel: int = 1,
 ) -> Optional[str]:
     # Init
-    time_passed = (datetime.datetime.now() - start_time).total_seconds()
+    time_passed = (datetime.now() - start_time).total_seconds()
     pct_progress = 100.0 - (nb_todo - nb_done) * 100 / nb_todo
     nb_todo_str = f"{nb_todo:n}"
     nb_decimal = len(nb_todo_str)
