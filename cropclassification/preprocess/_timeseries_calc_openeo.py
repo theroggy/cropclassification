@@ -7,8 +7,8 @@ from typing import List
 import geofileops as gfo
 
 from cropclassification.helpers import config_helper as conf
-from cropclassification.util import openeo_util
-from cropclassification.util.openeo_util import ImageProfile
+from cropclassification.util import mosaic_util
+from cropclassification.util.mosaic_util import ImageProfile
 from cropclassification.util import zonal_stats_bulk
 
 # First define/init some general variables/constants
@@ -41,7 +41,7 @@ def calculate_periodic_timeseries(
     days_per_period = 7
     roi_info = gfo.get_layerinfo(input_parcel_path)
 
-    periodic_images_result = openeo_util.get_images(
+    periodic_images_result = mosaic_util.calc_periodic_mosaic(
         roi_bounds=tuple(roi_info.total_bounds),
         roi_crs=roi_info.crs,
         start_date=start_date,
