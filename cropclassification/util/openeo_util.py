@@ -39,7 +39,7 @@ def get_images(
       - end_date (datetime): exclusive end date for the images in the collection to use
         for this image.
       - bands (List[str]): the bands to get.
-      - time_dimension_reducer (str): the reducer to be used to aggregate the images in
+      - time_reducer (str): the reducer to be used to aggregate the images in
         the time dimension: one of "mean", "min", "max",...
       - max_cloud_cover (float): the maximum cloud cover images should have to be used.
         If None, no cloud cover filtering is applied.
@@ -85,6 +85,8 @@ def get_images(
     # https://open-eo.github.io/openeo-python-client/configuration.html#configuration-files  # noqa: E501
     conn = openeo.connect()
 
+    images_to_get_dict = {image["path"].as_posix(): image for image in images_to_get}
+
     if delete_existing_openeo_jobs:
         # Delete all jobs that are running already
         jobs = conn.list_jobs()
@@ -101,8 +103,8 @@ def get_images(
         image_paths, job_errors = get_job_results(conn)
         for image_path in image_paths:
             band_descriptions = None
-            if image_path in images_to_get:
-                band_descriptions = images_to_get[image_path]["bands"]
+            if image_path in images_to_get_dict:
+                band_descriptions = images_to_get_dict[image_path]["bands"]
             postprocess_image(image_path, band_descriptions)
         if raise_errors and len(job_errors) > 0:
             raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
@@ -141,7 +143,7 @@ def get_images(
             start_date=image_to_get["start_date"],
             end_date=image_to_get["end_date"],
             bands=image_to_get["bands"],
-            time_dimension_reducer=image_to_get["time_dimension_reducer"],
+            time_reducer=image_to_get["time_reducer"],
             output_path=image_to_get["path"],
             max_cloud_cover=image_to_get.get("max_cloud_cover", None),
             job_options=image_to_get.get("job_options", {}),
@@ -154,8 +156,8 @@ def get_images(
     # Postprocess the images created
     for image_path in image_paths:
         band_descriptions = None
-        if image_path in images_to_get:
-            band_descriptions = images_to_get[image_path]["bands"]
+        if image_path in images_to_get_dict:
+            band_descriptions = images_to_get_dict[image_path]["bands"]
         postprocess_image(image_path, band_descriptions)
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
@@ -171,7 +173,7 @@ def create_mosaic_job(
     end_date: datetime,
     bands: List[str],
     output_path: Path,
-    time_dimension_reducer: str,
+    time_reducer: str,
     max_cloud_cover: Optional[float],
     job_options: dict,
     process_options: dict,
@@ -242,7 +244,7 @@ def create_mosaic_job(
         cube = cube.mask(mask)
 
     cube = cube.filter_bands(bands=bands)
-    cube = cube.reduce_dimension(dimension="t", reducer=time_dimension_reducer)
+    cube = cube.reduce_dimension(dimension="t", reducer=time_reducer)
 
     # The NDVI collection needs to be recalculated
     if collection == "TERRASCOPE_S2_NDVI_V2":

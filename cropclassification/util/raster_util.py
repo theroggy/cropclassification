@@ -60,6 +60,7 @@ def set_band_descriptions(
 
         # If band_descriptions is no dict, there should be a description for each band.
         if not isinstance(band_descriptions, dict):
+            band_descriptions = list(band_descriptions)
             if file.count != len(band_descriptions):
                 raise ValueError(
                     f"number of bands ({file.count}) != number of band_descriptions "

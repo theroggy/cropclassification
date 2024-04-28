@@ -34,7 +34,7 @@ def main():
         start_date=start_date,
         end_date=end_date,
         days_per_period=days_per_period,
-        time_dimension_reducer="mean",
+        time_reducer="mean",
         output_base_dir=dest_image_data_dir,
         # imageprofiles_to_get=["s2-agri", "s2-ndvi"],
         imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],

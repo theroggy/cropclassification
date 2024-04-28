@@ -8,7 +8,7 @@ import logging
 import gc
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import geofileops as gfo
 import numpy as np
@@ -226,7 +226,7 @@ def calculate_periodic_timeseries(
         logger.debug(
             "Get files we need based on start- & stopdates, sensordata_to_get,..."
         )
-        orbits = [None]
+        orbits: List[Optional[str]] = [None]
         if sensordata_type == "S1AscDesc":
             # Filter files to the ones we need
             # satellitetype = "S1"
@@ -338,7 +338,7 @@ def calculate_periodic_timeseries(
 
                 # Loop all period_files
                 period_band_data_df = None
-                statistic_columns_dict = {
+                statistic_columns_dict: Dict[str, Any] = {
                     "count": [],
                     "max": [],
                     "mean": [],
@@ -517,7 +517,7 @@ def get_fileinfo_timeseries(path: Path) -> dict:
         imageinfo_values = imageinfo_part.split("_")
         orbit = None
         image_profile = None
-        time_dimension_reducer = None
+        time_reducer = None
         if "-" in imageinfo_values[0]:
             # OpenEO mosaic filename format
             image_profile = imageinfo_values[0]
@@ -537,7 +537,7 @@ def get_fileinfo_timeseries(path: Path) -> dict:
 
             start_date = datetime.fromisoformat(imageinfo_values[1])
             end_date = datetime.fromisoformat(imageinfo_values[2])
-            time_dimension_reducer = imageinfo_values[4]
+            time_reducer = imageinfo_values[4]
             band = imageinfo_values[-1]  # =last value
 
         else:
@@ -597,8 +597,8 @@ def get_fileinfo_timeseries(path: Path) -> dict:
             "band": band,
             "orbit": orbit,  # ASC/DESC
         }
-        if time_dimension_reducer is not None:
-            image_metadata["time_dimension_reducer"] = time_dimension_reducer
+        if time_reducer is not None:
+            image_metadata["time_reducer"] = time_reducer
         if image_profile is not None:
             image_metadata["image_profile"] = image_profile
 

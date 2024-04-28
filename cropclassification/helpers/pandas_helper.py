@@ -123,7 +123,7 @@ def to_file(
             df.to_sql(
                 name=table_name,
                 con=sql_db,
-                if_exists=if_exists,
+                if_exists=if_exists,  # type: ignore[arg-type]
                 index=index,
                 chunksize=50000,
             )

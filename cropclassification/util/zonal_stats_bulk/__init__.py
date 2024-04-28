@@ -42,7 +42,7 @@ def zonal_stats(
             vector_path=vector_path,
             rasters_bands=rasters_bands,
             output_dir=output_dir,
-            stats=stats,
+            stats=stats,  # type: ignore[arg-type]
             columns=[id_column],
             nb_parallel=nb_parallel,
             force=force,

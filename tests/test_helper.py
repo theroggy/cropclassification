@@ -26,6 +26,7 @@ IMAGEPROFILES: Dict[str, ImageProfile] = {
         satellite="s2",
         image_source="local",
         index_type="ndvi",
+        bands=["ndvi"],
         base_image_profile="s2-agri",
     ),
 }

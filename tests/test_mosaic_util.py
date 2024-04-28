@@ -28,7 +28,6 @@ def test_calc_periodic_mosaic(tmp_path):
         start_date=start_date,
         end_date=end_date,
         days_per_period=days_per_period,
-        time_dimension_reducer="mean",
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s2-agri", "s2-ndvi"],
         imageprofiles=imageprofiles,
@@ -61,7 +60,6 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
         start_date=start_date,
         end_date=end_date,
         days_per_period=days_per_period,
-        time_dimension_reducer="mean",
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],
         imageprofiles=imageprofiles,
@@ -80,11 +78,12 @@ def test_ImageProfile_local():
         satellite="s2",
         image_source="local",
         index_type="ndvi",
+        bands=["ndvi"],
         base_image_profile="s2-agri",
     )
     assert image_profile.name == "s2-ndvi"
     assert image_profile.index_type == "ndvi"
-    assert image_profile.base_image_profile == "s2-agri"
+    assert image_profile.base_imageprofile == "s2-agri"
 
 
 @pytest.mark.parametrize(
@@ -92,11 +91,9 @@ def test_ImageProfile_local():
     [
         ("image_source='wrong' is not supported", "wrong", None, None, None, None),
         ("collection must be None", "local", "collection", None, "s2-agri", "ndvi"),
-        ("bands must be None", "local", None, ["ndvi"], "s2-agri", "ndvi"),
         ("index_type can't be None", "local", None, None, "s2-agri", None),
         ("base_image_profile can't be None", "local", None, None, None, "ndvi"),
         ("collection can't be None", "openeo", None, ["B"], None, None),
-        ("bands can't be None", "openeo", "col", None, None, None),
         ("collection can't be None", "openeo", None, ["B"], None, None),
         ("base_image_profile must be None", "openeo", "col", ["B"], "profile", None),
     ],
@@ -161,7 +158,7 @@ def test_prepare_mosaic_image_path():
         start_date=datetime(2024, 1, 1),
         end_date=datetime(2024, 1, 2),
         bands=["B01", "B02"],
-        time_dimension_reducer="mean",
+        time_reducer="mean",
         output_base_dir=Path("/tmp"),
     )
 
