@@ -28,7 +28,8 @@ class ImageProfile:
     image_source: str
     collection: Optional[str] = None
     bands: Optional[List[str]] = None
-    base_image_profile: Optional[str] = None
+    time_reducer: Optional[str] = None
+    base_imageprofile: Optional[str] = None
     index_type: Optional[str] = None
     max_cloud_cover: Optional[float] = None
     process_options: Optional[dict] = None
@@ -39,8 +40,9 @@ class ImageProfile:
         name: str,
         satellite: str,
         image_source: str,
+        bands: List[str],
         collection: Optional[str] = None,
-        bands: Optional[List[str]] = None,
+        time_reducer: Optional[str] = None,
         base_image_profile: Optional[str] = None,
         index_type: Optional[str] = None,
         max_cloud_cover: Optional[float] = None,
@@ -52,7 +54,8 @@ class ImageProfile:
         self.image_source = image_source
         self.collection = collection
         self.bands = bands
-        self.base_image_profile = base_image_profile
+        self.time_reducer = time_reducer
+        self.base_imageprofile = base_image_profile
         self.index_type = index_type
         self.max_cloud_cover = max_cloud_cover
         self.process_options = process_options
@@ -62,8 +65,6 @@ class ImageProfile:
         if image_source == "local":
             if collection is not None:
                 raise ValueError(f"collection must be None if {image_source=}, {self}")
-            elif bands is not None:
-                raise ValueError(f"bands must be None if {image_source=}, {self}")
             elif index_type is None:
                 raise ValueError(f"index_type can't be None if {image_source=}, {self}")
             elif base_image_profile is None:
@@ -73,8 +74,6 @@ class ImageProfile:
         elif image_source == "openeo":
             if collection is None:
                 raise ValueError(f"collection can't be None if {image_source=}, {self}")
-            elif bands is None:
-                raise ValueError(f"bands can't be None if {image_source=}, {self}")
             elif base_image_profile is not None:
                 raise ValueError(
                     f"base_image_profile must be None if {image_source=}, {self}"
@@ -89,7 +88,6 @@ def calc_periodic_mosaic(
     start_date: datetime,
     end_date: datetime,
     days_per_period: int,
-    time_dimension_reducer: str,
     imageprofiles_to_get: List[str],
     imageprofiles: Dict[str, ImageProfile],
     output_base_dir: Path,
@@ -108,8 +106,6 @@ def calc_periodic_mosaic(
         start_date (datetime): start date, included.
         end_date (datetime): end date, excluded.
         days_per_period (int): number of days per period.
-        time_dimension_reducer (str): reducer to use to aggregate pixels in time
-            dimension: one of: "mean", "min", "max",...
         imageprofiles_to_get (List[str]): list of image proles a periodic mosaic should
             be generated for.
         imageprofiles (Dict[str, ImageProfile]): dict with for all configured image
@@ -145,7 +141,6 @@ def calc_periodic_mosaic(
         roi_bounds=roi_bounds,
         roi_crs=roi_crs,
         periods=periods,
-        time_dimension_reducer=time_dimension_reducer,
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
         output_base_dir=output_base_dir,
@@ -263,7 +258,6 @@ def _prepare_periodic_mosaic_params(
     roi_bounds: Tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     periods: dict,
-    time_dimension_reducer: str,
     imageprofiles_to_get: List[str],
     imageprofiles: Dict[str, ImageProfile],
     output_base_dir: Path,
@@ -276,8 +270,6 @@ def _prepare_periodic_mosaic_params(
             of the region of interest to download the mosaic for.
         roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
         periods (dict): ???.
-        time_dimension_reducer (str): reducer to use to aggregate pixels in time
-            dimension: one of: "mean", "min", "max",...
         imageprofiles_to_get (List[str]): list of image proles a periodic mosaic should
             be generated for.
         imageprofiles (Dict[str, ImageProfile]): dict with for all configured image
@@ -295,13 +287,20 @@ def _prepare_periodic_mosaic_params(
     # Use a dict indexed on path to avoid having duplicate mosaic_image_params.
     periodic_mosaic_params: Dict[str, Dict[str, Any]] = {}
     for period, imageprofile in product(periods, imageprofiles_to_get):
+        # If the image is calculated locally, we need a base image profile.
+        base_imageprofile = None
+        if imageprofiles[imageprofile].image_source == "local":
+            base_imageprofile_name = imageprofiles[imageprofile].base_imageprofile
+            if base_imageprofile_name is not None:
+                base_imageprofile = imageprofiles[base_imageprofile_name]
+
         main_image_params = _prepare_mosaic_image_params(
             roi_bounds=roi_bounds,
             roi_crs=roi_crs,
             imageprofile=imageprofiles[imageprofile],
             period=period,
-            time_dimension_reducer=time_dimension_reducer,
             output_base_dir=output_base_dir,
+            base_imageprofile=base_imageprofile,
         )
 
         # If the image isn't calculated locally, just add main image and continue.
@@ -310,7 +309,7 @@ def _prepare_periodic_mosaic_params(
             continue
 
         # Image calculated locally... so we need a base image.
-        base_image_profile = imageprofiles[imageprofile].base_image_profile
+        base_image_profile = imageprofiles[imageprofile].base_imageprofile
         if base_image_profile is None:
             raise ValueError(
                 "generating an image locally needs a base image "
@@ -321,7 +320,6 @@ def _prepare_periodic_mosaic_params(
             roi_crs=roi_crs,
             imageprofile=imageprofiles[base_image_profile],
             period=period,
-            time_dimension_reducer=time_dimension_reducer,
             output_base_dir=output_base_dir,
         )
         periodic_mosaic_params[base_image_params["path"]] = base_image_params
@@ -338,8 +336,8 @@ def _prepare_mosaic_image_params(
     roi_crs: Optional[pyproj.CRS],
     imageprofile: ImageProfile,
     period: dict,
-    time_dimension_reducer: str,
     output_base_dir: Path,
+    base_imageprofile: Optional[ImageProfile] = None,
 ) -> Dict[str, Any]:
     """
     Prepares the relevant parameters + saves them as json file.
@@ -349,19 +347,25 @@ def _prepare_mosaic_image_params(
         roi_crs (Optional[pyproj.CRS]): _description_
         imageprofile (ImageProfile): _description_
         period (dict): _description_
-        time_dimension_reducer (str): _description_
         output_base_dir (Path): _description_
+        base_imageprofile (ImageProfile, optional): Defaults to None.
 
     Returns:
         Dict[str, Any]: _description_
     """
     # Prepare image path
+    assert imageprofile.bands is not None
+    time_reducer = imageprofile.time_reducer
+    if time_reducer is None and base_imageprofile is not None:
+        time_reducer = base_imageprofile.time_reducer
+    assert time_reducer is not None
+
     image_path = _prepare_mosaic_image_path(
         imageprofile.name,
         start_date=period["start_date"],
         end_date=period["end_date_incl"],
         bands=imageprofile.bands,
-        time_dimension_reducer=time_dimension_reducer,
+        time_reducer=time_reducer,
         output_base_dir=output_base_dir,
     )
 
@@ -388,7 +392,7 @@ def _prepare_mosaic_image_params(
         "end_date": period["end_date"],
         "weeks": weeks,
         "bands": imageprofile.bands,
-        "time_dimension_reducer": time_dimension_reducer,
+        "time_reducer": time_reducer,
         "path": image_path,
     }
     if imageprofile.name.lower() == "s1-grd-sigma0-asc":
@@ -408,7 +412,7 @@ def _prepare_mosaic_image_path(
     start_date: datetime,
     end_date: datetime,
     bands: List[str],
-    time_dimension_reducer: str,
+    time_reducer: str,
     output_base_dir: Path,
 ) -> Path:
     """
@@ -419,6 +423,8 @@ def _prepare_mosaic_image_path(
         start_date (datetime): start date of the mosaic.
         end_date (datetime): end date of the mosaic.
         bands (List[str]): list of bands that will be in the file.
+        time_reducer (str): reducer to use to aggregate pixels in time dimension: one
+            of: "mean", "min", "max",...
         output_base_dir (Path): base directory to put the file in.
 
     Raises:
@@ -437,7 +443,7 @@ def _prepare_mosaic_image_path(
         bands_str = imageprofile.split("-")[1]
     name = (
         f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_"
-        f"{time_dimension_reducer}.tif"
+        f"{time_reducer}.tif"
     )
 
     image_dir = output_base_dir / imageprofile

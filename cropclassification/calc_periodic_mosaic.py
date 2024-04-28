@@ -63,7 +63,9 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
             start_date=start_date,
             end_date=end_date,
             days_per_period=conf.calc_periodic_mosaic_params.getint("days_per_period"),
-            output_dir=Path(conf.calc_periodic_mosaic_params["dest_image_data_dir"]),
+            output_base_dir=Path(
+                conf.calc_periodic_mosaic_params["dest_image_data_dir"]
+            ),
             imageprofiles_to_get=imageprofiles_to_get,
             imageprofiles=imageprofiles,
             force=False,

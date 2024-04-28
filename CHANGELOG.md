@@ -14,7 +14,7 @@
 ### Improvements
 
 - Clip s2 and s1 timeseries values to one to avoid outliers > 1 (#47)
-- Change default time_dimension_reducer to mean for both s1 and s2 (#48)
+- Change default time_reducer to mean for both s1 and s2 (#48)
 
 ## 0.1.0
 ### Improvements

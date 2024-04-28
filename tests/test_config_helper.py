@@ -35,7 +35,7 @@ def test_validate_image_profiles():
 
 def test_validate_image_profiles_invalid():
     test_profiles = deepcopy(test_helper.IMAGEPROFILES)
-    test_profiles["s2-ndvi"].base_image_profile = "invalid"
+    test_profiles["s2-ndvi"].base_imageprofile = "invalid"
     with pytest.raises(
         ValueError, match="base_image_profile='invalid' not found for profile"
     ):
