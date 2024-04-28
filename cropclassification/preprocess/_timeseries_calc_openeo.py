@@ -2,12 +2,13 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import tempfile
-from typing import List
+from typing import Dict, List
 
 import geofileops as gfo
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import mosaic_util
+from cropclassification.util.mosaic_util import ImageProfile
 from cropclassification.util import zonal_stats_bulk
 
 # Get a logger...
@@ -19,6 +20,7 @@ def calculate_periodic_timeseries(
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: List[str],
+    imageprofiles: Dict[str, ImageProfile],
     dest_image_data_dir: Path,
     dest_data_dir: Path,
     nb_parallel: int,
@@ -41,7 +43,7 @@ def calculate_periodic_timeseries(
         days_per_period=days_per_period,
         output_base_dir=dest_image_data_dir,
         imageprofiles_to_get=imageprofiles_to_get,
-        imageprofiles=conf.image_profiles,
+        imageprofiles=imageprofiles,
         force=False,
     )
 

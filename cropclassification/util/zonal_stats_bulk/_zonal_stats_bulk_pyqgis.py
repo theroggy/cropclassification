@@ -83,7 +83,7 @@ def zonal_stats(
     nb_todo = 0
     nb_done_total = 0
     if nb_parallel < 1:
-        nb_parallel = multiprocessing.cpu_count()
+        nb_parallel += multiprocessing.cpu_count()
 
     # Loop over all images and bands to calculate zonal stats in parallel...
     calc_queue = {}

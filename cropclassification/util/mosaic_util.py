@@ -401,7 +401,7 @@ def _prepare_mosaic_image_params(
         imagemeta["orbit"] = "desc"
 
     imagemeta_path = Path(f"{image_path}.json")
-    if not imagemeta_path.exists():
+    if not imagemeta_path.exists() or imagemeta_path.stat().st_size == 0:
         _imagemeta_to_file(imagemeta_path, imagemeta)
 
     return imagemeta
@@ -464,5 +464,6 @@ def _imagemeta_to_file(path: Path, imagemeta: Dict[str, Any]):
         )
         imagemeta_prepared["end_date"] = imagemeta["end_date"].strftime("%Y-%m-%d")
         imagemeta_prepared["path"] = imagemeta["path"].as_posix()
+        imagemeta_prepared["roi_crs"] = str(imagemeta["roi_crs"])
 
         outfile.write(json.dumps(imagemeta_prepared, indent=4))

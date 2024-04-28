@@ -24,7 +24,7 @@ classifier: Any
 postprocess: Any
 columns: Any
 dirs: Any
-image_profiles: Any
+image_profiles: Dict[str, ImageProfile]
 
 
 class SensorData:
@@ -63,7 +63,7 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     # Check if all config paths are ok
     for config_path in config_paths:
         if not config_path.exists():
-            raise Exception(f"Config file doesn't exist: {config_path}")
+            raise ValueError(f"Config file doesn't exist: {config_path}")
 
     config.read(config_paths)
 

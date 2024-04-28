@@ -82,15 +82,12 @@ def calc_timeseries_data(
         # Prepare periodic images + calculate base timeseries on them
         import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 
-        sensordata_to_get_info_openeo = [
-            conf.image_profiles[sensordatatype]
-            for sensordatatype in sensordata_to_get_openeo
-        ]
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
             start_date=start_date,
             end_date=end_date,
-            imageprofiles_to_get=sensordata_to_get_info_openeo,
+            imageprofiles_to_get=sensordata_to_get_openeo,
+            imageprofiles=conf.image_profiles,
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
             dest_data_dir=dest_data_dir,
             nb_parallel=conf.general.getint("nb_parallel", -1),
