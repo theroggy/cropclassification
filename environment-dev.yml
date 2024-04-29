@@ -20,6 +20,7 @@ dependencies:
   - qgis
   - rasterio
   - rasterstats
+  - rioxarray
   # testing
   - pytest
   - pytest-cov
@@ -29,6 +30,7 @@ dependencies:
   - pre-commit
   - ruff
   - types-python-dateutil
+  - types-requests
   - pip:
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12

@@ -83,7 +83,7 @@ def zonal_stats(
     nb_todo = 0
     nb_done_total = 0
     if nb_parallel < 1:
-        nb_parallel = multiprocessing.cpu_count()
+        nb_parallel += multiprocessing.cpu_count()
 
     # Loop over all images and bands to calculate zonal stats in parallel...
     calc_queue = {}
@@ -215,6 +215,7 @@ def zonal_stats_band(
     layer = gfo.get_only_layer(vector_proj_path)
 
     # Init qgis
+    # qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True) ???
     qgs = qgis.core.QgsApplication([], False)
     qgs.initQgis()
     # Read the vector file + copy to memory layer for:

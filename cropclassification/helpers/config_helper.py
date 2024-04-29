@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module that manages configuration data.
 """
@@ -10,7 +9,7 @@ import pprint
 import tempfile
 from typing import Any, Dict, List, Optional
 
-from cropclassification.util.openeo_util import ImageProfile
+from cropclassification.util.mosaic_util import ImageProfile
 
 config: configparser.ConfigParser
 config_paths_used: List[Path]
@@ -25,7 +24,7 @@ classifier: Any
 postprocess: Any
 columns: Any
 dirs: Any
-image_profiles: Any
+image_profiles: Dict[str, ImageProfile]
 
 
 class SensorData:
@@ -43,7 +42,7 @@ class SensorData:
         if bands is not None:
             self.bands = bands
         else:
-            self.bands = self.imageprofile.bands
+            self.bands = self.imageprofile.bands  # type: ignore[assignment]
 
 
 def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None):
@@ -64,7 +63,7 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     # Check if all config paths are ok
     for config_path in config_paths:
         if not config_path.exists():
-            raise Exception(f"Config file doesn't exist: {config_path}")
+            raise ValueError(f"Config file doesn't exist: {config_path}")
 
     config.read(config_paths)
 
@@ -172,7 +171,7 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
 
 
 def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
-    # Cropclassification gives best results with time_dimension_reducer "mean" for both
+    # Cropclassification gives best results with time_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # Init
     if not image_profiles_path.exists():
@@ -193,15 +192,33 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
     profiles = {}
     for profile in profiles_config.sections():
         profiles[profile] = ImageProfile(
-            name=profiles_config[profile].get("name"),
+            name=profile,
             satellite=profiles_config[profile].get("satellite"),
+            index_type=profiles_config[profile].get("index_type"),
+            image_source=profiles_config[profile].get("image_source"),
+            base_image_profile=profiles_config[profile].get("base_image_profile"),
             collection=profiles_config[profile].get("collection"),
             bands=profiles_config[profile].getlist("bands"),
+            time_reducer=profiles_config[profile].get("time_reducer"),
+            max_cloud_cover=profiles_config[profile].getfloat("max_cloud_cover"),
             process_options=profiles_config[profile].getdict("process_options"),
             job_options=profiles_config[profile].getdict("job_options"),
         )
 
+    # Do some extra validations on the profiles read.
+    _validate_image_profiles(profiles)
+
     return profiles
+
+
+def _validate_image_profiles(profiles: Dict[str, ImageProfile]):
+    # Check that all base_image_profile s are actually existing image profiles.
+    for profile in profiles:
+        base_image_profile = profiles[profile].base_imageprofile
+        if base_image_profile is not None and base_image_profile not in profiles:
+            raise ValueError(
+                f"{base_image_profile=} not found for profile {profiles[profile]}"
+            )
 
 
 def pformat_config():
