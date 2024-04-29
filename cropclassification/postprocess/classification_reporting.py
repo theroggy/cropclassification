@@ -64,13 +64,18 @@ def write_full_report(
 
     logger.info("Start write_full_report")
 
-    pandas_option_context_kwargs = {
-        "display.max_rows": None,
-        "display.max_columns": None,
-        "display.max_colwidth": 300,
-        "display.width": 2000,
-        "display.colheader_justify": "left",
-    }
+    pandas_option_context_list = [
+        "display.max_rows",
+        None,
+        "display.max_columns",
+        None,
+        "display.max_colwidth",
+        300,
+        "display.width",
+        2000,
+        "display.colheader_justify",
+        "left",
+    ]
     logger.info(f"Read file with predictions: {parcel_predictions_geopath}")
     df_predict = gfo.read_file(parcel_predictions_geopath)
     df_predict.set_index(conf.columns["id"], inplace=True)
@@ -154,7 +159,7 @@ def write_full_report(
         parameters_used_df = pd.DataFrame(
             parameter_list, columns=["parameter_type", "parameter", "value"]
         )
-        with pd.option_context(*pandas_option_context_kwargs):
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{parameters_used_df}\n")
             logger.info(f"{parameters_used_df}\n")
             html_data["PARAMETERS_USED_TABLE"] = parameters_used_df.to_html(index=False)
@@ -214,7 +219,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context(*pandas_option_context_kwargs):
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -378,7 +383,7 @@ def write_full_report(
         overall_accuracies_df.set_index(
             keys=["parcels", "prediction_type"], inplace=True
         )
-        with pd.option_context(*pandas_option_context_kwargs):
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{overall_accuracies_df}\n")
             logger.info(f"{overall_accuracies_df}\n")
             html_data["OVERALL_ACCURACIES_TABLE"] = overall_accuracies_df.to_html()
