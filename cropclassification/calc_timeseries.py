@@ -57,11 +57,12 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     log_level = conf.general.get("log_level")
     if test:
         base_log_dir = base_log_dir.parent / f"{base_log_dir.name}_test"
-    log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
 
-    # Clean test log dir if it exist
-    if test and base_log_dir.exists():
-        shutil.rmtree(base_log_dir)
+        # Clean test log dir if it exist
+        if base_log_dir.exists():
+            shutil.rmtree(base_log_dir)
+
+    log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
 
     global logger
     logger = log_helper.main_log_init(log_dir, __name__, log_level)
@@ -93,11 +94,11 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         output_basedir = Path(f"{str(timeseries_per_image_dir)}_test")
         logger.info(f"As we are testing, use test output basedir: {output_basedir}")
     output_dir = output_basedir / input_features_filename.stem
-    if test:
-        if output_dir.exists():
-            logger.info(f"As we are only testing, clean the output dir: {output_dir}")
-            # By adding a / at the end, only the contents are recursively deleted
-            shutil.rmtree(str(output_dir) + os.sep)
+
+    if test and output_dir.exists():
+        logger.info(f"As we are only testing, clean the output dir: {output_dir}")
+        # By adding a / at the end, only the contents are recursively deleted
+        shutil.rmtree(str(output_dir) + os.sep)
 
     # Temp dir + clean contents from it.
     temp_dir = conf.dirs.getpath("temp_dir") / "calc_dias"

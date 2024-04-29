@@ -165,7 +165,7 @@ def create_train_test_sample(
     train_base_df = df_in[~df_in.index.isin(test_df.index)]
     logger.debug(f"df_train_base after isin\n{train_base_df}")
 
-    # Remove parcel with too few pixels from the train sample
+    # Remove parcels with too few pixels from the train sample
     min_pixcount = conf.marker.getfloat("min_nb_pixels_train")
     train_base_df = train_base_df[
         train_base_df[conf.columns["pixcount_s1s2"]] >= min_pixcount
@@ -194,6 +194,22 @@ def create_train_test_sample(
     train_base_df = train_base_df[
         ~train_base_df[class_column].isin(conf.marker.getlist("classes_to_ignore"))
     ]
+
+    # There shouldn't be any classes left that start with IGNORE now
+    train_ignore_df = train_base_df[
+        train_base_df[class_column].str.startswith("IGNORE")
+    ]
+    if len(train_ignore_df) > 0:
+        raise ValueError(
+            "There are still classes that start with IGNORE, after removing filtering "
+            "all classes in classes_to_ignore and classes_to_ignore, this must be a "
+            f"config error: {train_ignore_df[class_column].unique()}"
+        )
+
+    # Only keep parcels that are not to be ignored for training
+    if "ignore_for_training" in train_base_df.columns:
+        logger.info("Remove parcels from train sample where ignore_for_training == 1")
+        train_base_df = train_base_df[train_base_df["ignore_for_training"] == 0]
 
     # Print the train base result before applying any balancing
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
@@ -384,6 +400,7 @@ def create_train_test_sample(
         #     results significantly less good.
 
         # For the larger classes, leave the samples larger but cap
+        train_df = pd.DataFrame()
         upper_count_limit1 = 100000
         upper_train_limit1 = 30000
         logger.info(
