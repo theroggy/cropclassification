@@ -2,30 +2,25 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import tempfile
-from typing import List
+from typing import Dict, List
 
 import geofileops as gfo
 
 from cropclassification.helpers import config_helper as conf
-from cropclassification.util import openeo_util
-from cropclassification.util.openeo_util import ImageProfile
+from cropclassification.util import mosaic_util
+from cropclassification.util.mosaic_util import ImageProfile
 from cropclassification.util import zonal_stats_bulk
-
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 
 # Get a logger...
 logger = logging.getLogger(__name__)
-
-# The real work
-# -------------------------------------------------------------
 
 
 def calculate_periodic_timeseries(
     input_parcel_path: Path,
     start_date: datetime,
     end_date: datetime,
-    sensordata_to_get: List[ImageProfile],
+    imageprofiles_to_get: List[str],
+    imageprofiles: Dict[str, ImageProfile],
     dest_image_data_dir: Path,
     dest_data_dir: Path,
     nb_parallel: int,
@@ -34,28 +29,28 @@ def calculate_periodic_timeseries(
     Calculate timeseries data for the input parcels.
 
     args
-        data_to_get: an array with data you want to be calculated: check out the
-            constants starting with DATA_TO_GET... for the options.
+        imageprofiles_to_get: an array with data you want to be calculated.
     """
     # As we want a weekly calculation, get nearest monday for start and stop day
     days_per_period = 7
     roi_info = gfo.get_layerinfo(input_parcel_path)
 
-    periodic_images_result = openeo_util.calc_periodic_mosaic(
-        roi_bounds=tuple(roi_info.total_bounds),
+    periodic_images_result = mosaic_util.calc_periodic_mosaic(
+        roi_bounds=roi_info.total_bounds,
         roi_crs=roi_info.crs,
         start_date=start_date,
         end_date=end_date,
         days_per_period=days_per_period,
-        output_dir=dest_image_data_dir,
-        images_to_get=sensordata_to_get,
+        output_base_dir=dest_image_data_dir,
+        imageprofiles_to_get=imageprofiles_to_get,
+        imageprofiles=imageprofiles,
         force=False,
     )
 
     # Now calculate the timeseries
     images_bands = [
-        (image_path, imageprofile.bands)
-        for image_path, imageprofile in periodic_images_result
+        (image_info["path"], image_info["bands"])
+        for image_info in periodic_images_result
     ]
     temp_dir = conf.dirs.getpath("temp_dir")
     if temp_dir == "None":
@@ -65,7 +60,7 @@ def calculate_periodic_timeseries(
         id_column=conf.columns["id"],
         rasters_bands=images_bands,
         output_dir=dest_data_dir,
-        stats=["count", "mean", "median", "std", "min", "max"],
+        stats=["count", "mean", "median", "std", "min", "max"],  # type: ignore[arg-type]
         engine="pyqgis",
         nb_parallel=nb_parallel,
     )

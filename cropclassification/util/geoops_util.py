@@ -1,12 +1,12 @@
 from concurrent import futures
-import datetime
+from datetime import datetime
 import logging
 import math
 import multiprocessing
 import os
 from pathlib import Path
 import shutil
-from time import time
+import time
 from typing import Optional
 
 import geofileops as gfo
@@ -55,7 +55,7 @@ def zonal_stats(
             logger.info(f"Output file exists already and force is False: {output_path}")
             return
 
-    start_time = datetime.datetime.now()
+    start_time = datetime.now()
     tmp_dir = _io_util.create_tempdir("zonal_stats")
     output_temp_path = tmp_dir / f"{output_path.name}"
 
@@ -79,6 +79,7 @@ def zonal_stats(
         ) as calculate_pool:
             # calculate per batch to manage memory usage
             batch_start = 0
+            batch_id: Optional[int]
             for batch_id in range(nb_batches):
                 # Prepare the slice for this batch
                 if batch_id < nb_batches - 1:
@@ -122,8 +123,8 @@ def zonal_stats(
             for future in futures.as_completed(future_infos):
                 try:
                     future_info = future_infos[future]
-                    batch_id = future_info["batch_id"]
-                    output_temp_partial_path = future_info["output_temp_partial_path"]
+                    batch_id = future_info["batch_id"]  # type: ignore[assignment]
+                    output_temp_partial_path = future_info["output_temp_partial_path"]  # type: ignore[assignment]
                     _ = future.result()
 
                     # If the calculate gave results, copy to output
@@ -241,14 +242,14 @@ def zonal_stats_ext(
 
 
 def format_progress(
-    start_time: datetime.datetime,
+    start_time: datetime,
     nb_done: int,
     nb_todo: int,
     operation: Optional[str] = None,
     nb_parallel: int = 1,
 ) -> Optional[str]:
     # Init
-    time_passed = (datetime.datetime.now() - start_time).total_seconds()
+    time_passed = (datetime.now() - start_time).total_seconds()
     pct_progress = 100.0 - (nb_todo - nb_done) * 100 / nb_todo
     nb_todo_str = f"{nb_todo:n}"
     nb_decimal = len(nb_todo_str)

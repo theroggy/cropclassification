@@ -312,9 +312,7 @@ def prepare_input_cropgroup(
 
     # Read and cleanup the mapping table from crop codes to classes
     # --------------------------------------------------------------------------
-    logger.info(f"Read classes conversion table from {classes_refe_path}")
     classes_df = pdh.read_file(classes_refe_path)
-    logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
@@ -515,9 +513,7 @@ def prepare_input_fabaceae(
 
     # Read and cleanup the mapping table from crop codes to classes
     # --------------------------------------------------------------------------
-    logger.info(f"Read classes conversion table from {classes_refe_path}")
     classes_df = pdh.read_file(classes_refe_path)
-    logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
@@ -737,7 +733,6 @@ def prepare_input_latecrop(
     # -------------------------------------------------------------
     logger.info(f"Read classes conversion table from {classes_refe_path}")
     classes_df = pdh.read_file(classes_refe_path)
-    logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data
@@ -1085,7 +1080,6 @@ def prepare_input_landcover(
     # -------------------------------------------------------------
     logger.info(f"Read classes conversion table from {classes_refe_path}")
     classes_df = pdh.read_file(classes_refe_path)
-    logger.info(f"Read classes conversion table ready, info(): {classes_df.info()}")
 
     # Because the file was read as ansi, and gewas is int, so the data needs to be
     # converted to unicode to be able to do comparisons with the other data

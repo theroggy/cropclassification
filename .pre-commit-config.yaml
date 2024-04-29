@@ -8,3 +8,8 @@ repos:
     hooks:
       - id: ruff-format
       - id: ruff
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.8.0"
+    hooks:
+      - id: mypy
+        additional_dependencies: [pandas-stubs, types-python-dateutil, types-requests]

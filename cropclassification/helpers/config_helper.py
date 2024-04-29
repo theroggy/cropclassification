@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module that manages configuration data.
 """
@@ -8,13 +7,24 @@ import json
 from pathlib import Path
 import pprint
 import tempfile
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from cropclassification.util.openeo_util import ImageProfile
+from cropclassification.util.mosaic_util import ImageProfile
 
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
+config: configparser.ConfigParser
+config_paths_used: List[Path]
+general: Any
+calc_timeseries_params: Any
+calc_marker_params: Any
+calc_periodic_mosaic_params: Any
+marker: Any
+timeseries: Any
+preprocess: Any
+classifier: Any
+postprocess: Any
+columns: Any
+dirs: Any
+image_profiles: Dict[str, ImageProfile]
 
 
 class SensorData:
@@ -32,7 +42,7 @@ class SensorData:
         if bands is not None:
             self.bands = bands
         else:
-            self.bands = self.imageprofile.bands
+            self.bands = self.imageprofile.bands  # type: ignore[assignment]
 
 
 def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None):
@@ -53,7 +63,7 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     # Check if all config paths are ok
     for config_path in config_paths:
         if not config_path.exists():
-            raise Exception(f"Config file doesn't exist: {config_path}")
+            raise ValueError(f"Config file doesn't exist: {config_path}")
 
     config.read(config_paths)
 
@@ -103,6 +113,8 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     calc_timeseries_params = config["calc_timeseries_params"]
     global calc_marker_params
     calc_marker_params = config["calc_marker_params"]
+    global calc_periodic_mosaic_params
+    calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
     global marker
     marker = config["marker"]
     global timeseries
@@ -117,6 +129,10 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     columns = config["columns"]
     global dirs
     dirs = config["dirs"]
+    global image_profiles
+    image_profiles = _get_image_profiles(
+        marker.getpath("image_profiles_config_filepath")
+    )
 
 
 def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
@@ -154,87 +170,55 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     return result
 
 
-def _get_raster_profiles() -> Dict[str, ImageProfile]:
-    # Cropclassification gives best results with time_dimension_reducer "mean" for both
+def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
+    # Cropclassification gives best results with time_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
-    # TODO: this should move to a config file
+    # Init
+    if not image_profiles_path.exists():
+        raise ValueError(f"Config file specified does not exist: {image_profiles_path}")
 
-    job_options_extra_memory = {
-        "executor-memory": "4G",
-        "executor-memoryOverhead": "2G",
-        "executor-cores": "2",
-    }
+    # Read config file...
+    profiles_config = configparser.ConfigParser(
+        interpolation=configparser.ExtendedInterpolation(),
+        converters={
+            "list": lambda x: [i.strip() for i in x.split(",")],
+            "dict": lambda x: None if x == "None" else json.loads(x),
+        },
+        allow_no_value=True,
+    )
+    profiles_config.read(image_profiles_path)
 
+    # Prepare data
     profiles = {}
-    profiles["s2-agri"] = ImageProfile(
-        name="s2-agri",
-        satellite="s2",
-        collection="TERRASCOPE_S2_TOC_V2",
-        bands=["B02", "B03", "B04", "B08", "B11", "B12"],
-        # Use the "min" reducer filters out "lightly clouded areas"
-        process_options={
-            "time_dimension_reducer": "mean",
-            "cloud_filter_band_dilated": "SCL",
-        },
-        job_options=None,
-    )
-    profiles["s2-scl"] = ImageProfile(
-        name="s2-scl",
-        satellite="s2",
-        collection="TERRASCOPE_S2_TOC_V2",
-        bands=["SCL"],
-        # Use the "min" reducer filters out "lightly clouded areas"
-        process_options={
-            "time_dimension_reducer": "max",
-            # "cloud_filter_band_dilated": "SCL",
-            "cloud_filter_band": "SCL",
-        },
-        job_options=None,
-    )
-    profiles["s2-ndvi"] = ImageProfile(
-        name="s2-ndvi",
-        satellite="s2",
-        collection="TERRASCOPE_S2_NDVI_V2",
-        bands=["NDVI_10M"],
-        process_options={
-            "time_dimension_reducer": "mean",
-            # "cloud_filter_band_dilated": "SCENECLASSIFICATION_20M",
-            "cloud_filter_band": "SCENECLASSIFICATION_20M",
-        },
-        job_options=job_options_extra_memory,
-    )
-    profiles["s1-grd-sigma0-asc"] = ImageProfile(
-        name="s1-grd-sigma0-asc",
-        satellite="s1",
-        collection="S1_GRD_SIGMA0_ASCENDING",
-        bands=["VV", "VH"],
-        process_options={
-            "time_dimension_reducer": "mean",
-        },
-        job_options=None,
-    )
-    profiles["s1-grd-sigma0-desc"] = ImageProfile(
-        name="s1-grd-sigma0-desc",
-        satellite="s1",
-        collection="S1_GRD_SIGMA0_DESCENDING",
-        bands=["VV", "VH"],
-        process_options={
-            "time_dimension_reducer": "mean",
-        },
-        job_options=None,
-    )
-    profiles["s1-coh"] = ImageProfile(
-        name="s1-coh",
-        satellite="s1",
-        collection="TERRASCOPE_S1_SLC_COHERENCE_V1",
-        bands=["VV", "VH"],
-        process_options={
-            "time_dimension_reducer": "mean",
-        },
-        job_options=None,
-    )
+    for profile in profiles_config.sections():
+        profiles[profile] = ImageProfile(
+            name=profile,
+            satellite=profiles_config[profile].get("satellite"),
+            index_type=profiles_config[profile].get("index_type"),
+            image_source=profiles_config[profile].get("image_source"),
+            base_image_profile=profiles_config[profile].get("base_image_profile"),
+            collection=profiles_config[profile].get("collection"),
+            bands=profiles_config[profile].getlist("bands"),
+            time_reducer=profiles_config[profile].get("time_reducer"),
+            max_cloud_cover=profiles_config[profile].getfloat("max_cloud_cover"),
+            process_options=profiles_config[profile].getdict("process_options"),
+            job_options=profiles_config[profile].getdict("job_options"),
+        )
+
+    # Do some extra validations on the profiles read.
+    _validate_image_profiles(profiles)
 
     return profiles
+
+
+def _validate_image_profiles(profiles: Dict[str, ImageProfile]):
+    # Check that all base_image_profile s are actually existing image profiles.
+    for profile in profiles:
+        base_image_profile = profiles[profile].base_imageprofile
+        if base_image_profile is not None and base_image_profile not in profiles:
+            raise ValueError(
+                f"{base_image_profile=} not found for profile {profiles[profile]}"
+            )
 
 
 def pformat_config():
@@ -264,6 +248,3 @@ def as_dict():
         ].__dict__
 
     return the_dict
-
-
-image_profiles = _get_raster_profiles()

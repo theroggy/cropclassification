@@ -265,6 +265,7 @@ def train(
     best_model_info = mh.get_best_model(
         output_classifier_basepath.parent, acc_metric_mode=acc_metric_mode
     )
+    assert best_model_info is not None
     best_model_path = best_model_info["path"]
 
     return Path(best_model_path)

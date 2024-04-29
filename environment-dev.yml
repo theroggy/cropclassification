@@ -20,13 +20,17 @@ dependencies:
   - qgis
   - rasterio
   - rasterstats
+  - rioxarray
   # testing
   - pytest
   - pytest-cov
   # linting
-  - black
-  - flake8
+  - mypy
+  - pandas-stubs
   - pre-commit
+  - ruff
+  - types-python-dateutil
+  - types-requests
   - pip:
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12

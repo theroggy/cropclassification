@@ -265,9 +265,9 @@ def predict(
 
     # Join the data to send to prediction logic
     logger.info("Join input parcels with the classification data")
+    assert input_parcel_classification_data_df is not None
     input_parcel_for_predict_df = input_parcel_df.join(
-        input_parcel_classification_data_df,
-        how="inner",
+        input_parcel_classification_data_df, how="inner"
     )
 
     # Predict!

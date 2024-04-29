@@ -84,7 +84,7 @@ def write_full_report(
     # TODO: pretty ugly, hopefully becomes obsolete if pyogrio is used in gfo.to_file
     for column in df_predict.columns:
         try:
-            df_predict[column] = pd.to_numeric(df_predict[column], errors="ignore")
+            df_predict[column] = pd.to_numeric(df_predict[column], errors="ignore")  # type: ignore[call-overload]
         except Exception:
             _ = None
 
@@ -159,7 +159,7 @@ def write_full_report(
         parameters_used_df = pd.DataFrame(
             parameter_list, columns=["parameter_type", "parameter", "value"]
         )
-        with pd.option_context(*pandas_option_context_list):
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{parameters_used_df}\n")
             logger.info(f"{parameters_used_df}\n")
             html_data["PARAMETERS_USED_TABLE"] = parameters_used_df.to_html(index=False)
@@ -219,7 +219,7 @@ def write_full_report(
         values = 100 * count_per_class["count"] / count_per_class["count"].sum()
         count_per_class.insert(loc=1, column="pct", value=values)
 
-        with pd.option_context(*pandas_option_context_list):
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
             html_data[
@@ -383,7 +383,7 @@ def write_full_report(
         overall_accuracies_df.set_index(
             keys=["parcels", "prediction_type"], inplace=True
         )
-        with pd.option_context(*pandas_option_context_list):
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{overall_accuracies_df}\n")
             logger.info(f"{overall_accuracies_df}\n")
             html_data["OVERALL_ACCURACIES_TABLE"] = overall_accuracies_df.to_html()
@@ -590,7 +590,7 @@ def write_full_report(
             count_per_class = (
                 df_parcel_gt.groupby(f"gt_conclusion_{conf.columns['prediction_cons']}")
                 .size()
-                .to_frame("count")
+                .to_frame("count")  # type: ignore[operator]
             )
             values = 100 * count_per_class["count"] / count_per_class["count"].sum()
             count_per_class.insert(loc=1, column="pct", value=values)
@@ -621,7 +621,7 @@ def write_full_report(
                     f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
                 )
                 .size()
-                .to_frame("count")
+                .to_frame("count")  # type: ignore[operator]
             )
             values = 100 * count_per_class["count"] / count_per_class["count"].sum()
             count_per_class.insert(loc=1, column="pct", value=values)
@@ -829,7 +829,7 @@ def write_full_report(
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns,
+                    error_codes_denominator=beta_denominator_columns.tolist(),
                     error_type="beta",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -910,7 +910,7 @@ def write_full_report(
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns,
+                    error_codes_denominator=beta_denominator_columns.tolist(),
                     error_type="beta",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -991,7 +991,7 @@ def write_full_report(
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns,
+                    error_codes_denominator=beta_denominator_columns.tolist(),
                     error_type="beta",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -1075,7 +1075,7 @@ def write_full_report(
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns,
+                    error_codes_denominator=beta_denominator_columns.tolist(),
                     ascending=False,
                     error_type="beta",
                 )

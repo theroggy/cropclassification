@@ -5,6 +5,7 @@ Calaculate the timeseries data per image on DIAS.
 
 import datetime
 import glob
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -18,6 +19,8 @@ from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
 from cropclassification.util import zonal_stats_bulk
 from cropclassification.preprocess import _timeseries_helper as ts_helper
+
+logger: logging.Logger
 
 
 def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
@@ -105,7 +108,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         shutil.rmtree(str(temp_dir) + os.sep)
 
     # Process S1 GRD images
-    input_image_paths = []
+    input_image_paths: List[Path] = []
     for year in range(calc_year_start, calc_year_stop + 1):
         # TODO: works, but doesn't seem to be the most elegant code...
         if year < calc_year_stop:
@@ -120,14 +123,15 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             input_image_searchstr = (
                 f"/mnt/NAS*/CARD/FLANDERS/S1*/L1TC/{year}/{month:02d}/*/*.CARD"
             )
-            input_image_paths.extend(glob.glob(input_image_searchstr))
+            paths = [Path(path) for path in glob.glob(input_image_searchstr)]
+            input_image_paths.extend(paths)
     logger.info(f"Found {len(input_image_paths)} S1 GRD images in the time period")
 
     # Verify which S1 images we actually want to process...
     tmp_input_image_paths = []
     esaSwitchedProcessingMethod = dateutil.parser.isoparse("2021-02-23").timestamp()
-    for input_image_path in input_image_paths:
-        input_image_path = Path(input_image_path)
+    for input_image_path_str in input_image_paths:
+        input_image_path = Path(input_image_path_str)
         # Get more detailed info about the image
         try:
             image_info = zonal_stats_bulk.get_image_info(input_image_path)
@@ -181,9 +185,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             id_column=conf.columns["id"],
             rasters_bands=images_bands,
             output_dir=output_dir,
-            temp_dir=temp_dir,
-            log_dir=log_dir,
-            log_level=log_level,
+            stats="mean",
             nb_parallel=nb_parallel,
         )
     except Exception as ex:
@@ -206,7 +208,8 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
                 f"/mnt/NAS*/CARD/FLANDERS/S2*/L2A/{year}/{month:02d}/*/*.SAFE"
             )
             logger.info(f"Search for {input_image_searchstr}")
-            input_image_paths.extend(glob.glob(input_image_searchstr))
+            paths = [Path(path) for path in glob.glob(input_image_searchstr)]
+            input_image_paths.extend(paths)
     logger.info(f"Found {len(input_image_paths)} S2 images to process")
 
     if test:
@@ -255,9 +258,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             id_column=conf.columns["id"],
             rasters_bands=images_bands,
             output_dir=output_dir,
-            temp_dir=temp_dir,
-            log_dir=log_dir,
-            log_level=log_level,
+            stats="mean",
             nb_parallel=nb_parallel,
         )
     except Exception as ex:
@@ -279,7 +280,8 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             input_image_searchstr = (
                 f"/mnt/NAS*/CARD/FLANDERS/S1*/L1CO/{year}/{month:02d}/*/*.CARD"
             )
-            input_image_paths.extend(glob.glob(input_image_searchstr))
+            paths = [Path(path) for path in glob.glob(input_image_searchstr)]
+            input_image_paths.extend(paths)
     logger.info(f"Found {len(input_image_paths)} S1 Coherence images to process")
 
     if test:
@@ -300,9 +302,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
             id_column=conf.columns["id"],
             rasters_bands=images_bands,
             output_dir=output_dir,
-            temp_dir=temp_dir,
-            log_dir=log_dir,
-            log_level=log_level,
+            stats="mean",
         )
     except Exception as ex:
         logger.exception(ex)

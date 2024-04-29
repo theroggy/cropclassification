@@ -79,18 +79,15 @@ def calc_timeseries_data(
             dest_data_dir=dest_data_dir,
         )
     if len(sensordata_to_get_openeo) > 0:
-        # Pepare periodic images + calculate base timeseries on them
+        # Prepare periodic images + calculate base timeseries on them
         import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 
-        sensordata_to_get_info_openeo = [
-            conf.image_profiles[sensordatatype]
-            for sensordatatype in sensordata_to_get_openeo
-        ]
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
             start_date=start_date,
             end_date=end_date,
-            sensordata_to_get=sensordata_to_get_info_openeo,
+            imageprofiles_to_get=sensordata_to_get_openeo,
+            imageprofiles=conf.image_profiles,
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
             dest_data_dir=dest_data_dir,
             nb_parallel=conf.general.getint("nb_parallel", -1),
@@ -153,18 +150,16 @@ def collect_and_prepare_timeseries_data(
         if band not in sensordata_to_use[image_profile].bands:
             logger.debug(f"SKIP: file doesn't match the bands asked: {curr_path}")
             continue
-        time_dimension_reducer_asked = sensordata_to_use[
-            image_profile
-        ].imageprofile.process_options.get("time_dimension_reducer")
-        if time_dimension_reducer_asked is not None:
-            time_dimension_reducer = fileinfo.get("time_dimension_reducer")
-            if time_dimension_reducer is None:
+        time_reducer_asked = sensordata_to_use[image_profile].imageprofile.time_reducer
+        if time_reducer_asked is not None:
+            time_reducer = fileinfo.get("time_reducer")
+            if time_reducer is None:
                 logger.warning(
-                    f"SKIP: time_dimension_reducer {time_dimension_reducer_asked} "
+                    f"SKIP: time_reducer {time_reducer_asked} "
                     f"asked, but not known for file: {curr_path}"
                 )
                 continue
-            elif time_dimension_reducer != time_dimension_reducer_asked:
+            elif time_reducer != time_reducer_asked:
                 logger.debug(
                     f"SKIP: file doesn't match the time reducer asked: {curr_path}"
                 )

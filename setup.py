@@ -24,6 +24,7 @@ setuptools.setup(
         "psutil",
         "rasterio",
         "rasterstats",
+        "rioxarray",
         "scikit-learn",
         "tensorflow",
     ],
