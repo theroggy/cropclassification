@@ -4,6 +4,9 @@ from typing import Dict
 from cropclassification.util.mosaic_util import ImageProfile
 
 
+testdata_dir = Path(__file__).resolve().parent / "data"
+
+
 class SampleDirs:
     marker_basedir = Path(__file__).resolve().parent.parent / "sample_marker_basedir"
     tasks_dir = marker_basedir / "_tasks"
