@@ -9,6 +9,10 @@
 - Make image profiles to be used in a classification configurable in a config file (#56)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
 
+### Bugs fixed
+
+- Fix TypeError: QgsZonalStatistics(): arguments did not match any overloaded call (#76)
+
 ## 0.1.1 (2023-08-08)
 
 ### Improvements
