@@ -55,7 +55,7 @@ def test_calc_index_s1(tmp_path, index, save_as_byte):
     input_path = (
         test_helper.SampleDirs.image_dir
         / "roi_test/s1-grd-sigma0-asc"
-        / "s1-grd-sigma0-asc_2024-03-04_2024-03-10_VV-VH_mean.tif"
+        / "s1-grd-sigma0-asc_2024-03-04_2024-03-10_VV-VH_first.tif"
     )
     output_path = tmp_path / f"{input_path.stem}_{index}_{save_as_byte}.tif"
 

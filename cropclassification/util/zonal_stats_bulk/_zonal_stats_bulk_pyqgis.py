@@ -197,9 +197,12 @@ def zonal_stats_band(
     columns: List[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Init
-    stats_mask = 0
+    stats_mask = None
     for stat in stats:
-        stats_mask |= stat_to_qgisstat(stat)
+        if stats_mask is None:
+            stats_mask = stat_to_qgisstat(stat)
+        else:
+            stats_mask |= stat_to_qgisstat(stat)
 
     # Get the image info
     image_info = raster_helper.get_image_info(raster_path)
@@ -230,12 +233,19 @@ def zonal_stats_band(
     # Calculates zonal stats with raster
     raster = qgis.core.QgsRasterLayer(image_info.bands[band].path)
 
-    zoneStats = qgis.analysis.QgsZonalStatistics(
-        vector_mem,
-        raster,
-        stats=stats_mask,
-        rasterBand=image_info.bands[band].bandindex,
-    )
+    try:
+        zoneStats = qgis.analysis.QgsZonalStatistics(
+            polygonLayer=vector_mem,
+            rasterLayer=raster,
+            attributePrefix="",
+            rasterBand=image_info.bands[band].bandindex,
+            stats=stats_mask,
+        )
+        print("ok")
+    except Exception as ex:
+        print(ex)
+        raise
+
     if zoneStats.calculateStatistics(None) != 0:
         raise RuntimeError(
             "Error: calculateStatistics didn't return 0 for zonal stats between "
