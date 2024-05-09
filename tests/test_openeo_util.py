@@ -4,6 +4,7 @@ import shutil
 import pytest
 
 from cropclassification.util import openeo_util
+from tests import test_helper
 from tests.test_helper import SampleData
 
 
