@@ -10,14 +10,14 @@ from tests import test_helper
 
 def test_calc_periodic_mosaic(tmp_path):
     # Prepare test data
-    sample_dir = test_helper.SampleDirs.marker_basedir
+    sample_dir = test_helper.SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
+    output_base_dir = test_dir / test_helper.SampleData.image_dir.name / "roi_test"
     days_per_period = 7
     start_date = datetime(2024, 3, 4)
     end_date = datetime(2024, 3, 11)
@@ -42,14 +42,14 @@ def test_calc_periodic_mosaic(tmp_path):
 
 def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
     # Prepare test data
-    sample_dir = test_helper.SampleDirs.marker_basedir
+    sample_dir = test_helper.SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
+    output_base_dir = test_dir / test_helper.SampleData.image_dir.name / "roi_test"
     days_per_period = 7
     start_date = datetime(2024, 3, 4)
     end_date = datetime(2024, 3, 11)

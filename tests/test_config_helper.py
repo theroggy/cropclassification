@@ -17,7 +17,7 @@ from tests import test_helper
     ],
 )
 def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float):
-    config_path = test_helper.SampleDirs.config_dir / "image_profiles.ini"
+    config_path = test_helper.SampleData.config_dir / "image_profiles.ini"
     image_profiles = conf._get_image_profiles(config_path)
 
     profile = image_profiles.get(sensor)
