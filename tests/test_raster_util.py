@@ -12,7 +12,7 @@ from tests.test_helper import SampleData
 @pytest.mark.parametrize("resampling", ["average", "bilinear"])
 def test_add_overviews(tmp_path, resampling):
     # Prepare test file
-    test_path = tmp_path / SampleData.image_s2_pathpath.name
+    test_path = tmp_path / SampleData.image_s2_path.name
     shutil.copy(SampleData.image_s2_path, test_path)
     with rasterio.open(test_path) as file:
         for i in file.indexes:

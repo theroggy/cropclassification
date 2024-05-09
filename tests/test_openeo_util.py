@@ -2,6 +2,7 @@ from datetime import datetime
 import shutil
 
 import pytest
+import rasterio
 
 from cropclassification.util import openeo_util
 from tests import test_helper
@@ -86,9 +87,11 @@ def test_get_images_s2(tmp_path):
     Remark: the default way to run is with the result pre-copied and force=False, to
     avoid really calling the openeo API.
     """
-    SampleData.image_s2_path
+    # Prepare test data
     output_path = tmp_path / SampleData.image_s2_path.name
     shutil.copy(SampleData.image_s2_path, output_path)
+    bands = ["B02", "B03", "B04", "B08", "B11", "B12"]
+
     images_to_get = [
         {
             "path": output_path,
@@ -97,13 +100,18 @@ def test_get_images_s2(tmp_path):
             "collection": "TERRASCOPE_S2_TOC_V2",
             "start_date": SampleData.start_date,
             "end_date": SampleData.end_date,
-            "bands": ["B02", "B03", "B04", "B08", "B11", "B12"],
+            "bands": bands,
             "time_reducer": "mean",
             "max_cloud_cover": 80,
             "process_options": {},
             "job_options": {},
         }
     ]
-
     openeo_util.get_images(images_to_get=images_to_get, force=False)
+
+    # Check result
     assert output_path.exists()
+    with rasterio.open(output_path, "r") as file:
+        assert file.count == len(bands)
+        # All bands should have a description
+        assert all(file.descriptions)
