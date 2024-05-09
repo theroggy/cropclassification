@@ -18,16 +18,15 @@ def test_calc_periodic_mosaic(tmp_path):
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
     output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
-    days_per_period = 7
     start_date = datetime(2024, 3, 4)
     end_date = datetime(2024, 3, 11)
 
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[160_000, 188_000, 160_500, 188_500],
+        roi_bounds=[161_400, 188_000, 161_900, 188_500],
         roi_crs=31370,
         start_date=start_date,
         end_date=end_date,
-        days_per_period=days_per_period,
+        period_name="weekly",
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s2-agri", "s2-ndvi"],
         imageprofiles=imageprofiles,
@@ -50,18 +49,17 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
     output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
-    days_per_period = 7
-    start_date = datetime(2024, 3, 4)
-    end_date = datetime(2024, 3, 11)
+    start_date = datetime(2023, 2, 26)
+    end_date = datetime(2023, 3, 8)
 
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[160_000, 188_000, 160_500, 188_500],
+        roi_bounds=[161_400, 188_000, 161_900, 188_500],
         roi_crs=31370,
         start_date=start_date,
         end_date=end_date,
-        days_per_period=days_per_period,
+        period_name="biweekly",
         output_base_dir=output_base_dir,
-        imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],
+        imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc", "s2-agri"],
         imageprofiles=imageprofiles,
         force=False,
     )
@@ -127,27 +125,50 @@ def test_ImageProfile_openeo():
 
 
 @pytest.mark.parametrize(
-    "start_date, end_date, days_per_period, expected_nb_periods",
-    [(datetime(2024, 1, 1), datetime(2024, 1, 17), 7, 2)],
+    "start_date, end_date, period_name, days_per_period, expected_nb_periods",
+    [(datetime(2024, 1, 1), datetime(2024, 1, 17), None, 7, 2)],
 )
-def test_prepare_periods(start_date, end_date, days_per_period, expected_nb_periods):
+def test_prepare_periods(
+    start_date, end_date, period_name, days_per_period, expected_nb_periods
+):
     result = mosaic_util._prepare_periods(
-        start_date, end_date, days_per_period=days_per_period
+        start_date, end_date, period_name=period_name, days_per_period=days_per_period
     )
     assert len(result) == expected_nb_periods
 
 
 @pytest.mark.parametrize(
-    "exp_error, start_date, end_date, days_per_period",
+    "start_date, end_date, days_per_period, expected_nb_periods",
+    [(datetime(2024, 1, 1), datetime(2024, 1, 17), 7, 2)],
+)
+def test_prepare_periods_days_per_period(
+    start_date, end_date, days_per_period, expected_nb_periods
+):
+    result = mosaic_util._prepare_periods(
+        start_date, end_date, period_name=None, days_per_period=days_per_period
+    )
+    assert len(result) == expected_nb_periods
+
+
+@pytest.mark.parametrize(
+    "exp_error, start_date, end_date, period_name, days_per_period",
     [
-        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), 7),
-        ("Unknown period name", datetime(2024, 1, 1), datetime(2024, 1, 2), 3),
+        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), None, 7),
+        (
+            "period_name is None and days_per_period is not 7 or 14",
+            datetime(2024, 1, 1),
+            datetime(2024, 1, 2),
+            None,
+            3,
+        ),
     ],
 )
-def test_prepare_periods_invalid(exp_error, start_date, end_date, days_per_period):
+def test_prepare_periods_invalid(
+    exp_error, start_date, end_date, period_name, days_per_period
+):
     with pytest.raises(ValueError, match=exp_error):
         _ = mosaic_util._prepare_periods(
-            start_date, end_date, days_per_period=days_per_period
+            start_date, end_date, period_name, days_per_period=days_per_period
         )
 
 
@@ -157,10 +178,13 @@ def test_prepare_mosaic_image_path():
         imageprofile="s2-agri",
         start_date=datetime(2024, 1, 1),
         end_date=datetime(2024, 1, 2),
+        period_name="weekly",
         bands=["B01", "B02"],
         time_reducer="mean",
         output_base_dir=Path("/tmp"),
     )
 
-    expected_path = Path("/tmp/s2-agri/s2-agri_2024-01-01_2024-01-02_B01-B02_mean.tif")
+    expected_path = Path(
+        "/tmp/s2-agri_weekly/s2-agri_2024-01-01_2024-01-02_B01-B02_mean.tif"
+    )
     assert result_path == expected_path

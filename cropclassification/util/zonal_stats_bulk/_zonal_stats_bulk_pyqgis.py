@@ -241,9 +241,7 @@ def zonal_stats_band(
             rasterBand=image_info.bands[band].bandindex,
             stats=stats_mask,
         )
-        print("ok")
-    except Exception as ex:
-        print(ex)
+    except Exception:
         raise
 
     if zoneStats.calculateStatistics(None) != 0:

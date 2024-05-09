@@ -9,9 +9,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pyproj
 
-from cropclassification.util import raster_util
-from . import raster_index_util
+
+from . import date_util
 from . import openeo_util
+from . import raster_util
+from . import raster_index_util
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -87,11 +89,11 @@ def calc_periodic_mosaic(
     roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
-    days_per_period: int,
     imageprofiles_to_get: List[str],
     imageprofiles: Dict[str, ImageProfile],
     output_base_dir: Path,
-    period_name: Optional[str] = None,
+    period_name: str,
+    days_per_period: Optional[int] = None,
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
@@ -105,7 +107,6 @@ def calc_periodic_mosaic(
         roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
         start_date (datetime): start date, included.
         end_date (datetime): end date, excluded.
-        days_per_period (int): number of days per period.
         imageprofiles_to_get (List[str]): list of image proles a periodic mosaic should
             be generated for.
         imageprofiles (Dict[str, ImageProfile]): dict with for all configured image
@@ -118,6 +119,8 @@ def calc_periodic_mosaic(
             names are used: if ``days_per_period=7``: "weekly", if
             ``days_per_period=14``: "biweekly", for other values of ``days_per_period``
             a ValueError is thrown. Defaults to None.
+        days_per_period (int, optional): number of days per period. If None, it is
+            derived of the `period_name` if possible. Defaults to None.
         delete_existing_openeo_jobs (bool, optional): True to delete existing openeo
             jobs. If False, they are just left running and the results are downloaded if
             they are ready like other jobs. Defaults to False.
@@ -133,8 +136,8 @@ def calc_periodic_mosaic(
     periods = _prepare_periods(
         start_date=start_date,
         end_date=end_date,
-        days_per_period=days_per_period,
         period_name=period_name,
+        days_per_period=days_per_period,
     )
 
     periodic_mosaic_params = _prepare_periodic_mosaic_params(
@@ -189,40 +192,60 @@ def calc_periodic_mosaic(
 def _prepare_periods(
     start_date: datetime,
     end_date: datetime,
-    days_per_period: int,
-    period_name: Optional[str] = None,
-):
+    period_name: str,
+    days_per_period: Optional[int],
+) -> List[Dict[str, Any]]:
     """
-    Download a periodic mosaic.
+    Prepare the periods to download a periodic mosaic.
 
     Args:
         start_date (datetime): start date, included.
         end_date (datetime): end date, excluded.
-        days_per_period (int): number of days per period.
-        period_name (Optional[str], optional): name of the period. If None, default
-            names are used: if ``days_per_period=7``: "weekly", if
-            ``days_per_period=14``: "biweekly", for other values of ``days_per_period``
-            a ValueError is thrown. Defaults to None.
+        periode_name (str): the name of the periods to use.
+        days_per_period (Optional[int]): number of days per period.
 
     Raises:
-        ValueError: _description_
+        ValueError: invalid input parameter values were passed in.
 
     Returns:
-        List[dict]: list of dicts with info about the images to get
+        List[Dict[str, Any]]: list of dicts with info about the images to get
     """
-    if start_date == end_date:
-        raise ValueError(f"start_date == end_date: this is not supported: {start_date}")
-    if end_date > datetime.now():
-        logger.warning(f"end_date is in the future: {end_date}")
-
-    # Prepare period_name:
+    # Interprete period_name and days_per_period
     if period_name is None:
-        if days_per_period == 7:
+        if days_per_period is None:
+            raise ValueError("both period_name and days_per_period are None")
+        elif days_per_period == 7:
             period_name = "weekly"
         elif days_per_period == 14:
             period_name = "biweekly"
         else:
-            raise ValueError("Unknown period name, please specify")
+            raise ValueError("period_name is None and days_per_period is not 7 or 14")
+    elif period_name == "weekly":
+        days_per_period = 7
+    elif period_name == "biweekly":
+        days_per_period = 14
+    else:
+        if days_per_period is None:
+            raise ValueError(
+                "If period_name is not one of the basic names, days_per_period must be "
+                "specified."
+            )
+
+    # Adjust start_date and end_date based on the period specified
+    if period_name == "weekly":
+        start_date = date_util.get_monday(start_date)
+        end_date = date_util.get_monday(end_date)
+    elif period_name == "biweekly":
+        # Also make sure the start date is compatible with using biweekly mondays
+        # starting from the first monday of the year.
+        start_date = date_util.get_monday_biweekly(start_date)
+        end_date = date_util.get_monday_biweekly(end_date)
+
+    # Check if start date and end date are (still) valid
+    if start_date == end_date:
+        raise ValueError(f"start_date == end_date: this is not supported: {start_date}")
+    if end_date > datetime.now():
+        logger.warning(f"end_date is in the future: {end_date}")
 
     period_start_date = start_date
 
@@ -246,6 +269,7 @@ def _prepare_periods(
                 "start_date": period_start_date,
                 "end_date": period_end_date,
                 "end_date_incl": period_end_date_incl,
+                "period_name": period_name,
             }
         )
 
@@ -257,7 +281,7 @@ def _prepare_periods(
 def _prepare_periodic_mosaic_params(
     roi_bounds: Tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
-    periods: dict,
+    periods: List[Dict[str, Any]],
     imageprofiles_to_get: List[str],
     imageprofiles: Dict[str, ImageProfile],
     output_base_dir: Path,
@@ -269,7 +293,8 @@ def _prepare_periodic_mosaic_params(
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
             of the region of interest to download the mosaic for.
         roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
-        periods (dict): ???.
+        periods (List[Dict[str, Any]]): list of periods, with each period being a dict
+            with the keys start_date, end_date, end_date_incl and period_name.
         imageprofiles_to_get (List[str]): list of image proles a periodic mosaic should
             be generated for.
         imageprofiles (Dict[str, ImageProfile]): dict with for all configured image
@@ -278,6 +303,7 @@ def _prepare_periodic_mosaic_params(
             imageprofiles_to_get.
         output_base_dir (Path): base directory to save the images to. The images will be
             saved in a subdirectory based on the image profile name.
+
 
     Returns:
         List[Dict[str, Any]]: list of dicts with all neededparameters to generate the
@@ -335,7 +361,7 @@ def _prepare_mosaic_image_params(
     roi_bounds: Tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     imageprofile: ImageProfile,
-    period: dict,
+    period: Dict[str, Any],
     output_base_dir: Path,
     base_imageprofile: Optional[ImageProfile] = None,
 ) -> Dict[str, Any]:
@@ -346,7 +372,8 @@ def _prepare_mosaic_image_params(
         roi_bounds (Tuple[float, float, float, float]): _description_
         roi_crs (Optional[pyproj.CRS]): _description_
         imageprofile (ImageProfile): _description_
-        period (dict): _description_
+        period (Dict[str, Any]): period information: a dict with the keys start_date,
+            end_date, end_date_incl and period_name.
         output_base_dir (Path): _description_
         base_imageprofile (ImageProfile, optional): Defaults to None.
 
@@ -364,6 +391,7 @@ def _prepare_mosaic_image_params(
         imageprofile.name,
         start_date=period["start_date"],
         end_date=period["end_date_incl"],
+        period_name=period["period_name"],
         bands=imageprofile.bands,
         time_reducer=time_reducer,
         output_base_dir=output_base_dir,
@@ -384,16 +412,20 @@ def _prepare_mosaic_image_params(
         "index_type": imageprofile.index_type,
         "max_cloud_cover": imageprofile.max_cloud_cover,
         "image_source": imageprofile.image_source,
+        "base_imageprofile": imageprofile.base_imageprofile,
         "satellite": satellite,
         "roi_bounds": roi_bounds,
         "roi_crs": roi_crs,
         "start_date": period["start_date"],
         "end_date_incl": period["end_date_incl"],
         "end_date": period["end_date"],
+        "period_name": period["period_name"],
         "weeks": weeks,
         "bands": imageprofile.bands,
         "time_reducer": time_reducer,
         "path": image_path,
+        "job_options": imageprofile.job_options,
+        "process_options": imageprofile.process_options,
     }
     if imageprofile.name.lower() == "s1-grd-sigma0-asc":
         imagemeta["orbit"] = "asc"
@@ -411,6 +443,7 @@ def _prepare_mosaic_image_path(
     imageprofile: str,
     start_date: datetime,
     end_date: datetime,
+    period_name: str,
     bands: List[str],
     time_reducer: str,
     output_base_dir: Path,
@@ -422,6 +455,7 @@ def _prepare_mosaic_image_path(
         imageprofile (str): name of the image profile.
         start_date (datetime): start date of the mosaic.
         end_date (datetime): end date of the mosaic.
+        period_name (str): name of the period.
         bands (List[str]): list of bands that will be in the file.
         time_reducer (str): reducer to use to aggregate pixels in time dimension: one
             of: "mean", "min", "max",...
@@ -446,7 +480,7 @@ def _prepare_mosaic_image_path(
         f"{time_reducer}.tif"
     )
 
-    image_dir = output_base_dir / imageprofile
+    image_dir = output_base_dir / f"{imageprofile}_{period_name}"
     image_path = image_dir / name
 
     return image_path

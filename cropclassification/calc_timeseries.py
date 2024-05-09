@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calaculate the timeseries data per image on DIAS.
 """
@@ -17,8 +16,8 @@ import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
+from cropclassification.util import date_util
 from cropclassification.util import zonal_stats_bulk
-from cropclassification.preprocess import _timeseries_helper as ts_helper
 
 logger: logging.Logger
 
@@ -42,10 +41,10 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     test = conf.calc_timeseries_params.getboolean("test")
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_helper.get_monday(
+    start_date = date_util.get_monday(
         conf.marker["start_date_str"]
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_helper.get_monday(conf.marker["end_date_str"])
+    end_date = date_util.get_monday(conf.marker["end_date_str"])
 
     calc_year_start = start_date.year
     calc_year_stop = end_date.year

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calculates periodic timeseries for input parcels.
 """
@@ -8,7 +7,7 @@ import logging
 import gc
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import geofileops as gfo
 import numpy as np
@@ -18,9 +17,6 @@ import pandas as pd
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
@@ -177,6 +173,8 @@ def calculate_periodic_timeseries(
     timeseries_per_image_dir: Path,
     start_date: datetime,
     end_date: datetime,
+    period_name: str,
+    days_per_period: Optional[int],
     sensordata_to_get: List[str],
     dest_data_dir: Path,
     force: bool = False,
@@ -193,6 +191,8 @@ def calculate_periodic_timeseries(
             already on the periods wanted + data on this date is included.
         end_date (datetime): End date. Needs to be aligned already on
             the periods wanted + data on this date is excluded.
+        period_name (str): the periods to use for the mosaics.
+        days_per_period (Optional[int]): the number of days each period should count.
         sensordata_to_get ([]):
         dest_data_dir (Path): [description]
         force (bool, optional): [description]. Defaults to False.
@@ -447,9 +447,9 @@ def calculate_periodic_timeseries(
                         period_band_data_df[statistic_columns_dict["std"]], axis=1
                     )
                     # Number of Files used
-                    period_band_data_df[
-                        f"{column_basename}_used_files"
-                    ] = period_band_data_df[statistic_columns_dict["max"]].count(axis=1)
+                    period_band_data_df[f"{column_basename}_used_files"] = (
+                        period_band_data_df[statistic_columns_dict["max"]].count(axis=1)
+                    )
 
                     # Only keep the columns we want to keep
                     columns_to_keep = [
@@ -641,19 +641,3 @@ def get_fileinfo_timeseries_periods(path: Path) -> dict:
         }
 
     return get_fileinfo_timeseries(path)
-
-
-def get_monday(date: Union[str, datetime]) -> datetime:
-    """
-    This function gets the first monday before the date provided.
-    It is being used to adapt start_date and end_date so they are mondays, so it
-    becomes easier to reuse timeseries data
-       - inputformat:  %Y-%m-%d
-       - outputformat: datetime
-    """
-    if isinstance(date, str):
-        date = datetime.strptime(date, "%Y-%m-%d")
-
-    year_week = date.strftime("%Y_%W")
-    year_week_monday = datetime.strptime(year_week + "_1", "%Y_%W_%w")
-    return year_week_monday

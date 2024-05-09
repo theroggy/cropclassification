@@ -36,7 +36,7 @@ def set_band_descriptions(
     overwrite: bool = True,
 ):
     """
-    Add band decriptions to a raster file.
+    Add band descriptions to a raster file.
 
     Args:
         path (Path): the file to add band descriptions to
@@ -54,7 +54,7 @@ def set_band_descriptions(
 
     # Add band descriptions
     with rasterio.open(path, "r+") as file:
-        # If force is False and all bands already have a description, return.
+        # If overwrite is False and all bands already have a description, return.
         if not overwrite and all(file.descriptions):
             return
 

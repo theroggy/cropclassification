@@ -6,26 +6,27 @@ from datetime import datetime
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
+
+import pyproj
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.preprocess._timeseries_helper as ts_helper
-
-# First define/init some general variables/constants
-# -------------------------------------------------------------
+from cropclassification.util import date_util
 
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-# The real work
-# -------------------------------------------------------------
-
 
 def calc_timeseries_data(
     input_parcel_path: Path,
+    roi_bounds: Tuple[float, float, float, float],
+    roi_crs: Optional[pyproj.CRS],
     start_date_str: str,
     end_date_str: str,
+    period_name: str,
+    days_per_period: Optional[int],
     sensordata_to_get: Dict[str, conf.SensorData],
     dest_data_dir: Path,
 ):
@@ -36,6 +37,8 @@ def calc_timeseries_data(
         input_parcel_path (str): [description]
         start_date_str (str): [description]
         end_date_str (str): [description]
+        period_name (str): the period of mosaics to use.
+        days_per_period (Optional[int]): the number of days each period should count.
         sensordata_to_get (List[str]): an array with data you want to be calculated:
             check out the constants starting with DATA_TO_GET... for the options.
         dest_data_dir (str): [description]
@@ -47,10 +50,10 @@ def calc_timeseries_data(
         dest_data_dir.mkdir(parents=True, exist_ok=True)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_helper.get_monday(
+    start_date = date_util.get_monday(
         start_date_str
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_helper.get_monday(end_date_str)
+    end_date = date_util.get_monday(end_date_str)
 
     logger.info(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
@@ -75,6 +78,8 @@ def calc_timeseries_data(
             timeseries_per_image_dir=conf.dirs.getpath("timeseries_per_image_dir"),
             start_date=start_date,
             end_date=end_date,
+            period_name=period_name,
+            days_per_period=days_per_period,
             sensordata_to_get=sensordata_to_get_onda,
             dest_data_dir=dest_data_dir,
         )
@@ -84,8 +89,11 @@ def calc_timeseries_data(
 
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
+            roi_bounds=roi_bounds,
+            roi_crs=roi_crs,
             start_date=start_date,
             end_date=end_date,
+            period_name=period_name,
             imageprofiles_to_get=sensordata_to_get_openeo,
             imageprofiles=conf.image_profiles,
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
@@ -204,9 +212,9 @@ def collect_and_prepare_timeseries_data(
                     column_ok = True
                 elif column == parceldata_aggregation:
                     curr_start_date_str = fileinfo["start_date"].strftime("%Y%m%d")
-                    columns_to_rename[
-                        column
-                    ] = f"{image_profile}_{curr_start_date_str}_{band}_{column}"
+                    columns_to_rename[column] = (
+                        f"{image_profile}_{curr_start_date_str}_{band}_{column}"
+                    )
                     column_ok = True
             if not column_ok:
                 # Drop column if it doesn't end with something in
