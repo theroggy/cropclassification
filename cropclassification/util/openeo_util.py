@@ -161,8 +161,8 @@ def get_images(
     # Postprocess the images created
     for image_path in image_paths:
         band_descriptions = None
-        if image_path in images_to_get_dict:
-            band_descriptions = images_to_get_dict[image_path]["bands"]
+        if image_path.as_posix() in images_to_get_dict:
+            band_descriptions = images_to_get_dict[image_path.as_posix()]["bands"]
         postprocess_image(image_path, band_descriptions)
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
