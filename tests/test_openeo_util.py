@@ -4,14 +4,14 @@ import shutil
 import pytest
 
 from cropclassification.util import openeo_util
-from tests import test_helper
+from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize(
     "input_path, collection",
     [
-        (test_helper.SampleData.image_s1_asc_path, "S1_GRD_SIGMA0_ASCENDING"),
-        (test_helper.SampleData.image_s1_desc_path, "S1_GRD_SIGMA0_DESCENDING"),
+        (SampleData.image_s1_asc_path, "S1_GRD_SIGMA0_ASCENDING"),
+        (SampleData.image_s1_desc_path, "S1_GRD_SIGMA0_DESCENDING"),
     ],
 )
 def test_get_images_s1(tmp_path, input_path, collection):
@@ -26,11 +26,11 @@ def test_get_images_s1(tmp_path, input_path, collection):
     images_to_get = [
         {
             "path": output_path,
-            "roi_bounds": test_helper.SampleData.roi_bounds,
-            "roi_crs": test_helper.SampleData.roi_crs,
+            "roi_bounds": SampleData.roi_bounds,
+            "roi_crs": SampleData.roi_crs,
             "collection": collection,
-            "start_date": test_helper.SampleData.start_date,
-            "end_date": test_helper.SampleData.end_date,
+            "start_date": SampleData.start_date,
+            "end_date": SampleData.end_date,
             "bands": ["VV", "VH"],
             "time_reducer": "last",
             "max_cloud_cover": None,
@@ -85,17 +85,17 @@ def test_get_images_s2(tmp_path):
     Remark: the default way to run is with the result pre-copied and force=False, to
     avoid really calling the openeo API.
     """
-    test_helper.SampleData.image_s2_path
-    output_path = tmp_path / test_helper.SampleData.image_s2_path.name
-    shutil.copy(test_helper.SampleData.image_s2_path, output_path)
+    SampleData.image_s2_path
+    output_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, output_path)
     images_to_get = [
         {
             "path": output_path,
-            "roi_bounds": test_helper.SampleData.roi_bounds,
-            "roi_crs": test_helper.SampleData.roi_crs,
+            "roi_bounds": SampleData.roi_bounds,
+            "roi_crs": SampleData.roi_crs,
             "collection": "TERRASCOPE_S2_TOC_V2",
-            "start_date": test_helper.SampleData.start_date,
-            "end_date": test_helper.SampleData.end_date,
+            "start_date": SampleData.start_date,
+            "end_date": SampleData.end_date,
             "bands": ["B02", "B03", "B04", "B08", "B11", "B12"],
             "time_reducer": "mean",
             "max_cloud_cover": 80,

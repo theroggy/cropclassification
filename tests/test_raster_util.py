@@ -6,14 +6,14 @@ import rasterio
 import rioxarray
 
 from cropclassification.util import raster_util
-from tests import test_helper
+from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize("resampling", ["average", "bilinear"])
 def test_add_overviews(tmp_path, resampling):
     # Prepare test file
-    test_path = tmp_path / test_helper.SampleData.image_s2_pathpath.name
-    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
+    test_path = tmp_path / SampleData.image_s2_pathpath.name
+    shutil.copy(SampleData.image_s2_path, test_path)
     with rasterio.open(test_path) as file:
         for i in file.indexes:
             assert len(file.overviews(i)) == 0
@@ -39,8 +39,8 @@ def test_add_overviews(tmp_path, resampling):
 )
 def test_set_band_descriptions(tmp_path, band_descriptions):
     # Prepare test file
-    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
-    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
+    test_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, test_path)
     # Remove the band descriptions
     empty_band_descriptions = [None, None, None, None, None, None]
     raster_util.set_band_descriptions(test_path, empty_band_descriptions)
@@ -80,8 +80,8 @@ def test_set_band_descriptions(tmp_path, band_descriptions):
 )
 def test_set_band_descriptions_invalid(tmp_path, band_descriptions, expected_error):
     # Prepare and validate test file
-    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
-    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
+    test_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, test_path)
     # Remove the band descriptions
     empty_band_descriptions = [None, None, None, None, None, None]
     raster_util.set_band_descriptions(test_path, empty_band_descriptions)
@@ -93,8 +93,8 @@ def test_set_band_descriptions_invalid(tmp_path, band_descriptions, expected_err
 
 def test_set_band_descriptions_overwrite_False(tmp_path):
     # Prepare and validate test file
-    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
-    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
+    test_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, test_path)
 
     with rasterio.open(test_path, "r") as file:
         descriptions_orig = list(file.descriptions)
@@ -123,8 +123,8 @@ def test_set_band_descriptions_overwrite_False(tmp_path):
 
 def test_set_band_descriptions_remove(tmp_path):
     # Prepare and validate test file
-    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
-    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
+    test_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, test_path)
 
     # Remove the band descriptions
     empty_band_descriptions = [None, None, None, None, None, None]

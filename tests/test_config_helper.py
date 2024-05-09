@@ -2,7 +2,7 @@ from copy import deepcopy
 import pytest
 
 from cropclassification.helpers import config_helper as conf
-from tests import test_helper
+from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize(
@@ -17,7 +17,7 @@ from tests import test_helper
     ],
 )
 def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float):
-    config_path = test_helper.SampleData.config_dir / "image_profiles.ini"
+    config_path = SampleData.config_dir / "image_profiles.ini"
     image_profiles = conf._get_image_profiles(config_path)
 
     profile = image_profiles.get(sensor)

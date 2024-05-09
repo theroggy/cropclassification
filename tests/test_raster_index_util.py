@@ -2,13 +2,13 @@ import shutil
 import pytest
 
 from cropclassification.util import raster_index_util, raster_util
-from tests import test_helper
+from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize("force", [True, False])
 def test_calc_index_force(tmp_path, force):
     # Prepare test data
-    input_path = test_helper.SampleData.image_s2_path
+    input_path = SampleData.image_s2_path
     output_path = tmp_path / f"{input_path.stem}_ndvi.tif"
     output_path.touch()
 
@@ -25,7 +25,7 @@ def test_calc_index_force(tmp_path, force):
 
 def test_calc_index_invalid(tmp_path):
     # Prepare test data
-    input_path = test_helper.SampleData.image_s2_path
+    input_path = SampleData.image_s2_path
     test_input_path = tmp_path / input_path.name
     shutil.copy(input_path, test_input_path)
     # Remove the band descriptions
@@ -44,7 +44,7 @@ def test_calc_index_invalid(tmp_path):
 @pytest.mark.parametrize("save_as_byte", [True, False])
 def test_calc_index_s1(tmp_path, index, save_as_byte):
     # Prepare test data
-    input_path = test_helper.SampleData.image_s1_asc_path
+    input_path = SampleData.image_s1_asc_path
     output_path = tmp_path / f"{input_path.stem}_{index}_{save_as_byte}.tif"
 
     # Prepare parameters
@@ -60,7 +60,7 @@ def test_calc_index_s1(tmp_path, index, save_as_byte):
 )
 def test_calc_index_s2(tmp_path, index, save_as_byte):
     # Prepare test data
-    input_path = test_helper.SampleData.image_s2_path
+    input_path = SampleData.image_s2_path
     output_path = tmp_path / f"{input_path.stem}_{index}_{save_as_byte}.tif"
 
     # Prepare parameters
