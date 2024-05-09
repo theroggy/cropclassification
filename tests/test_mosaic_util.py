@@ -59,7 +59,7 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
         end_date=end_date,
         period_name="biweekly",
         output_base_dir=output_base_dir,
-        imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc", "s2-agri"],
+        imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],
         imageprofiles=imageprofiles,
         force=False,
     )
