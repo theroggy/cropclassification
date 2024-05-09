@@ -19,14 +19,12 @@ def test_calc_periodic_mosaic(tmp_path):
     imageprofiles = conf._get_image_profiles(image_profiles_path)
     output_base_dir = test_dir / test_helper.SampleData.image_dir.name / "roi_test"
     days_per_period = 7
-    start_date = datetime(2024, 3, 4)
-    end_date = datetime(2024, 3, 11)
 
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[160_000, 188_000, 160_500, 188_500],
-        roi_crs=31370,
-        start_date=start_date,
-        end_date=end_date,
+        roi_bounds=test_helper.SampleData.roi_bounds,
+        roi_crs=test_helper.SampleData.roi_crs,
+        start_date=test_helper.SampleData.start_date,
+        end_date=test_helper.SampleData.end_date,
         days_per_period=days_per_period,
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s2-agri", "s2-ndvi"],
@@ -51,14 +49,12 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
     imageprofiles = conf._get_image_profiles(image_profiles_path)
     output_base_dir = test_dir / test_helper.SampleData.image_dir.name / "roi_test"
     days_per_period = 7
-    start_date = datetime(2024, 3, 4)
-    end_date = datetime(2024, 3, 11)
 
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[160_000, 188_000, 160_500, 188_500],
-        roi_crs=31370,
-        start_date=start_date,
-        end_date=end_date,
+        roi_bounds=test_helper.SampleData.roi_bounds,
+        roi_crs=test_helper.SampleData.roi_crs,
+        start_date=test_helper.SampleData.start_date,
+        end_date=test_helper.SampleData.end_date,
         days_per_period=days_per_period,
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],

@@ -12,13 +12,8 @@ from tests import test_helper
 @pytest.mark.parametrize("resampling", ["average", "bilinear"])
 def test_add_overviews(tmp_path, resampling):
     # Prepare test file
-    path = (
-        test_helper.SampleData.image_dir
-        / "roi_test/s2-agri"
-        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
-    )
-    test_path = tmp_path / path.name
-    shutil.copy(path, test_path)
+    test_path = tmp_path / test_helper.SampleData.image_s2_pathpath.name
+    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
     with rasterio.open(test_path) as file:
         for i in file.indexes:
             assert len(file.overviews(i)) == 0
@@ -44,13 +39,8 @@ def test_add_overviews(tmp_path, resampling):
 )
 def test_set_band_descriptions(tmp_path, band_descriptions):
     # Prepare test file
-    path = (
-        test_helper.SampleData.image_dir
-        / "roi_test/s2-agri"
-        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
-    )
-    test_path = tmp_path / path.name
-    shutil.copy(path, test_path)
+    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
+    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
     # Remove the band descriptions
     empty_band_descriptions = [None, None, None, None, None, None]
     raster_util.set_band_descriptions(test_path, empty_band_descriptions)
@@ -90,13 +80,8 @@ def test_set_band_descriptions(tmp_path, band_descriptions):
 )
 def test_set_band_descriptions_invalid(tmp_path, band_descriptions, expected_error):
     # Prepare and validate test file
-    path = (
-        test_helper.SampleData.image_dir
-        / "roi_test/s2-agri"
-        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
-    )
-    test_path = tmp_path / path.name
-    shutil.copy(path, test_path)
+    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
+    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
     # Remove the band descriptions
     empty_band_descriptions = [None, None, None, None, None, None]
     raster_util.set_band_descriptions(test_path, empty_band_descriptions)
@@ -108,13 +93,8 @@ def test_set_band_descriptions_invalid(tmp_path, band_descriptions, expected_err
 
 def test_set_band_descriptions_overwrite_False(tmp_path):
     # Prepare and validate test file
-    path = (
-        test_helper.SampleData.image_dir
-        / "roi_test/s2-agri"
-        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
-    )
-    test_path = tmp_path / path.name
-    shutil.copy(path, test_path)
+    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
+    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
 
     with rasterio.open(test_path, "r") as file:
         descriptions_orig = list(file.descriptions)
@@ -143,13 +123,8 @@ def test_set_band_descriptions_overwrite_False(tmp_path):
 
 def test_set_band_descriptions_remove(tmp_path):
     # Prepare and validate test file
-    path = (
-        test_helper.SampleData.image_dir
-        / "roi_test/s2-agri"
-        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
-    )
-    test_path = tmp_path / path.name
-    shutil.copy(path, test_path)
+    test_path = tmp_path / test_helper.SampleData.image_s2_path.name
+    shutil.copy(test_helper.SampleData.image_s2_path, test_path)
 
     # Remove the band descriptions
     empty_band_descriptions = [None, None, None, None, None, None]
