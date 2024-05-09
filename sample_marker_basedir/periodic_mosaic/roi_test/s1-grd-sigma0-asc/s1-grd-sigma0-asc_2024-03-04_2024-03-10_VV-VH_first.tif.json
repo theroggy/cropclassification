@@ -6,9 +6,9 @@
     "image_source": "openeo",
     "satellite": "s1",
     "roi_bounds": [
-        160000,
+        161400,
         188000,
-        160500,
+        161900,
         188500
     ],
     "roi_crs": "31370",

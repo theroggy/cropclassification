@@ -5,27 +5,35 @@ import shutil
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import mosaic_util
-from tests import test_helper
+from tests.test_helper import SampleData
 
 
 def test_calc_periodic_mosaic(tmp_path):
     # Prepare test data
-    sample_dir = test_helper.SampleDirs.marker_basedir
+    sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
-    start_date = datetime(2024, 3, 4)
-    end_date = datetime(2024, 3, 11)
+    output_base_dir = test_dir / "periodic_mosaic/roi_test"
+    days_per_period = 7
 
+    # Make sure the s2-agri input file was copied
+    s2_agri_output_path = (
+        output_base_dir
+        / SampleData.image_s2_path.parent.name
+        / SampleData.image_s2_path.name
+    )
+    assert s2_agri_output_path.exists()
+
+    # Test
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[161_400, 188_000, 161_900, 188_500],
-        roi_crs=31370,
-        start_date=start_date,
-        end_date=end_date,
+        roi_bounds=SampleData.roi_bounds,
+        roi_crs=SampleData.roi_crs,
+        start_date=SampleData.start_date,
+        end_date=SampleData.end_date,
         period_name="weekly",
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s2-agri", "s2-ndvi"],
@@ -41,22 +49,35 @@ def test_calc_periodic_mosaic(tmp_path):
 
 def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
     # Prepare test data
-    sample_dir = test_helper.SampleDirs.marker_basedir
+    sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
-    start_date = datetime(2023, 2, 26)
-    end_date = datetime(2023, 3, 8)
+    output_base_dir = test_dir / "periodic_mosaic/roi_test"
+    days_per_period = 7
+
+    # Make sure the s1 input files were copied
+    s1_asc_output_path = (
+        output_base_dir
+        / SampleData.image_s1_asc_path.parent.name
+        / SampleData.image_s1_asc_path.name
+    )
+    assert s1_asc_output_path.exists()
+    s1_desc_output_path = (
+        output_base_dir
+        / SampleData.image_s1_desc_path.parent.name
+        / SampleData.image_s1_desc_path.name
+    )
+    assert s1_desc_output_path.exists()
 
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[161_400, 188_000, 161_900, 188_500],
-        roi_crs=31370,
-        start_date=start_date,
-        end_date=end_date,
+        roi_bounds=SampleData.roi_bounds,
+        roi_crs=SampleData.roi_crs,
+        start_date=SampleData.start_date,
+        end_date=SampleData.end_date,
         period_name="biweekly",
         output_base_dir=output_base_dir,
         imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],

@@ -66,12 +66,17 @@ def get_images(
         RuntimeError: _description_
         RuntimeError: _description_
     """
-    # If all images to get exist already, we can return
-    images_to_get_todo = {
-        image_to_get["path"]: image_to_get
-        for image_to_get in images_to_get
-        if not output_exists(image_to_get["path"], remove_if_exists=force)
-    }
+    # Do some checks on already existing images
+    images_to_get_todo = {}
+    for image_to_get in images_to_get:
+        if not output_exists(image_to_get["path"], remove_if_exists=force):
+            images_to_get_todo[image_to_get["path"]] = image_to_get
+        else:
+            # Make sure the band descriptions are in the image
+            raster_util.set_band_descriptions(
+                image_to_get["path"], image_to_get["bands"], overwrite=False
+            )
+
     if len(images_to_get_todo) == 0:
         return
 
@@ -157,8 +162,8 @@ def get_images(
     # Postprocess the images created
     for image_path in image_paths:
         band_descriptions = None
-        if image_path in images_to_get_dict:
-            band_descriptions = images_to_get_dict[image_path]["bands"]
+        if image_path.as_posix() in images_to_get_dict:
+            band_descriptions = images_to_get_dict[image_path.as_posix()]["bands"]
         postprocess_image(image_path, band_descriptions)
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
