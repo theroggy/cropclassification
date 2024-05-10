@@ -12,21 +12,26 @@ class SampleData:
     marker_basedir = Path(__file__).resolve().parent.parent / "sample_marker_basedir"
     tasks_dir = marker_basedir / "_tasks"
     config_dir = marker_basedir / "_config"
-    image_dir = marker_basedir / "periodic_mosaic/roi_test"
+    image_dir = marker_basedir / "periodic_mosaic"
     input_dir = marker_basedir / "_inputdata"
     task_path = tasks_dir / "task_test_calc_periodic_mosaic.ini"
+    roi_name = "roi_test"
+    image_roi_dir = image_dir / roi_name
 
     image_s1_asc_path = (
-        image_dir
-        / "s1-grd-sigma0-asc/s1-grd-sigma0-asc_2024-03-04_2024-03-10_VV-VH_first.tif"
+        image_roi_dir
+        / "s1-grd-sigma0-asc_weekly"
+        / "s1-grd-sigma0-asc_2024-03-04_2024-03-10_VV-VH_first.tif"
     )
     image_s1_desc_path = (
-        image_dir
-        / "s1-grd-sigma0-desc/s1-grd-sigma0-desc_2024-03-04_2024-03-10_VV-VH_first.tif"
+        image_roi_dir
+        / "s1-grd-sigma0-desc_weekly"
+        / "s1-grd-sigma0-desc_2024-03-04_2024-03-10_VV-VH_first.tif"
     )
     image_s2_path = (
-        image_dir
-        / "s2-agri/s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
+        image_roi_dir
+        / "s2-agri_weekly"
+        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
     )
 
     start_date = datetime(2024, 3, 4)

@@ -8,7 +8,7 @@ from cropclassification.util import mosaic_util
 from tests.test_helper import SampleData
 
 
-def test_calc_periodic_mosaic(tmp_path):
+def test_calc_periodic_mosaic_s2(tmp_path):
     # Prepare test data
     sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
@@ -17,11 +17,11 @@ def test_calc_periodic_mosaic(tmp_path):
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / "periodic_mosaic/roi_test"
+    output_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
 
     # Make sure the s2-agri input file was copied
     s2_agri_output_path = (
-        output_base_dir
+        output_image_roi_dir
         / SampleData.image_s2_path.parent.name
         / SampleData.image_s2_path.name
     )
@@ -34,7 +34,7 @@ def test_calc_periodic_mosaic(tmp_path):
         start_date=SampleData.start_date,
         end_date=SampleData.end_date,
         period_name="weekly",
-        output_base_dir=output_base_dir,
+        output_base_dir=output_image_roi_dir,
         imageprofiles_to_get=["s2-agri", "s2-ndvi"],
         imageprofiles=imageprofiles,
         force=False,
@@ -46,7 +46,7 @@ def test_calc_periodic_mosaic(tmp_path):
         assert result_info["path"].exists()
 
 
-def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
+def test_calc_periodic_mosaic_s1_local_index_dprvi(tmp_path):
     # Prepare test data
     sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
@@ -55,17 +55,17 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / "periodic_mosaic/roi_test"
+    output_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
 
     # Make sure the s1 input files were copied
     s1_asc_output_path = (
-        output_base_dir
+        output_image_roi_dir
         / SampleData.image_s1_asc_path.parent.name
         / SampleData.image_s1_asc_path.name
     )
     assert s1_asc_output_path.exists()
     s1_desc_output_path = (
-        output_base_dir
+        output_image_roi_dir
         / SampleData.image_s1_desc_path.parent.name
         / SampleData.image_s1_desc_path.name
     )
@@ -76,8 +76,8 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
         roi_crs=SampleData.roi_crs,
         start_date=SampleData.start_date,
         end_date=SampleData.end_date,
-        period_name="biweekly",
-        output_base_dir=output_base_dir,
+        period_name="weekly",
+        output_base_dir=output_image_roi_dir,
         imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],
         imageprofiles=imageprofiles,
         force=False,
