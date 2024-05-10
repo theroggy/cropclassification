@@ -25,6 +25,7 @@ import rasterstats
 
 from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper
+from . import _processing_util as processing_util
 from . import _raster_helper
 from . import _vector_helper
 from cropclassification.util import io_util
@@ -99,7 +100,9 @@ def zonal_stats(
     nb_done_total = 0
     image_idx = 0
 
-    pool = futures.ProcessPoolExecutor(nb_parallel)
+    pool = futures.ProcessPoolExecutor(
+        max_workers=nb_parallel, initializer=processing_util.initialize_worker()
+    )
     try:
         # Keep looping. At the end of the loop there are checks when to
         # break out of the loop...
