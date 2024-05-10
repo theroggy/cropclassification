@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ImageProfile:
     """
-    Profile of the image to be processed via openeo.
+    Profile of the image to be calculated.
     """
 
     name: str
@@ -54,14 +54,18 @@ class ImageProfile:
         job_options: Optional[dict] = None,
     ):
         """
-        Data structure with all needed information about a raster layer.
+        Profile of the image to be calculated.
 
         Args:
-            name (str): _description_
-            satellite (str): _description_
-            image_source (str): _description_
-            bands (List[str]): _description_
-            collection (Optional[str], optional): _description_. Defaults to None.
+            name (str): name of the image profile. To be choosen by the user, but
+                typically a combination of the satellite, image sensor and the period
+                name.
+            satellite (str): satellite the image is from.
+            image_source (str): source where the images should be generated. One of
+                "local" and "openeo".
+            bands (List[str]): bands to include in the image.
+            collection (Optional[str], optional): image collection to get the input
+                images from. Defaults to None.
             time_reducer (Optional[str], optional): _description_. Defaults to None.
             period_name (Optional[str], optional): name of the period. If None, default
                 names are used: if ``days_per_period=7``: "weekly", if
@@ -69,18 +73,21 @@ class ImageProfile:
                 ``days_per_period`` a ValueError is thrown. Defaults to None.
             period_days (int, optional): number of days per period. If None, it is
                 derived of the `period_name` if possible. Defaults to None.
-            base_image_profile (Optional[str], optional): _description_.
+            index_type (Optional[str], optional): only supported if
+                `image_source="local"`. The index to calculate based on another image.
+                One of "ndvi", "bsi", "dprvi". Defaults to None.
+            base_image_profile (Optional[str], optional): only supported if
+                `image_source="local"`. The image profile of the image an index image
+                should be based on. Defaults to None.
+            max_cloud_cover (Optional[float], optional): the maximum cloud cover an
+                input image can have to be used. Defaults to None.
+            process_options (Optional[dict], optional): extra process options.
                 Defaults to None.
-            index_type (Optional[str], optional): _description_. Defaults to None.
-            max_cloud_cover (Optional[float], optional): _description_.
+            job_options (Optional[dict], optional): extra job options.
                 Defaults to None.
-            process_options (Optional[dict], optional): _description_. Defaults to None.
-            job_options (Optional[dict], optional): _description_. Defaults to None.
 
         Raises:
-            ValueError: _description_
-            ValueError: _description_
-            ValueError: _description_
+            ValueError: when invalid parameters are passed in.
         """
         self.name = name
         self.satellite = satellite
