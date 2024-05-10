@@ -69,9 +69,11 @@ class ImageProfile:
                 ``days_per_period`` a ValueError is thrown. Defaults to None.
             period_days (int, optional): number of days per period. If None, it is
                 derived of the `period_name` if possible. Defaults to None.
-            base_image_profile (Optional[str], optional): _description_. Defaults to None.
-                index_type (Optional[str], optional): _description_. Defaults to None.
-            max_cloud_cover (Optional[float], optional): _description_. Defaults to None.
+            base_image_profile (Optional[str], optional): _description_.
+                Defaults to None.
+            index_type (Optional[str], optional): _description_. Defaults to None.
+            max_cloud_cover (Optional[float], optional): _description_.
+                Defaults to None.
             process_options (Optional[dict], optional): _description_. Defaults to None.
             job_options (Optional[dict], optional): _description_. Defaults to None.
 
