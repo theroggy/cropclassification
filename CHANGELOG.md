@@ -11,7 +11,8 @@
 
 ### Bugs fixed
 
-- Fix TypeError: QgsZonalStatistics(): arguments did not match any overloaded call (#76)
+- Various fixes and improvements to `bulk_zonal_statistics` with engine="pyqgis"
+  (#76, #80)
 
 ## 0.1.1 (2023-08-08)
 
