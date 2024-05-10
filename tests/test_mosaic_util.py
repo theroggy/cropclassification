@@ -18,7 +18,6 @@ def test_calc_periodic_mosaic(tmp_path):
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
     output_base_dir = test_dir / "periodic_mosaic/roi_test"
-    days_per_period = 7
 
     # Make sure the s2-agri input file was copied
     s2_agri_output_path = (
@@ -57,7 +56,6 @@ def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
     output_base_dir = test_dir / "periodic_mosaic/roi_test"
-    days_per_period = 7
 
     # Make sure the s1 input files were copied
     s1_asc_output_path = (

@@ -10,8 +10,8 @@ import shutil
 from typing import List
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
-import pyproj  # noqa: F401
+import geofileops as gfo  # noqa: F401
+import pyproj
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
