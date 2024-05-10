@@ -15,6 +15,7 @@ import pandas as pd
 
 from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper as general_helper
+from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
 from . import Statistic
@@ -75,7 +76,9 @@ def zonal_stats(
 
     # Loop over all images and bands to calculate zonal stats in parallel...
     calc_queue = {}
-    pool = futures.ProcessPoolExecutor(nb_parallel)
+    pool = futures.ProcessPoolExecutor(
+        max_workers=nb_parallel, initializer=processing_util.initialize_worker()
+    )
     try:
         for raster_path, bands in rasters_bands:
             raster_info = raster_helper.get_image_info(raster_path)
