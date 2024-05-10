@@ -19,6 +19,9 @@ from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
 from . import Statistic
 
+# Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
+# Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
 # Set path for qgis
 qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
 sys.path.insert(0, str(qgis_path))
