@@ -7,6 +7,7 @@
 - Add task/action to automate periodic download of images (#67)
 - Add support to calculate indexes locally (#55)
 - Make image profiles to be used in a classification configurable in a config file (#56)
+- Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
 
 ### Bugs fixed
