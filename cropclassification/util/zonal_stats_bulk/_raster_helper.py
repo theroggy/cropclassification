@@ -33,10 +33,24 @@ class BandInfo:
         crs: Optional[str] = None,
         epsg: Optional[int] = None,
     ):
+        """
+        Constructor of BandInfo.
+
+        Args:
+            path (str): _description_
+            relative_path (Optional[str]): _description_
+            filename (str): _description_
+            bandindex (int): one-based band index.
+            bounds (Optional[Tuple[float, float, float]], optional): _description_.
+                Defaults to None.
+            affine (_type_, optional): _description_. Defaults to None.
+            crs (Optional[str], optional): _description_. Defaults to None.
+            epsg (Optional[int], optional): _description_. Defaults to None.
+        """
         self.path = path
         self.relative_path = relative_path
         self.filename = filename
-        self.bandindex = bandindex
+        self.band_index = bandindex
         self.bounds = bounds
         self.affine = affine
         self.crs = crs
@@ -107,10 +121,8 @@ def get_image_data(
                 image_band_path = image_path / band_relative_path
             else:
                 image_band_path = image_path
-            band_index = image_info.bands[band].bandindex
-            logger.info(
-                f"Read image data from {image_band_path}, with band_index: {band_index}"
-            )
+            band_index = image_info.bands[band].band_index
+            logger.info(f"Read image data from {image_band_path}, with {band_index=}")
             image_data[band] = {}
             with rasterio.open(str(image_band_path)) as src:
                 # Determine the window we need to read from the image:
@@ -124,9 +136,7 @@ def get_image_data(
                 # Read!
                 # Remark: bandindex in rasterio is 1-based instead of 0-based -> +1
                 logger.debug(f"Read image data from {image_band_path}")
-                image_data[band]["data"] = src.read(
-                    band_index + 1, window=window_to_read
-                )
+                image_data[band]["data"] = src.read(band_index, window=window_to_read)
                 logger.debug("Image data read")
     else:
         message = f"Format currently not supported: {image_path}"
@@ -556,13 +566,13 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
                 path=str(image_datapath),
                 relative_path=image_datafilename,
                 filename=image_datafilename,
-                bandindex=0,
+                bandindex=1,
             )
             bands["VV"] = BandInfo(
                 path=str(image_datapath),
                 relative_path=image_datafilename,
                 filename=image_datafilename,
-                bandindex=1,
+                bandindex=2,
             )
 
         except Exception as ex:
@@ -752,7 +762,7 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
                 path=str(image_path),
                 relative_path=None,
                 filename=image_path.name,
-                bandindex=band_idx - 1,
+                bandindex=band_idx,
             )
 
     footprint: Dict[str, Any] = {}
