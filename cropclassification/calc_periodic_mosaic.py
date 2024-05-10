@@ -67,7 +67,5 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
             ),
             imageprofiles_to_get=imageprofiles_to_get,
             imageprofiles=imageprofiles,
-            period_name=conf.calc_periodic_mosaic_params.get("period_name"),
-            days_per_period=conf.calc_periodic_mosaic_params.getint("days_per_period"),
             force=False,
         )

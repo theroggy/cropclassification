@@ -173,8 +173,6 @@ def calculate_periodic_timeseries(
     timeseries_per_image_dir: Path,
     start_date: datetime,
     end_date: datetime,
-    period_name: str,
-    days_per_period: Optional[int],
     sensordata_to_get: List[str],
     dest_data_dir: Path,
     force: bool = False,
@@ -191,8 +189,6 @@ def calculate_periodic_timeseries(
             already on the periods wanted + data on this date is included.
         end_date (datetime): End date. Needs to be aligned already on
             the periods wanted + data on this date is excluded.
-        period_name (str): the periods to use for the mosaics.
-        days_per_period (Optional[int]): the number of days each period should count.
         sensordata_to_get ([]):
         dest_data_dir (Path): [description]
         force (bool, optional): [description]. Defaults to False.
@@ -447,9 +443,9 @@ def calculate_periodic_timeseries(
                         period_band_data_df[statistic_columns_dict["std"]], axis=1
                     )
                     # Number of Files used
-                    period_band_data_df[
-                        f"{column_basename}_used_files"
-                    ] = period_band_data_df[statistic_columns_dict["max"]].count(axis=1)
+                    period_band_data_df[f"{column_basename}_used_files"] = (
+                        period_band_data_df[statistic_columns_dict["max"]].count(axis=1)
+                    )
 
                     # Only keep the columns we want to keep
                     columns_to_keep = [

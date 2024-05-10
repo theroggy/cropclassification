@@ -8,12 +8,12 @@ from tests.test_helper import IMAGEPROFILES, SampleData
 @pytest.mark.parametrize(
     "sensor, exp_max_cloud_cover",
     [
-        ("s2-agri", 80),
-        ("s2-scl", 80),
-        ("s2-ndvi", None),
-        ("s1-grd-sigma0-asc", None),
-        ("s1-grd-sigma0-desc", None),
-        ("s1-coh", None),
+        ("s2-agri-weekly", 80),
+        ("s2-scl-weekly", 80),
+        ("s2-ndvi-weekly", None),
+        ("s1-grd-sigma0-asc-weekly", None),
+        ("s1-grd-sigma0-desc-weekly", None),
+        ("s1-coh-weekly", None),
     ],
 )
 def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float):

@@ -33,9 +33,8 @@ def test_calc_periodic_mosaic_s2(tmp_path):
         roi_crs=SampleData.roi_crs,
         start_date=SampleData.start_date,
         end_date=SampleData.end_date,
-        period_name="weekly",
         output_base_dir=output_image_roi_dir,
-        imageprofiles_to_get=["s2-agri", "s2-ndvi"],
+        imageprofiles_to_get=["s2-agri-weekly", "s2-ndvi-weekly"],
         imageprofiles=imageprofiles,
         force=False,
     )
@@ -76,9 +75,8 @@ def test_calc_periodic_mosaic_s1_local_index_dprvi(tmp_path):
         roi_crs=SampleData.roi_crs,
         start_date=SampleData.start_date,
         end_date=SampleData.end_date,
-        period_name="weekly",
         output_base_dir=output_image_roi_dir,
-        imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],
+        imageprofiles_to_get=["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"],
         imageprofiles=imageprofiles,
         force=False,
     )
@@ -130,6 +128,28 @@ def test_ImageProfile_invalid(
         )
 
 
+@pytest.mark.parametrize(
+    "exp_error, image_source, period_name, period_days",
+    [
+        ("period_name must be None", "local", "weekly", 7),
+        ("both period_name and period_days are None", "openeo", None, None),
+    ],
+)
+def test_ImageProfile_period_info_invalid(
+    exp_error, image_source, period_name, period_days
+):
+    with pytest.raises(ValueError, match=exp_error):
+        mosaic_util.ImageProfile(
+            name="test-name",
+            satellite="s2",
+            image_source=image_source,
+            collection="test",
+            bands=["A"],
+            period_name=period_name,
+            period_days=period_days,
+        )
+
+
 def test_ImageProfile_openeo():
     image_profile = mosaic_util.ImageProfile(
         name="s2-agri",
@@ -137,6 +157,7 @@ def test_ImageProfile_openeo():
         image_source="openeo",
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B01", "B02"],
+        period_name="weekly",
     )
     assert image_profile.name == "s2-agri"
     assert image_profile.collection == "TERRASCOPE_S2_TOC_V2"
@@ -151,7 +172,7 @@ def test_prepare_periods(
     start_date, end_date, period_name, days_per_period, expected_nb_periods
 ):
     result = mosaic_util._prepare_periods(
-        start_date, end_date, period_name=period_name, days_per_period=days_per_period
+        start_date, end_date, period_name=period_name, period_days=days_per_period
     )
     assert len(result) == expected_nb_periods
 
@@ -164,17 +185,17 @@ def test_prepare_periods_days_per_period(
     start_date, end_date, days_per_period, expected_nb_periods
 ):
     result = mosaic_util._prepare_periods(
-        start_date, end_date, period_name=None, days_per_period=days_per_period
+        start_date, end_date, period_name=None, period_days=days_per_period
     )
     assert len(result) == expected_nb_periods
 
 
 @pytest.mark.parametrize(
-    "exp_error, start_date, end_date, period_name, days_per_period",
+    "exp_error, start_date, end_date, period_name, period_days",
     [
         ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), None, 7),
         (
-            "period_name is None and days_per_period is not 7 or 14",
+            "period_name is None and period_days is not 7 or 14",
             datetime(2024, 1, 1),
             datetime(2024, 1, 2),
             None,
@@ -183,27 +204,26 @@ def test_prepare_periods_days_per_period(
     ],
 )
 def test_prepare_periods_invalid(
-    exp_error, start_date, end_date, period_name, days_per_period
+    exp_error, start_date, end_date, period_name, period_days
 ):
     with pytest.raises(ValueError, match=exp_error):
         _ = mosaic_util._prepare_periods(
-            start_date, end_date, period_name, days_per_period=days_per_period
+            start_date, end_date, period_name, period_days=period_days
         )
 
 
 def test_prepare_mosaic_image_path():
     # Very basic test, as otherwise the tests just reimplements all code
     result_path = mosaic_util._prepare_mosaic_image_path(
-        imageprofile="s2-agri",
+        imageprofile="s2-agri-weekly",
         start_date=datetime(2024, 1, 1),
         end_date=datetime(2024, 1, 2),
-        period_name="weekly",
         bands=["B01", "B02"],
         time_reducer="mean",
         output_base_dir=Path("/tmp"),
     )
 
     expected_path = Path(
-        "/tmp/s2-agri_weekly/s2-agri_2024-01-01_2024-01-02_B01-B02_mean.tif"
+        "/tmp/s2-agri-weekly/s2-agri-weekly_2024-01-01_2024-01-02_B01-B02_mean.tif"
     )
     assert result_path == expected_path

@@ -194,8 +194,6 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
         roi_crs=pyproj.CRS.from_user_input(conf.marker.get("roi_crs")),
         start_date_str=start_date_str,
         end_date_str=end_date_str,
-        period_name=period_name,
-        days_per_period=conf.marker.get("days_per_period", None),
         sensordata_to_get=sensordata_to_use,
         dest_data_dir=timeseries_periodic_dir,
     )

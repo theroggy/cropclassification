@@ -20,18 +20,18 @@ class SampleData:
 
     image_s1_asc_path = (
         image_roi_dir
-        / "s1-grd-sigma0-asc_weekly"
-        / "s1-grd-sigma0-asc_2024-03-04_2024-03-10_VV-VH_first.tif"
+        / "s1-grd-sigma0-asc-weekly"
+        / "s1-grd-sigma0-asc-weekly_2024-03-04_2024-03-10_VV-VH_last.tif"
     )
     image_s1_desc_path = (
         image_roi_dir
-        / "s1-grd-sigma0-desc_weekly"
-        / "s1-grd-sigma0-desc_2024-03-04_2024-03-10_VV-VH_first.tif"
+        / "s1-grd-sigma0-desc-weekly"
+        / "s1-grd-sigma0-desc-weekly_2024-03-04_2024-03-10_VV-VH_last.tif"
     )
     image_s2_path = (
         image_roi_dir
-        / "s2-agri_weekly"
-        / "s2-agri_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
+        / "s2-agri-weekly"
+        / "s2-agri-weekly_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_mean.tif"
     )
 
     start_date = datetime(2024, 3, 4)
@@ -48,6 +48,7 @@ IMAGEPROFILES: Dict[str, ImageProfile] = {
         image_source="openeo",
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B02", "B03", "B04", "B08", "B11", "B12"],
+        period_name="weekly",
         max_cloud_cover=80,
     ),
     "s2-ndvi": ImageProfile(
