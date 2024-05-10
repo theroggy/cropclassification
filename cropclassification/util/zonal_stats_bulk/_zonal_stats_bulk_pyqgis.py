@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
-from typing import List, Literal, Tuple, Union
+from typing import List, Tuple, Union
 
 import geofileops as gfo
 import geopandas as gpd
@@ -17,7 +17,11 @@ from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper as general_helper
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
+from . import Statistic
 
+# Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
+# Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
 # Set path for qgis
 qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
 sys.path.insert(0, str(qgis_path))
@@ -27,28 +31,12 @@ import qgis.analysis  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
-Statistic = Literal[
-    "count",
-    "sum",
-    "mean",
-    "median",
-    "std",
-    "min",
-    "max",
-    "range",
-    "minority",
-    "majority",
-    "variance",
-]
-DEFAULT_STATS = ["count", "median"]
-
-
 def zonal_stats(
     vector_path: Path,
     columns: List[str],
     rasters_bands: List[Tuple[Path, List[str]]],
     output_dir: Path,
-    stats: List[Statistic] = DEFAULT_STATS,  # type: ignore[assignment]
+    stats: List[Statistic],
     nb_parallel: int = -1,
     force: bool = False,
 ):
@@ -59,7 +47,7 @@ def zonal_stats(
         features_path (Path): _description_
         id_column (str): _description_
         images_bands (List[Tuple[Path, List[str]]]): _description_
-        stats (List[Statistic])
+        stats (List[Statistic]): statistics to calculate.
         output_dir (Path): _description_
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
@@ -116,11 +104,7 @@ def zonal_stats(
             for band in bands:
                 # Prepare the output paths...
                 output_band_path = general_helper._format_output_path(
-                    vector_path,
-                    raster_path,
-                    output_dir,
-                    orbit,
-                    band,
+                    vector_path, raster_path, output_dir, orbit, band
                 )
                 output_band_busy_path = tmp_dir / f"BUSY_{output_band_path.name}"
 
@@ -178,9 +162,7 @@ def zonal_stats(
                 raise Exception(f"Error calculating {calc_queue[future]}: {ex}") from ex
             nb_done_total += 1
             progress_msg = general_helper._format_progress_message(
-                nb_todo,
-                nb_done_total,
-                start_time,
+                nb_todo, nb_done_total, start_time
             )
             logger.info(progress_msg)
     finally:
@@ -218,7 +200,7 @@ def zonal_stats_band(
     layer = gfo.get_only_layer(vector_proj_path)
 
     # Init qgis
-    # qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True) ???
+    qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
     qgs = qgis.core.QgsApplication([], False)
     qgs.initQgis()
     # Read the vector file + copy to memory layer for:
@@ -233,22 +215,27 @@ def zonal_stats_band(
     # Calculates zonal stats with raster
     raster = qgis.core.QgsRasterLayer(image_info.bands[band].path)
 
+    # rasterband is the 1 based index in the raster file. Verify, as QgsZonalStatistics
+    # doesn't give an error if this is wrong.
+    band_index = image_info.bands[band].band_index
+    if band_index < 1 or band_index > raster.bandCount():
+        raise ValueError(f"invalid {band_index=} in {image_info.bands[band]}")
+
     try:
         zoneStats = qgis.analysis.QgsZonalStatistics(
             polygonLayer=vector_mem,
             rasterLayer=raster,
             attributePrefix="",
-            rasterBand=image_info.bands[band].bandindex,
+            rasterBand=band_index,
             stats=stats_mask,
         )
-        print("ok")
-    except Exception as ex:
-        print(ex)
+    except Exception:
         raise
 
-    if zoneStats.calculateStatistics(None) != 0:
+    status = zoneStats.calculateStatistics(None)
+    if zoneStats.calculateStatistics(None) != qgis.analysis.QgsZonalStatistics.Success:
         raise RuntimeError(
-            "Error: calculateStatistics didn't return 0 for zonal stats between "
+            f"Error: calculateStatistics returned {status} for zonal stats between "
             f"{vector_proj_path.name} and {raster_path.name}"
         )
 
