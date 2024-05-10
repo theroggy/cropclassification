@@ -1,4 +1,4 @@
-name: geofileops-minimal
+name: cropclass-minimal
 channels:
   - conda-forge
 dependencies:

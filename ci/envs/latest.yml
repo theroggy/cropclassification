@@ -1,4 +1,4 @@
-name: geofileops-latest
+name: cropclass-latest
 channels:
   - conda-forge
 dependencies:
