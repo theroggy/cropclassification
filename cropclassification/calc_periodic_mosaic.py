@@ -4,7 +4,6 @@ from typing import List
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.helpers import log_helper
-from cropclassification.util import date_util
 from cropclassification.util import mosaic_util
 
 
@@ -51,10 +50,6 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
     imageprofiles = conf._get_image_profiles(
         Path(conf.marker["image_profiles_config_filepath"])
     )
-
-    # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = date_util.get_monday(start_date)
-    end_date = date_util.get_monday(end_date)
 
     if not conf.calc_periodic_mosaic_params.getboolean("simulate"):
         _ = mosaic_util.calc_periodic_mosaic(

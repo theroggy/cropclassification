@@ -23,10 +23,8 @@ def main():
     roi_bounds = [161_400, 188_000, 161_900, 188_500]
     dest_image_data_dir = Path("c:/temp/periodic_mosaic/roi_test")
 
-    period_name = "biweekly"
-    imageprofiles_to_get = ["s1-dprvi-asc", "s1-dprvi-desc"]
-    period_name = "weekly"
-    imageprofiles_to_get = ["s2-agri"]
+    imageprofiles_to_get = ["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"]
+    imageprofiles_to_get = ["s2-agri-weekly"]
 
     image_profiles_path = (
         Path(__file__).resolve().parent.parent
@@ -39,11 +37,10 @@ def main():
         roi_crs=roi_crs,
         start_date=start_date,
         end_date=end_date,
-        period_name=period_name,
         output_base_dir=dest_image_data_dir,
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
-        force=True,
+        force=False,
     )
 
 
