@@ -6,24 +6,23 @@ from datetime import datetime
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
+
+import pyproj
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.preprocess._timeseries_helper as ts_helper
-
-# First define/init some general variables/constants
-# -------------------------------------------------------------
+from cropclassification.util import date_util
 
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-# The real work
-# -------------------------------------------------------------
-
 
 def calc_timeseries_data(
     input_parcel_path: Path,
+    roi_bounds: Tuple[float, float, float, float],
+    roi_crs: Optional[pyproj.CRS],
     start_date_str: str,
     end_date_str: str,
     sensordata_to_get: Dict[str, conf.SensorData],
@@ -47,10 +46,10 @@ def calc_timeseries_data(
         dest_data_dir.mkdir(parents=True, exist_ok=True)
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_helper.get_monday(
+    start_date = date_util.get_monday(
         start_date_str
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_helper.get_monday(end_date_str)
+    end_date = date_util.get_monday(end_date_str)
 
     logger.info(
         f"Start date {start_date_str} converted to monday before: {start_date}, end "
@@ -84,6 +83,8 @@ def calc_timeseries_data(
 
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
+            roi_bounds=roi_bounds,
+            roi_crs=roi_crs,
             start_date=start_date,
             end_date=end_date,
             imageprofiles_to_get=sensordata_to_get_openeo,

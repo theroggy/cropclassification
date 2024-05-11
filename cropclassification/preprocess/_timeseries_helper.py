@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calculates periodic timeseries for input parcels.
 """
@@ -8,7 +7,7 @@ import logging
 import gc
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import geofileops as gfo
 import numpy as np
@@ -18,9 +17,6 @@ import pandas as pd
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
@@ -641,19 +637,3 @@ def get_fileinfo_timeseries_periods(path: Path) -> dict:
         }
 
     return get_fileinfo_timeseries(path)
-
-
-def get_monday(date: Union[str, datetime]) -> datetime:
-    """
-    This function gets the first monday before the date provided.
-    It is being used to adapt start_date and end_date so they are mondays, so it
-    becomes easier to reuse timeseries data
-       - inputformat:  %Y-%m-%d
-       - outputformat: datetime
-    """
-    if isinstance(date, str):
-        date = datetime.strptime(date, "%Y-%m-%d")
-
-    year_week = date.strftime("%Y_%W")
-    year_week_monday = datetime.strptime(year_week + "_1", "%Y_%W_%w")
-    return year_week_monday

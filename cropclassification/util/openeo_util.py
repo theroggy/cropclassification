@@ -89,6 +89,7 @@ def get_images(
     # More info on the configuration file format can be found here:
     # https://open-eo.github.io/openeo-python-client/configuration.html#configuration-files  # noqa: E501
     conn = openeo.connect()
+    logger.info(conn.describe_account())
 
     images_to_get_dict = {image["path"].as_posix(): image for image in images_to_get}
 
@@ -190,6 +191,8 @@ def create_mosaic_job(
         start_date.strftime("%Y-%m-%d"),
         end_date.strftime("%Y-%m-%d"),
     ]
+    if process_options is None:
+        process_options = {}
 
     bands_to_load = list(bands)
     cloud_filter_band = None
