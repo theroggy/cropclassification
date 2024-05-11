@@ -6,7 +6,7 @@ from datetime import datetime
 import logging
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import pyproj
 
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 def calc_timeseries_data(
     input_parcel_path: Path,
-    roi_bounds: Tuple[float, float, float, float],
+    roi_bounds: tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     start_date_str: str,
     end_date_str: str,
-    sensordata_to_get: Dict[str, conf.SensorData],
+    sensordata_to_get: dict[str, conf.SensorData],
     dest_data_dir: Path,
 ):
     """
@@ -102,8 +102,8 @@ def collect_and_prepare_timeseries_data(
     output_path: Path,
     start_date_str: str,
     end_date_str: str,
-    sensordata_to_use: Dict[str, conf.SensorData],
-    parceldata_aggregations_to_use: List[str],
+    sensordata_to_use: dict[str, conf.SensorData],
+    parceldata_aggregations_to_use: list[str],
     force: bool = False,
 ):
     """

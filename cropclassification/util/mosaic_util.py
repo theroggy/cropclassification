@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pyproj
 
@@ -26,7 +26,7 @@ class ImageProfile:
     name: str
     satellite: str
     image_source: str
-    bands: Optional[List[str]] = None
+    bands: Optional[list[str]] = None
     collection: Optional[str] = None
     time_reducer: Optional[str] = None
     period_name: Optional[str] = None
@@ -42,7 +42,7 @@ class ImageProfile:
         name: str,
         satellite: str,
         image_source: str,
-        bands: List[str],
+        bands: list[str],
         collection: Optional[str] = None,
         time_reducer: Optional[str] = None,
         period_name: Optional[str] = None,
@@ -141,17 +141,17 @@ class ImageProfile:
 
 
 def calc_periodic_mosaic(
-    roi_bounds: Tuple[float, float, float, float],
+    roi_bounds: tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
-    imageprofiles_to_get: List[str],
-    imageprofiles: Dict[str, ImageProfile],
+    imageprofiles_to_get: list[str],
+    imageprofiles: dict[str, ImageProfile],
     output_base_dir: Path,
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Generate a periodic mosaic.
 
@@ -236,7 +236,7 @@ def _prepare_periods(
     end_date: datetime,
     period_name: str,
     period_days: Optional[int],
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Prepare the periods to download a periodic mosaic.
 
@@ -303,7 +303,7 @@ def _prepare_periods(
 
 def _prepare_period_params(
     period_name: Optional[str], period_days: Optional[int]
-) -> Tuple[str, int]:
+) -> tuple[str, int]:
     """
     Interprete period_name and period_days and return cleaned version.
 
@@ -341,14 +341,14 @@ def _prepare_period_params(
 
 
 def _prepare_periodic_mosaic_params(
-    roi_bounds: Tuple[float, float, float, float],
+    roi_bounds: tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
-    imageprofiles_to_get: List[str],
-    imageprofiles: Dict[str, ImageProfile],
+    imageprofiles_to_get: list[str],
+    imageprofiles: dict[str, ImageProfile],
     output_base_dir: Path,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Prepare the parameters needed to generate a list of periodic mosaics.
 
@@ -373,7 +373,7 @@ def _prepare_periodic_mosaic_params(
     """
     # Prepare full list of image mosaics we want to calculate.
     # Use a dict indexed on path to avoid having duplicate mosaic_image_params.
-    periodic_mosaic_params: Dict[str, Dict[str, Any]] = {}
+    periodic_mosaic_params: dict[str, dict[str, Any]] = {}
     for imageprofile in imageprofiles_to_get:
         # If the image is calculated locally, we need a base image profile.
         base_imageprofile = None
@@ -439,13 +439,13 @@ def _prepare_periodic_mosaic_params(
 
 
 def _prepare_mosaic_image_params(
-    roi_bounds: Tuple[float, float, float, float],
+    roi_bounds: tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     imageprofile: ImageProfile,
-    period: Dict[str, Any],
+    period: dict[str, Any],
     output_base_dir: Path,
     base_imageprofile: Optional[ImageProfile] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Prepares the relevant parameters + saves them as json file.
 
@@ -523,7 +523,7 @@ def _prepare_mosaic_image_path(
     imageprofile: str,
     start_date: datetime,
     end_date: datetime,
-    bands: List[str],
+    bands: list[str],
     time_reducer: str,
     output_base_dir: Path,
 ) -> Path:
@@ -564,7 +564,7 @@ def _prepare_mosaic_image_path(
     return image_path
 
 
-def _imagemeta_to_file(path: Path, imagemeta: Dict[str, Any]):
+def _imagemeta_to_file(path: Path, imagemeta: dict[str, Any]):
     # Write to file
     path.parent.mkdir(exist_ok=True, parents=True)
     with open(path, "w") as outfile:

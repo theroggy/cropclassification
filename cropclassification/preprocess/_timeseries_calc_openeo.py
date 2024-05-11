@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import tempfile
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import geofileops as gfo
 import pyproj
@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 
 def calculate_periodic_timeseries(
     input_parcel_path: Path,
-    roi_bounds: Tuple[float, float, float, float],
+    roi_bounds: tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
-    imageprofiles_to_get: List[str],
-    imageprofiles: Dict[str, ImageProfile],
+    imageprofiles_to_get: list[str],
+    imageprofiles: dict[str, ImageProfile],
     dest_image_data_dir: Path,
     dest_data_dir: Path,
     nb_parallel: int,

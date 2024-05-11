@@ -1,9 +1,9 @@
 import setuptools
 
-with open("README.md", "r") as fh:
+with open("README.md") as fh:
     long_description = fh.read()
 
-with open("cropclassification/version.txt", mode="r") as file:
+with open("cropclassification/version.txt") as file:
     version = file.readline()
 
 setuptools.setup(

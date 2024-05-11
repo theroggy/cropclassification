@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calaculate the timeseries data per week based on per image data.
 """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Main script to do a classification.
 """
@@ -7,7 +6,6 @@ import logging
 import os
 from pathlib import Path
 import shutil
-from typing import List
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo  # noqa: F401
@@ -29,7 +27,7 @@ from cropclassification.postprocess import classification_reporting as class_rep
 # -------------------------------------------------------------
 
 
-def calc_marker_task(config_paths: List[Path], default_basedir: Path):
+def calc_marker_task(config_paths: list[Path], default_basedir: Path):
     """
     Runs a marker using the setting in the config_paths.
 

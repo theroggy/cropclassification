@@ -1,18 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Module with helper functions to expand on some features of pandas.
 """
 
 from pathlib import Path
 import os
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import pandas as pd
 import sqlite3
 
 
 def read_file(
-    path: Path, table_name: str = "info", columns: Optional[List[str]] = None
+    path: Path, table_name: str = "info", columns: Optional[list[str]] = None
 ) -> pd.DataFrame:
     """
     Reads a file to a pandas dataframe. The fileformat is detected based on the

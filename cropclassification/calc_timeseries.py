@@ -8,7 +8,6 @@ import logging
 import os
 from pathlib import Path
 import shutil
-from typing import List
 import dateutil.parser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
@@ -22,7 +21,7 @@ from cropclassification.util import zonal_stats_bulk
 logger: logging.Logger
 
 
-def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
+def calc_timeseries_task(config_paths: list[Path], default_basedir: Path):
     """
     Runs a calculation of timeseries with the settings in the config_paths.
 
@@ -107,7 +106,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         shutil.rmtree(str(temp_dir) + os.sep)
 
     # Process S1 GRD images
-    input_image_paths: List[Path] = []
+    input_image_paths: list[Path] = []
     for year in range(calc_year_start, calc_year_stop + 1):
         # TODO: works, but doesn't seem to be the most elegant code...
         if year < calc_year_stop:

@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
 
 from cropclassification.util.mosaic_util import ImageProfile
 
@@ -41,7 +40,7 @@ class SampleData:
     roi_crs = 31370
 
 
-IMAGEPROFILES: Dict[str, ImageProfile] = {
+IMAGEPROFILES: dict[str, ImageProfile] = {
     "s2-agri": ImageProfile(
         name="s2-agri",
         satellite="s2",
