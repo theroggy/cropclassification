@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
-from typing import List, Tuple, Union
+from typing import Union
 
 import geofileops as gfo
 import geopandas as gpd
@@ -34,10 +34,10 @@ logger = logging.getLogger(__name__)
 
 def zonal_stats(
     vector_path: Path,
-    columns: List[str],
-    rasters_bands: List[Tuple[Path, List[str]]],
+    columns: list[str],
+    rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: List[Statistic],
+    stats: list[Statistic],
     nb_parallel: int = -1,
     force: bool = False,
 ):
@@ -178,8 +178,8 @@ def zonal_stats_band(
     raster_path: Path,
     band: str,
     tmp_dir: Path,
-    stats: List[Statistic],
-    columns: List[str],
+    stats: list[Statistic],
+    columns: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Init
     stats_mask = None
@@ -269,8 +269,8 @@ def zonal_stats_band_tofile(
     output_band_path: Path,
     band: str,
     tmp_dir: Path,
-    stats: List[Statistic],
-    columns: List[str],
+    stats: list[Statistic],
+    columns: list[str],
     force: bool = False,
 ) -> Path:
     if output_band_path.exists():

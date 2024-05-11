@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 import pprint
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import openeo
 import openeo.rest.job
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_images(
-    images_to_get: List[Dict[str, Any]],
+    images_to_get: list[dict[str, Any]],
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
@@ -177,7 +177,7 @@ def create_mosaic_job(
     spatial_extent,
     start_date: datetime,
     end_date: datetime,
-    bands: List[str],
+    bands: list[str],
     output_path: Path,
     time_reducer: str,
     max_cloud_cover: Optional[float],
@@ -267,7 +267,7 @@ def create_mosaic_job(
 
 def get_job_results(
     conn: openeo.Connection, ignore_errors: bool = False
-) -> Tuple[List[Path], List[str]]:
+) -> tuple[list[Path], list[str]]:
     """Get results of the completed jobs."""
 
     output_paths = []
@@ -361,7 +361,7 @@ def get_job_results(
     return output_paths, errors
 
 
-def postprocess_image(path: Path, band_descriptions: Optional[List[str]]):
+def postprocess_image(path: Path, band_descriptions: Optional[list[str]]):
     raster_util.add_overviews(path)
 
     # if band_descriptions is None, try to read them from the json metadata file.

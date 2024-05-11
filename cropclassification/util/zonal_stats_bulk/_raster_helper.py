@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 import xml.etree.ElementTree as ET
 
 from osgeo import gdal
@@ -28,7 +28,7 @@ class BandInfo:
         relative_path: Optional[str],
         filename: str,
         bandindex: int,
-        bounds: Optional[Tuple[float, float, float]] = None,
+        bounds: Optional[tuple[float, float, float]] = None,
         affine=None,
         crs: Optional[str] = None,
         epsg: Optional[int] = None,
@@ -67,9 +67,9 @@ class ImageInfo:
         footprint: Optional[dict],
         image_epsg: int,
         image_crs: str,
-        image_bounds: Tuple[float, float, float],
+        image_bounds: tuple[float, float, float],
         image_affine,
-        bands: Dict[str, BandInfo],
+        bands: dict[str, BandInfo],
         extra: dict,
     ):
         self.imagetype = imagetype
@@ -87,8 +87,8 @@ class ImageInfo:
 
 def get_image_data(
     image_path: Path,
-    bounds: Tuple[float, float, float, float],
-    bands: List[str],
+    bounds: tuple[float, float, float, float],
+    bands: list[str],
     pixel_buffer: int = 0,
 ) -> dict:
     """
@@ -112,7 +112,7 @@ def get_image_data(
     image_info = get_image_info(image_path)
 
     # Now get the data
-    image_data: Dict[str, Any] = {}  # Dict for the transforms and the data per band
+    image_data: dict[str, Any] = {}  # Dict for the transforms and the data per band
     if image_info.filetype in ("CARD", "SAFE", "TIF"):
         # Loop over bands and get data
         for band in bands:
@@ -373,7 +373,7 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
     manifest_xml_paths = list(image_path.glob(manifest_xml_searchstring))
 
     # The number of .safe indicates whether it is a GRD or a Coherence image
-    extra: Dict[str, Any] = {}
+    extra: dict[str, Any] = {}
     nb_safefiles = len(manifest_xml_paths)
     if nb_safefiles == 1:
         # Now parse the .safe file
@@ -765,12 +765,12 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
                 bandindex=band_idx,
             )
 
-    footprint: Dict[str, Any] = {}
+    footprint: dict[str, Any] = {}
     footprint["shape"] = None
     footprint["crs"] = None
     footprint["epsg"] = None
 
-    extra: Dict[str, Any] = {}
+    extra: dict[str, Any] = {}
     imagetype = image_path.stem.split("_")[0].upper()
     if imagetype in ("S1-ASC", "S1-DESC"):
         orbit = imagetype.split("-")[1]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calculate timeseries data per image.
 """
@@ -14,7 +13,7 @@ import shutil
 import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from osgeo import gdal
 
@@ -41,9 +40,9 @@ logger = logging.getLogger(__name__)
 def zonal_stats(
     vector_path: Path,
     id_column: str,
-    rasters_bands: List[Tuple[Path, List[str]]],
+    rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: List[Statistic],
+    stats: list[Statistic],
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     nb_parallel: int = -1,
@@ -95,7 +94,7 @@ def zonal_stats(
     nb_errors_max = 10
     nb_errors = 0
 
-    image_dict: Dict[str, Any] = {}
+    image_dict: dict[str, Any] = {}
     calc_stats_batch_dict = {}
     nb_done_total = 0
     image_idx = 0
@@ -117,7 +116,7 @@ def zonal_stats(
             ):
                 # Not too many busy preparing, so get next image_path to start
                 # prepare on
-                bands: List[Any]
+                bands: list[Any]
                 image_path, bands = rasters_bands[image_idx]
                 image_path_str = str(image_path)
                 image_idx += 1
@@ -445,7 +444,7 @@ def zonal_stats(
     )
 
 
-def _filter_on_status(dict: dict, status_to_check: str) -> List[str]:
+def _filter_on_status(dict: dict, status_to_check: str) -> list[str]:
     """
     Function to check the number of images that are being prepared for processing
     """
@@ -488,7 +487,7 @@ def _prepare_calc(
 
     global logger
     logger = logging.getLogger("prepare_calc")
-    ret_val: Dict[str, Any] = {}
+    ret_val: dict[str, Any] = {}
 
     # Prepare the image
     logger.info(f"Start prepare_image for {image_path} to {tmp_dir}")
@@ -558,7 +557,7 @@ def _prepare_calc(
     # Loop over the batches, pickle them and add the paths to the result...
     ret_val["feature_batches"] = []
     for batch_idx, features_gdf_batch in enumerate(features_gdf_batches):
-        batch_info: Dict[str, Any] = {}
+        batch_info: dict[str, Any] = {}
         pickle_path = temp_features_dir / f"{batch_idx}.pkl"
         logger.info(
             f"Write pkl of {len(features_gdf_batch.index)} features: {pickle_path}"
@@ -580,9 +579,9 @@ def _zonal_stats_image_gdf(
     features,
     id_column: str,
     image_path: Path,
-    bands: Union[List[str], str],
+    bands: Union[list[str], str],
     output_base_path: Path,
-    stats: List[Statistic],
+    stats: list[Statistic],
     log_dir: Path,
     log_level: Union[str, int],
     future_start_time=None,

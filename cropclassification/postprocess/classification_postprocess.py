@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module with postprocessing functions on classification results.
 """

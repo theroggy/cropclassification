@@ -7,12 +7,12 @@ import json
 from pathlib import Path
 import pprint
 import tempfile
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from cropclassification.util.mosaic_util import ImageProfile
 
 config: configparser.ConfigParser
-config_paths_used: List[Path]
+config_paths_used: list[Path]
 general: Any
 calc_timeseries_params: Any
 calc_marker_params: Any
@@ -24,7 +24,7 @@ classifier: Any
 postprocess: Any
 columns: Any
 dirs: Any
-image_profiles: Dict[str, ImageProfile]
+image_profiles: dict[str, ImageProfile]
 
 
 class SensorData:
@@ -32,7 +32,7 @@ class SensorData:
         self,
         imageprofile_name: str,
         imageprofile: Optional[ImageProfile] = None,
-        bands: Optional[List[str]] = None,
+        bands: Optional[list[str]] = None,
     ):
         self.imageprofile_name = imageprofile_name
         if imageprofile is not None:
@@ -45,7 +45,7 @@ class SensorData:
             self.bands = self.imageprofile.bands  # type: ignore[assignment]
 
 
-def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None):
+def read_config(config_paths: list[Path], default_basedir: Optional[Path] = None):
     # Read the configuration
     global config
     config = configparser.ConfigParser(
@@ -135,7 +135,7 @@ def read_config(config_paths: List[Path], default_basedir: Optional[Path] = None
     )
 
 
-def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
+def parse_sensordata_to_use(input) -> dict[str, SensorData]:
     result = None
     sensordata_parsed = None
     try:
@@ -170,7 +170,7 @@ def parse_sensordata_to_use(input) -> Dict[str, SensorData]:
     return result
 
 
-def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
+def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
     # Cropclassification gives best results with time_reducer "mean" for both
     # sentinel 2 and sentinel 1 images.
     # Init
@@ -213,7 +213,7 @@ def _get_image_profiles(image_profiles_path: Path) -> Dict[str, ImageProfile]:
     return profiles
 
 
-def _validate_image_profiles(profiles: Dict[str, ImageProfile]):
+def _validate_image_profiles(profiles: dict[str, ImageProfile]):
     # Check that all base_image_profile s are actually existing image profiles.
     for profile in profiles:
         base_image_profile = profiles[profile].base_imageprofile

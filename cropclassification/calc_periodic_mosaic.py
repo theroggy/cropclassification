@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.helpers import log_helper
 from cropclassification.util import mosaic_util
 
 
-def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
+def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
     """
     Runs a periodic mosaic using the setting in the config_paths.
 

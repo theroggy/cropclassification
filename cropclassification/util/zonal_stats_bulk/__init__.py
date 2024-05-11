@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Literal, Optional, Union
 
 from ._raster_helper import *  # noqa: F403
 
@@ -22,9 +22,9 @@ DEFAULT_STATS = ["count", "median"]
 def zonal_stats(
     vector_path: Path,
     id_column: str,
-    rasters_bands: List[Tuple[Path, List[str]]],
+    rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: Union[List[Statistic], Statistic] = DEFAULT_STATS,  # type: ignore[assignment]
+    stats: Union[list[Statistic], Statistic] = DEFAULT_STATS,  # type: ignore[assignment]
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     engine: str = "rasterstats",

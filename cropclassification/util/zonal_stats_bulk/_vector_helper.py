@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import time
-from typing import List, Optional
+from typing import Optional
 
 import geofileops as gfo
 import geopandas as gpd
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def reproject_synced(
     path: Path,
-    columns: List[str],
+    columns: list[str],
     target_epsg: int,
     dst_dir: Optional[Path] = None,
 ) -> Path:
@@ -129,7 +129,7 @@ def reproject_synced(
 
 def _load_features_file(
     features_path: Path,
-    columns_to_retain: List[str],
+    columns_to_retain: list[str],
     target_epsg: int,
     bbox=None,
     polygon=None,
