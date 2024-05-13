@@ -165,27 +165,20 @@ def test_ImageProfile_openeo():
 
 
 @pytest.mark.parametrize(
-    "start_date, end_date, period_name, days_per_period, expected_nb_periods",
-    [(datetime(2024, 1, 1), datetime(2024, 1, 17), None, 7, 2)],
+    "start_date, end_date, period_name, period_days, expected_nb_periods",
+    [
+        (datetime(2024, 1, 1), datetime(2024, 1, 17), None, 7, 2),
+        (datetime(2024, 1, 1), datetime(2024, 1, 17), "weekly", None, 2),
+        (datetime(2024, 1, 2), datetime(2024, 1, 17), "weekly", None, 1),
+        (datetime(2024, 1, 1), datetime(2024, 1, 30), "biweekly", None, 2),
+        (datetime(2024, 1, 2), datetime(2024, 1, 30), "biweekly", None, 1),
+    ],
 )
 def test_prepare_periods(
-    start_date, end_date, period_name, days_per_period, expected_nb_periods
+    start_date, end_date, period_name, period_days, expected_nb_periods
 ):
     result = mosaic_util._prepare_periods(
-        start_date, end_date, period_name=period_name, period_days=days_per_period
-    )
-    assert len(result) == expected_nb_periods
-
-
-@pytest.mark.parametrize(
-    "start_date, end_date, days_per_period, expected_nb_periods",
-    [(datetime(2024, 1, 1), datetime(2024, 1, 17), 7, 2)],
-)
-def test_prepare_periods_days_per_period(
-    start_date, end_date, days_per_period, expected_nb_periods
-):
-    result = mosaic_util._prepare_periods(
-        start_date, end_date, period_name=None, period_days=days_per_period
+        start_date, end_date, period_name=period_name, period_days=period_days
     )
     assert len(result) == expected_nb_periods
 
@@ -193,13 +186,20 @@ def test_prepare_periods_days_per_period(
 @pytest.mark.parametrize(
     "exp_error, start_date, end_date, period_name, period_days",
     [
-        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), None, 7),
         (
             "period_name is None and period_days is not 7 or 14",
             datetime(2024, 1, 1),
             datetime(2024, 1, 2),
             None,
             3,
+        ),
+        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), None, 7),
+        (
+            "start_date == end_date",
+            datetime(2024, 1, 2),
+            datetime(2024, 1, 26),
+            "biweekly",
+            None,
         ),
     ],
 )

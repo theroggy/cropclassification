@@ -56,6 +56,12 @@ class ImageProfile:
         """
         Profile of the image to be calculated.
 
+        The `period_name` and `period_days` are used to determine the periods of the
+        images to be generated. For some pre-defined values of `period_name`, the
+        periods will be aligned to certain week days and/or weeks of the year:
+          - "weekly": image periods will start on a monday and end on a sunday.
+          - "biweekly": image periods will start on even mondays of the year.
+
         Args:
             name (str): name of the image profile. To be choosen by the user, but
                 typically a combination of the satellite, image sensor and the period
@@ -155,12 +161,26 @@ def calc_periodic_mosaic(
     """
     Generate a periodic mosaic.
 
+    Depending on the period_name specified in the ImageProfiles, the `start_date` and
+    `end_date` will  be adjusted:
+      - "weekly": image periods will start on a monday and end on a sunday. If the
+        `start_date` is no monday, the first monday following it will be used. If the
+        `end_date` (exclusive) is no monday, the first monday before it will be used.
+      - "biweekly": image periods will start on even mondays of the year. If the
+        `start_date` is no monday, the first even monday following it will be used.
+        If the `end_date` (exclusive) is no monday, the first even monday before it
+        will be used.
+
     Args:
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
             of the region of interest to download the mosaic for.
         roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
-        start_date (datetime): start date, included.
-        end_date (datetime): end date, excluded.
+        start_date (datetime): start date, included. Depending on the period used in the
+            imageprofiles, the start_date might be adjusted to e.g. the next monday for
+            "weekly",...
+        end_date (datetime): end date, excluded. Depending on the period used in the
+            imageprofiles, the end_date might be adjusted to e.g. the previous monday
+            for "weekly",...
         imageprofiles_to_get (List[str]): list of image proles a periodic mosaic should
             be generated for.
         imageprofiles (Dict[str, ImageProfile]): dict with for all configured image
@@ -234,7 +254,7 @@ def calc_periodic_mosaic(
 def _prepare_periods(
     start_date: datetime,
     end_date: datetime,
-    period_name: str,
+    period_name: Optional[str],
     period_days: Optional[int],
 ) -> list[dict[str, Any]]:
     """
@@ -256,13 +276,13 @@ def _prepare_periods(
 
     # Adjust start_date and end_date based on the period specified
     if period_name == "weekly":
-        start_date = date_util.get_monday(start_date)
-        end_date = date_util.get_monday(end_date)
+        start_date = date_util.get_monday(start_date, before=False)
+        end_date = date_util.get_monday(end_date, before=True)
     elif period_name == "biweekly":
         # Also make sure the start date is compatible with using biweekly mondays
         # starting from the first monday of the year.
-        start_date = date_util.get_monday_biweekly(start_date)
-        end_date = date_util.get_monday_biweekly(end_date)
+        start_date = date_util.get_monday_biweekly(start_date, before=False)
+        end_date = date_util.get_monday_biweekly(end_date, before=True)
 
     # Check if start date and end date are (still) valid
     if start_date == end_date:
