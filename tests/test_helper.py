@@ -13,7 +13,7 @@ class SampleData:
     config_dir = marker_basedir / "_config"
     inputdata_dir = marker_basedir / "_inputdata"
     refe_dir = marker_basedir / "_refe"
-    image_dir = marker_basedir / "periodic_mosaic"
+    image_dir = marker_basedir / "_images_periodic"
     input_dir = marker_basedir / "_inputdata"
     task_path = tasks_dir / "task_test_calc_periodic_mosaic.ini"
     roi_name = "roi_test"
