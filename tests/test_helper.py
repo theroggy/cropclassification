@@ -11,6 +11,8 @@ class SampleDirs:
     marker_basedir = Path(__file__).resolve().parent.parent / "sample_marker_basedir"
     tasks_dir = marker_basedir / "_tasks"
     config_dir = marker_basedir / "_config"
+    inputdata_dir = marker_basedir / "_inputdata"
+    refe_dir = marker_basedir / "_refe"
     image_dir = marker_basedir / "periodic_mosaic"
     task_path = tasks_dir / "task_test_calc_periodic_mosaic.ini"
 
