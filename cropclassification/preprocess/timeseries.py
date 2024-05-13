@@ -13,7 +13,7 @@ import pyproj
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.preprocess._timeseries_helper as ts_helper
-from cropclassification.util import date_util
+
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -23,8 +23,8 @@ def calc_timeseries_data(
     input_parcel_path: Path,
     roi_bounds: tuple[float, float, float, float],
     roi_crs: Optional[pyproj.CRS],
-    start_date_str: str,
-    end_date_str: str,
+    start_date: datetime,
+    end_date: datetime,
     sensordata_to_get: dict[str, conf.SensorData],
     dest_data_dir: Path,
 ):
@@ -33,8 +33,8 @@ def calc_timeseries_data(
 
     Args:
         input_parcel_path (str): [description]
-        start_date_str (str): [description]
-        end_date_str (str): [description]
+        start_date_str (datetime): [description]
+        end_date_str (datetime): [description]
         sensordata_to_get (List[str]): an array with data you want to be calculated:
             check out the constants starting with DATA_TO_GET... for the options.
         dest_data_dir (str): [description]
@@ -45,16 +45,6 @@ def calc_timeseries_data(
     if not dest_data_dir.exists():
         dest_data_dir.mkdir(parents=True, exist_ok=True)
 
-    # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = date_util.get_monday(
-        start_date_str
-    )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = date_util.get_monday(end_date_str)
-
-    logger.info(
-        f"Start date {start_date_str} converted to monday before: {start_date}, end "
-        f"date {end_date_str} as well: {end_date}"
-    )
     sensordata_to_get_onda = [
         sensor for sensor in sensordata_to_get if sensor not in conf.image_profiles
     ]
@@ -100,8 +90,8 @@ def collect_and_prepare_timeseries_data(
     timeseries_dir: Path,
     base_filename: str,
     output_path: Path,
-    start_date_str: str,
-    end_date_str: str,
+    start_date: datetime,
+    end_date: datetime,
     sensordata_to_use: dict[str, conf.SensorData],
     parceldata_aggregations_to_use: list[str],
     force: bool = False,
@@ -117,8 +107,6 @@ def collect_and_prepare_timeseries_data(
             f"Output file already exists and force == False, so stop: {output_path}"
         )
         return
-    start_date = datetime.fromisoformat(start_date_str)
-    end_date = datetime.fromisoformat(end_date_str)
 
     # Init the result with the id's of the parcels we want to treat
     result_df = pdh.read_file(input_parcel_path, columns=[conf.columns["id"]])
@@ -205,9 +193,9 @@ def collect_and_prepare_timeseries_data(
                     column_ok = True
                 elif column == parceldata_aggregation:
                     curr_start_date_str = fileinfo["start_date"].strftime("%Y%m%d")
-                    columns_to_rename[
-                        column
-                    ] = f"{image_profile}_{curr_start_date_str}_{band}_{column}"
+                    columns_to_rename[column] = (
+                        f"{image_profile}_{curr_start_date_str}_{band}_{column}"
+                    )
                     column_ok = True
             if not column_ok:
                 # Drop column if it doesn't end with something in

@@ -2,7 +2,7 @@
 Calaculate the timeseries data per image on DIAS.
 """
 
-import datetime
+from datetime import datetime
 import glob
 import logging
 import os
@@ -15,7 +15,6 @@ import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-from cropclassification.util import date_util
 from cropclassification.util import zonal_stats_bulk
 
 logger: logging.Logger
@@ -39,11 +38,8 @@ def calc_timeseries_task(config_paths: list[Path], default_basedir: Path):
 
     test = conf.calc_timeseries_params.getboolean("test")
 
-    # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = date_util.get_monday(
-        conf.marker["start_date_str"]
-    )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = date_util.get_monday(conf.marker["end_date_str"])
+    start_date = datetime.fromisoformat(conf.marker["start_date_str"])
+    end_date = datetime.fromisoformat(conf.marker["end_date_str"])
 
     calc_year_start = start_date.year
     calc_year_stop = end_date.year
@@ -60,7 +56,7 @@ def calc_timeseries_task(config_paths: list[Path], default_basedir: Path):
         if base_log_dir.exists():
             shutil.rmtree(base_log_dir)
 
-    log_dir = base_log_dir / f"calc_dias_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}"
+    log_dir = base_log_dir / f"calc_dias_{datetime.now():%Y-%m-%d_%H-%M-%S}"
 
     global logger
     logger = log_helper.main_log_init(log_dir, __name__, log_level)
