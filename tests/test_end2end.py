@@ -4,8 +4,8 @@ from tests import test_helper
 
 
 def test_end2end(tmp_path):
-    marker_basedir = tmp_path / test_helper.SampleDirs.marker_basedir.name
-    shutil.copytree(test_helper.SampleDirs.marker_basedir, marker_basedir)
+    marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
+    shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
 
     # Create configparser and read task file!
     tasks_dir = marker_basedir / "_tasks"
