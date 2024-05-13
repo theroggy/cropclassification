@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module with helper functions to preprocess the data to use for the classification.
 """

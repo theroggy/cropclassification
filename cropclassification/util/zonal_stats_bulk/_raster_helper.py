@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 import xml.etree.ElementTree as ET
 
 from osgeo import gdal
@@ -28,15 +28,29 @@ class BandInfo:
         relative_path: Optional[str],
         filename: str,
         bandindex: int,
-        bounds: Optional[Tuple[float, float, float]] = None,
+        bounds: Optional[tuple[float, float, float]] = None,
         affine=None,
         crs: Optional[str] = None,
         epsg: Optional[int] = None,
     ):
+        """
+        Constructor of BandInfo.
+
+        Args:
+            path (str): _description_
+            relative_path (Optional[str]): _description_
+            filename (str): _description_
+            bandindex (int): one-based band index.
+            bounds (Optional[Tuple[float, float, float]], optional): _description_.
+                Defaults to None.
+            affine (_type_, optional): _description_. Defaults to None.
+            crs (Optional[str], optional): _description_. Defaults to None.
+            epsg (Optional[int], optional): _description_. Defaults to None.
+        """
         self.path = path
         self.relative_path = relative_path
         self.filename = filename
-        self.bandindex = bandindex
+        self.band_index = bandindex
         self.bounds = bounds
         self.affine = affine
         self.crs = crs
@@ -53,9 +67,9 @@ class ImageInfo:
         footprint: Optional[dict],
         image_epsg: int,
         image_crs: str,
-        image_bounds: Tuple[float, float, float],
+        image_bounds: tuple[float, float, float],
         image_affine,
-        bands: Dict[str, BandInfo],
+        bands: dict[str, BandInfo],
         extra: dict,
     ):
         self.imagetype = imagetype
@@ -73,8 +87,8 @@ class ImageInfo:
 
 def get_image_data(
     image_path: Path,
-    bounds: Tuple[float, float, float, float],
-    bands: List[str],
+    bounds: tuple[float, float, float, float],
+    bands: list[str],
     pixel_buffer: int = 0,
 ) -> dict:
     """
@@ -98,7 +112,7 @@ def get_image_data(
     image_info = get_image_info(image_path)
 
     # Now get the data
-    image_data: Dict[str, Any] = {}  # Dict for the transforms and the data per band
+    image_data: dict[str, Any] = {}  # Dict for the transforms and the data per band
     if image_info.filetype in ("CARD", "SAFE", "TIF"):
         # Loop over bands and get data
         for band in bands:
@@ -107,10 +121,8 @@ def get_image_data(
                 image_band_path = image_path / band_relative_path
             else:
                 image_band_path = image_path
-            band_index = image_info.bands[band].bandindex
-            logger.info(
-                f"Read image data from {image_band_path}, with band_index: {band_index}"
-            )
+            band_index = image_info.bands[band].band_index
+            logger.info(f"Read image data from {image_band_path}, with {band_index=}")
             image_data[band] = {}
             with rasterio.open(str(image_band_path)) as src:
                 # Determine the window we need to read from the image:
@@ -124,9 +136,7 @@ def get_image_data(
                 # Read!
                 # Remark: bandindex in rasterio is 1-based instead of 0-based -> +1
                 logger.debug(f"Read image data from {image_band_path}")
-                image_data[band]["data"] = src.read(
-                    band_index + 1, window=window_to_read
-                )
+                image_data[band]["data"] = src.read(band_index, window=window_to_read)
                 logger.debug("Image data read")
     else:
         message = f"Format currently not supported: {image_path}"
@@ -363,7 +373,7 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
     manifest_xml_paths = list(image_path.glob(manifest_xml_searchstring))
 
     # The number of .safe indicates whether it is a GRD or a Coherence image
-    extra: Dict[str, Any] = {}
+    extra: dict[str, Any] = {}
     nb_safefiles = len(manifest_xml_paths)
     if nb_safefiles == 1:
         # Now parse the .safe file
@@ -556,13 +566,13 @@ def _get_image_info_card(image_path: Path) -> ImageInfo:
                 path=str(image_datapath),
                 relative_path=image_datafilename,
                 filename=image_datafilename,
-                bandindex=0,
+                bandindex=1,
             )
             bands["VV"] = BandInfo(
                 path=str(image_datapath),
                 relative_path=image_datafilename,
                 filename=image_datafilename,
-                bandindex=1,
+                bandindex=2,
             )
 
         except Exception as ex:
@@ -752,15 +762,15 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
                 path=str(image_path),
                 relative_path=None,
                 filename=image_path.name,
-                bandindex=band_idx - 1,
+                bandindex=band_idx,
             )
 
-    footprint: Dict[str, Any] = {}
+    footprint: dict[str, Any] = {}
     footprint["shape"] = None
     footprint["crs"] = None
     footprint["epsg"] = None
 
-    extra: Dict[str, Any] = {}
+    extra: dict[str, Any] = {}
     imagetype = image_path.stem.split("_")[0].upper()
     if imagetype in ("S1-ASC", "S1-DESC"):
         orbit = imagetype.split("-")[1]

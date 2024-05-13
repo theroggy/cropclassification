@@ -1,8 +1,48 @@
 from datetime import datetime
 import shutil
 
+import pytest
+import rasterio
+
 from cropclassification.util import openeo_util
 from tests import test_helper
+from tests.test_helper import SampleData
+
+
+@pytest.mark.parametrize(
+    "input_path, collection",
+    [
+        (SampleData.image_s1_asc_path, "S1_GRD_SIGMA0_ASCENDING"),
+        (SampleData.image_s1_desc_path, "S1_GRD_SIGMA0_DESCENDING"),
+    ],
+)
+def test_get_images_s1(tmp_path, input_path, collection):
+    """
+    Test creating an s1 image.
+
+    Remark: the default way to run is with the result pre-copied and force=False, to
+    avoid really calling the openeo API.
+    """
+    output_path = tmp_path / input_path.name
+    shutil.copy(input_path, output_path)
+    images_to_get = [
+        {
+            "path": output_path,
+            "roi_bounds": SampleData.roi_bounds,
+            "roi_crs": SampleData.roi_crs,
+            "collection": collection,
+            "start_date": SampleData.start_date,
+            "end_date": SampleData.end_date,
+            "bands": ["VV", "VH"],
+            "time_reducer": "last",
+            "max_cloud_cover": None,
+            "process_options": {},
+            "job_options": {},
+        }
+    ]
+
+    openeo_util.get_images(images_to_get=images_to_get, force=False)
+    assert output_path.exists()
 
 
 def test_get_images_s1_edge_first(tmp_path):
@@ -38,3 +78,40 @@ def test_get_images_s1_edge_first(tmp_path):
 
     openeo_util.get_images(images_to_get=images_to_get, force=False)
     assert output_path.exists()
+
+
+def test_get_images_s2(tmp_path):
+    """
+    Test creating an s2 image.
+
+    Remark: the default way to run is with the result pre-copied and force=False, to
+    avoid really calling the openeo API.
+    """
+    # Prepare test data
+    output_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, output_path)
+    bands = ["B02", "B03", "B04", "B08", "B11", "B12"]
+
+    images_to_get = [
+        {
+            "path": output_path,
+            "roi_bounds": SampleData.roi_bounds,
+            "roi_crs": SampleData.roi_crs,
+            "collection": "TERRASCOPE_S2_TOC_V2",
+            "start_date": SampleData.start_date,
+            "end_date": SampleData.end_date,
+            "bands": bands,
+            "time_reducer": "mean",
+            "max_cloud_cover": 80,
+            "process_options": {},
+            "job_options": {},
+        }
+    ]
+    openeo_util.get_images(images_to_get=images_to_get, force=False)
+
+    # Check result
+    assert output_path.exists()
+    with rasterio.open(output_path, "r") as file:
+        assert file.count == len(bands)
+        # All bands should have a description
+        assert all(file.descriptions)

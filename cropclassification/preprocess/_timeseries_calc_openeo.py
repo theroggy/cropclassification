@@ -2,9 +2,11 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import tempfile
-from typing import Dict, List
+from typing import Optional
 
 import geofileops as gfo
+import pyproj
+import shapely
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import mosaic_util
@@ -17,10 +19,12 @@ logger = logging.getLogger(__name__)
 
 def calculate_periodic_timeseries(
     input_parcel_path: Path,
+    roi_bounds: tuple[float, float, float, float],
+    roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
-    imageprofiles_to_get: List[str],
-    imageprofiles: Dict[str, ImageProfile],
+    imageprofiles_to_get: list[str],
+    imageprofiles: dict[str, ImageProfile],
     dest_image_data_dir: Path,
     dest_data_dir: Path,
     nb_parallel: int,
@@ -31,16 +35,19 @@ def calculate_periodic_timeseries(
     args
         imageprofiles_to_get: an array with data you want to be calculated.
     """
-    # As we want a weekly calculation, get nearest monday for start and stop day
-    days_per_period = 7
-    roi_info = gfo.get_layerinfo(input_parcel_path)
+    info = gfo.get_layerinfo(input_parcel_path)
+    if info.crs is not None and not info.crs.equals(roi_crs):
+        raise ValueError(f"parcel crs ({info.crs}) <> roi crs ({roi_crs})")
+    if not shapely.box(*info.total_bounds).within(shapely.box(*roi_bounds)):
+        raise ValueError(
+            f"parcel bounds ({info.total_bounds}) not within roi_bounds ({roi_bounds})"
+        )
 
     periodic_images_result = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=roi_info.total_bounds,
-        roi_crs=roi_info.crs,
+        roi_bounds=roi_bounds,
+        roi_crs=roi_crs,
         start_date=start_date,
         end_date=end_date,
-        days_per_period=days_per_period,
         output_base_dir=dest_image_data_dir,
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
@@ -64,15 +71,3 @@ def calculate_periodic_timeseries(
         engine="pyqgis",
         nb_parallel=nb_parallel,
     )
-
-    """
-    for image_path in periodic_images:
-        output_path = (
-            dest_data_dir / f"{input_parcel_path.stem}__{image_path.stem}.gpkg"
-        )
-        geoops_util.zonal_stats(
-            input_vector_path=input_parcel_path,
-            input_raster_path=image_path,
-            output_path=output_path,
-        )
-    """

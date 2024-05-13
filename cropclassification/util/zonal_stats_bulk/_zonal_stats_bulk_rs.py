@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calculate timeseries data per image.
 """
@@ -14,7 +13,7 @@ import shutil
 import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from osgeo import gdal
 
@@ -25,9 +24,11 @@ import rasterstats
 
 from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper
+from . import _processing_util as processing_util
 from . import _raster_helper
 from . import _vector_helper
 from cropclassification.util import io_util
+from . import Statistic
 
 # Suppress gdal warnings/errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
@@ -39,9 +40,9 @@ logger = logging.getLogger(__name__)
 def zonal_stats(
     vector_path: Path,
     id_column: str,
-    rasters_bands: List[Tuple[Path, List[str]]],
+    rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: Literal["count", "mean", "median", "std", "min", "max"],
+    stats: list[Statistic],
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     nb_parallel: int = -1,
@@ -55,7 +56,6 @@ def zonal_stats(
         id_column (str): _description_
         images_bands (List[Tuple[Path, List[str]]]): _description_
         output_dir (Path): _description_
-        temp_dir (Path): _description_
         log_dir (Path): _description_
         log_level (Union[str, int]): _description_
         nb_parallel (int, optional): the number of parallel processes to use.
@@ -80,8 +80,8 @@ def zonal_stats(
 
     # General init
     output_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = io_util.create_tempdir("zonal_stats_rs")
-    log_dir = temp_dir
+    tmp_dir = io_util.create_tempdir("zonal_stats_rs")
+    log_dir = tmp_dir
     log_level = logger.level
 
     # Create process pool for parallelisation...
@@ -94,12 +94,14 @@ def zonal_stats(
     nb_errors_max = 10
     nb_errors = 0
 
-    image_dict: Dict[str, Any] = {}
+    image_dict: dict[str, Any] = {}
     calc_stats_batch_dict = {}
     nb_done_total = 0
     image_idx = 0
 
-    pool = futures.ProcessPoolExecutor(nb_parallel)
+    pool = futures.ProcessPoolExecutor(
+        max_workers=nb_parallel, initializer=processing_util.initialize_worker()
+    )
     try:
         # Keep looping. At the end of the loop there are checks when to
         # break out of the loop...
@@ -114,7 +116,7 @@ def zonal_stats(
             ):
                 # Not too many busy preparing, so get next image_path to start
                 # prepare on
-                bands: List[Any]
+                bands: list[Any]
                 image_path, bands = rasters_bands[image_idx]
                 image_path_str = str(image_path)
                 image_idx += 1
@@ -128,13 +130,9 @@ def zonal_stats(
                 elif image_info.imagetype.lower() == "s1-grd-sigma0-desc":
                     orbit = "DESCENDING"
                 output_base_path = _general_helper._format_output_path(
-                    vector_path,
-                    image_path,
-                    output_dir,
-                    orbit,
-                    band=None,
+                    vector_path, image_path, output_dir, orbit, band=None
                 )
-                output_base_busy_path = temp_dir / f"BUSY_{output_base_path.name}"
+                output_base_busy_path = tmp_dir / f"BUSY_{output_base_path.name}"
 
                 # Check for which bands there is a valid output file already
                 if bands is None:
@@ -144,13 +142,9 @@ def zonal_stats(
                 for band in bands:
                     # Prepare the output paths...
                     output_band_path = _general_helper._format_output_path(
-                        vector_path,
-                        image_path,
-                        output_dir,
-                        orbit,
-                        band,
+                        vector_path, image_path, output_dir, orbit, band
                     )
-                    output_band_busy_path = temp_dir / f"BUSY_{output_band_path.name}"
+                    output_band_busy_path = tmp_dir / f"BUSY_{output_band_path.name}"
 
                     # If a busy output file exists, remove it, otherwise we can get
                     # double data in it...
@@ -185,7 +179,7 @@ def zonal_stats(
                     features_path=vector_path,
                     id_column=id_column,
                     image_path=image_path,
-                    temp_dir=temp_dir,
+                    tmp_dir=tmp_dir,
                     log_dir=log_dir,
                     log_level=log_level,
                     nb_parallel_max=nb_parallel,
@@ -272,6 +266,7 @@ def zonal_stats(
                                 image_path=image["image_prepared_path"],
                                 bands=band,
                                 output_base_path=image["output_base_busy_path"],
+                                stats=stats,
                                 log_dir=log_dir,
                                 log_level=log_level,
                                 future_start_time=start_time_batch,
@@ -449,7 +444,7 @@ def zonal_stats(
     )
 
 
-def _filter_on_status(dict: dict, status_to_check: str) -> List[str]:
+def _filter_on_status(dict: dict, status_to_check: str) -> list[str]:
     """
     Function to check the number of images that are being prepared for processing
     """
@@ -464,7 +459,7 @@ def _prepare_calc(
     features_path: Path,
     id_column: str,
     image_path: Path,
-    temp_dir: Path,
+    tmp_dir: Path,
     log_dir: Path,
     log_level: int,
     nb_parallel_max: int = 16,
@@ -492,11 +487,11 @@ def _prepare_calc(
 
     global logger
     logger = logging.getLogger("prepare_calc")
-    ret_val: Dict[str, Any] = {}
+    ret_val: dict[str, Any] = {}
 
     # Prepare the image
-    logger.info(f"Start prepare_image for {image_path} to {temp_dir}")
-    image_prepared_path = _raster_helper.prepare_image(image_path, temp_dir)
+    logger.info(f"Start prepare_image for {image_path} to {tmp_dir}")
+    image_prepared_path = _raster_helper.prepare_image(image_path, tmp_dir)
     logger.debug(f"Preparing ready, result: {image_prepared_path}")
     ret_val["image_prepared_path"] = image_prepared_path
 
@@ -506,6 +501,14 @@ def _prepare_calc(
     logger.info(f"image_info: {image_info}")
 
     # Load the features that overlap with the image.
+    # Reproject the vector data
+    tmp_dir.mkdir(exist_ok=True, parents=True)
+    features_proj_path = _vector_helper.reproject_synced(
+        path=features_path,
+        columns=[id_column, "geometry"],
+        target_epsg=image_info.image_epsg,
+        dst_dir=tmp_dir,
+    )
     # TODO: passing both bbox and poly is double, or not?
     # footprint epsg should be passed as well, or reproject here first?
     footprint_shape = None
@@ -517,7 +520,7 @@ def _prepare_calc(
         raise Exception(f"target_epsg == NONE: {image_info}")
 
     features_gdf = _vector_helper._load_features_file(
-        features_path=features_path,
+        features_path=features_proj_path,
         target_epsg=image_info.image_epsg,
         columns_to_retain=[id_column, "geometry"],
         bbox=image_info.image_bounds,
@@ -544,7 +547,7 @@ def _prepare_calc(
     # Pickle the batches to temporary files
     # Create temp dir to put the pickles in... and clean or create it.
     # TODO: change dir so it is always unique
-    temp_features_dir = temp_dir / image_path.stem
+    temp_features_dir = tmp_dir / image_path.stem
     ret_val["temp_features_dir"] = temp_features_dir
     if temp_features_dir.exists():
         logger.info(f"Remove dir {str(temp_features_dir)}{os.sep}")
@@ -554,7 +557,7 @@ def _prepare_calc(
     # Loop over the batches, pickle them and add the paths to the result...
     ret_val["feature_batches"] = []
     for batch_idx, features_gdf_batch in enumerate(features_gdf_batches):
-        batch_info: Dict[str, Any] = {}
+        batch_info: dict[str, Any] = {}
         pickle_path = temp_features_dir / f"{batch_idx}.pkl"
         logger.info(
             f"Write pkl of {len(features_gdf_batch.index)} features: {pickle_path}"
@@ -576,8 +579,9 @@ def _zonal_stats_image_gdf(
     features,
     id_column: str,
     image_path: Path,
-    bands: Union[List[str], str],
+    bands: Union[list[str], str],
     output_base_path: Path,
+    stats: list[Statistic],
     log_dir: Path,
     log_level: Union[str, int],
     future_start_time=None,
@@ -780,12 +784,14 @@ def _zonal_stats_image_gdf(
             prefix="",
             nodata=image_data[band]["nodata"],
             all_touched=False,
-            stats=["count", "mean", "median", "std", "min", "max"],
+            stats=stats,
         )
         features_stats_df = pd.DataFrame(features_stats)
-        features_stats_df["count"] = features_stats_df["count"].divide(
-            upsample_factor * 2
-        )
+
+        # If upsampling was applied, correct the pixel count accordingly
+        if upsample_factor > 1 and "count" in features_stats_df:
+            count_divide = upsample_factor * 2
+            features_stats_df["count"] = features_stats_df["count"].divide(count_divide)
 
         # Add original id column to statistics dataframe
         features_stats_df.insert(loc=0, column=id_column, value=features[id_column])

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Module with some helper functions to report on the classification results.
 """
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 import geofileops as gfo
 import numpy as np
@@ -1449,8 +1448,8 @@ def _get_errors_per_column(
     df_predquality,
     pred_quality_column: str,
     pred_quality_full_doubt_column: str,
-    error_codes_numerator: List[str],
-    error_codes_denominator: List[str],
+    error_codes_numerator: list[str],
+    error_codes_denominator: list[str],
     error_type: str,
     ascending: bool = True,
 ):

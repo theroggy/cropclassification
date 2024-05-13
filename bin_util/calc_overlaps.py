@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module calculate overlaps between two layers.
 """

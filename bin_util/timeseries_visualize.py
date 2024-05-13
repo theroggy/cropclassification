@@ -1,5 +1,4 @@
 # %%
-# -*- coding: utf-8 -*-
 """
 Show the timeseries for a parcel.
 

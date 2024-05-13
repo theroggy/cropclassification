@@ -1,15 +1,30 @@
 from pathlib import Path
-from typing import List, Literal, Optional, Tuple
+from typing import Literal, Optional, Union
 
 from ._raster_helper import *  # noqa: F403
+
+Statistic = Literal[
+    "count",
+    "sum",
+    "mean",
+    "median",
+    "std",
+    "min",
+    "max",
+    "range",
+    "minority",
+    "majority",
+    "variance",
+]
+DEFAULT_STATS = ["count", "median"]
 
 
 def zonal_stats(
     vector_path: Path,
     id_column: str,
-    rasters_bands: List[Tuple[Path, List[str]]],
+    rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: Literal["count", "mean", "median", "std", "min", "max"],
+    stats: Union[list[Statistic], Statistic] = DEFAULT_STATS,  # type: ignore[assignment]
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     engine: str = "rasterstats",
@@ -20,17 +35,24 @@ def zonal_stats(
     Calculate zonal statistics.
 
     Args:
-        vector_path (Path): _description_
-        id_column (str): _description_
-        rasters_bands (List[Tuple[Path, List[str]]]): _description_
-        output_dir (Path): _description_
+        vector_path (Path): input file with vector data.
+        id_column (str): column in vector_path with the id that will be retained in the
+            output files.
+        rasters_bands (List[Tuple[Path, List[str]]]): List of tuples with the path to
+            the raster files and the bands to calculate the zonal statistics on.
+        output_dir (Path): directory to write the results to.
+        stats (List[Statistic]): statistics to calculate.
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
-        force (bool, optional): _description_. Defaults to False.
+        force (bool, optional): False to skip calculating existing output files. True to
+            recalculate and overwrite existing output files. Defaults to False.
 
     Raises:
         Exception: _description_
     """
+    if isinstance(stats, str):
+        stats = [stats]
+
     if engine == "pyqgis":
         if cloud_filter_band is not None:
             raise ValueError(
@@ -42,7 +64,7 @@ def zonal_stats(
             vector_path=vector_path,
             rasters_bands=rasters_bands,
             output_dir=output_dir,
-            stats=stats,  # type: ignore[arg-type]
+            stats=stats,
             columns=[id_column],
             nb_parallel=nb_parallel,
             force=force,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Calaculate the timeseries data per image on DIAS.
 """
@@ -9,7 +8,6 @@ import logging
 import os
 from pathlib import Path
 import shutil
-from typing import List
 import dateutil.parser
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
@@ -17,13 +15,13 @@ import geofileops as gfo  # noqa: F401
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
+from cropclassification.util import date_util
 from cropclassification.util import zonal_stats_bulk
-from cropclassification.preprocess import _timeseries_helper as ts_helper
 
 logger: logging.Logger
 
 
-def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
+def calc_timeseries_task(config_paths: list[Path], default_basedir: Path):
     """
     Runs a calculation of timeseries with the settings in the config_paths.
 
@@ -42,10 +40,10 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
     test = conf.calc_timeseries_params.getboolean("test")
 
     # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_helper.get_monday(
+    start_date = date_util.get_monday(
         conf.marker["start_date_str"]
     )  # output: vb 2018_2_1 - maandag van week 2 van 2018
-    end_date = ts_helper.get_monday(conf.marker["end_date_str"])
+    end_date = date_util.get_monday(conf.marker["end_date_str"])
 
     calc_year_start = start_date.year
     calc_year_stop = end_date.year
@@ -108,7 +106,7 @@ def calc_timeseries_task(config_paths: List[Path], default_basedir: Path):
         shutil.rmtree(str(temp_dir) + os.sep)
 
     # Process S1 GRD images
-    input_image_paths: List[Path] = []
+    input_image_paths: list[Path] = []
     for year in range(calc_year_start, calc_year_stop + 1):
         # TODO: works, but doesn't seem to be the most elegant code...
         if year < calc_year_stop:

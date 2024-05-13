@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Dict, Iterable, Union
+from typing import Union
+from collections.abc import Iterable
 
 from osgeo import gdal
 import rasterio
@@ -32,11 +33,11 @@ def add_overviews(path: Path, min_pixels=512, resampling="average"):
 
 def set_band_descriptions(
     path: Path,
-    band_descriptions: Union[Iterable[str], Dict[int, str], str],
+    band_descriptions: Union[Iterable[str], dict[int, str], str],
     overwrite: bool = True,
 ):
     """
-    Add band decriptions to a raster file.
+    Add band descriptions to a raster file.
 
     Args:
         path (Path): the file to add band descriptions to
@@ -54,7 +55,7 @@ def set_band_descriptions(
 
     # Add band descriptions
     with rasterio.open(path, "r+") as file:
-        # If force is False and all bands already have a description, return.
+        # If overwrite is False and all bands already have a description, return.
         if not overwrite and all(file.descriptions):
             return
 

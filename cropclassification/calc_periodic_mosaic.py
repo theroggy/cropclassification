@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.helpers import log_helper
-import cropclassification.preprocess._timeseries_helper as ts_helper
 from cropclassification.util import mosaic_util
 
 
-def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
+def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
     """
     Runs a periodic mosaic using the setting in the config_paths.
 
@@ -52,17 +50,12 @@ def calc_periodic_mosaic_task(config_paths: List[Path], default_basedir: Path):
         Path(conf.marker["image_profiles_config_filepath"])
     )
 
-    # As we want a weekly calculation, get nearest monday for start and stop day
-    start_date = ts_helper.get_monday(start_date)
-    end_date = ts_helper.get_monday(end_date)
-
     if not conf.calc_periodic_mosaic_params.getboolean("simulate"):
         _ = mosaic_util.calc_periodic_mosaic(
-            roi_bounds=(161_000, 188_000, 162_000, 189_000),
+            roi_bounds=conf.calc_periodic_mosaic_params.getint("roi_bounds"),
             roi_crs=conf.calc_periodic_mosaic_params.getint("roi_crs"),
             start_date=start_date,
             end_date=end_date,
-            days_per_period=conf.calc_periodic_mosaic_params.getint("days_per_period"),
             output_base_dir=Path(
                 conf.calc_periodic_mosaic_params["dest_image_data_dir"]
             ),

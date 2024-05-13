@@ -6,12 +6,15 @@
 
 - Add task/action to automate periodic download of images (#67)
 - Add support to calculate indexes locally (#55)
+- Improve config and handling of "weekly" and "biweekly" raster image periods (#78)
 - Make image profiles to be used in a classification configurable in a config file (#56)
+- Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
 
 ### Bugs fixed
 
-- Fix TypeError: QgsZonalStatistics(): arguments did not match any overloaded call (#76)
+- Various fixes and improvements to `bulk_zonal_statistics` with engine="pyqgis"
+  (#76, #80)
 
 ## 0.1.1 (2023-08-08)
 

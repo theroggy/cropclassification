@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Create the parcel classes that will be used for the classification.
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Main script to do a classification.
 """
@@ -7,10 +6,10 @@ import logging
 import os
 from pathlib import Path
 import shutil
-from typing import List
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo  # noqa: F401
+import pyproj
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper
@@ -28,7 +27,7 @@ from cropclassification.postprocess import classification_reporting as class_rep
 # -------------------------------------------------------------
 
 
-def calc_marker_task(config_paths: List[Path], default_basedir: Path):
+def calc_marker_task(config_paths: list[Path], default_basedir: Path):
     """
     Runs a marker using the setting in the config_paths.
 
@@ -176,8 +175,11 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     # Get the time series data (eg. S1, S2,...) to be used for the classification
     # Result: data is put in files in timeseries_periodic_dir, in one file per
     #         date/period
+    period_name = conf.marker.get("period_name", "weekly")
     timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
-    timeseries_periodic_dir = timeseries_periodic_dir / imagedata_input_parcel_path.stem
+    timeseries_periodic_dir = (
+        timeseries_periodic_dir / f"{imagedata_input_parcel_path.stem}_{period_name}"
+    )
     start_date_str = conf.marker["start_date_str"]
     end_date_str = conf.marker["end_date_str"]
     sensordata_to_use = conf.parse_sensordata_to_use(conf.marker["sensordata_to_use"])
@@ -186,6 +188,8 @@ def calc_marker_task(config_paths: List[Path], default_basedir: Path):
     )
     ts.calc_timeseries_data(
         input_parcel_path=imagedata_input_parcel_path,
+        roi_bounds=tuple(conf.marker.getlistfloat("roi_bounds")),
+        roi_crs=pyproj.CRS.from_user_input(conf.marker.get("roi_crs")),
         start_date_str=start_date_str,
         end_date_str=end_date_str,
         sensordata_to_get=sensordata_to_use,

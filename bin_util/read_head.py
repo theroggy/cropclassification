@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Read first lines of a file.
 """
@@ -10,6 +9,6 @@ path = (
 )
 
 # Print the first 5 lines of the file
-with open(path, "r") as file:
+with open(path) as file:
     for i in range(5):
         print(file.readline())

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module that implements the classification logic.
 """
@@ -241,7 +240,7 @@ def predict(
     datacolumns_path = glob.glob(
         os.path.join(os.path.dirname(input_classifier_path), "*datacolumns.txt")
     )[0]
-    with open(datacolumns_path, "r") as f:
+    with open(datacolumns_path) as f:
         input_classifier_datacolumns = ast.literal_eval(f.readline())
 
     # If the classification data isn't passed as dataframe, read it from the csv

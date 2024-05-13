@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module that implements the classification logic.
 """
@@ -321,7 +320,7 @@ def predict_proba(
     classifier_datacolumns_path = glob.glob(
         os.path.join(os.path.dirname(classifier_path), "*_datacolumns.txt")
     )[0]
-    with open(classifier_datacolumns_path, "r") as file:
+    with open(classifier_datacolumns_path) as file:
         classifier_datacolumns = ast.literal_eval(file.readline())
     if classifier_datacolumns != list(parcel_data_df.columns):
         raise Exception(
@@ -350,7 +349,7 @@ def predict_proba(
     classifier_classes_path = glob.glob(
         os.path.join(os.path.dirname(classifier_path), "*_classes.txt")
     )[0]
-    with open(classifier_classes_path, "r") as file:
+    with open(classifier_classes_path) as file:
         classes_dict = ast.literal_eval(file.readline())
 
     id_class_proba = np.concatenate(

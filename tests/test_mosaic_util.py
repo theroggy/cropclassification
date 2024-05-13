@@ -5,31 +5,36 @@ import shutil
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import mosaic_util
-from tests import test_helper
+from tests.test_helper import SampleData
 
 
-def test_calc_periodic_mosaic(tmp_path):
+def test_calc_periodic_mosaic_s2(tmp_path):
     # Prepare test data
-    sample_dir = test_helper.SampleDirs.marker_basedir
+    sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
-    days_per_period = 7
-    start_date = datetime(2024, 3, 4)
-    end_date = datetime(2024, 3, 11)
+    output_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
 
+    # Make sure the s2-agri input file was copied
+    s2_agri_output_path = (
+        output_image_roi_dir
+        / SampleData.image_s2_path.parent.name
+        / SampleData.image_s2_path.name
+    )
+    assert s2_agri_output_path.exists()
+
+    # Test
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[160_000, 188_000, 160_500, 188_500],
-        roi_crs=31370,
-        start_date=start_date,
-        end_date=end_date,
-        days_per_period=days_per_period,
-        output_base_dir=output_base_dir,
-        imageprofiles_to_get=["s2-agri", "s2-ndvi"],
+        roi_bounds=SampleData.roi_bounds,
+        roi_crs=SampleData.roi_crs,
+        start_date=SampleData.start_date,
+        end_date=SampleData.end_date,
+        output_base_dir=output_image_roi_dir,
+        imageprofiles_to_get=["s2-agri-weekly", "s2-ndvi-weekly"],
         imageprofiles=imageprofiles,
         force=False,
     )
@@ -40,28 +45,38 @@ def test_calc_periodic_mosaic(tmp_path):
         assert result_info["path"].exists()
 
 
-def test_calc_periodic_mosaic_local_index_dprvi(tmp_path):
+def test_calc_periodic_mosaic_s1_local_index_dprvi(tmp_path):
     # Prepare test data
-    sample_dir = test_helper.SampleDirs.marker_basedir
+    sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     # Init parameters
     image_profiles_path = test_dir / "_config" / "image_profiles.ini"
     imageprofiles = conf._get_image_profiles(image_profiles_path)
-    output_base_dir = test_dir / test_helper.SampleDirs.image_dir.name / "roi_test"
-    days_per_period = 7
-    start_date = datetime(2024, 3, 4)
-    end_date = datetime(2024, 3, 11)
+    output_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
+
+    # Make sure the s1 input files were copied
+    s1_asc_output_path = (
+        output_image_roi_dir
+        / SampleData.image_s1_asc_path.parent.name
+        / SampleData.image_s1_asc_path.name
+    )
+    assert s1_asc_output_path.exists()
+    s1_desc_output_path = (
+        output_image_roi_dir
+        / SampleData.image_s1_desc_path.parent.name
+        / SampleData.image_s1_desc_path.name
+    )
+    assert s1_desc_output_path.exists()
 
     result_infos = mosaic_util.calc_periodic_mosaic(
-        roi_bounds=[160_000, 188_000, 160_500, 188_500],
-        roi_crs=31370,
-        start_date=start_date,
-        end_date=end_date,
-        days_per_period=days_per_period,
-        output_base_dir=output_base_dir,
-        imageprofiles_to_get=["s1-dprvi-asc", "s1-dprvi-desc"],
+        roi_bounds=SampleData.roi_bounds,
+        roi_crs=SampleData.roi_crs,
+        start_date=SampleData.start_date,
+        end_date=SampleData.end_date,
+        output_base_dir=output_image_roi_dir,
+        imageprofiles_to_get=["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"],
         imageprofiles=imageprofiles,
         force=False,
     )
@@ -113,6 +128,28 @@ def test_ImageProfile_invalid(
         )
 
 
+@pytest.mark.parametrize(
+    "exp_error, image_source, period_name, period_days",
+    [
+        ("period_name must be None", "local", "weekly", 7),
+        ("both period_name and period_days are None", "openeo", None, None),
+    ],
+)
+def test_ImageProfile_period_info_invalid(
+    exp_error, image_source, period_name, period_days
+):
+    with pytest.raises(ValueError, match=exp_error):
+        mosaic_util.ImageProfile(
+            name="test-name",
+            satellite="s2",
+            image_source=image_source,
+            collection="test",
+            bands=["A"],
+            period_name=period_name,
+            period_days=period_days,
+        )
+
+
 def test_ImageProfile_openeo():
     image_profile = mosaic_util.ImageProfile(
         name="s2-agri",
@@ -120,6 +157,7 @@ def test_ImageProfile_openeo():
         image_source="openeo",
         collection="TERRASCOPE_S2_TOC_V2",
         bands=["B01", "B02"],
+        period_name="weekly",
     )
     assert image_profile.name == "s2-agri"
     assert image_profile.collection == "TERRASCOPE_S2_TOC_V2"
@@ -127,34 +165,57 @@ def test_ImageProfile_openeo():
 
 
 @pytest.mark.parametrize(
-    "start_date, end_date, days_per_period, expected_nb_periods",
-    [(datetime(2024, 1, 1), datetime(2024, 1, 17), 7, 2)],
+    "start_date, end_date, period_name, days_per_period, expected_nb_periods",
+    [(datetime(2024, 1, 1), datetime(2024, 1, 17), None, 7, 2)],
 )
-def test_prepare_periods(start_date, end_date, days_per_period, expected_nb_periods):
+def test_prepare_periods(
+    start_date, end_date, period_name, days_per_period, expected_nb_periods
+):
     result = mosaic_util._prepare_periods(
-        start_date, end_date, days_per_period=days_per_period
+        start_date, end_date, period_name=period_name, period_days=days_per_period
     )
     assert len(result) == expected_nb_periods
 
 
 @pytest.mark.parametrize(
-    "exp_error, start_date, end_date, days_per_period",
+    "start_date, end_date, days_per_period, expected_nb_periods",
+    [(datetime(2024, 1, 1), datetime(2024, 1, 17), 7, 2)],
+)
+def test_prepare_periods_days_per_period(
+    start_date, end_date, days_per_period, expected_nb_periods
+):
+    result = mosaic_util._prepare_periods(
+        start_date, end_date, period_name=None, period_days=days_per_period
+    )
+    assert len(result) == expected_nb_periods
+
+
+@pytest.mark.parametrize(
+    "exp_error, start_date, end_date, period_name, period_days",
     [
-        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), 7),
-        ("Unknown period name", datetime(2024, 1, 1), datetime(2024, 1, 2), 3),
+        ("start_date == end_date", datetime(2024, 1, 1), datetime(2024, 1, 1), None, 7),
+        (
+            "period_name is None and period_days is not 7 or 14",
+            datetime(2024, 1, 1),
+            datetime(2024, 1, 2),
+            None,
+            3,
+        ),
     ],
 )
-def test_prepare_periods_invalid(exp_error, start_date, end_date, days_per_period):
+def test_prepare_periods_invalid(
+    exp_error, start_date, end_date, period_name, period_days
+):
     with pytest.raises(ValueError, match=exp_error):
         _ = mosaic_util._prepare_periods(
-            start_date, end_date, days_per_period=days_per_period
+            start_date, end_date, period_name, period_days=period_days
         )
 
 
 def test_prepare_mosaic_image_path():
     # Very basic test, as otherwise the tests just reimplements all code
     result_path = mosaic_util._prepare_mosaic_image_path(
-        imageprofile="s2-agri",
+        imageprofile="s2-agri-weekly",
         start_date=datetime(2024, 1, 1),
         end_date=datetime(2024, 1, 2),
         bands=["B01", "B02"],
@@ -162,5 +223,7 @@ def test_prepare_mosaic_image_path():
         output_base_dir=Path("/tmp"),
     )
 
-    expected_path = Path("/tmp/s2-agri/s2-agri_2024-01-01_2024-01-02_B01-B02_mean.tif")
+    expected_path = Path(
+        "/tmp/s2-agri-weekly/s2-agri-weekly_2024-01-01_2024-01-02_B01-B02_mean.tif"
+    )
     assert result_path == expected_path

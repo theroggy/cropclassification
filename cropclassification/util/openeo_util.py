@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 import pprint
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import openeo
 import openeo.rest.job
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_images(
-    images_to_get: List[Dict[str, Any]],
+    images_to_get: list[dict[str, Any]],
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
@@ -66,12 +66,17 @@ def get_images(
         RuntimeError: _description_
         RuntimeError: _description_
     """
-    # If all images to get exist already, we can return
-    images_to_get_todo = {
-        image_to_get["path"]: image_to_get
-        for image_to_get in images_to_get
-        if not output_exists(image_to_get["path"], remove_if_exists=force)
-    }
+    # Do some checks on already existing images
+    images_to_get_todo = {}
+    for image_to_get in images_to_get:
+        if not output_exists(image_to_get["path"], remove_if_exists=force):
+            images_to_get_todo[image_to_get["path"]] = image_to_get
+        else:
+            # Make sure the band descriptions are in the image
+            raster_util.set_band_descriptions(
+                image_to_get["path"], image_to_get["bands"], overwrite=False
+            )
+
     if len(images_to_get_todo) == 0:
         return
 
@@ -84,6 +89,7 @@ def get_images(
     # More info on the configuration file format can be found here:
     # https://open-eo.github.io/openeo-python-client/configuration.html#configuration-files  # noqa: E501
     conn = openeo.connect()
+    logger.info(conn.describe_account())
 
     images_to_get_dict = {image["path"].as_posix(): image for image in images_to_get}
 
@@ -156,8 +162,8 @@ def get_images(
     # Postprocess the images created
     for image_path in image_paths:
         band_descriptions = None
-        if image_path in images_to_get_dict:
-            band_descriptions = images_to_get_dict[image_path]["bands"]
+        if image_path.as_posix() in images_to_get_dict:
+            band_descriptions = images_to_get_dict[image_path.as_posix()]["bands"]
         postprocess_image(image_path, band_descriptions)
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
@@ -171,7 +177,7 @@ def create_mosaic_job(
     spatial_extent,
     start_date: datetime,
     end_date: datetime,
-    bands: List[str],
+    bands: list[str],
     output_path: Path,
     time_reducer: str,
     max_cloud_cover: Optional[float],
@@ -185,6 +191,8 @@ def create_mosaic_job(
         start_date.strftime("%Y-%m-%d"),
         end_date.strftime("%Y-%m-%d"),
     ]
+    if process_options is None:
+        process_options = {}
 
     bands_to_load = list(bands)
     cloud_filter_band = None
@@ -259,7 +267,7 @@ def create_mosaic_job(
 
 def get_job_results(
     conn: openeo.Connection, ignore_errors: bool = False
-) -> Tuple[List[Path], List[str]]:
+) -> tuple[list[Path], list[str]]:
     """Get results of the completed jobs."""
 
     output_paths = []
@@ -353,7 +361,7 @@ def get_job_results(
     return output_paths, errors
 
 
-def postprocess_image(path: Path, band_descriptions: Optional[List[str]]):
+def postprocess_image(path: Path, band_descriptions: Optional[list[str]]):
     raster_util.add_overviews(path)
 
     # if band_descriptions is None, try to read them from the json metadata file.
