@@ -193,9 +193,9 @@ def collect_and_prepare_timeseries_data(
                     column_ok = True
                 elif column == parceldata_aggregation:
                     curr_start_date_str = fileinfo["start_date"].strftime("%Y%m%d")
-                    columns_to_rename[column] = (
-                        f"{image_profile}_{curr_start_date_str}_{band}_{column}"
-                    )
+                    columns_to_rename[
+                        column
+                    ] = f"{image_profile}_{curr_start_date_str}_{band}_{column}"
                     column_ok = True
             if not column_ok:
                 # Drop column if it doesn't end with something in
