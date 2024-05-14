@@ -2,6 +2,7 @@
 Main script to do a classification.
 """
 
+from datetime import datetime
 import logging
 import os
 from pathlib import Path
@@ -180,8 +181,8 @@ def calc_marker_task(config_paths: list[Path], default_basedir: Path):
     timeseries_periodic_dir = (
         timeseries_periodic_dir / f"{imagedata_input_parcel_path.stem}_{period_name}"
     )
-    start_date_str = conf.marker["start_date_str"]
-    end_date_str = conf.marker["end_date_str"]
+    start_date = datetime.fromisoformat(conf.marker["start_date_str"])
+    end_date = datetime.fromisoformat(conf.marker["end_date_str"])
     sensordata_to_use = conf.parse_sensordata_to_use(conf.marker["sensordata_to_use"])
     parceldata_aggregations_to_use = conf.marker.getlist(
         "parceldata_aggregations_to_use"
@@ -190,8 +191,8 @@ def calc_marker_task(config_paths: list[Path], default_basedir: Path):
         input_parcel_path=imagedata_input_parcel_path,
         roi_bounds=tuple(conf.marker.getlistfloat("roi_bounds")),
         roi_crs=pyproj.CRS.from_user_input(conf.marker.get("roi_crs")),
-        start_date_str=start_date_str,
-        end_date_str=end_date_str,
+        start_date=start_date,
+        end_date=end_date,
         sensordata_to_get=sensordata_to_use,
         dest_data_dir=timeseries_periodic_dir,
     )
@@ -233,8 +234,8 @@ def calc_marker_task(config_paths: list[Path], default_basedir: Path):
         timeseries_dir=timeseries_periodic_dir,
         base_filename=base_filename,
         output_path=parcel_classification_data_path,
-        start_date_str=start_date_str,
-        end_date_str=end_date_str,
+        start_date=start_date,
+        end_date=end_date,
         sensordata_to_use=sensordata_to_use,
         parceldata_aggregations_to_use=parceldata_aggregations_to_use,
     )

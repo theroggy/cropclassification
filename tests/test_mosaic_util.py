@@ -170,6 +170,7 @@ def test_ImageProfile_openeo():
         (datetime(2024, 1, 1), datetime(2024, 1, 17), None, 7, 2),
         (datetime(2024, 1, 1), datetime(2024, 1, 17), "weekly", None, 2),
         (datetime(2024, 1, 2), datetime(2024, 1, 17), "weekly", None, 1),
+        (datetime(2024, 3, 3), datetime(2024, 3, 20), "weekly", None, 2),
         (datetime(2024, 1, 1), datetime(2024, 1, 30), "biweekly", None, 2),
         (datetime(2024, 1, 2), datetime(2024, 1, 30), "biweekly", None, 1),
     ],
@@ -177,10 +178,13 @@ def test_ImageProfile_openeo():
 def test_prepare_periods(
     start_date, end_date, period_name, period_days, expected_nb_periods
 ):
-    result = mosaic_util._prepare_periods(
+    periods = mosaic_util._prepare_periods(
         start_date, end_date, period_name=period_name, period_days=period_days
     )
-    assert len(result) == expected_nb_periods
+    assert len(periods) == expected_nb_periods
+    for period in periods:
+        assert start_date <= period["start_date"]
+        assert end_date >= period["end_date"]
 
 
 @pytest.mark.parametrize(
