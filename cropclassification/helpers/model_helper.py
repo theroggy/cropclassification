@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from tensorflow import keras as kr
 
 # -------------------------------------------------------------
 # First define/init some general variables/constants
@@ -380,64 +379,6 @@ def save_and_clean_models(
                 f"{best_model['acc_train']}, acc_val: {best_model['acc_val']}, epoch: "
                 f"{best_model['epoch']}"
             )
-
-
-class ModelCheckpointExt(kr.callbacks.Callback):
-    def __init__(
-        self,
-        model_save_dir: Path,
-        model_save_base_filename: str,
-        acc_metric_mode: str,
-        acc_metric_train: str,
-        acc_metric_validation: str,
-        save_weights_only: bool = False,
-        verbose: bool = True,
-        only_report: bool = False,
-    ):
-        """[summary]
-
-        Args:
-            model_save_dir (Path): [description]
-            model_save_base_filename (str): [description]
-            acc_metric_mode (str): use 'min' if the accuracy metrics should be
-                    as low as possible, 'max' if a higher values is better.
-            acc_metric_train (str): [description]
-            acc_metric_validation (str): [description]
-            verbose (bool, optional): [description]. Defaults to True.
-            only_report (bool, optional): [description]. Defaults to False.
-        """
-
-        acc_metric_mode_values = ["min", "max"]
-        if acc_metric_mode not in acc_metric_mode_values:
-            raise Exception(
-                f"Invalid value for mode: {acc_metric_mode}, should be one of "
-                f"{acc_metric_mode_values}"
-            )
-
-        self.model_save_dir = model_save_dir
-        self.model_save_base_filename = model_save_base_filename
-        self.acc_metric_train = acc_metric_train
-        self.acc_metric_validation = acc_metric_validation
-        self.acc_metric_mode = acc_metric_mode
-        self.save_weights_only = save_weights_only
-        self.verbose = verbose
-        self.only_report = only_report
-
-    def on_epoch_end(self, epoch, logs={}):
-        logger.debug("Start in callback on_epoch_begin")
-
-        save_and_clean_models(
-            model_save_dir=self.model_save_dir,
-            model_save_base_filename=self.model_save_base_filename,
-            acc_metric_mode=self.acc_metric_mode,
-            new_model=self.model,
-            new_model_acc_train=logs.get(self.acc_metric_train),
-            new_model_acc_val=logs.get(self.acc_metric_validation),
-            new_model_epoch=epoch,
-            save_weights_only=self.save_weights_only,
-            verbose=self.verbose,
-            only_report=self.only_report,
-        )
 
 
 if __name__ == "__main__":

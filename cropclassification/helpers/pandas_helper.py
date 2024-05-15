@@ -32,12 +32,12 @@ def read_file(
                 low_memory=False,
             )
         except UnicodeDecodeError:
-            # If a unicode decode error is thrown, try again using ANSI encoding
+            # If a unicode decode error is thrown, try again using CP1252 encoding
             data_read_df = pd.read_csv(
                 str(path),
                 usecols=columns,
                 low_memory=False,
-                encoding="ANSI",
+                encoding="cp1252",
             )
         return data_read_df
     elif ext_lower == ".tsv":
@@ -49,13 +49,13 @@ def read_file(
                 low_memory=False,
             )
         except UnicodeDecodeError:
-            # If a unicode decode error is thrown, try again using ANSI encoding
+            # If a unicode decode error is thrown, try again using CP1252 encoding
             data_read_df = pd.read_csv(
                 str(path),
                 usecols=columns,
                 sep="\t",
                 low_memory=False,
-                encoding="ANSI",
+                encoding="cp1252",
             )
         return data_read_df
     elif ext_lower == ".parquet":

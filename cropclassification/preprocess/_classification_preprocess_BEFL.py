@@ -449,7 +449,7 @@ def prepare_input_cropgroup(
         .reset_index(name="count")
         .iterrows()
     ):
-        if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+        if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
             logger.info(
                 f"Class <{row[column_output_class]}> only contains {row['count']} "
                 "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
@@ -656,7 +656,7 @@ def prepare_input_fabaceae(
         .reset_index(name="count")
         .iterrows()
     ):
-        if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+        if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
             logger.info(
                 f"Class <{row[column_output_class]}> only contains {row['count']} "
                 "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
@@ -879,7 +879,7 @@ def prepare_input_latecrop(
             .reset_index(name="count")
             .iterrows()
         ):
-            if row["count"] <= conf.preprocess.getint("min_parcels_in_class"):
+            if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
                 logger.info(
                     f"Class <{row[column_output_class]}> only contains {row['count']} "
                     "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"

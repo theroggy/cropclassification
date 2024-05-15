@@ -35,7 +35,7 @@ def test_zonal_stats_bulk(tmp_path, engine):
     )
 
     result_paths = list(tmp_path.glob("*.sqlite"))
-    assert len(result_paths) == 4
+    assert len(result_paths) == 8
     for result_path in result_paths:
         result_df = pdh.read_file(result_path)
         # The result should have the same number of rows as the input vector file.

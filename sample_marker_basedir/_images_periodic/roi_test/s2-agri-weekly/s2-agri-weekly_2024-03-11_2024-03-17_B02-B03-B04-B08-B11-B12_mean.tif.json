@@ -1,0 +1,39 @@
+{
+    "imageprofile": "s2-agri-weekly",
+    "collection": "TERRASCOPE_S2_TOC_V2",
+    "index_type": null,
+    "max_cloud_cover": 80.0,
+    "image_source": "openeo",
+    "base_imageprofile": null,
+    "satellite": "s2",
+    "roi_bounds": [
+        161400.0,
+        188000.0,
+        161900.0,
+        188500.0
+    ],
+    "roi_crs": "EPSG:31370",
+    "start_date": "2024-03-11",
+    "end_date_incl": "2024-03-17",
+    "end_date": "2024-03-18",
+    "period_name": "weekly",
+    "weeks": [
+        11
+    ],
+    "bands": [
+        "B02",
+        "B03",
+        "B04",
+        "B08",
+        "B11",
+        "B12"
+    ],
+    "time_reducer": "mean",
+    "path": "C:/Users/local_KRIWAY/Temp/1/pytest-of-KRIWAY/pytest-36/test_end2end0/sample_marker_basedir/_images_periodic/BEFL/s2-agri-weekly/s2-agri-weekly_2024-03-11_2024-03-17_B02-B03-B04-B08-B11-B12_mean.tif",
+    "job_options": {
+        "driver-memoryOverhead": "5G"
+    },
+    "process_options": {
+        "cloud_filter_band_dilated": "SCL"
+    }
+}

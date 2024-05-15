@@ -67,6 +67,12 @@ def read_config(config_paths: list[Path], default_basedir: Optional[Path] = None
 
     config.read(config_paths)
 
+    if config["calc_marker_params"].get("country_code") == "MUST_OVERRIDE":
+        raise Exception("country_code must be overridden")
+
+    if config["marker"].get("roi_name") == "MUST_OVERRIDE":
+        raise Exception("roi_name must be overridden")
+
     # If the data_dir parameter is a relative path, try to resolve it towards
     # the default basedir of, if specfied.
     data_dir = config["dirs"].getpath("data_dir")
