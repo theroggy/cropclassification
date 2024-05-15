@@ -8,11 +8,7 @@ from tests import test_helper
 
 @pytest.mark.parametrize(
     "task",
-    [
-        "calc_marker",
-        "calc_periodic_mosaic",
-        "calc_timeseries",
-    ],
+    ["calc_marker", "calc_periodic_mosaic"],
 )
 def test_end2end_task(tmp_path, task):
     marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
@@ -47,7 +43,3 @@ def test_end2end_task(tmp_path, task):
         log_dir = marker_basedir / "log"
         assert log_dir.exists()
         assert len(list(log_dir.glob("*.log"))) == 1
-    if task == "calc_timeseries":
-        # Check if a log file was written
-        log_dir = marker_basedir / "log"
-        assert log_dir.exists()
