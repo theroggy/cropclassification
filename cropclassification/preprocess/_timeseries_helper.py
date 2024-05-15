@@ -71,8 +71,7 @@ def prepare_input(
 
     # Create temp dir to store temporary data for tracebility
     temp_output_dir = output_imagedata_parcel_input_path.parent / "temp"
-    if not temp_output_dir.exists():
-        os.mkdir(temp_output_dir)
+    temp_output_dir.mkdir(parents=True, exist_ok=True)
 
     # Read the parcel data and write nogeo version
     parceldata_gdf = gfo.read_file(input_parcel_path)
