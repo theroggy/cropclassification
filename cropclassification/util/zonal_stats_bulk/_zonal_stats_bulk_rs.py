@@ -388,7 +388,7 @@ def zonal_stats(
                 logger.info(f"Ready processing image: {image_path_str}")
                 nb_done_latestbatch = 1
                 nb_done_total += nb_done_latestbatch
-                progress_msg = _general_helper._format_progress_message(
+                progress_msg = _general_helper.format_progress_message(
                     nb_todo,
                     nb_done_total,
                     start_time,

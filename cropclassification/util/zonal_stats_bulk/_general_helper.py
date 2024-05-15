@@ -37,7 +37,7 @@ def _format_output_path(
     return output_path
 
 
-def _format_progress_message(
+def format_progress_message(
     nb_todo: int,
     nb_done_total: int,
     start_time: datetime,
@@ -67,8 +67,12 @@ def _format_progress_message(
         nb_per_hour = (nb_done_total / time_passed_s) * 3600
     else:
         nb_per_hour = large_number
-    hours_to_go = (int)((nb_todo - nb_done_total) / nb_per_hour)
-    min_to_go = (int)((((nb_todo - nb_done_total) / nb_per_hour) % 1) * 60)
+    if nb_per_hour > 0:
+        hours_to_go = f"{round((nb_todo - nb_done_total) / nb_per_hour)}"
+        min_to_go = f"{round((((nb_todo - nb_done_total) / nb_per_hour) % 1) * 60)}"
+    else:
+        hours_to_go = "?"
+        min_to_go = "?"
 
     # Format message
     message = (
@@ -87,3 +91,25 @@ def _format_progress_message(
         message = f"{message} ({nb_per_hour_latestbatch:0.0f}/h last batch)"
 
     return message
+
+
+def formatbytes(bytes: float):
+    """
+    Return the given bytes as a human friendly KB, MB, GB, or TB string.
+    """
+    bytes_float = float(bytes)
+    KB = float(1024)
+    MB = float(KB**2)  # 1,048,576
+    GB = float(KB**3)  # 1,073,741,824
+    TB = float(KB**4)  # 1,099,511,627,776
+
+    if bytes_float < KB:
+        return "{} {}".format(bytes_float, "Bytes" if bytes_float > 1 else "Byte")
+    elif KB <= bytes_float < MB:
+        return f"{bytes_float / KB:.2f} KB"
+    elif MB <= bytes_float < GB:
+        return f"{bytes_float / MB:.2f} MB"
+    elif GB <= bytes_float < TB:
+        return f"{bytes_float / GB:.2f} GB"
+    elif TB <= bytes_float:
+        return f"{bytes_float / TB:.2f} TB"
