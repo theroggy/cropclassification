@@ -198,7 +198,7 @@ def zonal_stats(
             if len(not_done) == 0:
                 break
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt:  # pragma: no cover
         # If CTRL+C is used, shut down pool and kill children
         print("You pressed Ctrl+C")
         print("Worker processes are being stopped, followed by exit!")
