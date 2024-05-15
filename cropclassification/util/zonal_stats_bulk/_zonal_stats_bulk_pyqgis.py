@@ -5,6 +5,7 @@ import multiprocessing
 import os
 from pathlib import Path
 import shutil
+import signal
 import sys
 import tempfile
 from typing import Union
@@ -12,6 +13,7 @@ from typing import Union
 import geofileops as gfo
 import geopandas as gpd
 import pandas as pd
+import psutil
 
 from cropclassification.helpers import pandas_helper as pdh
 from . import _general_helper as general_helper
@@ -157,17 +159,60 @@ def zonal_stats(
                     "status": "IMAGE_PREPARE_CALC_BUSY",
                 }
 
-        # Write progress for each completed calculation
-        for future in futures.as_completed(calc_queue):
-            try:
-                _ = future.result()
-            except Exception as ex:
-                raise Exception(f"Error calculating {calc_queue[future]}: {ex}") from ex
-            nb_done_total += 1
-            progress_msg = general_helper._format_progress_message(
-                nb_todo, nb_done_total, start_time
+        # Already write progress to indicate we have started
+        logger.info(
+            general_helper.format_progress_message(nb_todo, nb_done_total, start_time)
+        )
+
+        # Keep looping until all futures are done.
+        # The loop is used instead of using as_completed keeps UI responsive, allows
+        # for e.g. to log memory usage evolution and allows to catch CTRL+C.
+        min_available = 4 * 1024 * 1024 * 1024
+        while True:
+            # Log memory availability if it becomes low
+            virtual_available = psutil.virtual_memory().available
+            if virtual_available < min_available:
+                virtual_available_str = general_helper.formatbytes(virtual_available)
+                logger.info(f" {virtual_available_str=}")
+            done, not_done = futures.wait(
+                calc_queue, timeout=10, return_when=futures.FIRST_COMPLETED
             )
-            logger.info(progress_msg)
+
+            for future in done:
+                try:
+                    _ = future.result()
+                except Exception as ex:
+                    raise Exception(
+                        f"Error calculating {calc_queue[future]}: {ex}"
+                    ) from ex
+                del calc_queue[future]
+                nb_done_total += 1
+
+                logger.info(
+                    general_helper.format_progress_message(
+                        nb_todo, nb_done_total, start_time
+                    )
+                )
+
+            # If no more futures are not_done, we're done
+            if len(not_done) == 0:
+                break
+
+    except KeyboardInterrupt:
+        # If CTRL+C is used, shut down pool and kill children
+        print("You pressed Ctrl+C")
+        print("Worker processes are being stopped, followed by exit!")
+
+        # Stop process pool + kill children + exit
+        try:
+            pool.shutdown(wait=False)
+            parent = psutil.Process(os.getpid())
+            children = parent.children(recursive=True)
+            for process_pid in children:
+                print(f"Kill child with pid {process_pid}")
+                process_pid.send_signal(signal.SIGTERM)
+        finally:
+            sys.exit(1)
     finally:
         pool.shutdown()
         shutil.rmtree(tmp_dir, ignore_errors=True)
