@@ -73,7 +73,11 @@ def cropclassification(tasksdir: Path):
 
         # Now get the info we want from the task config
         action = task_config["task"].get("action")
-        default_basedir = task_path.parent.parent
+        default_basedir = None
+        if "dirs" in task_config:
+            default_basedir = Path(task_config["dirs"].get("marker_basedir"))
+        if default_basedir is None:
+            default_basedir = task_path.parent.parent
 
         # Determine the config files to load
         script_dir = Path(__file__).resolve().parent
@@ -100,12 +104,6 @@ def cropclassification(tasksdir: Path):
             from cropclassification import calc_marker
 
             calc_marker.calc_marker_task(
-                config_paths=config_paths, default_basedir=default_basedir
-            )
-        elif action == "calc_timeseries":
-            from cropclassification import calc_timeseries
-
-            calc_timeseries.calc_timeseries_task(
                 config_paths=config_paths, default_basedir=default_basedir
             )
         elif action == "calc_periodic_mosaic":
