@@ -10,20 +10,13 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     # Some variables that need to be choosen
-    """
     input_groundtruth_filename = "Prc_BEFL_2022_2024_05_13_groundtruth.tsv"
     run_dir = Path(
         "X:/Monitoring/Markers/dev/2022_CROPGROUP/Run_2022-08-02_001_groundtruth"
     )
     basedir = run_dir.parent.parent
-    overrules = [
-        "marker.roi_name=BEFL",
-        "preprocess.classtype_to_prepare=CROPGROUP",
-        "columns.class_refe=MON_CROPGROUP",
-        "postprocess.doubt_proba1_st_2_x_proba2=False",
-        "postprocess.doubt_pred_eq_input_proba1_st_pct=0",
-        "postprocess.doubt_pred_ne_input_proba1_st_pct=94.5",
-    ]
+    overrules = ["columns.class_declared2=NOT_AVAILABLE"]
+
     """
     input_groundtruth_filename = "Prc_BEFL_2022_2024_05_13_groundtruth.tsv"
     run_dir = Path(
@@ -31,6 +24,7 @@ def main():
     )
     basedir = run_dir.parent.parent
     overrules = []  # ["marker.roi_name=BEFL"]
+    """
 
     # Init
     configfiles_used = sorted((run_dir / "configfiles_used").glob("*.ini"))
