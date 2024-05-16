@@ -7,7 +7,8 @@ import json
 from pathlib import Path
 import pprint
 import tempfile
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Optional, Union
+from collections.abc import Iterable
 
 from cropclassification.util.mosaic_util import ImageProfile
 
