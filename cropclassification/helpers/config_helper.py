@@ -7,7 +7,8 @@ import json
 from pathlib import Path
 import pprint
 import tempfile
-from typing import Any, Optional
+from typing import Any, Optional, Union
+from collections.abc import Iterable
 
 from cropclassification.util.mosaic_util import ImageProfile
 
@@ -48,40 +49,45 @@ class SensorData:
 
 
 def read_config(
-    config_paths: list[Path],
+    config_paths: Union[list[Path], Path, None],
     default_basedir: Optional[Path] = None,
     overrules: list[str] = [],
+    preload_defaults: bool = True,
 ):
     """
     Read cropclassification configuration file(s).
 
     Args:
-        config_path (Path): path to the configuration file to read.
+        config_paths (Path): path(s) to the configuration file(s) to read. If None, and
+            `preload_defaults=True`, only the defaults are loaded.
         default_basedir (Path, optional): if there relative paths are used in the
             configuration, this is the directory they will be resolved to.
             Defaults to None.
         overrules (List[str], optional): list of config options that will overrule other
             ways to supply configuration. They should be specified as a list of
             "<section>.<parameter>=<value>" strings. Defaults to [].
+        preload_defaults (bool, optional): True to preload the config with the defaults
+            in cropclassification.general.ini. Defaults to True.
     """
-    global config
-    config = configparser.ConfigParser(
-        interpolation=configparser.ExtendedInterpolation(),
-        converters={
-            "list": lambda x: [i.strip() for i in x.split(",")],
-            "listint": lambda x: [int(i.strip()) for i in x.split(",")],
-            "listfloat": lambda x: [float(i.strip()) for i in x.split(",")],
-            "dict": lambda x: json.loads(x),
-            "path": lambda x: None if x is None else Path(x),
-        },
-        allow_no_value=True,
-    )
+    # Check input parameters
+    if default_basedir is not None and not default_basedir.exists():
+        raise ValueError(f"default_basedir does not exist: {default_basedir}")
+    # If only one config_path, make it a list to simplify code later on
+    if config_paths is not None and not isinstance(config_paths, Iterable):
+        config_paths = [config_paths]
 
     # Make sure general.ini is loaded first
-    # general_ini = Path(__file__).resolve().parent.parent / "general.ini"
-    # config_paths = [general_ini] + config_paths
+    if preload_defaults:
+        general_ini = Path(__file__).resolve().parent.parent / "general.ini"
+        if config_paths is None:
+            config_paths = [general_ini]
+        else:
+            config_paths = [general_ini] + config_paths
 
-    # Check if all config paths exist
+    if config_paths is None:
+        raise ValueError("config_paths is None and preload_defaults is False")
+
+    # Check if all config paths exist + make sure all are Path objects
     for config_path in config_paths:
         if not config_path.exists():
             raise ValueError(f"Config file doesn't exist: {config_path}")
@@ -119,20 +125,27 @@ def read_config(
             overrules_parser.write(overrules_file)
         config_paths.append(config_overrules_path)
 
+    # Read and parse the config files
+    global config
+    config = configparser.ConfigParser(
+        interpolation=configparser.ExtendedInterpolation(),
+        converters={
+            "list": lambda x: [i.strip() for i in x.split(",")],
+            "listint": lambda x: [int(i.strip()) for i in x.split(",")],
+            "listfloat": lambda x: [float(i.strip()) for i in x.split(",")],
+            "dict": lambda x: json.loads(x),
+            "path": lambda x: None if x is None else Path(x),
+        },
+        allow_no_value=True,
+    )
     config.read(config_paths)
-
-    if config["calc_marker_params"].get("country_code") == "MUST_OVERRIDE":
-        raise Exception("country_code must be overridden")
-
-    if config["marker"].get("roi_name") == "MUST_OVERRIDE":
-        raise Exception("roi_name must be overridden")
 
     # If the data_dir parameter is a relative path, try to resolve it towards
     # the default basedir of, if specfied.
     data_dir = config["dirs"].getpath("data_dir")
     if not data_dir.is_absolute():
         if default_basedir is None:
-            raise Exception(
+            raise ValueError(
                 "Config parameter dirs.data_dir is relative, but no default_basedir "
                 "supplied!"
             )
@@ -148,7 +161,7 @@ def read_config(
     marker_basedir = config["dirs"].getpath("marker_basedir")
     if not marker_basedir.is_absolute():
         if default_basedir is None:
-            raise Exception(
+            raise ValueError(
                 "Config parameter dirs.marker_basedir is relative, but no "
                 "default_basedir supplied!"
             )
@@ -162,6 +175,13 @@ def read_config(
     # Fill out placeholder in the temp_dir (if it is there)
     tmp_dir_str = tempfile.gettempdir()
     config["dirs"]["temp_dir"] = config["dirs"]["temp_dir"].format(tmp_dir=tmp_dir_str)
+
+    # Check some parameters that should be overriden to have a valid config
+    if config["calc_marker_params"].get("country_code") == "MUST_OVERRIDE":
+        raise ValueError("calc_marker_params.country_code must be overridden")
+
+    if config["marker"].get("roi_name") == "MUST_OVERRIDE":
+        raise ValueError("marker.roi_name must be overridden")
 
     global config_paths_used
     config_paths_used = config_paths

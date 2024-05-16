@@ -15,7 +15,6 @@ class SampleData:
     refe_dir = marker_basedir / "_refe"
     image_dir = marker_basedir / "_images_periodic"
     input_dir = marker_basedir / "_inputdata"
-    task_path = tasks_dir / "task_test_calc_periodic_mosaic.ini"
     roi_name = "roi_test"
     image_roi_dir = image_dir / roi_name
 
