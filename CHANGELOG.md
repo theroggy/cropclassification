@@ -10,6 +10,7 @@
 - Make image profiles to be used in a classification configurable in a config file (#56)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
+- Add utility script to recalculate reports for an existing run (#91)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
 
