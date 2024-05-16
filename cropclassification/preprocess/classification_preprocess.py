@@ -4,14 +4,14 @@ Module with helper functions to preprocess the data to use for the classificatio
 
 import logging
 import os
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 import pandas as pd
 
-import cropclassification.preprocess._classification_preprocess_BEFL as befl
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
+import cropclassification.preprocess._classification_preprocess_BEFL as befl
 
 # -------------------------------------------------------------
 # First define/init some general variables/constants
@@ -91,7 +91,7 @@ def prepare_input(
     df_parceldata = df_parceldata.join(
         df_pixcount[conf.columns["pixcount_s1s2"]], how="left"
     )
-    df_parceldata[conf.columns["pixcount_s1s2"]].fillna(value=0, inplace=True)
+    df_parceldata.fillna({conf.columns["pixcount_s1s2"]: 0}, inplace=True)
 
     # Export result to file
     output_ext = os.path.splitext(output_parcel_path)[1]
@@ -153,9 +153,13 @@ def create_train_test_sample(
     #     groups above the data and evades having to do
     #     .reset_index(level=class_balancing_column_NAME, drop=True)
     #     to get rid of the group level
-    test_df = df_in.groupby(class_balancing_column, group_keys=False).apply(
-        pd.DataFrame.sample, frac=0.20
+    test_df = (
+        df_in.groupby(class_balancing_column)
+        .apply(pd.DataFrame.sample, frac=0.20, include_groups=False)
+        .reset_index()
+        .set_index("level_1")
     )
+    test_df.index.name = None
     logger.debug(
         f"df_test after sampling 20% of data per class, shape: {test_df.shape}"
     )
@@ -386,7 +390,9 @@ def create_train_test_sample(
                 [
                     train_df,
                     train_capped_df.apply(
-                        pd.DataFrame.sample, oversample_count, replace=True
+                        pd.DataFrame.sample,
+                        oversample_count,
+                        replace=True,
                     ),
                 ]
             )
