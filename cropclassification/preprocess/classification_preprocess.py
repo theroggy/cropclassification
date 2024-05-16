@@ -383,7 +383,7 @@ def create_train_test_sample(
         train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) < oversample_count)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_capped_df) > 0:
             train_df = pd.concat(
@@ -393,7 +393,10 @@ def create_train_test_sample(
                         pd.DataFrame.sample,
                         oversample_count,
                         replace=True,
-                    ),
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
                 ]
             )
 
