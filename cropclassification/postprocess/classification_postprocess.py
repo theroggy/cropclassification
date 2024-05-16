@@ -7,9 +7,9 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+import geofileops as gfo
 import numpy as np
 import pandas as pd
-import geofileops as gfo
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
@@ -77,7 +77,7 @@ def calc_top3_and_consolidation(
     ] = pred_df[conf.columns["class_declared"]]
     # For all other parcels without prediction there must have been no data
     # available for a classification, so set prediction to NODATA
-    pred_df["pred1"].fillna("NODATA", inplace=True)
+    pred_df.fillna({"pred1": "NODATA"}, inplace=True)
 
     # Add doubt columns
     add_doubt_column(
@@ -100,7 +100,7 @@ def calc_top3_and_consolidation(
         pred_df[conf.columns["prediction_full_alpha"]].isin(proba_df.columns),
         conf.columns["prediction_cons_status"],
     ] = "OK"
-    pred_df[conf.columns["prediction_cons_status"]].fillna("NOK", inplace=True)
+    pred_df.fillna({conf.columns["prediction_cons_status"]: "NOK"}, inplace=True)
 
     # Output to geo file
     input_parcel_gdf = gfo.read_file(input_parcel_geopath).set_index(conf.columns["id"])
