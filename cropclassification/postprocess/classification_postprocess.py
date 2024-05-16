@@ -395,7 +395,7 @@ def add_doubt_column(
                 & (pred_df[conf.columns["class_declared"]] != pred_df["pred1"])
                 & (pred_df["pred1"].isin(["MON_LC_BOS", "MON_LC_HEIDE"])),
                 new_pred_column,
-            ] = "RISKY_DOUBT:DECL<>PRED-PRED=" + pred_df["pred1"].map(str)
+            ] = "RISKY_DOUBT:DECL<>PRED-PRED=" + pred_df["pred1"]
 
             # If parcel was declared as some arable crops (9534 = knolvenkel), and is
             # classified as fabaceae, set to doubt
@@ -440,7 +440,7 @@ def add_doubt_column(
                     )
                 ),
                 new_pred_column,
-            ] = "RISKY_DOUBT:DECL<>PRED-PRED=" + pred_df["pred1"].map(str)
+            ] = "RISKY_DOUBT:DECL<>PRED-PRED=" + pred_df["pred1"]
 
             # If parcel was declared as 9410 and classified as ARABLE, set to doubt
             pred_df.loc[
