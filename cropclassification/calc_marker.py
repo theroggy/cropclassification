@@ -91,8 +91,10 @@ def calc_marker_task(config_paths: list[Path], default_basedir: Path):
         if configfiles_used_dir.exists():
             shutil.rmtree(configfiles_used_dir)
         configfiles_used_dir.mkdir()
-        for config_path in config_paths:
-            shutil.copy(config_path, configfiles_used_dir)
+        for idx, config_path in enumerate(config_paths):
+            # Prepend with idx so the order of config files is retained...
+            dst = configfiles_used_dir / f"{idx}_{config_path.name}"
+            shutil.copy(config_path, dst)
 
         # Write the resolved complete config, so it can be reused
         logger.info("Write config_used.ini, so it can be reused later on")

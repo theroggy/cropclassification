@@ -13,6 +13,8 @@ from cropclassification.util.mosaic_util import ImageProfile
 
 config: configparser.ConfigParser
 config_paths_used: list[Path]
+config_overrules: list[str] = []
+config_overrules_path: Optional[Path] = None
 general: Any
 calc_timeseries_params: Any
 calc_marker_params: Any
@@ -45,8 +47,23 @@ class SensorData:
             self.bands = self.imageprofile.bands  # type: ignore[assignment]
 
 
-def read_config(config_paths: list[Path], default_basedir: Optional[Path] = None):
-    # Read the configuration
+def read_config(
+    config_paths: list[Path],
+    default_basedir: Optional[Path] = None,
+    overrules: list[str] = [],
+):
+    """
+    Read cropclassification configuration file(s).
+
+    Args:
+        config_path (Path): path to the configuration file to read.
+        default_basedir (Path, optional): if there relative paths are used in the
+            configuration, this is the directory they will be resolved to.
+            Defaults to None.
+        overrules (List[str], optional): list of config options that will overrule other
+            ways to supply configuration. They should be specified as a list of
+            "<section>.<parameter>=<value>" strings. Defaults to [].
+    """
     global config
     config = configparser.ConfigParser(
         interpolation=configparser.ExtendedInterpolation(),
@@ -60,10 +77,47 @@ def read_config(config_paths: list[Path], default_basedir: Optional[Path] = None
         allow_no_value=True,
     )
 
-    # Check if all config paths are ok
+    # Make sure general.ini is loaded first
+    # general_ini = Path(__file__).resolve().parent.parent / "general.ini"
+    # config_paths = [general_ini] + config_paths
+
+    # Check if all config paths exist
     for config_path in config_paths:
         if not config_path.exists():
             raise ValueError(f"Config file doesn't exist: {config_path}")
+
+    # If there are overrules, write them to a temporary configuration file.
+    global config_overrules
+    config_overrules = overrules
+    global config_overrules_path
+    config_overrules_path = None
+    if len(config_overrules) > 0:
+        tmp_dir = Path(tempfile.gettempdir())
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        config_overrules_path = (
+            Path(tempfile.mkdtemp(prefix="config_overrules_", dir=tmp_dir))
+            / "config_overrules.ini"
+        )
+
+        # Create config parser, add all overrules
+        overrules_parser = configparser.ConfigParser()
+        for overrule in config_overrules:
+            parts = overrule.split("=")
+            if len(parts) != 2:
+                raise ValueError(f"invalid config overrule found: {overrule}")
+            key, value = parts
+            parts2 = key.split(".")
+            if len(parts2) != 2:
+                raise ValueError(f"invalid config overrule found: {overrule}")
+            section, parameter = parts2
+            if section not in overrules_parser:
+                overrules_parser[section] = {}
+            overrules_parser[section][parameter] = value
+
+        # Write to temp file and add file to config_paths
+        with open(config_overrules_path, "w") as overrules_file:
+            overrules_parser.write(overrules_file)
+        config_paths.append(config_overrules_path)
 
     config.read(config_paths)
 
@@ -120,7 +174,10 @@ def read_config(config_paths: list[Path], default_basedir: Optional[Path] = None
     global calc_marker_params
     calc_marker_params = config["calc_marker_params"]
     global calc_periodic_mosaic_params
-    calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
+    if "calc_periodic_mosaic_params" in config:
+        calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
+    else:
+        calc_periodic_mosaic_params = None
     global marker
     marker = config["marker"]
     global timeseries
@@ -135,10 +192,17 @@ def read_config(config_paths: list[Path], default_basedir: Optional[Path] = None
     columns = config["columns"]
     global dirs
     dirs = config["dirs"]
+
+    # Load image profiles
     global image_profiles
-    image_profiles = _get_image_profiles(
-        marker.getpath("image_profiles_config_filepath")
-    )
+    image_profiles_config_filepath = marker.getpath("image_profiles_config_filepath")
+    if image_profiles_config_filepath is not None:
+        image_profiles = _get_image_profiles(
+            marker.getpath("image_profiles_config_filepath")
+        )
+    else:
+        # For backwards compatibility: old runs didn't have image profile configuration.
+        image_profiles = {}
 
 
 def parse_sensordata_to_use(input) -> dict[str, SensorData]:
