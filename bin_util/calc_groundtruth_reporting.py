@@ -15,7 +15,10 @@ def main():
         "X:/Monitoring/Markers/dev/2022_CROPGROUP/Run_2022-08-02_001_groundtruth"
     )
     basedir = run_dir.parent.parent
-    overrules = ["columns.class_declared2=NOT_AVAILABLE"]
+    overrules = [
+        "columns.class_declared2=NOT_AVAILABLE",
+        "marker.roi_name=BEFL",
+    ]
 
     """
     input_groundtruth_filename = "Prc_BEFL_2022_2024_05_13_groundtruth.tsv"
