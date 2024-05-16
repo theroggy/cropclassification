@@ -17,6 +17,7 @@
 
 - Various fixes and improvements to `bulk_zonal_statistics` with engine="pyqgis"
   (#76, #80)
+- Fix some group names being wrong/unclear in the classification reporting (#90)
 
 ## 0.1.1 (2023-08-08)
 
