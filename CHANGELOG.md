@@ -8,6 +8,7 @@
 - Add support to calculate indexes locally (#55)
 - Improve config and handling of "weekly" and "biweekly" raster image periods (#78)
 - Make image profiles to be used in a classification configurable in a config file (#56)
+- Add option to overrule config setting at runtime (#92)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
@@ -17,6 +18,7 @@
 
 - Various fixes and improvements to `bulk_zonal_statistics` with engine="pyqgis"
   (#76, #80)
+- Fix some group names being wrong/unclear in the classification reporting (#90)
 
 ## 0.1.1 (2023-08-08)
 
