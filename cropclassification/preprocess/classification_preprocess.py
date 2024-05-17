@@ -157,9 +157,11 @@ def create_train_test_sample(
         df_in.groupby(class_balancing_column)
         .apply(pd.DataFrame.sample, frac=0.20, include_groups=False)
         .reset_index()
-        .set_index("level_1")
     )
-    test_df.index.name = None
+    if not test_df.empty:
+        test_df.set_index("level_1", inplace=True)
+        test_df.index.name = None
+
     logger.debug(
         f"df_test after sampling 20% of data per class, shape: {test_df.shape}"
     )
@@ -233,9 +235,14 @@ def create_train_test_sample(
         #           size than other classes
         #         - this results in a relatively high accuracy in overall numbers, but
         #           the small classes are not detected at all
-        train_df = train_base_df.groupby(
-            class_balancing_column, group_keys=False
-        ).apply(pd.DataFrame.sample, frac=0.25)
+        train_df = (
+            train_base_df.groupby(class_balancing_column)
+            .apply(pd.DataFrame.sample, frac=0.25, include_groups=False)
+            .reset_index()
+        )
+        if not train_df.empty:
+            train_df.set_index("level_1", inplace=True)
+            train_df.index.name = None
 
     elif balancing_strategy == "BALANCING_STRATEGY_MEDIUM":
         # Balance the train data, but still use some larger samples for the classes
@@ -255,9 +262,14 @@ def create_train_test_sample(
         train_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_limit)
-            .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, upper_limit)
+            .groupby(class_balancing_column)
+            .apply(pd.DataFrame.sample, upper_limit, include_groups=False)
+            .reset_index()
         )
+        if not train_df.empty:
+            train_df.set_index("level_1", inplace=True)
+            train_df.index.name = None
+
         # Middle classes use the number as they are
         train_df = pd.concat(
             [
@@ -269,15 +281,22 @@ def create_train_test_sample(
             ]
         )
         # For smaller classes, oversample...
-        train_df = pd.concat(
-            [
-                train_df,
-                train_base_df.groupby(class_balancing_column)
-                .filter(lambda x: len(x) < lower_limit)
-                .groupby(class_balancing_column, group_keys=False)
-                .apply(pd.DataFrame.sample, lower_limit, replace=True),
-            ]
+        train_base_df = (
+            train_base_df.groupby(class_balancing_column)
+            .filter(lambda x: len(x) < lower_limit)
+            .groupby(class_balancing_column)
+            .apply(
+                pd.DataFrame.sample,
+                lower_limit,
+                replace=True,
+                include_groups=False,
+            )
+            .reset_index()
         )
+        if not train_base_df.empty:
+            train_base_df.set_index("level_1", inplace=True)
+            train_base_df.index.name = None
+        train_df = pd.concat([train_df, train_base_df])
 
     elif balancing_strategy == "BALANCING_STRATEGY_MEDIUM2":
         # Balance the train data, but still use some larger samples for the classes
@@ -296,11 +315,20 @@ def create_train_test_sample(
         train_capped_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit1)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_capped_df) > 0:
             train_df = pd.concat(
-                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit1)]
+                [
+                    train_df,
+                    train_capped_df.apply(
+                        pd.DataFrame.sample,
+                        cap_train_limit1,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
+                ]
             )
 
         # Cap 2
@@ -315,11 +343,20 @@ def create_train_test_sample(
             .filter(lambda x: len(x) < cap_count_limit1)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit2)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_capped_df) > 0:
             train_df = pd.concat(
-                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit2)]
+                [
+                    train_df,
+                    train_capped_df.apply(
+                        pd.DataFrame.sample,
+                        cap_train_limit2,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
+                ]
             )
 
         # Cap 3
@@ -334,11 +371,20 @@ def create_train_test_sample(
             .filter(lambda x: len(x) < cap_count_limit2)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit3)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_capped_df) > 0:
             train_df = pd.concat(
-                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit3)]
+                [
+                    train_df,
+                    train_capped_df.apply(
+                        pd.DataFrame.sample,
+                        cap_train_limit3,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
+                ]
             )
 
         # Cap 4
@@ -353,11 +399,20 @@ def create_train_test_sample(
             .filter(lambda x: len(x) < cap_count_limit3)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= cap_count_limit4)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_capped_df) > 0:
             train_df = pd.concat(
-                [train_df, train_capped_df.apply(pd.DataFrame.sample, cap_train_limit4)]
+                [
+                    train_df,
+                    train_capped_df.apply(
+                        pd.DataFrame.sample,
+                        cap_train_limit4,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
+                ]
             )
 
         # Middle classes use the number as they are, smaller classes are oversampled
@@ -417,9 +472,14 @@ def create_train_test_sample(
         train_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_count_limit1)
-            .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, upper_train_limit1)
+            .groupby(class_balancing_column)
+            .apply(pd.DataFrame.sample, upper_train_limit1, include_groups=False)
+            .reset_index()
         )
+        if not train_df.empty:
+            train_df.set_index("level_1", inplace=True)
+            train_df.index.name = None
+
         upper_count_limit2 = 50000
         upper_train_limit2 = 20000
         logger.info(
@@ -431,13 +491,19 @@ def create_train_test_sample(
             .filter(lambda x: len(x) < upper_count_limit1)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_count_limit2)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_limit2_df) > 0:
             train_df = pd.concat(
                 [
                     train_df,
-                    train_limit2_df.apply(pd.DataFrame.sample, upper_train_limit2),
+                    train_limit2_df.apply(
+                        pd.DataFrame.sample,
+                        upper_train_limit2,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
                 ]
             )
         upper_count_limit3 = 20000
@@ -451,13 +517,19 @@ def create_train_test_sample(
             .filter(lambda x: len(x) < upper_count_limit2)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_count_limit3)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_limit3_df) > 0:
             train_df = pd.concat(
                 [
                     train_df,
-                    train_limit3_df.apply(pd.DataFrame.sample, upper_train_limit3),
+                    train_limit3_df.apply(
+                        pd.DataFrame.sample,
+                        upper_train_limit3,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
                 ]
             )
         upper_count_limit4 = 10000
@@ -471,13 +543,19 @@ def create_train_test_sample(
             .filter(lambda x: len(x) < upper_count_limit3)
             .groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_count_limit4)
-            .groupby(class_balancing_column, group_keys=False)
+            .groupby(class_balancing_column)
         )
         if len(train_limit4_df) > 0:
             train_df = pd.concat(
                 [
                     train_df,
-                    train_limit4_df.apply(pd.DataFrame.sample, upper_train_limit4),
+                    train_limit4_df.apply(
+                        pd.DataFrame.sample,
+                        upper_train_limit4,
+                        include_groups=False,
+                    )
+                    .reset_index()
+                    .set_index("level_1"),
                 ]
             )
         # For smaller balancing classes, just use all samples
@@ -504,9 +582,14 @@ def create_train_test_sample(
         train_df = (
             train_base_df.groupby(class_balancing_column)
             .filter(lambda x: len(x) >= upper_limit)
-            .groupby(class_balancing_column, group_keys=False)
-            .apply(pd.DataFrame.sample, upper_limit)
+            .groupby(class_balancing_column)
+            .apply(pd.DataFrame.sample, upper_limit, include_groups=False)
+            .reset_index()
         )
+        if not train_df.empty:
+            train_df.set_index("level_1", inplace=True)
+            train_df.index.name = None
+
         # For smaller classes, just use all samples
         train_df = pd.concat(
             [
@@ -521,9 +604,14 @@ def create_train_test_sample(
         # In theory the most logical way to balance: make sure all classes have the
         # same amount of training data by undersampling the largest classes and
         # oversampling the small classes.
-        train_df = train_base_df.groupby(
-            class_balancing_column, group_keys=False
-        ).apply(pd.DataFrame.sample, 2000, replace=True)
+        train_df = (
+            train_base_df.groupby(class_balancing_column)
+            .apply(pd.DataFrame.sample, 2000, replace=True, include_groups=False)
+            .reset_index()
+        )
+        if not train_df.empty:
+            train_df.set_index("level_1", inplace=True)
+            train_df.index.name = None
 
     else:
         raise Exception(f"Unknown balancing strategy, STOP!: {balancing_strategy}")

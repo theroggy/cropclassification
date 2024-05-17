@@ -4,11 +4,11 @@ Process the tasks in the tasks directory.
 
 import argparse
 import configparser
+import sys
+from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo  # noqa: F401
-from pathlib import Path
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -59,7 +59,7 @@ def main():
             sys.exit(1)
 
 
-def cropclassification(tasksdir: Path):
+def cropclassification(tasksdir: Path, config_overrules: list[str] = []):
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
     for task_path in task_paths:
@@ -104,7 +104,9 @@ def cropclassification(tasksdir: Path):
             from cropclassification import calc_marker
 
             calc_marker.calc_marker_task(
-                config_paths=config_paths, default_basedir=default_basedir
+                config_paths=config_paths,
+                default_basedir=default_basedir,
+                config_overrules=config_overrules,
             )
         elif action == "calc_periodic_mosaic":
             from cropclassification import calc_periodic_mosaic
