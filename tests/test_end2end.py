@@ -1,7 +1,10 @@
-from datetime import datetime
 import shutil
+from datetime import datetime
 
+import geofileops as gfo
 import pytest
+from pandas.api.types import is_numeric_dtype
+
 from cropclassification import cropclassification
 from tests import test_helper
 
@@ -38,6 +41,31 @@ def test_end2end_task(tmp_path, task):
             run_dir
             / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_all.sqlite_accuracy_report.html"  # noqa: E501
         ).exists()
+        assert (
+            run_dir
+            / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_test.sqlite_accuracy_report.txt_groundtruth_pred_quality_details.gpkg"  # noqa: E501
+        )
+        df_predict = gfo.read_file(
+            path=run_dir
+            / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_test.sqlite_accuracy_report.txt_groundtruth_pred_quality_details.gpkg"  # noqa: E501
+        )
+        assert is_numeric_dtype(df_predict["LAYER_ID"].dtype)
+        assert is_numeric_dtype(df_predict["PRC_ID"].dtype)
+        assert is_numeric_dtype(df_predict["pixcount"].dtype)
+        assert is_numeric_dtype(df_predict["pred1_prob"].dtype)
+        assert is_numeric_dtype(df_predict["pred2_prob"].dtype)
+        assert is_numeric_dtype(df_predict["pred3_prob"].dtype)
+        df_predict = gfo.read_file(
+            path=run_dir
+            / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_all.sqlite_accuracy_report.txt_groundtruth_pred_quality_details.gpkg"  # noqa: E501
+        )
+        assert is_numeric_dtype(df_predict["LAYER_ID"].dtype)
+        assert is_numeric_dtype(df_predict["PRC_ID"].dtype)
+        assert is_numeric_dtype(df_predict["pixcount"].dtype)
+        assert is_numeric_dtype(df_predict["pred1_prob"].dtype)
+        assert is_numeric_dtype(df_predict["pred2_prob"].dtype)
+        assert is_numeric_dtype(df_predict["pred3_prob"].dtype)
+
     if task == "calc_periodic_mosaic":
         # Check if a log file was written
         log_dir = marker_basedir / "log"

@@ -82,10 +82,7 @@ def prepare_input(
 
     # Read input file
     logger.info(f"Read parceldata from {input_parcel_path}")
-    if gfo.is_geofile(input_parcel_path):
-        parceldata_df = gfo.read_file(input_parcel_path)
-    else:
-        parceldata_df = pdh.read_file(input_parcel_path)
+    parceldata_df = gfo.read_file(input_parcel_path)
     logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")
 
     # Check if the id column is present...
