@@ -221,12 +221,12 @@ def write_full_report(
         with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
-            html_data[
-                "GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TABLE"
-            ] = count_per_class.to_html()
-            html_data[
-                "GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA"
-            ] = count_per_class.to_dict()
+            html_data["GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TABLE"] = (
+                count_per_class.to_html()
+            )
+            html_data["GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_DATA"] = (
+                count_per_class.to_dict()
+            )
 
         # Output general accuracies
         outputfile.write("\n")
@@ -443,9 +443,9 @@ def write_full_report(
         with pd.option_context("display.max_rows", None, "display.max_columns", None):
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
-            html_data[
-                "PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TABLE"
-            ] = count_per_class.to_html()
+            html_data["PREDICTION_CONCLUSION_DETAIL_CONS_OVERVIEW_TABLE"] = (
+                count_per_class.to_html()
+            )
 
         # Calculate detailed conclusions for the predictions
         logger.info("Calculate the detailed conclusions for the predictions")
@@ -475,9 +475,9 @@ def write_full_report(
         with pd.option_context("display.max_rows", None, "display.max_columns", None):
             outputfile.write(f"\n{count_per_class}\n")
             logger.info(f"{count_per_class}\n")
-            html_data[
-                "PREDICTION_CONCLUSION_DETAIL_FULL_ALPHA_OVERVIEW_TABLE"
-            ] = count_per_class.to_html()
+            html_data["PREDICTION_CONCLUSION_DETAIL_FULL_ALPHA_OVERVIEW_TABLE"] = (
+                count_per_class.to_html()
+            )
 
         outputfile.write("\n")
         outputfile.write(
@@ -516,12 +516,12 @@ def write_full_report(
             "display.max_rows", None, "display.max_columns", None, "display.width", 2000
         ):
             outputfile.write(f"{df_confmatrix_ext}\n\n")
-            html_data[
-                "CONFUSION_MATRICES_CONSOLIDATED_TABLE"
-            ] = df_confmatrix_ext.to_html()
-            html_data[
-                "CONFUSION_MATRICES_CONSOLIDATED_DATA"
-            ] = df_confmatrix_ext.to_json()
+            html_data["CONFUSION_MATRICES_CONSOLIDATED_TABLE"] = (
+                df_confmatrix_ext.to_html()
+            )
+            html_data["CONFUSION_MATRICES_CONSOLIDATED_DATA"] = (
+                df_confmatrix_ext.to_json()
+            )
 
         # If the pixcount is available, write the OA per pixcount
         if conf.columns["pixcount_s1s2"] in df_predict.columns:
@@ -602,9 +602,9 @@ def write_full_report(
             ):
                 outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
-                html_data[
-                    "PREDICTION_QUALITY_CONS_OVERVIEW_TABLE"
-                ] = count_per_class.to_html()
+                html_data["PREDICTION_QUALITY_CONS_OVERVIEW_TABLE"] = (
+                    count_per_class.to_html()
+                )
 
             # Calculate and write the result for the full alpha predictions
             _add_gt_conclusions(df_parcel_gt, conf.columns["prediction_full_alpha"])
@@ -633,9 +633,9 @@ def write_full_report(
             ):
                 outputfile.write(f"\n{count_per_class}\n")
                 logger.info(f"{count_per_class}\n")
-                html_data[
-                    "PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE"
-                ] = count_per_class.to_html()
+                html_data["PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE"] = (
+                    count_per_class.to_html()
+                )
 
             # Write the ground truth conclusions to files
             pdh.to_file(
@@ -808,9 +808,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
                 # BETA errors
                 message = (
@@ -842,9 +842,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
             # If cropclass is available, write the number of ALFA errors per cropclass
             # (for the prediction with doubt)
@@ -889,9 +889,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
                 # BETA errors
                 message = (
@@ -923,9 +923,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_BETA_PER_CLASS_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_BETA_PER_CLASS_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
             # If crop is available, write the number of ALFA errors per cropclass
             # (for the prediction with doubt)
@@ -970,9 +970,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
                 # BETA errors
                 message = (
@@ -1004,9 +1004,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_BETA_PER_CROP_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_BETA_PER_CROP_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
             # If probability is available, write the number of ALFA errors per
             # probability (for the prediction with doubt)
@@ -1054,9 +1054,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
                 # BETA errors
                 message = (
@@ -1089,9 +1089,9 @@ def write_full_report(
                 ):
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
-                    html_data[
-                        "PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE"
-                    ] = df_per_column.to_html()
+                    html_data["PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE"] = (
+                        df_per_column.to_html()
+                    )
 
     with open(output_report_html, "w") as outputfile:
         script_dir = Path(__file__).resolve().parent
@@ -1252,9 +1252,9 @@ def _add_prediction_conclusion(
         new_columnname,
     ] = "OK:PREDICTION=INPUT_CLASS"
     # If conclusion still UNDEFINED, prediction is different from input
-    in_df.loc[
-        in_df[new_columnname] == "UNDEFINED", new_columnname
-    ] = "NOK:PREDICTION<>INPUT_CLASS"
+    in_df.loc[in_df[new_columnname] == "UNDEFINED", new_columnname] = (
+        "NOK:PREDICTION<>INPUT_CLASS"
+    )
 
 
 def _add_gt_conclusions(in_df, prediction_column_to_use):
@@ -1318,9 +1318,9 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     """
 
     # If conclusion still UNDEFINED, farmer was simply wrong
-    in_df.loc[
-        in_df[gt_vs_declared_column] == "UNDEFINED", gt_vs_declared_column
-    ] = "FARMER-WRONG"
+    in_df.loc[in_df[gt_vs_declared_column] == "UNDEFINED", gt_vs_declared_column] = (
+        "FARMER-WRONG"
+    )
 
     # Calculate gt_vs_prediction_column
     # ---------------------------------
@@ -1434,9 +1434,9 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     ] = "FARMER-WRONG_" + in_df[gt_vs_prediction_column]
 
     # Declared or groundtruth class was ignore
-    in_df.loc[
-        (in_df[gt_conclusion_column] == "UNDEFINED"), gt_conclusion_column
-    ] = in_df[gt_vs_declared_column]
+    in_df.loc[(in_df[gt_conclusion_column] == "UNDEFINED"), gt_conclusion_column] = (
+        in_df[gt_vs_declared_column]
+    )
 
 
 def _get_errors_per_column(

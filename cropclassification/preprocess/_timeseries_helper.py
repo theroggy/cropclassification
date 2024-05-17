@@ -442,9 +442,9 @@ def calculate_periodic_timeseries(
                         period_band_data_df[statistic_columns_dict["std"]], axis=1
                     )
                     # Number of Files used
-                    period_band_data_df[
-                        f"{column_basename}_used_files"
-                    ] = period_band_data_df[statistic_columns_dict["max"]].count(axis=1)
+                    period_band_data_df[f"{column_basename}_used_files"] = (
+                        period_band_data_df[statistic_columns_dict["max"]].count(axis=1)
+                    )
 
                     # Only keep the columns we want to keep
                     columns_to_keep = [

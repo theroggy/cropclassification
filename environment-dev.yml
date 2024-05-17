@@ -28,7 +28,7 @@ dependencies:
   - mypy
   - pandas-stubs
   - pre-commit
-  - ruff
+  - ruff==0.4.4
   - types-python-dateutil
   - types-requests
   - pip:
