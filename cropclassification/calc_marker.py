@@ -2,33 +2,36 @@
 Main script to do a classification.
 """
 
-from datetime import datetime
 import logging
 import os
-from pathlib import Path
 import shutil
+from datetime import datetime
+from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo  # noqa: F401
 import pyproj
 
 from cropclassification.helpers import config_helper as conf
-from cropclassification.helpers import dir_helper
-from cropclassification.helpers import log_helper
+from cropclassification.helpers import dir_helper, log_helper
 from cropclassification.helpers import model_helper as mh
-from cropclassification.preprocess import _timeseries_helper as ts_helper
-from cropclassification.preprocess import timeseries as ts
-from cropclassification.preprocess import classification_preprocess as class_pre
-from cropclassification.predict import classification
 from cropclassification.postprocess import classification_postprocess as class_post
 from cropclassification.postprocess import classification_reporting as class_report
+from cropclassification.predict import classification
+from cropclassification.preprocess import _timeseries_helper as ts_helper
+from cropclassification.preprocess import classification_preprocess as class_pre
+from cropclassification.preprocess import timeseries as ts
 
 # -------------------------------------------------------------
 # First define/init some general variables/constants
 # -------------------------------------------------------------
 
 
-def calc_marker_task(config_paths: list[Path], default_basedir: Path):
+def calc_marker_task(
+    config_paths: list[Path],
+    default_basedir: Path,
+    config_overrules: list[str] = [],
+):
     """
     Runs a marker using the setting in the config_paths.
 
@@ -36,13 +39,19 @@ def calc_marker_task(config_paths: list[Path], default_basedir: Path):
         config_paths (List[Path]): the config files to load
         default_basedir (Path): the dir to resolve relative paths in the config
             file to.
+        config_overrules (List[str], optional): list of config options that will
+            overrule other ways to supply configuration.
+            They should be specified as a list of
+            "<section>.<parameter>=<value>" strings. Defaults to [].
 
     Raises:
         Exception: [description]
         Exception: [description]
     """
     # Read the configuration files
-    conf.read_config(config_paths, default_basedir=default_basedir)
+    conf.read_config(
+        config_paths, default_basedir=default_basedir, overrules=config_overrules
+    )
 
     # Create run dir to be used for the results
     reuse_last_run_dir = conf.calc_marker_params.getboolean("reuse_last_run_dir")
@@ -79,7 +88,11 @@ def calc_marker_task(config_paths: list[Path], default_basedir: Path):
     ):
         config_paths.append(config_used_path)
         logger.info(f"Run dir config needs to be reused, so {config_paths}")
-        conf.read_config(config_paths=config_paths, default_basedir=default_basedir)
+        conf.read_config(
+            config_paths=config_paths,
+            default_basedir=default_basedir,
+            overrules=config_overrules,
+        )
         logger.info(
             "Write new config_used.ini, because some parameters might have been added"
         )
