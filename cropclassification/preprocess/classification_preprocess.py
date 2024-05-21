@@ -7,6 +7,7 @@ import os
 import shutil
 from pathlib import Path
 
+import geofileops as gfo
 import pandas as pd
 
 import cropclassification.helpers.config_helper as conf
@@ -78,8 +79,26 @@ def prepare_input(
         df_pixcount = pdh.read_file(parcel_pixcount_path)
         logger.debug(f"Read pixcount file ready, shape: {df_pixcount.shape}")
     else:
-        parcel_pixcount_path = next(timeseries_periodic_dir.glob("*s2*.sqlite"))
-        df_pixcount = pdh.read_file(parcel_pixcount_path)
+        # Find the s1 image having the largest percentage of pixcount >= 1, and use that
+        logger.info("Determine pixel count based on s1 timeseries data")
+        pixcount_path = None
+        nb_pixcount_ok_max = -1
+        sql_stmt = """
+            SELECT COUNT(*) AS aantal_pixcount_gte1 FROM info WHERE info.count >= 1
+        """
+        for path in timeseries_periodic_dir.glob("*s1*.sqlite"):
+            nb_pixcount_ok = gfo.read_file(path, sql_stmt=sql_stmt)[
+                "aantal_pixcount_gte1"
+            ][0].item()
+            if nb_pixcount_ok > nb_pixcount_ok_max:
+                nb_pixcount_ok_max = nb_pixcount_ok
+                pixcount_path = path
+        if pixcount_path is None:
+            raise RuntimeError(
+                f"No valid timeseries found to get pixel count for {input_parcel_path}"
+            )
+
+        df_pixcount = pdh.read_file(pixcount_path)
         df_pixcount = df_pixcount[[conf.columns["id"], "count"]].rename(
             columns={"count": conf.columns["pixcount_s1s2"]}
         )
