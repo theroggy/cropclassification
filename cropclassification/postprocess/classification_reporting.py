@@ -641,7 +641,7 @@ def write_full_report(
 
             # Alpha and beta error statistics based on CONS prediction
             # ******************************************************************
-            # Pct Alpha errors=alpha errors/(alpha errors + real errors)
+            # Pct Alpha errors=nb incorrect errors/total nb errors
             columnname = f"gt_conclusion_{conf.columns['prediction_cons']}"
             alpha_numerator = len(
                 df_parcel_gt.loc[
@@ -658,7 +658,7 @@ def write_full_report(
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error for cons: {alpha_numerator}/{alpha_denominator} = "
-                    f"{(alpha_numerator/alpha_denominator):.02f}"
+                    f"{(alpha_numerator/alpha_denominator):.04f}"
                 )
             else:
                 message = (
@@ -668,6 +668,7 @@ def write_full_report(
             outputfile.write(f"\n{message}\n")
             html_data["PREDICTION_QUALITY_ALPHA_TEXT"] = message
 
+            # Pct BETA errors=nb incorrect judged OK/total nb judged OK
             beta_numerator = len(
                 df_parcel_gt.loc[
                     df_parcel_gt[columnname]
@@ -676,46 +677,44 @@ def write_full_report(
             )
             beta_denominator = beta_numerator + len(
                 df_parcel_gt.loc[
-                    df_parcel_gt[columnname].str.startswith("FARMER-WRONG_PRED-")
+                    df_parcel_gt[columnname].str.startswith("FARMER-CORRECT")
                 ].index
             )
+            message = "Beta error for cons (=Beta/(Beta + all FARMER-CORRECT)): "
             if beta_denominator > 0:
-                message = (
-                    f"Beta error for cons: {beta_numerator}/{beta_denominator} = "
-                    f"{(beta_numerator/beta_denominator):.02f}"
+                message += (
+                    f"{beta_numerator}/{beta_denominator} = "
+                    f"{(beta_numerator/beta_denominator):.04f}"
                 )
             else:
-                message = (
-                    f"Beta error for cons: {beta_numerator}/{beta_denominator} = ?"
-                )
+                message += f"{beta_numerator}/{beta_denominator} = ?"
 
             outputfile.write(f"\n{message}\n")
             html_data["PREDICTION_QUALITY_BETA_TEXT"] = message
 
-            # Alpha and beta error statistics based on CONS prediction
+            # Alpha and beta error statistics based on FULL ALPHA prediction
             # ******************************************************************
             # Pct ALPHA errors=alpha errors/(alpha errors + real errors)
-            alpha_numerator_columns = ["FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA"]
-            alpha_denominator_columns = [
-                "FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA",
+            alpha_numerator_conclusions = ["FARMER-CORRECT_PRED-WRONG:ERROR_ALPHA"]
+            alpha_denominator_conclusions = [
                 "FARMER-WRONG_PRED-CORRECT",
                 "FARMER-WRONG_PRED-WRONG",
-            ]
+            ] + alpha_numerator_conclusions
             columnname = f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
             alpha_numerator = len(
                 df_parcel_gt.loc[
-                    df_parcel_gt[columnname].isin(alpha_numerator_columns)
+                    df_parcel_gt[columnname].isin(alpha_numerator_conclusions)
                 ].index
             )
             alpha_denominator = len(
                 df_parcel_gt.loc[
-                    df_parcel_gt[columnname].isin(alpha_denominator_columns)
+                    df_parcel_gt[columnname].isin(alpha_denominator_conclusions)
                 ].index
             )
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error full: {alpha_numerator}/{alpha_denominator} = "
-                    f"{(alpha_numerator/alpha_denominator):.02f}"
+                    f"{(alpha_numerator/alpha_denominator):.04f}"
                 )
             else:
                 message = f"Alpha error full: {alpha_numerator}/{alpha_denominator} = ?"
@@ -723,30 +722,33 @@ def write_full_report(
             outputfile.write(f"\n{message}\n")
             html_data["PREDICTION_QUALITY_ALPHA_TEXT"] += "<br/>" + message
 
-            # Pct BETA errors=beta errors/(beta errors + real wrong farmer declarations)
-            beta_numerator_columns = ["FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA"]
-            beta_denominator_columns = (
+            # Pct BETA errors=beta errors/(beta errors + correct farmer declarations)
+            beta_numerator_conclusions = ["FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA"]
+            beta_denominator_conclusions = (
                 df_parcel_gt[columnname]
-                .loc[df_parcel_gt[columnname].str.startswith("FARMER-WRONG_PRED-")]
+                .loc[df_parcel_gt[columnname].str.startswith("FARMER-CORRECT")]
                 .unique()
+                .tolist()
+                + beta_numerator_conclusions
             )
             beta_numerator = len(
                 df_parcel_gt.loc[
-                    df_parcel_gt[columnname].isin(beta_numerator_columns)
+                    df_parcel_gt[columnname].isin(beta_numerator_conclusions)
                 ].index
             )
             beta_denominator = len(
                 df_parcel_gt.loc[
-                    df_parcel_gt[columnname].isin(beta_denominator_columns)
+                    df_parcel_gt[columnname].isin(beta_denominator_conclusions)
                 ].index
             )
+            message = "Beta error full (=Beta/(Beta + all FARMER-CORRECT)): "
             if beta_denominator > 0:
-                message = (
-                    f"Beta error full: {beta_numerator}/{beta_denominator} = "
-                    f"{(beta_numerator/beta_denominator):.02f}"
+                message += (
+                    f"{beta_numerator}/{beta_denominator} = "
+                    f"{(beta_numerator/beta_denominator):.04f}"
                 )
             else:
-                message = f"Beta error full: {beta_numerator}/{beta_denominator} = ?"
+                message += f"{beta_numerator}/{beta_denominator} = ?"
 
             outputfile.write(f"\n{message}\n")
             html_data["PREDICTION_QUALITY_BETA_TEXT"] += "<br/>" + message
@@ -760,6 +762,18 @@ def write_full_report(
                 f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
             )
             if conf.columns["pixcount_s1s2"] in df_parcel_gt.columns:
+                # Convert pixcounts to bins
+                pixcount_bins_column = f"{conf.columns['pixcount_s1s2']}_bins"
+                bins = np.array(
+                    [0, 1, 5, 10, 20, 30, 40, 50, 100, 200, 1000, 5000, 10000]
+                )
+                df_parcel_gt[pixcount_bins_column] = pd.cut(
+                    x=df_parcel_gt[conf.columns["pixcount_s1s2"]],
+                    bins=bins,
+                    include_lowest=True,
+                    right=True,
+                )
+
                 # ALPHA errors
                 message = (
                     "Number of ERROR_ALFA parcels per pixcount for the ground truth "
@@ -781,12 +795,12 @@ def write_full_report(
                 # Calc data and write
                 pred_quality_column = "gt_conclusion_" + "pred_cons_no_min_pix"
                 df_per_column = _get_errors_per_column(
-                    groupbycolumn=conf.columns["pixcount_s1s2"],
+                    groupbycolumn=pixcount_bins_column,
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=alpha_numerator_columns,
-                    error_codes_denominator=alpha_denominator_columns,
+                    error_codes_numerator=alpha_numerator_conclusions,
+                    error_codes_denominator=alpha_denominator_conclusions,
                     error_type="alpha",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -815,12 +829,12 @@ def write_full_report(
                 # Calc data and write
                 pred_quality_column = "gt_conclusion_" + "pred_cons_no_min_pix"
                 df_per_column = _get_errors_per_column(
-                    groupbycolumn=conf.columns["pixcount_s1s2"],
+                    groupbycolumn=pixcount_bins_column,
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns.tolist(),
+                    error_codes_numerator=beta_numerator_conclusions,
+                    error_codes_denominator=beta_denominator_conclusions,
                     error_type="beta",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -866,8 +880,8 @@ def write_full_report(
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=alpha_numerator_columns,
-                    error_codes_denominator=alpha_denominator_columns,
+                    error_codes_numerator=alpha_numerator_conclusions,
+                    error_codes_denominator=alpha_denominator_conclusions,
                     error_type="alpha",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -900,8 +914,8 @@ def write_full_report(
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns.tolist(),
+                    error_codes_numerator=beta_numerator_conclusions,
+                    error_codes_denominator=beta_denominator_conclusions,
                     error_type="beta",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -947,8 +961,8 @@ def write_full_report(
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=alpha_numerator_columns,
-                    error_codes_denominator=alpha_denominator_columns,
+                    error_codes_numerator=alpha_numerator_conclusions,
+                    error_codes_denominator=alpha_denominator_conclusions,
                     error_type="alpha",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -981,8 +995,8 @@ def write_full_report(
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns.tolist(),
+                    error_codes_numerator=beta_numerator_conclusions,
+                    error_codes_denominator=beta_denominator_conclusions,
                     error_type="beta",
                 )
                 # df_per_column.dropna(inplace=True)
@@ -1030,8 +1044,8 @@ def write_full_report(
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=alpha_numerator_columns,
-                    error_codes_denominator=alpha_denominator_columns,
+                    error_codes_numerator=alpha_numerator_conclusions,
+                    error_codes_denominator=alpha_denominator_conclusions,
                     ascending=False,
                     error_type="alpha",
                 )
@@ -1065,8 +1079,8 @@ def write_full_report(
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
-                    error_codes_numerator=beta_numerator_columns,
-                    error_codes_denominator=beta_denominator_columns.tolist(),
+                    error_codes_numerator=beta_numerator_conclusions,
+                    error_codes_denominator=beta_denominator_conclusions,
                     ascending=False,
                     error_type="beta",
                 )
