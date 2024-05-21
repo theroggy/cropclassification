@@ -11,6 +11,7 @@
 - Add option to overrule config setting at runtime (#92)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
+- Improve calculation of beta error in reporting (#97)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
 
