@@ -772,7 +772,7 @@ def write_full_report(
                     bins=bins,
                     include_lowest=True,
                     right=True,
-                )
+                )  # type: ignore[call-overload]
 
                 # ALPHA errors
                 message = (
