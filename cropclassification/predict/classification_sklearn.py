@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.neighbors import KNeighborsClassifier
 import joblib
 from sklearn.svm import SVC
@@ -69,7 +70,9 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
     classifier_type_lower = conf.classifier["classifier_type"].lower()
     if classifier_type_lower == "randomforest":
         n_estimators = conf.classifier.getint("randomforest_n_estimators")
-        max_depth = conf.classifier.getint("randomforest_max_depth")
+        max_depth = conf.classifier.get("randomforest_max_depth")
+        if max_depth is not None:
+            max_depth = int(max_depth)
         classifier = RandomForestClassifier(
             n_estimators=n_estimators, max_depth=max_depth
         )
@@ -97,6 +100,9 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
             probability=True,
             cache_size=1000,
         )
+    elif classifier_type_lower == "histgradientboostingclassifier":
+        kwargs = conf.classifier.getdict("histgradientboostingclassifier_kwargs", {})
+        classifier = HistGradientBoostingClassifier(**kwargs)
     else:
         message = (
             "Unsupported classifier in conf.classifier['classifier_type']: "
