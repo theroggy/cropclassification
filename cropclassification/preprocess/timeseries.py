@@ -240,12 +240,22 @@ def collect_and_prepare_timeseries_data(
                 data_read_df[column] = data_read_df[column].clip(upper=1)
 
         # If s1 coherence, rescale data
-        if image_profile in ["s1coh", "s1-coh"]:
+        if image_profile.startswith(("s1coh", "s1-coh")):
             for column in data_read_df.columns:
                 logger.info(
                     f"Column with s1 coherence: scale it by dividing by 300: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 300
+
+        # Write warning if the data isn't scaled between 0 and 1
+        for column in data_read_df.columns:
+            value_max = data_read_df[column].max()
+            value_min = data_read_df[column].min()
+            if value_max > 1 or value_min < 0:
+                logger.warning(
+                    f"column {column} in {curr_path} is not fully normalized "
+                    f"({value_min=}, {value_max=})"
+                )
 
         # Join the data to the result...
         result_df = result_df.join(data_read_df, how="left")
