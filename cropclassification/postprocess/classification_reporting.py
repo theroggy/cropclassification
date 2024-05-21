@@ -79,14 +79,6 @@ def write_full_report(
     df_predict = gfo.read_file(parcel_predictions_geopath)
     df_predict.set_index(conf.columns["id"], inplace=True)
 
-    # Convert all columns to numeric, for the actual numeric ones this will stick.
-    # TODO: pretty ugly, hopefully becomes obsolete if pyogrio is used in gfo.to_file
-    for column in df_predict.columns:
-        try:
-            df_predict[column] = pd.to_numeric(df_predict[column], errors="ignore")  # type: ignore[call-overload]
-        except Exception:
-            _ = None
-
     # Python template engine expects all values to be present, so initialize to empty
     empty_string = "''"
     html_data = {
