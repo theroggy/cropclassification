@@ -155,7 +155,7 @@ def test_get_images_s2_best_available_pixel(
     # Check result
     if expected_error is not None:
         with pytest.raises(ValueError, match=expected_error):
-            openeo_util.get_images(images_to_get=images_to_get, force=False)
+            openeo_util.get_images(images_to_get=images_to_get, force=True)
     else:
         openeo_util.get_images(images_to_get=images_to_get, force=False)
 
