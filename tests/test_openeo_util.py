@@ -1,5 +1,5 @@
-from datetime import datetime
 import shutil
+from datetime import datetime
 
 import pytest
 import rasterio
@@ -115,3 +115,52 @@ def test_get_images_s2(tmp_path):
         assert file.count == len(bands)
         # All bands should have a description
         assert all(file.descriptions)
+
+
+@pytest.mark.parametrize(
+    "satellite, expected_error",
+    [("s1", "only Sentinel 2 can be used with time_reducer = best"), ("s2", None)],
+)
+def test_get_images_s2_best_available_pixel(
+    tmp_path, satellite: str, expected_error: str
+):
+    """
+    Test creating an s2 image.
+
+    Remark: the default way to run is with the result pre-copied and force=False, to
+    avoid really calling the openeo API.
+    """
+    # Prepare test data
+    output_path = tmp_path / SampleData.image_s2_path.name
+    shutil.copy(SampleData.image_s2_path, output_path)
+    bands = ["B02", "B03", "B04", "B08", "B11", "B12"]
+
+    images_to_get = [
+        {
+            "path": output_path,
+            "roi_bounds": SampleData.roi_bounds,
+            "roi_crs": SampleData.roi_crs,
+            "collection": "TERRASCOPE_S2_TOC_V2",
+            "satellite": satellite,
+            "start_date": SampleData.start_date,
+            "end_date": SampleData.end_date,
+            "bands": bands,
+            "time_reducer": "best",
+            "max_cloud_cover": 80,
+            "process_options": {},
+            "job_options": {},
+        }
+    ]
+
+    # Check result
+    if expected_error is not None:
+        with pytest.raises(ValueError, match=expected_error):
+            openeo_util.get_images(images_to_get=images_to_get, force=True)
+    else:
+        openeo_util.get_images(images_to_get=images_to_get, force=True)
+
+        assert output_path.exists()
+        with rasterio.open(output_path, "r") as file:
+            assert file.count == len(bands)
+            # All bands should have a description
+            assert all(file.descriptions)

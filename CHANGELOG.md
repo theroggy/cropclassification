@@ -13,6 +13,7 @@
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
+- Add method "best available pixel" on openeo for S2 (#70)
 
 ### Bugs fixed
 
