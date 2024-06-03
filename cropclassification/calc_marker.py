@@ -109,6 +109,7 @@ def calc_marker_task(
                 overrules=config_overrules,
             )
         else:
+            configfiles_used_dir.mkdir(parents=True)
             for idx, config_path in enumerate(config_paths):
                 # Prepend with idx so the order of config files is retained...
                 dst = configfiles_used_dir / f"{idx}_{config_path.name}"
