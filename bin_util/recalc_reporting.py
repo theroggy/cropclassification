@@ -85,6 +85,7 @@ def main():
     classes_refe_filename = conf.calc_marker_params.getpath("classes_refe_filename")
     classes_refe_path = refe_dir / classes_refe_filename
 
+    parcel_train_path = run_dir / f"{base_filename}_parcel_train{data_ext}"
     parcel_test_path = run_dir / f"{base_filename}_parcel_test{data_ext}"
     parcel_predictions_proba_test_path = (
         run_dir / f"{base_filename}_predict_proba_test{data_ext}"
@@ -179,6 +180,7 @@ def main():
     report_txt = Path(f"{str(parcel_predictions_test_path)}_accuracy_report.txt")
     class_report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_test_geopath,
+        parcel_train_path=parcel_train_path,
         output_report_txt=report_txt,
         parcel_ground_truth_path=groundtruth_path,
         force=True,
@@ -188,6 +190,7 @@ def main():
     report_txt = Path(f"{str(parcel_predictions_all_path)}_accuracy_report.txt")
     class_report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
+        parcel_train_path=parcel_train_path,
         output_report_txt=report_txt,
         parcel_ground_truth_path=groundtruth_path,
         force=True,

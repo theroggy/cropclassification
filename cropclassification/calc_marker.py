@@ -279,15 +279,14 @@ def calc_marker_task(
             input_model_to_use_path = best_model["path"]
 
     # if there is no model to use specified, train one!
-    parcel_test_path = None
+    parcel_train_path = run_dir / f"{base_filename}_parcel_train{data_ext}"
+    parcel_test_path = run_dir / f"{base_filename}_parcel_test{data_ext}"
     parcel_predictions_proba_test_path = None
     if input_model_to_use_path is None:
         # Create the training sample...
         # Remark: this creates a list of representative test parcel + a list of
         # (candidate) training parcel
         balancing_strategy = conf.marker["balancing_strategy"]
-        parcel_train_path = run_dir / f"{base_filename}_parcel_train{data_ext}"
-        parcel_test_path = run_dir / f"{base_filename}_parcel_test{data_ext}"
         class_pre.create_train_test_sample(
             input_parcel_path=parcel_path,
             output_parcel_train_path=parcel_train_path,
@@ -392,6 +391,7 @@ def calc_marker_task(
         report_txt = Path(f"{str(parcel_predictions_test_path)}_accuracy_report.txt")
         class_report.write_full_report(
             parcel_predictions_geopath=parcel_predictions_test_geopath,
+            parcel_train_path=parcel_train_path,
             output_report_txt=report_txt,
             parcel_ground_truth_path=groundtruth_path,
         )
@@ -400,6 +400,7 @@ def calc_marker_task(
     report_txt = Path(f"{str(parcel_predictions_all_path)}_accuracy_report.txt")
     class_report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
+        parcel_train_path=parcel_train_path,
         output_report_txt=report_txt,
         parcel_ground_truth_path=groundtruth_path,
     )

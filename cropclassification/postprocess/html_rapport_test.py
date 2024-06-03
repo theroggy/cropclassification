@@ -21,6 +21,7 @@ if report_html.exists():
 
 class_report.write_full_report(
     parcel_predictions_geopath=parcel_predictions_all_path,
+    parcel_train_path=None,
     output_report_txt=report_txt,
     parcel_ground_truth_path=groundtruth_path,
     force=True,

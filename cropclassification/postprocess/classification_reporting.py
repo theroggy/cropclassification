@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 def write_full_report(
     parcel_predictions_geopath: Path,
+    parcel_train_path: Optional[Path],
     output_report_txt: Path,
     parcel_ground_truth_path: Optional[Path] = None,
     force: bool = False,
@@ -87,6 +88,12 @@ def write_full_report(
             df_predict[column] = pd.to_numeric(df_predict[column])
         except Exception:
             _ = None
+
+    # Add column that shows if the parcel was used for training
+    if parcel_train_path is not None:
+        parcel_train_df = gfo.read_file(parcel_train_path, ignore_geometry=True)
+        parcel_train_df.set_index(conf.columns["id"], inplace=True)
+        df_predict["used_for_train"] = df_predict.index.isin(parcel_train_df.index)
 
     # Python template engine expects all values to be present, so initialize to empty
     empty_string = "''"
