@@ -136,6 +136,86 @@ def prepare_input(
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
         )
+    elif classtype_to_prepare == "CROPROTATION":
+        parceldata_df = prepare_input_croprotation(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+        return prepare_input_croprotation(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CROPROTATION-GROUNDTRUTH":
+        return prepare_input_croprotation(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CROPROTATION-EARLY":
+        parceldata_df = prepare_input_croprotation_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+        return prepare_input_croprotation_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CROPROTATION-EARLY-GROUNDTRUTH":
+        return prepare_input_croprotation_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CARBONSUPPLY":
+        parceldata_df = prepare_input_carbonsupply(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+        return prepare_input_carbonsupply(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CARBONSUPPLY-GROUNDTRUTH":
+        return prepare_input_carbonsupply(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CARBONSUPPLY-EARLY":
+        parceldata_df = prepare_input_carbonsupply_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+        )
+        return prepare_input_carbonsupply_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+        )
+    elif classtype_to_prepare == "CARBONSUPPLY-EARLY-GROUNDTRUTH":
+        return prepare_input_carbonsupply_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+        )
     elif classtype_to_prepare == "LANDCOVER":
         parceldata_df = prepare_input_landcover(
             parceldata_df=parceldata_df,
@@ -438,6 +518,284 @@ def prepare_input_cropgroup(
     #     column_output_class].isin(['MON_BOOM', 'MON_FRUIT']),
     #     column_output_class
     # ] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
+
+    # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
+    for _, row in (
+        parceldata_df.groupby(column_output_class)
+        .size()
+        .reset_index(name="count")
+        .iterrows()
+    ):
+        if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
+            logger.info(
+                f"Class <{row[column_output_class]}> only contains {row['count']} "
+                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+            )
+            parceldata_df.loc[
+                parceldata_df[column_output_class] == row[column_output_class],
+                column_output_class,
+            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+
+    # Drop the columns that aren't useful at all
+    for column in parceldata_df.columns:
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_BEFL_to_keep
+        ):
+            parceldata_df.drop(column, axis=1, inplace=True)
+        elif column == column_BEFL_gesp_pm:
+            parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
+                column_BEFL_gesp_pm
+            ].str.replace(",", ";")
+
+    return parceldata_df
+
+
+def prepare_input_croprotation(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+):
+    """
+    This function creates a file that is compliant with the assumptions used by the rest
+    of the classification functionality.
+
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be
+          classified to
+
+    This specific implementation converts the typical export format used in BE-Flanders
+    to this format.
+    """
+    # Check if parameters are OK and init some extra params
+    # --------------------------------------------------------------------------
+    if not classes_refe_path.exists():
+        raise Exception(f"Input classes file doesn't exist: {classes_refe_path}")
+
+    # Convert the crop to unicode, in case the input is int...
+    if column_BEFL_cropcode in parceldata_df.columns:
+        parceldata_df[column_BEFL_cropcode] = parceldata_df[
+            column_BEFL_cropcode
+        ].astype("string")
+
+    # Read and cleanup the mapping table from crop codes to classes
+    # --------------------------------------------------------------------------
+    classes_df = pdh.read_file(classes_refe_path)
+
+    # Because the file was read as ansi, and gewas is int, so the data needs to be
+    # converted to unicode to be able to do comparisons with the other data
+    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("string")
+
+    # Map column with the classname to orig classname
+    column_output_class_orig = conf.columns["class"] + "_orig"
+    classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
+
+    # Remove unneeded columns
+    for column in classes_df.columns:
+        if (
+            column not in [column_output_class_orig, column_BEFL_cropcode]
+            and column not in columns_BEFL_to_keep
+        ):
+            classes_df.drop(column, axis=1, inplace=True)
+
+    # Set the index
+    classes_df.set_index(column_BEFL_cropcode, inplace=True, verify_integrity=True)
+
+    # Get only the columns in the classes_df that don't exist yet in parceldata_df
+    cols_to_join = classes_df.columns.difference(parceldata_df.columns)
+
+    # Join/merge the classname
+    logger.info("Add the classes to the parceldata")
+    parceldata_df = parceldata_df.merge(
+        classes_df[cols_to_join],
+        how="left",
+        left_on=column_BEFL_cropcode,
+        right_index=True,
+        validate="many_to_one",
+    )
+
+    # Copy orig classname to classification classname
+    parceldata_df.insert(
+        loc=0, column=column_output_class, value=parceldata_df[column_output_class_orig]
+    )
+
+    # For rows with no class, set to UNKNOWN
+    parceldata_df.fillna(value={column_output_class: "UNKNOWN"}, inplace=True)
+
+    # If a column with extra info exists, use it as well to fine-tune the classification
+    # classes.
+    if column_BEFL_gesp_pm in parceldata_df.columns:
+        # Serres, tijdelijke overkappingen en loodsen
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm].isin(["SER", "SGM"]), column_output_class
+        ] = "MON_OVERK_LOO"
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm].isin(["PLA", "PLO", "NPO"]),
+            column_output_class,
+        ] = "MON_OVERK_LOO"
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm] == "LOO", column_output_class
+        ] = "MON_OVERK_LOO"  # Een loods is hetzelfde als een stal...
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm] == "CON", column_output_class
+        ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
+        # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
+        # parceldata_df.loc[
+        #     parceldata_df[column_BEFL_gesp_pm] == "CIV", class_columnname
+        # ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
+    else:
+        logger.warning(
+            f"The column {column_BEFL_gesp_pm} doesn't exist, so this part of the code "
+            "was skipped!"
+        )
+
+    # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
+    for _, row in (
+        parceldata_df.groupby(column_output_class)
+        .size()
+        .reset_index(name="count")
+        .iterrows()
+    ):
+        if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
+            logger.info(
+                f"Class <{row[column_output_class]}> only contains {row['count']} "
+                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+            )
+            parceldata_df.loc[
+                parceldata_df[column_output_class] == row[column_output_class],
+                column_output_class,
+            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+
+    # Drop the columns that aren't useful at all
+    for column in parceldata_df.columns:
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_BEFL_to_keep
+        ):
+            parceldata_df.drop(column, axis=1, inplace=True)
+        elif column == column_BEFL_gesp_pm:
+            parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
+                column_BEFL_gesp_pm
+            ].str.replace(",", ";")
+
+    return parceldata_df
+
+
+def prepare_input_carbonsupply(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+):
+    """
+    This function creates a file that is compliant with the assumptions used by the rest
+    of the classification functionality.
+
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be
+          classified to
+
+    This specific implementation converts the typical export format used in BE-Flanders
+    to this format.
+    """
+    # Check if parameters are OK and init some extra params
+    # --------------------------------------------------------------------------
+    if not classes_refe_path.exists():
+        raise Exception(f"Input classes file doesn't exist: {classes_refe_path}")
+
+    # Convert the crop to unicode, in case the input is int...
+    if column_BEFL_cropcode in parceldata_df.columns:
+        parceldata_df[column_BEFL_cropcode] = parceldata_df[
+            column_BEFL_cropcode
+        ].astype("string")
+
+    # Read and cleanup the mapping table from crop codes to classes
+    # --------------------------------------------------------------------------
+    classes_df = pdh.read_file(classes_refe_path)
+
+    # Because the file was read as ansi, and gewas is int, so the data needs to be
+    # converted to unicode to be able to do comparisons with the other data
+    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("string")
+
+    # Map column with the classname to orig classname
+    column_output_class_orig = conf.columns["class"] + "_orig"
+    classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
+
+    # Remove unneeded columns
+    for column in classes_df.columns:
+        if (
+            column not in [column_output_class_orig, column_BEFL_cropcode]
+            and column not in columns_BEFL_to_keep
+        ):
+            classes_df.drop(column, axis=1, inplace=True)
+
+    # Set the index
+    classes_df.set_index(column_BEFL_cropcode, inplace=True, verify_integrity=True)
+
+    # Get only the columns in the classes_df that don't exist yet in parceldata_df
+    cols_to_join = classes_df.columns.difference(parceldata_df.columns)
+
+    # Join/merge the classname
+    logger.info("Add the classes to the parceldata")
+    parceldata_df = parceldata_df.merge(
+        classes_df[cols_to_join],
+        how="left",
+        left_on=column_BEFL_cropcode,
+        right_index=True,
+        validate="many_to_one",
+    )
+
+    # Copy orig classname to classification classname
+    parceldata_df.insert(
+        loc=0, column=column_output_class, value=parceldata_df[column_output_class_orig]
+    )
+
+    # For rows with no class, set to UNKNOWN
+    parceldata_df.fillna(value={column_output_class: "UNKNOWN"}, inplace=True)
+
+    # If a column with extra info exists, use it as well to fine-tune the classification
+    # classes.
+    if column_BEFL_gesp_pm in parceldata_df.columns:
+        # Serres, tijdelijke overkappingen en loodsen
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm].isin(["SER", "SGM"]), column_output_class
+        ] = "MON_OVERK_LOO"
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm].isin(["PLA", "PLO", "NPO"]),
+            column_output_class,
+        ] = "MON_OVERK_LOO"
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm] == "LOO", column_output_class
+        ] = "MON_OVERK_LOO"  # Een loods is hetzelfde als een stal...
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm] == "CON", column_output_class
+        ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
+        # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
+        # parceldata_df.loc[
+        #     parceldata_df[column_BEFL_gesp_pm] == "CIV", class_columnname
+        # ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
+    else:
+        logger.warning(
+            f"The column {column_BEFL_gesp_pm} doesn't exist, so this part of the code "
+            "was skipped!"
+        )
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
     for _, row in (
@@ -1005,6 +1363,84 @@ def prepare_input_latecrop_early(
 
 
 def prepare_input_cropgroup_early(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+):
+    """
+    Prepare a dataframe based on the BEFL input file so it onclused a classname
+    column ready to classify the cropgroups for early crops.
+    """
+    # First run the standard landcover prepare
+    parceldata_df = prepare_input_cropgroup(
+        parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_path
+    )
+
+    # Set late crops to ignore
+    parceldata_df.loc[
+        parceldata_df[column_BEFL_earlylate] != "MON_TEELTEN_VROEGE",
+        column_output_class,
+    ] = "IGNORE_LATE_CROP"
+
+    # Set new grass to ignore
+    if column_BEFL_status_perm_grass in parceldata_df.columns:
+        parceldata_df.loc[
+            (parceldata_df[column_BEFL_cropcode] == "60")
+            & (
+                (parceldata_df[column_BEFL_status_perm_grass] == "BG1")
+                | (parceldata_df[column_BEFL_status_perm_grass].isnull())
+            ),
+            column_output_class,
+        ] = "IGNORE_NEW_GRASSLAND"
+    else:
+        logger.warning(
+            f"Source file doesn't contain column {column_BEFL_status_perm_grass}!"
+        )
+
+    return parceldata_df
+
+
+def prepare_input_croprotation_early(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+):
+    """
+    Prepare a dataframe based on the BEFL input file so it onclused a classname
+    column ready to classify the cropgroups for early crops.
+    """
+    # First run the standard landcover prepare
+    parceldata_df = prepare_input_cropgroup(
+        parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_path
+    )
+
+    # Set late crops to ignore
+    parceldata_df.loc[
+        parceldata_df[column_BEFL_earlylate] != "MON_TEELTEN_VROEGE",
+        column_output_class,
+    ] = "IGNORE_LATE_CROP"
+
+    # Set new grass to ignore
+    if column_BEFL_status_perm_grass in parceldata_df.columns:
+        parceldata_df.loc[
+            (parceldata_df[column_BEFL_cropcode] == "60")
+            & (
+                (parceldata_df[column_BEFL_status_perm_grass] == "BG1")
+                | (parceldata_df[column_BEFL_status_perm_grass].isnull())
+            ),
+            column_output_class,
+        ] = "IGNORE_NEW_GRASSLAND"
+    else:
+        logger.warning(
+            f"Source file doesn't contain column {column_BEFL_status_perm_grass}!"
+        )
+
+    return parceldata_df
+
+
+def prepare_input_carbonsupply_early(
     parceldata_df,
     column_BEFL_cropcode: str,
     column_output_class: str,
