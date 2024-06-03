@@ -104,6 +104,7 @@ def prepare_input(
         df_pixcount = df_pixcount[[conf.columns["id"], "count"]].rename(
             columns={"count": conf.columns["pixcount_s1s2"]}
         )
+        pdh.to_file(df_pixcount, parcel_pixcount_path)
 
     if df_pixcount.index.name != conf.columns["id"]:
         df_pixcount.set_index(conf.columns["id"], inplace=True)
