@@ -227,6 +227,7 @@ def calc_marker_task(
     #             the number of S1/S2 pixels in the parcel.
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
+    min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
     base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
     class_pre.prepare_input(
@@ -237,6 +238,7 @@ def calc_marker_task(
         data_ext=data_ext,
         classtype_to_prepare=classtype_to_prepare,
         classes_refe_path=classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
         output_parcel_path=parcel_path,
     )
 
@@ -374,6 +376,7 @@ def calc_marker_task(
             data_ext=data_ext,
             classtype_to_prepare=conf.preprocess["classtype_to_prepare_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             output_parcel_path=groundtruth_path,
         )
 

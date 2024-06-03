@@ -76,6 +76,7 @@ def main():
     parcel_predictions_test_geopath = (
         run_dir / f"{base_filename}_predict_test{geofile_ext}"
     )
+    min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_predictions_all_path = run_dir / f"{base_filename}_predict_all{data_ext}"
     parcel_predictions_all_geopath = (
         run_dir / f"{base_filename}_predict_all{geofile_ext}"
@@ -95,6 +96,7 @@ def main():
             data_ext=data_ext,
             classtype_to_prepare=conf.preprocess["classtype_to_prepare_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             output_parcel_path=groundtruth_path,
         )
 

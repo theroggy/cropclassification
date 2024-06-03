@@ -63,6 +63,7 @@ def prepare_input(
     input_parcel_path: Path,
     classtype_to_prepare: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
     output_dir: Path,
 ):
     """
@@ -102,19 +103,25 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop_declared,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
         )
-        return prepare_input_cropgroup(
+        parceldata_df = prepare_input_cropgroup(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "CROPGROUP-GROUNDTRUTH":
-        return prepare_input_cropgroup(
+        parceldata_df = prepare_input_cropgroup(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop_gt_verified,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "CROPGROUP-EARLY":
         parceldata_df = prepare_input_cropgroup_early(
@@ -122,19 +129,25 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop_declared,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
         )
-        return prepare_input_cropgroup_early(
+        parceldata_df = prepare_input_cropgroup_early(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "CROPGROUP-EARLY-GROUNDTRUTH":
-        return prepare_input_cropgroup_early(
+        parceldata_df = prepare_input_cropgroup_early(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop_gt_verified,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "LANDCOVER":
         parceldata_df = prepare_input_landcover(
@@ -142,12 +155,16 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop_declared,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
         )
-        return prepare_input_landcover(
+        parceldata_df = prepare_input_landcover(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "MULTICROP":
         parceldata_df = prepare_input_landcover(
@@ -155,19 +172,25 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop_declared,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
         )
-        return prepare_input_landcover(
+        parceldata_df = prepare_input_landcover(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "LANDCOVER-GROUNDTRUTH":
-        return prepare_input_landcover(
+        parceldata_df = prepare_input_landcover(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop_gt_verified,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "LANDCOVER-EARLY":
         parceldata_df = prepare_input_landcover_early(
@@ -175,19 +198,25 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop_declared,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
         )
-        return prepare_input_landcover_early(
+        parceldata_df = prepare_input_landcover_early(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "LANDCOVER-EARLY-GROUNDTRUTH":
-        return prepare_input_landcover_early(
+        parceldata_df = prepare_input_landcover_early(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop_gt_verified,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "POPULAR-CROP":
         parceldata_df = prepare_input_most_popular_crop(
@@ -195,58 +224,68 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop_declared,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
         )
-        return prepare_input_most_popular_crop(
+        parceldata_df = prepare_input_most_popular_crop(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "POPULAR-CROP-GROUNDTRUTH":
-        return prepare_input_most_popular_crop(
+        parceldata_df = prepare_input_most_popular_crop(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop_gt_verified,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
         )
     elif classtype_to_prepare == "LATECROP-EARLY":
-        return prepare_input_latecrop_early(
+        parceldata_df = prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=column_BEFL_latecrop,
             column_BEFL_latecrop2=column_BEFL_latecrop2,
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=False,
         )
     elif classtype_to_prepare == "LATECROP":
-        return prepare_input_latecrop(
+        parceldata_df = prepare_input_latecrop(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=column_BEFL_latecrop,
             column_BEFL_latecrop2=column_BEFL_latecrop2,
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=False,
         )
     elif classtype_to_prepare == "LATECROP-EARLY-GROUNDTRUTH":
-        return prepare_input_latecrop_early(
+        parceldata_df = prepare_input_latecrop_early(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=column_BEFL_latecrop_gt_verified,
             column_BEFL_latecrop2=None,
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=True,
         )
     elif classtype_to_prepare == "LATECROP-GROUNDTRUTH":
-        return prepare_input_latecrop(
+        parceldata_df = prepare_input_latecrop(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=column_BEFL_latecrop_gt_verified,
             column_BEFL_latecrop2=None,
             column_BEFL_maincrop=column_BEFL_crop,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=True,
         )
     elif classtype_to_prepare == "FABACEAE":
@@ -255,26 +294,34 @@ def prepare_input(
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class_declared"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
-        return prepare_input_fabaceae(
+        parceldata_df = prepare_input_fabaceae(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop,
             column_output_class=conf.columns["class"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
         )
     elif classtype_to_prepare == "FABACEAE-GROUNDTRUTH":
-        return prepare_input_fabaceae(
+        parceldata_df = prepare_input_fabaceae(
             parceldata_df=parceldata_df,
             column_BEFL_cropcode=column_BEFL_crop_gt_verified,
             column_output_class=conf.columns["class_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
         )
     else:
         message = (
             f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
         )
         logger.critical(message)
-        raise Exception(message)
+        raise ValueError(message)
+
+    return parceldata_df
 
 
 def prepare_input_cropgroup(
@@ -282,6 +329,8 @@ def prepare_input_cropgroup(
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
 ):
     """
     This function creates a file that is compliant with the assumptions used by the rest
@@ -440,21 +489,22 @@ def prepare_input_cropgroup(
     # ] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    for _, row in (
-        parceldata_df.groupby(column_output_class)
-        .size()
-        .reset_index(name="count")
-        .iterrows()
-    ):
-        if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
-            logger.info(
-                f"Class <{row[column_output_class]}> only contains {row['count']} "
-                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
-            )
-            parceldata_df.loc[
-                parceldata_df[column_output_class] == row[column_output_class],
-                column_output_class,
-            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+    if not is_groundtruth and min_parcels_in_class > 1:
+        for _, row in (
+            parceldata_df.groupby(column_output_class)
+            .size()
+            .reset_index(name="count")
+            .iterrows()
+        ):
+            if row["count"] < min_parcels_in_class:
+                logger.info(
+                    f"Class <{row[column_output_class]}> only contains {row['count']} "
+                    "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+                )
+                parceldata_df.loc[
+                    parceldata_df[column_output_class] == row[column_output_class],
+                    column_output_class,
+                ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
@@ -483,6 +533,8 @@ def prepare_input_fabaceae(
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
 ):
     """
     This function creates a file that is compliant with the assumptions used by the rest
@@ -647,21 +699,22 @@ def prepare_input_fabaceae(
     # ] = 'IGNORE_DIFFICULT_PERMANENT_CLASS'
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    for _, row in (
-        parceldata_df.groupby(column_output_class)
-        .size()
-        .reset_index(name="count")
-        .iterrows()
-    ):
-        if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
-            logger.info(
-                f"Class <{row[column_output_class]}> only contains {row['count']} "
-                "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
-            )
-            parceldata_df.loc[
-                parceldata_df[column_output_class] == row[column_output_class],
-                column_output_class,
-            ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+    if not is_groundtruth and min_parcels_in_class > 1:
+        for _, row in (
+            parceldata_df.groupby(column_output_class)
+            .size()
+            .reset_index(name="count")
+            .iterrows()
+        ):
+            if row["count"] < min_parcels_in_class:
+                logger.info(
+                    f"Class <{row[column_output_class]}> only contains {row['count']} "
+                    "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+                )
+                parceldata_df.loc[
+                    parceldata_df[column_output_class] == row[column_output_class],
+                    column_output_class,
+                ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
@@ -692,6 +745,7 @@ def prepare_input_latecrop(
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
     """
@@ -869,14 +923,14 @@ def prepare_input_latecrop(
         )
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
-    if not is_groundtruth:
+    if not is_groundtruth and min_parcels_in_class > 1:
         for _, row in (
             parceldata_df.groupby(column_output_class)
             .size()
             .reset_index(name="count")
             .iterrows()
         ):
-            if row["count"] < conf.preprocess.getint("min_parcels_in_class"):
+            if row["count"] < min_parcels_in_class:
                 logger.info(
                     f"Class <{row[column_output_class]}> only contains {row['count']} "
                     "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
@@ -966,6 +1020,7 @@ def prepare_input_latecrop_early(
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
     """
@@ -980,6 +1035,7 @@ def prepare_input_latecrop_early(
         column_BEFL_maincrop=column_BEFL_maincrop,
         column_output_class=column_output_class,
         classes_refe_path=classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
         is_groundtruth=is_groundtruth,
     )
 
@@ -1009,6 +1065,8 @@ def prepare_input_cropgroup_early(
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
 ):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname
@@ -1016,7 +1074,12 @@ def prepare_input_cropgroup_early(
     """
     # First run the standard landcover prepare
     parceldata_df = prepare_input_cropgroup(
-        parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_path
+        parceldata_df,
+        column_BEFL_cropcode,
+        column_output_class,
+        classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
+        is_groundtruth=is_groundtruth,
     )
 
     # Set late crops to ignore
@@ -1048,6 +1111,8 @@ def prepare_input_landcover(
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
 ):
     """
     This function creates a file that is compliant with the assumptions used by the rest
@@ -1148,6 +1213,29 @@ def prepare_input_landcover(
         column_output_class,
     ] = "MON_LC_UNKNOWN"
 
+    # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
+    if not is_groundtruth and min_parcels_in_class > 1:
+        for _, row in (
+            parceldata_df.groupby(column_output_class)
+            .size()
+            .reset_index(name="count")
+            .iterrows()
+        ):
+            if row["count"] < min_parcels_in_class:
+                logger.info(
+                    f"Class <{row[column_output_class]}> only contains {row['count']} "
+                    "elements, so put them to IGNORE_NOT_ENOUGH_SAMPLES"
+                )
+                parceldata_df.loc[
+                    parceldata_df[column_output_class] == row[column_output_class],
+                    column_output_class,
+                ] = "IGNORE_NOT_ENOUGH_SAMPLES"
+
+        # Add copy of class as class_declared
+        parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+            column_output_class
+        ]
+
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
         if (
@@ -1175,6 +1263,8 @@ def prepare_input_landcover_early(
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
 ):
     """
     Prepare a dataframe based on the BEFL input file so it onclused a classname
@@ -1182,7 +1272,12 @@ def prepare_input_landcover_early(
     """
     # First run the standard landcover prepare
     parceldata_df = prepare_input_landcover(
-        parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_path
+        parceldata_df,
+        column_BEFL_cropcode,
+        column_output_class,
+        classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
+        is_groundtruth=is_groundtruth,
     )
 
     # Set crops not in early crops to ignore
@@ -1215,6 +1310,8 @@ def prepare_input_most_popular_crop(
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
 ):
     """
     This function creates a file that is compliant with the assumptions used by the rest

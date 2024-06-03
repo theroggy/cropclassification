@@ -34,6 +34,7 @@ def prepare_input(
     data_ext: str,
     classtype_to_prepare: str,
     classes_refe_path: Path,
+    min_parcels_in_class: int,
     output_parcel_path: Path,
     force: bool = False,
 ):
@@ -63,6 +64,7 @@ def prepare_input(
             input_parcel_path=input_parcel_path,
             classtype_to_prepare=classtype_to_prepare,
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             output_dir=output_parcel_path.parent,
         )
     else:
