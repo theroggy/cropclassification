@@ -42,7 +42,7 @@ def write_full_report(
     """Writes a report about the accuracy of the predictions to a file.
 
     Args:
-        parcel_predictions_geopath: File name of geofile with the parcels with their
+        parcel_predictions_path: File name of csv file with the parcel with their
             predictions.
         prediction_columnname: Column name of the column that contains the predictions.
         output_report_txt: File name of txt file the report will be written to.
@@ -79,15 +79,6 @@ def write_full_report(
     logger.info(f"Read file with predictions: {parcel_predictions_geopath}")
     df_predict = gfo.read_file(parcel_predictions_geopath)
     df_predict.set_index(conf.columns["id"], inplace=True)
-
-    # Convert all columns to numeric, for the actual numeric ones this will stick.
-    # For new files this isn't necessary anymore, but to be able to update reports for
-    # old runs this needs to stay here.
-    for column in df_predict.columns:
-        try:
-            df_predict[column] = pd.to_numeric(df_predict[column])
-        except Exception:
-            _ = None
 
     # Add column that shows if the parcel was used for training
     if parcel_train_path is not None:
@@ -1429,7 +1420,6 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
     ] = "PRED-WRONG"
 
     # Calculate gt_conclusion_column
-    # ------------------------------
     # Declared class was correct
     in_df[gt_conclusion_column] = "UNDEFINED"
     in_df.loc[
