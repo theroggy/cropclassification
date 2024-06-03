@@ -102,17 +102,22 @@ def calc_marker_task(
         # Copy the config files to a config dir for later notice
         configfiles_used_dir = run_dir / "configfiles_used"
         if configfiles_used_dir.exists():
-            shutil.rmtree(configfiles_used_dir)
-        configfiles_used_dir.mkdir()
-        for idx, config_path in enumerate(config_paths):
-            # Prepend with idx so the order of config files is retained...
-            dst = configfiles_used_dir / f"{idx}_{config_path.name}"
-            shutil.copy(config_path, dst)
+            configfiles_used = sorted(configfiles_used_dir.glob("*.ini"))
+            conf.read_config(
+                config_paths=configfiles_used,
+                default_basedir=default_basedir,
+                overrules=config_overrules,
+            )
+        else:
+            for idx, config_path in enumerate(config_paths):
+                # Prepend with idx so the order of config files is retained...
+                dst = configfiles_used_dir / f"{idx}_{config_path.name}"
+                shutil.copy(config_path, dst)
 
-        # Write the resolved complete config, so it can be reused
-        logger.info("Write config_used.ini, so it can be reused later on")
-        with open(config_used_path, "w") as config_used_file:
-            conf.config.write(config_used_file)
+            # Write the resolved complete config, so it can be reused
+            logger.info("Write config_used.ini, so it can be reused later on")
+            with open(config_used_path, "w") as config_used_file:
+                conf.config.write(config_used_file)
 
     # Read the info about the run
     input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
@@ -153,7 +158,7 @@ def calc_marker_task(
         if path is not None and not path.exists():
             message = f"Input file doesn't exist, so STOP: {path}"
             logger.critical(message)
-            raise Exception(message)
+            raise ValueError(message)
 
     # Get some general config
     data_ext = conf.general["data_ext"]
