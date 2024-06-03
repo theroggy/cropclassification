@@ -14,7 +14,7 @@
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
 - Add utility script to recalculate reports for an existing run + make recalculation
   more robust for old runs (#91, #102, #104)
-- Improve pixelcount calculation for parcels (#96)
+- Improve pixelcount calculation for parcels (#96, #105)
 - Improve calculation of beta error in reporting (#97)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
