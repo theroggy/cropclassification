@@ -13,7 +13,7 @@
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
 - Add utility script to recalculate reports for an existing run + make recalculation
-  more robust for old runs (#91, #102, #104)
+  more robust for old runs (#91, #102, #103, #104)
 - Improve pixelcount calculation for parcels (#96, #105)
 - Improve calculation of beta error in reporting (#97)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)

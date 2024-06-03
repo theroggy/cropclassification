@@ -51,6 +51,10 @@ def calc_top3_and_consolidation(
             f"stop: {output_predictions_path}"
         )
         return
+    if not input_parcel_probabilities_path.exists():
+        raise ValueError(f"file does not exist: {input_parcel_probabilities_path=}")
+    if not input_parcel_path.exists():
+        raise ValueError(f"file does not exist: {input_parcel_path=}")
 
     # Read input files
     logger.info("Read input file")
@@ -256,10 +260,7 @@ def add_doubt_column(
         if doubt_proba1_st_2_x_proba2 is True:
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
-                & (
-                    pred_df["pred1_prob"].map(float)
-                    < 2.0 * pred_df["pred2_prob"].map(float)
-                ),
+                & (pred_df["pred1_prob"] < 2.0 * pred_df["pred2_prob"]),
                 new_pred_column,
             ] = "DOUBT:PROBA1<2*PROBA2"
 
@@ -276,10 +277,7 @@ def add_doubt_column(
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df["pred1"] != pred_df[conf.columns["class_declared"]])
-                & (
-                    pred_df["pred1_prob"].map(float)
-                    < (doubt_pred_ne_input_proba1_st_pct / 100)
-                ),
+                & (pred_df["pred1_prob"] < (doubt_pred_ne_input_proba1_st_pct / 100)),
                 new_pred_column,
             ] = "DOUBT:PRED<>INPUT-PROBA1<X"
 
@@ -296,10 +294,7 @@ def add_doubt_column(
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df["pred1"] == pred_df[conf.columns["class_declared"]])
-                & (
-                    pred_df["pred1_prob"].map(float)
-                    < (doubt_pred_eq_input_proba1_st_pct / 100)
-                ),
+                & (pred_df["pred1_prob"] < (doubt_pred_eq_input_proba1_st_pct / 100)),
                 new_pred_column,
             ] = "DOUBT:PRED=INPUT-PROBA1<X"
 
