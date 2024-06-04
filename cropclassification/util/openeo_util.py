@@ -40,6 +40,7 @@ def get_images(
       - roi_bounds (Tuple): bounds of the image to get as Tuple[minx, miny, maxx, maxy].
       - roi_crs (int): crs the roi bounds.
       - collection (str): openeo collection to get the image from.
+      - satellite (str): the satellite to get the image from.
       - start_date (datetime): start date for the images in the collection to use for
         this image.
       - end_date (datetime): exclusive end date for the images in the collection to use
@@ -69,7 +70,6 @@ def get_images(
     Raises:
         ValueError: _description_
         Exception: _description_
-        RuntimeError: _description_
         RuntimeError: _description_
     """
     # Do some checks on already existing images

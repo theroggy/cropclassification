@@ -376,7 +376,6 @@ def _prepare_periodic_mosaic_params(
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
             of the region of interest to download the mosaic for.
         roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
-                start_date (datetime): start date, included.
         end_date (datetime): end date, excluded.
         imageprofiles_to_get (List[str]): list of image proles a periodic mosaic should
             be generated for.
