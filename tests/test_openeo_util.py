@@ -1,3 +1,4 @@
+import os
 import shutil
 from datetime import datetime
 
@@ -126,6 +127,10 @@ def test_get_images_s2(tmp_path, time_reducer):
         assert all(file.descriptions)
 
 
+@pytest.mark.skipif(
+    "GITHUB_ACTIONS" in os.environ,
+    "Don't run on CI: not possible to connect to openeo.",
+)
 @pytest.mark.parametrize(
     "expected_error, satellite, time_reducer",
     [("only Sentinel 2 can be used with time_reducer = best", "s1", "best")],
