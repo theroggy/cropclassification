@@ -418,16 +418,16 @@ def best_available_pixel(
     max_cloud_cover: Optional[float],
 ):
     """
-    A monthly composite image is created based on the Best Available Pixel (BAP) method
-    in OpenEO.
+    Create image mosaic using the Best Available Pixel (BAP) method.
+
     Link to the article:
     https://documentation.dataspace.copernicus.eu/APIs/openEO/openeo-community-examples/python/RankComposites/bap_composite.html
 
     Args:
-        conn (openeo.Connection): _description_
+        conn (openeo.Connection): openeo connection.
         collection (str): openeo collection to get the image from.
         spatial_extent (_type_): bounds of the image
-        temporal_extent (list[str]): period between start and enddate
+        temporal_extent (list[str]): period between start and end date
         bands (list[str]): the bands to get.
         max_cloud_cover (Optional[float]): the maximum cloud cover images
         should have to be used.
@@ -484,10 +484,9 @@ def best_available_pixel(
     )
 
     cloud_coverage = (1 - binary).aggregate_spatial(geometries=polygon, reducer="mean")
-    coverage_score = cloud_coverage.vector_to_raster(
-        scl
-    )  # This rasterizes the vectorcube and results in the same spatial dimensions
-    # as the scl cube
+
+    # rasterize the vectorcube so result has the same spatial dimensions as scl cube.
+    coverage_score = cloud_coverage.vector_to_raster(scl)
     coverage_score = coverage_score.rename_labels("bands", ["score"])
 
     # Data Score
@@ -573,12 +572,11 @@ def best_available_pixel(
 
     rank_mask = rank_mask.band("score")
 
-    # Next, some bands of interest from Sentinel-2 are loaded.
-    # They are then masked by the BAP mask constructed above.
-    # Then they are aggregated per month, to obtain a composite image per month.
-    # By using the “first” process as an aggregator,
-    # the situation where there are potentially more than one days in a month selected
-    # by the algorithm is immediately handled.
+    # Next, some bands of interest from Sentinel-2 are loaded. They are then masked by
+    # the BAP mask constructed above.
+    # Then they are aggregated per period, to obtain a composite image per period.
+    # By using the "first" process as an aggregator, the situation where there are
+    # more than one images selected in the period for a pixel, is handled.
     rgb_bands = conn.load_collection(
         collection,
         spatial_extent=spatial_extent,
