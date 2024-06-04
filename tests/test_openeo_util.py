@@ -129,7 +129,7 @@ def test_get_images_s2(tmp_path, time_reducer):
 
 @pytest.mark.skipif(
     "GITHUB_ACTIONS" in os.environ,
-    "Don't run on CI: not possible to connect to openeo.",
+    reason="Don't run on CI: not possible to connect to openeo.",
 )
 @pytest.mark.parametrize(
     "expected_error, satellite, time_reducer",
