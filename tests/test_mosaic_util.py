@@ -22,8 +22,8 @@ def test_calc_periodic_mosaic_s2(tmp_path):
     # Make sure the s2-agri input file was copied
     s2_agri_output_path = (
         output_image_roi_dir
-        / SampleData.image_s2_path.parent.name
-        / SampleData.image_s2_path.name
+        / SampleData.image_s2_mean_path.parent.name
+        / SampleData.image_s2_mean_path.name
     )
     assert s2_agri_output_path.exists()
 
