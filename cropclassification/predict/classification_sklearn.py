@@ -62,6 +62,8 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
     logger.info("Start training")
     classifier_type_lower = conf.classifier["classifier_type"].lower()
     classifier_kwargs = conf.classifier.getdict("classifier_sklearn_kwargs")
+    if classifier_kwargs is None:
+        classifier_kwargs = {}
     if classifier_type_lower == "randomforest":
         if "n_jobs" not in classifier_kwargs:
             classifier_kwargs["n_jobs"] = conf.general.getint("nb_parallel")
