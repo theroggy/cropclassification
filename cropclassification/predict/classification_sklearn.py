@@ -20,15 +20,8 @@ from sklearn.svm import SVC
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
-
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
 
 
 def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
@@ -68,48 +61,30 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
     # Using almost all defaults for the classifier seems to work best...
     logger.info("Start training")
     classifier_type_lower = conf.classifier["classifier_type"].lower()
+    classifier_kwargs = conf.classifier.getdict("classifier_sklearn_kwargs")
     if classifier_type_lower == "randomforest":
-        n_estimators = conf.classifier.getint("randomforest_n_estimators")
-        max_depth = conf.classifier.get("randomforest_max_depth")
-        if max_depth is not None:
-            max_depth = int(max_depth)
-        classifier = RandomForestClassifier(
-            n_estimators=n_estimators, max_depth=max_depth
-        )
+        if "n_jobs" not in classifier_kwargs:
+            classifier_kwargs["n_jobs"] = conf.general.getint("nb_parallel")
+        classifier = RandomForestClassifier(**classifier_kwargs)
     elif classifier_type_lower == "nearestneighbor":
-        classifier = KNeighborsClassifier(weights="distance", n_jobs=-1)
+        if "n_jobs" not in classifier_kwargs:
+            classifier_kwargs["n_jobs"] = conf.general.getint("nb_parallel")
+        classifier = KNeighborsClassifier(**classifier_kwargs)
     elif classifier_type_lower == "multilayer_perceptron":
-        hidden_layer_sizes = tuple(
-            conf.classifier.getlistint("multilayer_perceptron_hidden_layer_sizes")
-        )
-        max_iter = conf.classifier.getint("multilayer_perceptron_max_iter")
-        learning_rate_init = conf.classifier.getfloat(
-            "multilayer_perceptron_learning_rate_init"
-        )
-        classifier = MLPClassifier(
-            max_iter=max_iter,
-            hidden_layer_sizes=hidden_layer_sizes,
-            learning_rate_init=learning_rate_init,
-        )
+        classifier = MLPClassifier(**classifier_kwargs)
     elif classifier_type_lower == "svm":
-        # cache_size=1000 (MB) should speed up training
-        # probability=True is necessary to be able to use predict_proba
-        classifier = SVC(
-            C=64.0,
-            gamma=0.125,
-            probability=True,
-            cache_size=1000,
-        )
+        if "probability" not in classifier_kwargs:
+            classifier_kwargs["probability"] = True
+        classifier = SVC(**classifier_kwargs)
     elif classifier_type_lower == "histgradientboostingclassifier":
-        kwargs = conf.classifier.getdict("histgradientboostingclassifier_kwargs", {})
-        classifier = HistGradientBoostingClassifier(**kwargs)
+        classifier = HistGradientBoostingClassifier(**classifier_kwargs)
     else:
         message = (
             "Unsupported classifier in conf.classifier['classifier_type']: "
             f"{conf.classifier['classifier_type']}"
         )
         logger.critical(message)
-        raise Exception(message)
+        raise ValueError(message)
 
     logger.info(f"Start fitting classifier:\n{classifier}")
     classifier.fit(train_data_df, train_classes_df)
