@@ -7,6 +7,7 @@ import os
 from typing import Optional, Union
 
 import pandas as pd
+import pyogrio
 import sqlite3
 
 
@@ -61,6 +62,8 @@ def read_file(
     elif ext_lower == ".parquet":
         return pd.read_parquet(str(path), columns=columns)
     elif ext_lower in (".sqlite", ".gpkg"):
+        data_read_df = pyogrio.read_dataframe(path, columns=columns, use_arrow=True)
+        """
         sql_db = None
         try:
             sql_db = sqlite3.connect(str(path))
@@ -76,6 +79,7 @@ def read_file(
         finally:
             if sql_db is not None:
                 sql_db.close()
+        """
         return data_read_df
     else:
         raise Exception(f"Not implemented for extension {ext_lower}")
