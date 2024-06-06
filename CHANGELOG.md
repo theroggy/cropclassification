@@ -20,7 +20,8 @@
 - Add whether a parcel has been used for training to output (#107)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
-- Fix pandas 3,... deprecations, warnings (#88, #109)
+- Updates to avoid warnings from (newer versions of) dependencies like pandas,
+  geofileops (#88, #109)
 
 ### Bugs fixed
 
