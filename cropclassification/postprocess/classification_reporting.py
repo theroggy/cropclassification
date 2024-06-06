@@ -1158,7 +1158,7 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     df_confmatrix_ext.insert(loc=2, column="nb_predicted_correct", value=0)
     for column in df_confmatrix_ext.columns:
         if column not in ["nb_input", "nb_predicted", "nb_predicted_correct"]:
-            df_confmatrix_ext.loc["nb_predicted_correct", column] = df_confmatrix_ext[
+            df_confmatrix_ext["nb_predicted_correct"][column] = df_confmatrix_ext[
                 column
             ][column]
     # Insert column with the total nb of parcel for each class that were predicted to
