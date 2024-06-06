@@ -2,14 +2,28 @@
 
 ## ???
 
+### Deprecations and compatibility notes
+
+- To provide the possibility to specify any hyperparameter for sklearn classifiers, the
+  parameters will now have to be specified as a json string instead of in individual
+  parameters when such a classifier is used. Because of this, the following parameters
+  become obsolete + the default values will become the default values in sklearn (#110):
+    - randomforest_n_estimators: default 100 instead of 200
+    - randomforest_max_depth: default None instead of 35
+    - multilayer_perceptron_hidden_layer_sizes: default (100,) instead of (100, 100)
+    - multilayer_perceptron_max_iter: default 200 instead of 1000
+    - multilayer_perceptron_learning_rate_init
+
 ### Improvements
 
 - Add task/action to automate periodic download of images (#67)
 - Add support to calculate indexes locally (#55)
 - Improve config and handling of "weekly" and "biweekly" raster image periods (#78)
+- Add possibility to configure any possible hyperparameter for the supported sklearn
+  based classifiers (#110)
 - Add support for HistGradientBoostingClassifier (#95)
 - Make image profiles to be used in a classification configurable in a config file (#56)
-- Add option to overrule config setting at runtime (#92)
+- Add option to overrule configuration parameters at runtime (#92)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
 - Add method "best available pixel" on openeo for S2 (#70)
