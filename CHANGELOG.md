@@ -12,6 +12,7 @@
 - Add option to overrule config setting at runtime (#92)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
   instead of the previous one to avoid using data outside the dates provided (#83, #84)
+- Add method "best available pixel" on openeo for S2 (#70)
 - Add utility script to recalculate reports for an existing run + make recalculation
   more robust for old runs (#91, #102, #103, #104, #106)
 - Improve pixelcount calculation for parcels (#96, #105)
@@ -19,7 +20,8 @@
 - Add whether a parcel has been used for training to output (#107)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)
-- Add method "best available pixel" on openeo for S2 (#70)
+- Updates to avoid warnings from (newer versions of) dependencies like pandas,
+  geofileops (#88, #109)
 
 ### Bugs fixed
 
