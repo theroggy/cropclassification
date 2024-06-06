@@ -1232,9 +1232,10 @@ def prepare_input_landcover(
                 ] = "IGNORE_NOT_ENOUGH_SAMPLES"
 
         # Add copy of class as class_declared
-        parceldata_df[conf.columns["class_declared"]] = parceldata_df[
-            column_output_class
-        ]
+        if conf.columns["class_declared"] not in parceldata_df.columns:
+            parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+                column_output_class
+            ]
 
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
