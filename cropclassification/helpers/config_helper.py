@@ -133,7 +133,7 @@ def read_config(
             "list": lambda x: [i.strip() for i in x.split(",")],
             "listint": lambda x: [int(i.strip()) for i in x.split(",")],
             "listfloat": lambda x: [float(i.strip()) for i in x.split(",")],
-            "dict": lambda x: json.loads(x),
+            "dict": lambda x: None if x is None else json.loads(x),
             "path": lambda x: None if x is None else Path(x),
         },
         allow_no_value=True,
