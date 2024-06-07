@@ -16,15 +16,8 @@ from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.postprocess import classification_postprocess as class_postpr
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
-
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
 
 # TODO: improve reporting to divide between eligible versus ineligible classes?
 # TODO?: report based on area instead of number parcel
@@ -131,16 +124,9 @@ def write_full_report(
 
     # Build and write report...
     with open(output_report_txt, "w") as outputfile:
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "********************* PARAMETERS USED **********************\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write("\n")
+        outputfile.write("**************************************************\n")
+        outputfile.write("**************** PARAMETERS USED *****************\n")
+        outputfile.write("**************************************************\n\n")
         message = "Main parameters used for the marker"
         outputfile.write(f"\n{message}\n")
         html_data["PARAMETERS_USED_TEXT"] = message
@@ -171,26 +157,12 @@ def write_full_report(
             logger.info(f"{parameters_used_df}\n")
             html_data["PARAMETERS_USED_TABLE"] = parameters_used_df.to_html(index=False)
 
-        outputfile.write("\n")
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "**************** RECAP OF GENERAL RESULTS ******************\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write("\n")
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "*             GENERAL CONSOLIDATED CONCLUSIONS             *\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
+        outputfile.write("\n**************************************************\n")
+        outputfile.write("*********** RECAP OF GENERAL RESULTS *************\n")
+        outputfile.write("**************************************************\n\n")
+        outputfile.write("**************************************************\n")
+        outputfile.write("*        GENERAL CONSOLIDATED CONCLUSIONS        *\n")
+        outputfile.write("**************************************************\n")
         # Calculate + write general conclusions for consolidated prediction
         _add_prediction_conclusion(
             in_df=df_predict,
@@ -237,16 +209,9 @@ def write_full_report(
             )
 
         # Output general accuracies
-        outputfile.write("\n")
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "*                   OVERALL ACCURACIES                     *\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
+        outputfile.write("\n*************************************************\n")
+        outputfile.write("*              OVERALL ACCURACIES                *\n")
+        outputfile.write("**************************************************\n")
         overall_accuracies_list = []
 
         # Calculate overall accuracies for all parcels
@@ -403,25 +368,12 @@ def write_full_report(
         # )
         # outputfile.write(message)
 
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "********************* DETAILED RESULTS *********************\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write("\n")
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "*             DETAILED PREDICTION CONCLUSIONS              *\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
+        outputfile.write("**************************************************\n")
+        outputfile.write("**************** DETAILED RESULTS ****************\n")
+        outputfile.write("**************************************************\n")
+        outputfile.write("\n**************************************************\n")
+        outputfile.write("*        DETAILED PREDICTION CONCLUSIONS         *\n")
+        outputfile.write("**************************************************\n")
 
         # Calculate detailed conclusions for the predictions
         logger.info("Calculate the detailed conclusions for the predictions")
@@ -487,16 +439,9 @@ def write_full_report(
                 count_per_class.to_html()
             )
 
-        outputfile.write("\n")
-        outputfile.write(
-            "************************************************************\n"
-        )
-        outputfile.write(
-            "*     CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS      *\n"
-        )
-        outputfile.write(
-            "************************************************************\n"
-        )
+        outputfile.write("\n**************************************************\n")
+        outputfile.write("* CONFUSION MATRICES FOR PARCELS WITH PREDICTIONS*\n")
+        outputfile.write("**************************************************\n")
         # Calculate an extended confusion matrix with the standard prediction column
         # and write it to output...
         df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, "pred1")
@@ -544,15 +489,9 @@ def write_full_report(
 
         # If a ground truth file is provided, report on the ground truth
         if parcel_ground_truth_path is not None:
-            outputfile.write(
-                "************************************************************\n"
-            )
-            outputfile.write(
-                "*   REPORTING ON PREDICTION QUALITY BASED ON GROUND TRUTH  *\n"
-            )
-            outputfile.write(
-                "************************************************************\n"
-            )
+            outputfile.write("**************************************************\n")
+            outputfile.write("*  REPORT PREDICT QUALITY BASED ON GROUND TRUTH  *\n")
+            outputfile.write("**************************************************\n")
 
             # Read ground truth
             logger.info(
@@ -582,7 +521,7 @@ def write_full_report(
                 raise Exception(message)
 
             # General ground truth statistics
-            # ******************************************************************
+            # -------------------------------
             # Calculate the conclusions based on ground truth
 
             # Calculate and write the result for the consolidated predictions
