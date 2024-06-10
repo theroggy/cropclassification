@@ -102,15 +102,23 @@ def calc_marker_task(
         # Copy the config files to a config dir for later notice
         configfiles_used_dir = run_dir / "configfiles_used"
         if configfiles_used_dir.exists():
-            shutil.rmtree(configfiles_used_dir)
-        configfiles_used_dir.mkdir()
-        for config_path in config_paths:
-            shutil.copy(config_path, configfiles_used_dir)
+            configfiles_used = sorted(configfiles_used_dir.glob("*.ini"))
+            conf.read_config(
+                config_paths=configfiles_used,
+                default_basedir=default_basedir,
+                overrules=config_overrules,
+            )
+        else:
+            configfiles_used_dir.mkdir(parents=True)
+            for idx, config_path in enumerate(config_paths):
+                # Prepend with idx so the order of config files is retained...
+                dst = configfiles_used_dir / f"{idx}_{config_path.name}"
+                shutil.copy(config_path, dst)
 
-        # Write the resolved complete config, so it can be reused
-        logger.info("Write config_used.ini, so it can be reused later on")
-        with open(config_used_path, "w") as config_used_file:
-            conf.config.write(config_used_file)
+            # Write the resolved complete config, so it can be reused
+            logger.info("Write config_used.ini, so it can be reused later on")
+            with open(config_used_path, "w") as config_used_file:
+                conf.config.write(config_used_file)
 
     # Read the info about the run
     input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
@@ -151,7 +159,7 @@ def calc_marker_task(
         if path is not None and not path.exists():
             message = f"Input file doesn't exist, so STOP: {path}"
             logger.critical(message)
-            raise Exception(message)
+            raise ValueError(message)
 
     # Get some general config
     data_ext = conf.general["data_ext"]
@@ -225,6 +233,7 @@ def calc_marker_task(
     #             the number of S1/S2 pixels in the parcel.
     #             Is -1 if the parcel doesn't have any S1/S2 data.
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
+    min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
     base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
     class_pre.prepare_input(
@@ -235,6 +244,7 @@ def calc_marker_task(
         data_ext=data_ext,
         classtype_to_prepare=classtype_to_prepare,
         classes_refe_path=classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
         output_parcel_path=parcel_path,
     )
 
@@ -269,15 +279,14 @@ def calc_marker_task(
             input_model_to_use_path = best_model["path"]
 
     # if there is no model to use specified, train one!
-    parcel_test_path = None
+    parcel_train_path = run_dir / f"{base_filename}_parcel_train{data_ext}"
+    parcel_test_path = run_dir / f"{base_filename}_parcel_test{data_ext}"
     parcel_predictions_proba_test_path = None
     if input_model_to_use_path is None:
         # Create the training sample...
         # Remark: this creates a list of representative test parcel + a list of
         # (candidate) training parcel
         balancing_strategy = conf.marker["balancing_strategy"]
-        parcel_train_path = run_dir / f"{base_filename}_parcel_train{data_ext}"
-        parcel_test_path = run_dir / f"{base_filename}_parcel_test{data_ext}"
         class_pre.create_train_test_sample(
             input_parcel_path=parcel_path,
             output_parcel_train_path=parcel_train_path,
@@ -372,6 +381,7 @@ def calc_marker_task(
             data_ext=data_ext,
             classtype_to_prepare=conf.preprocess["classtype_to_prepare_groundtruth"],
             classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
             output_parcel_path=groundtruth_path,
         )
 
@@ -381,6 +391,7 @@ def calc_marker_task(
         report_txt = Path(f"{str(parcel_predictions_test_path)}_accuracy_report.txt")
         class_report.write_full_report(
             parcel_predictions_geopath=parcel_predictions_test_geopath,
+            parcel_train_path=parcel_train_path,
             output_report_txt=report_txt,
             parcel_ground_truth_path=groundtruth_path,
         )
@@ -389,6 +400,7 @@ def calc_marker_task(
     report_txt = Path(f"{str(parcel_predictions_all_path)}_accuracy_report.txt")
     class_report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
+        parcel_train_path=parcel_train_path,
         output_report_txt=report_txt,
         parcel_ground_truth_path=groundtruth_path,
     )

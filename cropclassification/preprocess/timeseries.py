@@ -123,6 +123,10 @@ def collect_and_prepare_timeseries_data(
         raise ValueError(f"No timeseries data found for pattern {glob_pattern}")
 
     for curr_path in sorted(ts_data_paths):
+        # Skip the pixcount file
+        if curr_path.stem.endswith("_pixcount"):
+            continue
+
         # Only process data that is of the right sensor types
         fileinfo = ts_helper.get_fileinfo_timeseries_periods(curr_path)
         image_profile = fileinfo["image_profile"].lower()
