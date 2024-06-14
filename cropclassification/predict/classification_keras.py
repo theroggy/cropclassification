@@ -140,11 +140,19 @@ def train(
     test_classes_df = tf.keras.utils.to_categorical(test_classes_df, len(classes_dict))
 
     # Get some config from the config file
-    hidden_layer_sizes = conf.classifier.getlistint(
+    hidden_layer_sizes_str = conf.classifier.getlist(
         "multilayer_perceptron_hidden_layer_sizes"
     )
-    if len(hidden_layer_sizes) == 0:
+    if len(hidden_layer_sizes_str) == 0:
         raise Exception("Having no hidden layers is currently not supported")
+    hidden_layer_sizes = []
+    for hidden_layer_size_str in hidden_layer_sizes_str:
+        # Support using {input_layer_size} placeholder
+        hidden_layer_size = safe_math_eval(
+            hidden_layer_size_str.format(input_layer_size=len(train_data_df.columns))
+        )
+        hidden_layer_sizes.append(int(hidden_layer_size))
+
     max_iter = conf.classifier.getint("multilayer_perceptron_max_iter")
     learning_rate_init = conf.classifier.getfloat(
         "multilayer_perceptron_learning_rate_init"
@@ -154,20 +162,29 @@ def train(
     model = tf.keras.models.Sequential()
     # Create the hidden layers as specified in config
     dropout_pct = conf.classifier.getfloat("multilayer_perceptron_dropout_pct")
+    activation = "relu"
+    kernel_initializer = "he_uniform"
     for i, hidden_layer_size in enumerate(hidden_layer_sizes):
         # For the first layer, the input size needs to be specified
         if i == 0:
             model.add(
                 tf.keras.layers.Dense(
                     hidden_layer_size,
-                    activation="relu",
+                    activation=activation,
+                    kernel_initializer=kernel_initializer,
                     input_shape=(len(train_data_df.columns),),
                 )
             )
             if dropout_pct > 0:
                 model.add(tf.keras.layers.Dropout(dropout_pct / 100))
         else:
-            model.add(tf.keras.layers.Dense(hidden_layer_size, activation="relu"))
+            model.add(
+                tf.keras.layers.Dense(
+                    hidden_layer_size,
+                    activation=activation,
+                    kernel_initializer=kernel_initializer,
+                )
+            )
             if dropout_pct > 0:
                 model.add(tf.keras.layers.Dropout(dropout_pct / 100))
 
@@ -179,12 +196,13 @@ def train(
     model.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"])
 
     logger.info(f"Start fitting classifier:\n{model.summary()}")
+    stop_patience = 100
     acc_metric_mode = "min"
     reduce_lr_loss = tf.keras.callbacks.ReduceLROnPlateau(
         monitor="val_loss",
         mode=acc_metric_mode,
         factor=0.2,
-        patience=50,
+        patience=25,
         verbose=1,
         epsilon=1e-4,
     )
@@ -192,7 +210,7 @@ def train(
 
     # Several best_model strategies are possible, but it seems the standard/typical
     # val_loss gives the best results for this case.
-    best_model_strategy = "VAL_LOSS"
+    best_model_strategy = conf.classifier.get("best_model_strategy")
     if best_model_strategy == "VAL_LOSS":
         to_be_formatted_by_callback = (
             "{val_loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
@@ -210,7 +228,10 @@ def train(
         )
         callbacks.append(
             tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss", mode=acc_metric_mode, patience=200, verbose=0
+                monitor="val_loss",
+                mode=acc_metric_mode,
+                patience=stop_patience,
+                verbose=0,
             )
         )
     elif best_model_strategy == "LOSS":
@@ -228,7 +249,7 @@ def train(
         )
         callbacks.append(
             tf.keras.callbacks.EarlyStopping(
-                monitor="loss", mode=acc_metric_mode, patience=100, verbose=0
+                monitor="loss", mode=acc_metric_mode, patience=stop_patience, verbose=0
             )
         )
     elif best_model_strategy == "AVG(VAL_LOSS,LOSS)":
@@ -245,9 +266,11 @@ def train(
         )
         callbacks.append(
             tf.keras.callbacks.EarlyStopping(
-                monitor="loss", mode=acc_metric_mode, patience=100, verbose=0
+                monitor="loss", mode=acc_metric_mode, patience=stop_patience, verbose=0
             )
         )
+    else:
+        raise ValueError(f"unsupported {best_model_strategy=}")
 
     csv_log_path = Path(f"{output_classifier_path_noext}_train_log.csv")
     callbacks.append(
@@ -371,6 +394,21 @@ def predict_proba(
         pdh.to_file(proba_df, output_parcel_predictions_path)
 
     return proba_df
+
+
+def safe_math_eval(string):
+    """
+    Function to evaluate a mathematical expression safely.
+    """
+    if string is None:
+        return None
+
+    allowed_chars = "0123456789+-*(). /"
+    for char in string:
+        if char not in allowed_chars:
+            raise ValueError("Error: Unsafe eval")
+
+    return eval(string)
 
 
 class ModelCheckpointExt(kr.callbacks.Callback):
