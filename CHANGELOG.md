@@ -13,6 +13,8 @@
     - multilayer_perceptron_hidden_layer_sizes: default (100,) instead of (100, 100)
     - multilayer_perceptron_max_iter: default 200 instead of 1000
     - multilayer_perceptron_learning_rate_init
+- For keras multilayer perceptron, some changes were applied to the default
+  hyperparameters (#115)
 
 ### Improvements
 
@@ -22,6 +24,7 @@
 - Add possibility to configure any possible hyperparameter for the supported sklearn
   based classifiers (#110)
 - Add support for HistGradientBoostingClassifier (#95)
+- Improve configurability + defaults of keras mlp classifier (#115)
 - Make image profiles to be used in a classification configurable in a config file (#56)
 - Add option to overrule configuration parameters at runtime (#92)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
