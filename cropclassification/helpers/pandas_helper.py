@@ -4,10 +4,39 @@ Module with helper functions to expand on some features of pandas.
 
 from pathlib import Path
 import os
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import pandas as pd
 import sqlite3
+
+
+def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
+    ext_lower = path.suffix.lower()
+    if ext_lower in (".sqlite", ".gpkg"):
+        sql_db = None
+        try:
+            sql_db = sqlite3.connect(str(path))
+            df = pd.read_sql_query(
+                f'select count(*) featurecount from "{table_name}"', sql_db
+            )
+            featurecount = df["featurecount"].iloc[0].item()
+
+            df = pd.read_sql_query(f"PRAGMA table_info('{table_name}')", sql_db)
+            columns = df["name"].to_list()
+
+            result = {
+                "featurecount": featurecount,
+                "columns": columns,
+            }
+            return result
+
+        except Exception as ex:
+            raise RuntimeError(f"Error reading data from {str(path)}") from ex
+        finally:
+            if sql_db is not None:
+                sql_db.close()
+    else:
+        raise ValueError(f"Not implemented for extension {ext_lower}")
 
 
 def read_file(
@@ -78,7 +107,7 @@ def read_file(
                 sql_db.close()
         return data_read_df
     else:
-        raise Exception(f"Not implemented for extension {ext_lower}")
+        raise ValueError(f"Not implemented for extension {ext_lower}")
 
 
 def to_file(

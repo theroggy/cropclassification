@@ -360,7 +360,7 @@ def get_job_results(
                         batch_job.delete()
 
                 except Exception as ex:
-                    raise RuntimeError(f"Error downloading {output_path}: {ex}")
+                    raise RuntimeError(f"Error downloading {output_path}: {ex}") from ex
 
         # As long as processing is needed, keep polling
         if "queued" in jobs_per_status or "running" in jobs_per_status:

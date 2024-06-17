@@ -27,9 +27,10 @@ logger = logging.getLogger(__name__)
 
 def write_full_report(
     parcel_predictions_geopath: Path,
-    parcel_train_path: Optional[Path],
     output_report_txt: Path,
     parcel_ground_truth_path: Optional[Path] = None,
+    parcel_train_path: Optional[Path] = None,
+    parcel_classification_data_path: Optional[Path] = None,
     force: bool = False,
 ):
     """Writes a report about the accuracy of the predictions to a file.
@@ -37,7 +38,8 @@ def write_full_report(
     Args:
         parcel_predictions_geopath: File name of geofile with the parcels with their
             predictions.
-        prediction_columnname: Column name of the column that contains the predictions.
+        parcel_train_path:
+        parcel_classification_data_path:
         output_report_txt: File name of txt file the report will be written to.
         parcel_ground_truth_path: List of parcels with ground truth to calculate
             eg. alfa and beta errors. If None, the part of the report that is based on
@@ -104,6 +106,7 @@ def write_full_report(
         "PREDICTION_QUALITY_FULL_ALPHA_OVERVIEW_TABLE": empty_string,
         "PREDICTION_QUALITY_ALPHA_TEXT": empty_string,
         "PREDICTION_QUALITY_BETA_TEXT": empty_string,
+        "PREDICTION_QUALITY_THETA_TEXT": empty_string,
         "PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT": empty_string,
         "PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE": empty_string,
         "PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT": empty_string,
@@ -120,6 +123,14 @@ def write_full_report(
         "PREDICTION_QUALITY_BETA_PER_CROP_TABLE": empty_string,
         "PREDICTION_QUALITY_BETA_PER_PROBABILITY_TEXT": empty_string,
         "PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TEXT": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TABLE": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_CLASS_TEXT": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_CLASS_TABLE": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_CROP_TEXT": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_CROP_TABLE": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_PROBABILITY_TEXT": empty_string,
+        "PREDICTION_QUALITY_THETA_PER_PROBABILITY_TABLE": empty_string,
     }
 
     # Build and write report...
@@ -156,6 +167,31 @@ def write_full_report(
             outputfile.write(f"\n{parameters_used_df}\n")
             logger.info(f"{parameters_used_df}\n")
             html_data["PARAMETERS_USED_TABLE"] = parameters_used_df.to_html(index=False)
+
+        outputfile.write("\n**************************************************\n")
+        outputfile.write("****************** DATA STATS ********************\n")
+        outputfile.write("**************************************************\n\n")
+        message = "Some statistics regarding the input data for the marker"
+        outputfile.write(f"\n{message}\n")
+        html_data["DATA_STATS_TEXT"] = message
+
+        logger.info(f"{dict(conf.marker)}")
+        data_stats = []
+        if parcel_classification_data_path is not None:
+            info = pdh.get_table_info(parcel_classification_data_path)
+            data_stats.append(
+                ("classification_data_featurecount", info["featurecount"])
+            )
+            data_stats.append(
+                ("classification_data_columns_count", len(info["columns"]))
+            )
+            data_stats.append(("classification_data_columns", info["columns"]))
+
+        data_stats_df = pd.DataFrame(data_stats, columns=["description", "value"])
+        with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
+            outputfile.write(f"\n{parameters_used_df}\n")
+            logger.info(f"{parameters_used_df}\n")
+            html_data["DATA_STATS_TABLE"] = data_stats_df.to_html(index=False)
 
         outputfile.write("\n**************************************************\n")
         outputfile.write("*********** RECAP OF GENERAL RESULTS *************\n")
@@ -708,9 +744,46 @@ def write_full_report(
             outputfile.write(f"\n{message}\n")
             html_data["PREDICTION_QUALITY_BETA_TEXT"] += "<br/>" + message
 
-            # Some more detailed reports for alpha and beta errors
-            # ******************************************************************
+            # Pct THETA errors=theta errors/(theta errors + correct farmer declarations)
+            theta_numerator_conclusions = (
+                df_parcel_gt[columnname]
+                .loc[df_parcel_gt[columnname].str.startswith("FARMER-WRONG_PRED-DOUBT")]
+                .unique()
+                .tolist()
+            )
+            theta_denominator_conclusions = (
+                df_parcel_gt[columnname]
+                .loc[
+                    df_parcel_gt[columnname].str.startswith("FARMER-CORRECT_PRED-DOUBT")
+                ]
+                .unique()
+                .tolist()
+                + theta_numerator_conclusions
+            )
+            theta_numerator = len(
+                df_parcel_gt.loc[
+                    df_parcel_gt[columnname].isin(theta_numerator_conclusions)
+                ].index
+            )
+            theta_denominator = len(
+                df_parcel_gt.loc[
+                    df_parcel_gt[columnname].isin(theta_denominator_conclusions)
+                ].index
+            )
+            message = "Theta error full (=Theta/(Theta + all FARMER-CORRECT)): "
+            if theta_denominator > 0:
+                message += (
+                    f"{theta_numerator}/{theta_denominator} = "
+                    f"{(theta_numerator/theta_denominator):.04f}"
+                )
+            else:
+                message += f"{theta_numerator}/{theta_denominator} = ?"
 
+            outputfile.write(f"\n{message}\n")
+            html_data["PREDICTION_QUALITY_THETA_TEXT"] += "<br/>" + message
+
+            # Some more detailed reports for alpha, beta and theta errors
+            # -----------------------------------------------------------
             # If the pixcount is available, write the number of ALFA errors per
             # pixcount (for the prediction with doubt)
             pred_quality_full_doubt_column = (
@@ -756,7 +829,7 @@ def write_full_report(
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=alpha_numerator_conclusions,
                     error_codes_denominator=alpha_denominator_conclusions,
-                    error_type="alpha",
+                    include_cumulative_columns=True,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -790,7 +863,7 @@ def write_full_report(
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_conclusions,
                     error_codes_denominator=beta_denominator_conclusions,
-                    error_type="beta",
+                    include_cumulative_columns=True,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -804,6 +877,41 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE"] = (
+                        df_per_column.to_html()
+                    )
+
+                # THETA errors
+                message = (
+                    "Number of THETA parcels (DOUBT parcels that are wrongly declared) "
+                    "per pixcount for the ground truth "
+                    "parcels without applying doubt based on pixcount:"
+                )
+                outputfile.write(f"\n{message}\n")
+                html_data["PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TEXT"] = message
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_" + "pred_cons_no_min_pix"
+                df_per_column = _get_errors_per_column(
+                    groupbycolumn=pixcount_bins_column,
+                    df_predquality=df_parcel_gt,
+                    pred_quality_column=pred_quality_column,
+                    pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                    error_codes_numerator=theta_numerator_conclusions,
+                    error_codes_denominator=theta_denominator_conclusions,
+                    include_cumulative_columns=True,
+                )
+                # df_per_column.dropna(inplace=True)
+                with pd.option_context(
+                    "display.max_rows",
+                    None,
+                    "display.max_columns",
+                    None,
+                    "display.width",
+                    2000,
+                ):
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data["PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TABLE"] = (
                         df_per_column.to_html()
                     )
 
@@ -837,7 +945,7 @@ def write_full_report(
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=alpha_numerator_conclusions,
                     error_codes_denominator=alpha_denominator_conclusions,
-                    error_type="alpha",
+                    include_cumulative_columns=False,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -871,7 +979,7 @@ def write_full_report(
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_conclusions,
                     error_codes_denominator=beta_denominator_conclusions,
-                    error_type="beta",
+                    include_cumulative_columns=False,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -885,6 +993,40 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_CLASS_TABLE"] = (
+                        df_per_column.to_html()
+                    )
+
+                # THETA errors
+                message = (
+                    "Number of THETA error parcels per declared cropclass for the "
+                    "ground truth parcels without applying crop/class based doubt:"
+                )
+                outputfile.write(f"\n{message}\n")
+                html_data["PREDICTION_QUALITY_THETA_PER_CLASS_TEXT"] = message
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_pred_cons_no_marker_specific"
+                df_per_column = _get_errors_per_column(
+                    groupbycolumn=conf.columns["class_declared"],
+                    df_predquality=df_parcel_gt,
+                    pred_quality_column=pred_quality_column,
+                    pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                    error_codes_numerator=theta_numerator_conclusions,
+                    error_codes_denominator=theta_denominator_conclusions,
+                    include_cumulative_columns=False,
+                )
+                # df_per_column.dropna(inplace=True)
+                with pd.option_context(
+                    "display.max_rows",
+                    None,
+                    "display.max_columns",
+                    None,
+                    "display.width",
+                    2000,
+                ):
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data["PREDICTION_QUALITY_THETA_PER_CLASS_TABLE"] = (
                         df_per_column.to_html()
                     )
 
@@ -918,7 +1060,7 @@ def write_full_report(
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=alpha_numerator_conclusions,
                     error_codes_denominator=alpha_denominator_conclusions,
-                    error_type="alpha",
+                    include_cumulative_columns=False,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -952,7 +1094,7 @@ def write_full_report(
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_conclusions,
                     error_codes_denominator=beta_denominator_conclusions,
-                    error_type="beta",
+                    include_cumulative_columns=False,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -966,6 +1108,40 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_CROP_TABLE"] = (
+                        df_per_column.to_html()
+                    )
+
+                # THETA errors
+                message = (
+                    "Number of THETA error parcels per declared crop for the ground "
+                    "truth parcels, without applying marker specific doubt:"
+                )
+                outputfile.write(f"\n{message}\n")
+                html_data["PREDICTION_QUALITY_THETA_PER_CROP_TEXT"] = message
+
+                # Calc data and write
+                pred_quality_column = "gt_conclusion_pred_cons_no_marker_specific"
+                df_per_column = _get_errors_per_column(
+                    groupbycolumn=conf.columns["crop_declared"],
+                    df_predquality=df_parcel_gt,
+                    pred_quality_column=pred_quality_column,
+                    pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                    error_codes_numerator=theta_numerator_conclusions,
+                    error_codes_denominator=theta_denominator_conclusions,
+                    include_cumulative_columns=False,
+                )
+                # df_per_column.dropna(inplace=True)
+                with pd.option_context(
+                    "display.max_rows",
+                    None,
+                    "display.max_columns",
+                    None,
+                    "display.width",
+                    2000,
+                ):
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data["PREDICTION_QUALITY_THETA_PER_CROP_TABLE"] = (
                         df_per_column.to_html()
                     )
 
@@ -990,19 +1166,19 @@ def write_full_report(
                     apply_doubt_marker_specific=True,
                 )
                 _add_gt_conclusions(df_parcel_gt, "pred_cons_no_pct_prob")
-                df_parcel_gt["pred1_prob_rounded"] = df_parcel_gt["pred1_prob"].round(2)
+                df_parcel_gt["pred1_prob_rnd"] = df_parcel_gt["pred1_prob"].round(2)
 
                 # Calc data and write
                 pred_quality_column = "gt_conclusion_" + "pred_cons_no_pct_prob"
                 df_per_column = _get_errors_per_column(
-                    groupbycolumn="pred1_prob_rounded",
+                    groupbycolumn="pred1_prob_rnd",
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=alpha_numerator_conclusions,
                     error_codes_denominator=alpha_denominator_conclusions,
-                    ascending=False,
-                    error_type="alpha",
+                    ascending=True,
+                    include_cumulative_columns=True,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -1030,14 +1206,14 @@ def write_full_report(
                 # Calc data and write
                 pred_quality_column = "gt_conclusion_" + "pred_cons_no_pct_prob"
                 df_per_column = _get_errors_per_column(
-                    groupbycolumn="pred1_prob_rounded",
+                    groupbycolumn="pred1_prob_rnd",
                     df_predquality=df_parcel_gt,
                     pred_quality_column=pred_quality_column,
                     pred_quality_full_doubt_column=pred_quality_full_doubt_column,
                     error_codes_numerator=beta_numerator_conclusions,
                     error_codes_denominator=beta_denominator_conclusions,
-                    ascending=False,
-                    error_type="beta",
+                    ascending=True,
+                    include_cumulative_columns=True,
                 )
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
@@ -1051,6 +1227,44 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE"] = (
+                        df_per_column.to_html()
+                    )
+
+                # THETA errors
+                message = (
+                    "Number of THETA error parcels per % probability for the ground "
+                    "truth parcels, without doubt based on probability. "
+                    "Sorted descending because ?"
+                )
+                outputfile.write(f"\n{message}\n")
+                html_data["PREDICTION_QUALITY_THETA_PER_PROBABILITY_TEXT"] = message
+
+                # Calc data and write
+                # pred_quality_column = "gt_conclusion_" + "pred_cons_no_pct_prob"
+                pred_quality_column = "gt_conclusion_pred_consolidated"
+                df_per_column = _get_errors_per_column(
+                    groupbycolumn="pred1_prob_rnd",
+                    df_predquality=df_parcel_gt,
+                    pred_quality_column=pred_quality_column,
+                    pred_quality_full_doubt_column=pred_quality_full_doubt_column,
+                    # pred_quality_full_doubt_column=pred_quality_column,
+                    error_codes_numerator=theta_numerator_conclusions,
+                    error_codes_denominator=theta_denominator_conclusions,
+                    ascending=False,
+                    include_cumulative_columns=True,
+                )
+                # df_per_column.dropna(inplace=True)
+                with pd.option_context(
+                    "display.max_rows",
+                    None,
+                    "display.max_columns",
+                    None,
+                    "display.width",
+                    2000,
+                ):
+                    outputfile.write(f"\n{df_per_column}\n")
+                    logger.info(f"{df_per_column}\n")
+                    html_data["PREDICTION_QUALITY_THETA_PER_PROBABILITY_TABLE"] = (
                         df_per_column.to_html()
                     )
 
@@ -1408,17 +1622,21 @@ def _get_errors_per_column(
     pred_quality_full_doubt_column: str,
     error_codes_numerator: list[str],
     error_codes_denominator: list[str],
-    error_type: str,
+    include_cumulative_columns: bool,
     ascending: bool = True,
 ):
     """
-    Returns a dataset with detailed information about the number of alfa errors per
-    column that was passed on
+    Calculates a detailed overview about the number of errors per group specified.
     """
     # First filter on the parcels we need to calculate the pct alpha errors
     df_predquality_filtered = df_predquality[
         df_predquality[pred_quality_column].isin(error_codes_denominator)
     ]
+    """
+    df_predquality_filtered[groupbycolumn] = df_predquality_filtered[
+        groupbycolumn
+    ].fillna(value=-1)
+    """
 
     # Calculate the number of parcels per groupbycolumn, the cumulative sum +
     # the pct of all
@@ -1426,48 +1644,47 @@ def _get_errors_per_column(
         df_predquality_filtered.groupby(groupbycolumn).size().to_frame("count_all")
     )
     df_predquality_count.sort_index(ascending=ascending, inplace=True)
-    values = df_predquality_count["count_all"].cumsum(axis=0)
-    df_predquality_count.insert(
-        loc=len(df_predquality_count.columns),
-        column="count_all_cumulative",
-        value=values,
-    )
-    values = (
-        100
-        * df_predquality_count["count_all_cumulative"]
-        / df_predquality_count["count_all"].sum()
-    )
-    df_predquality_count.insert(
-        loc=len(df_predquality_count.columns), column="pct_all_cumulative", value=values
-    )
+    if include_cumulative_columns:
+        values = df_predquality_count["count_all"].cumsum(axis=0)
+        df_predquality_count.insert(
+            loc=len(df_predquality_count.columns),
+            column="count_all_cumul",
+            value=values,
+        )
+        values = (
+            100
+            * df_predquality_count["count_all_cumul"]
+            / df_predquality_count["count_all"].sum()
+        )
+        df_predquality_count.insert(
+            loc=len(df_predquality_count.columns), column="pct_all_cumul", value=values
+        )
 
     # Now calculate the number of alfa errors per groupbycolumn
-    df_alfa_error = df_predquality_filtered[
+    df_errors_error = df_predquality_filtered[
         df_predquality_filtered[pred_quality_column].isin(error_codes_numerator)
     ]
-    df_alfa_per_column = (
-        df_alfa_error.groupby(groupbycolumn)
-        .size()
-        .to_frame(f"count_error_{error_type}")
+    df_errors_per_column = (
+        df_errors_error.groupby(groupbycolumn).size().to_frame("count_error")
     )
-    df_alfa_per_column.sort_index(ascending=ascending, inplace=True)
+    df_errors_per_column.sort_index(ascending=ascending, inplace=True)
 
     # Now calculate the number of alfa errors with full doubt per groupbycolumn
-    df_alfa_error_full_doubt = df_predquality_filtered[
+    df_errors_error_full_doubt = df_predquality_filtered[
         df_predquality_filtered[pred_quality_full_doubt_column].isin(
             error_codes_numerator
         )
     ]
-    df_alfa_full_doubt_per_column = (
-        df_alfa_error_full_doubt.groupby(groupbycolumn)
+    df_errors_full_doubt_per_column = (
+        df_errors_error_full_doubt.groupby(groupbycolumn)
         .size()
-        .to_frame(f"count_error_{error_type}_full_doubt")
+        .to_frame("count_error_full_doubt")
     )
 
     # Join everything together
-    df_alfa_per_column = df_predquality_count.join(df_alfa_per_column, how="left")
-    df_alfa_per_column = df_alfa_per_column.join(
-        df_alfa_full_doubt_per_column, how="left"
+    df_errors_per_column = df_predquality_count.join(df_errors_per_column, how="left")
+    df_errors_per_column = df_errors_per_column.join(
+        df_errors_full_doubt_per_column, how="left"
     )
 
     # Calculate the total number of parcels with full doubt applied per groupbycolumn
@@ -1480,62 +1697,38 @@ def _get_errors_per_column(
         .size()
         .to_frame("count_all_full_doubt")
     )
-    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+    df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
     # Finally calculate all alfa error percentages
-    values = (
-        df_alfa_per_column[f"count_error_{error_type}"]
-        .cumsum(axis=0)
-        .to_frame(f"count_error_{error_type}_cumulative")
-    )
-    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+    if include_cumulative_columns:
+        values = (
+            df_errors_per_column["count_error"]
+            .cumsum(axis=0)
+            .to_frame("count_error_cumul")
+        )
+        df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
     values = (
-        100
-        * df_alfa_per_column[f"count_error_{error_type}"]
-        / df_alfa_per_column["count_all"]
-    ).to_frame(f"pct_error_{error_type}_of_all")
-    # df_alfa_per_column.insert(
-    #     loc=len(df_alfa_per_column.columns),
-    #     column=f"pct_error_{error_type}_of_all",
-    #     value=values,
-    # )
-    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+        100 * df_errors_per_column["count_error"] / df_errors_per_column["count_all"]
+    ).to_frame("pct_error_all")
+    df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
-    values = (
-        100
-        * df_alfa_per_column[f"count_error_{error_type}_cumulative"]
-        / df_alfa_per_column[f"count_error_{error_type}"].sum()
-    ).to_frame(f"pct_error_{error_type}_of_{error_type}_cumulative")
-    # df_alfa_per_column.insert(
-    #     loc=len(df_alfa_per_column.columns),
-    #     column=f"pct_error_{error_type}_of_{error_type}_cumulative",
-    #     value=values
-    # )
-    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+    if include_cumulative_columns:
+        values = (
+            100
+            * df_errors_per_column["count_error_cumul"]
+            / df_errors_per_column["count_error"].sum()
+        ).to_frame("pct_error_cumul")
+        df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
-    values = (
-        100
-        * df_alfa_per_column[f"count_error_{error_type}_cumulative"]
-        / df_alfa_per_column["count_all"].sum()
-    ).to_frame(f"pct_error_{error_type}_of_all_cumulative")
-    # df_alfa_per_column.insert(
-    #     loc=len(df_alfa_per_column.columns),
-    #     column=f"pct_error_{error_type}_of_all_cumulative",
-    #     value=values
-    # )
-    df_alfa_per_column = pd.concat([df_alfa_per_column, values], axis=1)
+        values = (
+            100
+            * df_errors_per_column["count_error_cumul"]
+            / df_errors_per_column["count_all"].sum()
+        ).to_frame("pct_error_cumul_vs_count_all")
+        df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
-    # MARINA
-    values = (
-        df_alfa_per_column[f"count_error_{error_type}_cumulative"]
-        / df_alfa_per_column["count_all_cumulative"]
-    )
-    df_alfa_per_column.insert(
-        loc=len(df_alfa_per_column.columns), column="new_column", value=values
-    )
-
-    return df_alfa_per_column
+    return df_errors_per_column
 
 
 def _write_OA_per_pixcount(

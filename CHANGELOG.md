@@ -13,6 +13,8 @@
     - multilayer_perceptron_hidden_layer_sizes: default (100,) instead of (100, 100)
     - multilayer_perceptron_max_iter: default 200 instead of 1000
     - multilayer_perceptron_learning_rate_init
+- For keras multilayer perceptron, some changes were applied to the default
+  hyperparameters (#115)
 
 ### Improvements
 
@@ -22,6 +24,7 @@
 - Add possibility to configure any possible hyperparameter for the supported sklearn
   based classifiers (#110)
 - Add support for HistGradientBoostingClassifier (#95)
+- Improve configurability + defaults of keras mlp classifier (#115)
 - Make image profiles to be used in a classification configurable in a config file (#56)
 - Add option to overrule configuration parameters at runtime (#92)
 - If image period is e.g. "weekly", align `start_date` of a marker to the next monday
@@ -31,6 +34,7 @@
   more robust for old runs (#91, #102, #103, #104, #106)
 - Improve pixelcount calculation for parcels (#96, #105)
 - Improve calculation of beta error in reporting (#97)
+- Add "theta errors" to report + general reporting improvements (#114)
 - Add whether a parcel has been used for training to output (#107)
 - Run `bulk_zonal_stats` in low priority worker processes (#81)
 - Use ruff instead of black and flake for formatting and linting (#57, #64, #65, #67)

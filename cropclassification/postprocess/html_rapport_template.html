@@ -19,7 +19,17 @@
                 </div>
                 <br />
             </div>
-        </div>                 
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <h1>DATA STATISTICS</h1>
+                <p>$DATA_STATS_TEXT</p>
+                <div class="row">
+                    <div class="col-md-auto">$DATA_STATS_TABLE</div>
+                </div>
+                <br />
+            </div>
+        </div>
         <div class="row">
             <div class="col-md-12">
                 <h1>GENERAL RESULTS</h1>
@@ -77,9 +87,10 @@
         <div class="row">
             <div class="col-md-12">
                 <h1>REPORTING BASED ON GROUND TRUTH</h1>
-                <h2>GENERAL: ALPHA AND BETA ERROR</h2>
+                <h2>GENERAL: ALPHA, BETA AND THETA ERRORS</h2>
                 <p>$PREDICTION_QUALITY_ALPHA_TEXT</p>
                 <p>$PREDICTION_QUALITY_BETA_TEXT</p>
+                <p>$PREDICTION_QUALITY_THETA_TEXT</p>
                 <h2>DETAILED</h2>
                 <p>$PREDICTION_QUALITY_CONS_OVERVIEW_TEXT</p>
                 <div class="row">
@@ -133,10 +144,34 @@
                     <div class="col-md-12">$PREDICTION_QUALITY_BETA_PER_CROP_TABLE</div>
                     <br />
                 </div>
-                <h2>BETADETAILED PER PREDICTION PROBABILITY</h2>
+                <h2>BETA DETAILED PER PREDICTION PROBABILITY</h2>
                 <p>$PREDICTION_QUALITY_BETA_PER_PROBABILITY_TEXT</p>
                 <div class="row">
                     <div class="col-md-12">$PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE</div>
+                    <br />
+                </div>
+                <h2>THETA DETAILED PER PIXCOUNT</h2>
+                <p>$PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TEXT</p>
+                <div class="row">
+                    <div class="col-md-12">$PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TABLE</div>
+                    <br />
+                </div>
+                <h2>THETA DETAILED PER CLASS</h2>
+                <p>$PREDICTION_QUALITY_THETA_PER_CLASS_TEXT</p>
+                <div class="row">
+                    <div class="col-md-12">$PREDICTION_QUALITY_THETA_PER_CLASS_TABLE</div>
+                    <br />
+                </div>
+                <h2>THETA DETAILED PER CROP</h2>
+                <p>$PREDICTION_QUALITY_THETA_PER_CROP_TEXT</p>
+                <div class="row">
+                    <div class="col-md-12">$PREDICTION_QUALITY_THETA_PER_CROP_TABLE</div>
+                    <br />
+                </div>
+                <h2>THETA DETAILED PER PREDICTION PROBABILITY</h2>
+                <p>$PREDICTION_QUALITY_THETA_PER_PROBABILITY_TEXT</p>
+                <div class="row">
+                    <div class="col-md-12">$PREDICTION_QUALITY_THETA_PER_PROBABILITY_TABLE</div>
                     <br />
                 </div>
             </div>
