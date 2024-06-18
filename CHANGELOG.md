@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## ???
+## 0.2 (2024-06-17)
 
 ### Deprecations and compatibility notes
 
