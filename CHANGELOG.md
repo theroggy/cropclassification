@@ -3,7 +3,7 @@
 ## 0.3 (yyyy-mm-dd)
 
 ### Deprecations and compatibility notes
-- Consolidated some landcover pre-processing ignore codes
+- Consolidated some landcover pre-processing ignore codes (#120)
 
 ### Improvements
 
