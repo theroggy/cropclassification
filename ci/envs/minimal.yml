@@ -19,6 +19,7 @@ dependencies:
   - rasterio
   - rasterstats
   - rioxarray
+  - numpy<2
   # testing
   - pytest
   - pytest-cov
