@@ -1195,6 +1195,20 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
         / df_confmatrix_ext["nb_input"]
     )
     df_confmatrix_ext.insert(loc=5, column="pct_predicted_wrong", value=values)
+    values = df_confmatrix_ext.join(
+        pd.DataFrame(
+            data={
+                "f1": skmetrics.f1_score(
+                    df_predict[conf.columns["class"]],
+                    df_predict[prediction_column_to_use],
+                    labels=classes,
+                    average=None,
+                )
+            },
+            index=classes,
+        )
+    )["f1"]
+    df_confmatrix_ext.insert(loc=2, column="f1", value=values)
 
     return df_confmatrix_ext
 
