@@ -27,7 +27,7 @@ setuptools.setup(
         "rioxarray",
         "scikit-learn",
         "tensorflow",
-        "numpy<2"
+        "numpy<2",
     ],
     entry_points="""
         [console_scripts]
