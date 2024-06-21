@@ -246,151 +246,15 @@ def write_full_report(
 
         # Output general accuracies
         outputfile.write("\n*************************************************\n")
-        outputfile.write("*              OVERALL ACCURACIES                *\n")
+        outputfile.write("*                   ACCURACIES                   *\n")
         outputfile.write("**************************************************\n")
-        overall_accuracies_list = []
-
-        # Calculate overall accuracies for all parcels
-        try:
-            oa = (
-                skmetrics.accuracy_score(
-                    df_predict[conf.columns["class"]],
-                    df_predict["pred1"],
-                    normalize=True,
-                    sample_weight=None,
-                )
-                * 100
-            )
-            overall_accuracies_list.append(
-                {"parcels": "All", "prediction_type": "standard", "accuracy": oa}
-            )
-
-            oa = (
-                skmetrics.accuracy_score(
-                    df_predict[conf.columns["class"]],
-                    df_predict[conf.columns["prediction_full_alpha"]],
-                    normalize=True,
-                    sample_weight=None,
-                )
-                * 100
-            )
-            overall_accuracies_list.append(
-                {"parcels": "All", "prediction_type": "consolidated", "accuracy": oa}
-            )
-        except Exception:
-            logger.exception("Error calculating overall accuracies!")
-
-        # Calculate while ignoring the classes to be ignored...
-        df_predict_accuracy_no_ignore = df_predict[
-            ~df_predict[conf.columns["class"]].isin(
-                conf.marker.getlist("classes_to_ignore_for_train")
-            )
-        ]
-        df_predict_accuracy_no_ignore = df_predict_accuracy_no_ignore[
-            ~df_predict_accuracy_no_ignore[conf.columns["class"]].isin(
-                conf.marker.getlist("classes_to_ignore")
-            )
-        ]
-
-        oa = (
-            skmetrics.accuracy_score(
-                df_predict_accuracy_no_ignore[conf.columns["class"]],
-                df_predict_accuracy_no_ignore["pred1"],
-                normalize=True,
-                sample_weight=None,
-            )
-            * 100
-        )
-        overall_accuracies_list.append(
-            {
-                "parcels": "Exclude classes_to_ignore(_for_train) classes",
-                "prediction_type": "standard",
-                "accuracy": oa,
-            }
-        )
-
-        oa = (
-            skmetrics.accuracy_score(
-                df_predict_accuracy_no_ignore[conf.columns["class"]],
-                df_predict_accuracy_no_ignore[conf.columns["prediction_full_alpha"]],
-                normalize=True,
-                sample_weight=None,
-            )
-            * 100
-        )
-        overall_accuracies_list.append(
-            {
-                "parcels": "Exclude classes_to_ignore(_for_train) classes",
-                "prediction_type": "consolidated",
-                "accuracy": oa,
-            }
-        )
-
-        # Calculate ignoring both classes to ignored + parcels not having a valid
-        # prediction
-        df_predict_no_ignore_has_prediction = df_predict_accuracy_no_ignore.loc[
-            (
-                df_predict_accuracy_no_ignore[conf.columns["prediction_full_alpha"]]
-                != "NODATA"
-            )
-            & (
-                df_predict_accuracy_no_ignore[conf.columns["prediction_full_alpha"]]
-                != "DOUBT:NOT_ENOUGH_PIXELS"
-            )
-        ]
-        oa = (
-            skmetrics.accuracy_score(
-                df_predict_no_ignore_has_prediction[conf.columns["class"]],
-                df_predict_no_ignore_has_prediction["pred1"],
-                normalize=True,
-                sample_weight=None,
-            )
-            * 100
-        )
-        overall_accuracies_list.append(
-            {
-                "parcels": (
-                    "Exclude ignored ones + with prediction (= excl. NODATA, "
-                    "NOT_ENOUGH_PIXELS)"
-                ),
-                "prediction_type": "standard",
-                "accuracy": oa,
-            }
-        )
-
-        oa = (
-            skmetrics.accuracy_score(
-                df_predict_no_ignore_has_prediction[conf.columns["class"]],
-                df_predict_no_ignore_has_prediction[
-                    conf.columns["prediction_full_alpha"]
-                ],
-                normalize=True,
-                sample_weight=None,
-            )
-            * 100
-        )
-        overall_accuracies_list.append(
-            {
-                "parcels": (
-                    "Exclude ignored ones + with prediction (= excl. NODATA, "
-                    "NOT_ENOUGH_PIXELS)"
-                ),
-                "prediction_type": "consolidated",
-                "accuracy": oa,
-            }
-        )
+        overall_accuracies_df = _calc_accuracies(df_predict)
 
         # Output the resulting overall accuracies
         message = "Overall accuracies for different sub-groups of the data"
         outputfile.write(f"\n{message}\n")
         html_data["OVERALL_ACCURACIES_TEXT"] = message
 
-        overall_accuracies_df = pd.DataFrame(
-            overall_accuracies_list, columns=["parcels", "prediction_type", "accuracy"]
-        )
-        overall_accuracies_df.set_index(
-            keys=["parcels", "prediction_type"], inplace=True
-        )
         with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{overall_accuracies_df}\n")
             logger.info(f"{overall_accuracies_df}\n")
@@ -1331,6 +1195,20 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
         / df_confmatrix_ext["nb_input"]
     )
     df_confmatrix_ext.insert(loc=5, column="pct_predicted_wrong", value=values)
+    values = df_confmatrix_ext.join(
+        pd.DataFrame(
+            data={
+                "f1": skmetrics.f1_score(
+                    df_predict[conf.columns["class"]],
+                    df_predict[prediction_column_to_use],
+                    labels=classes,
+                    average=None,
+                )
+            },
+            index=classes,
+        )
+    )["f1"]
+    df_confmatrix_ext.insert(loc=2, column="f1", value=values)
 
     return df_confmatrix_ext
 
@@ -1768,3 +1646,178 @@ def _write_OA_per_pixcount(
             )
             logger.info(message)
             outputfile.write(f"{message}\n")
+
+
+def _calc_accuracies(df_predict):
+    result_df = pd.DataFrame(
+        _calc_accuracy(
+            df_predict,
+            score_name="accuracy",
+            score_fn=skmetrics.accuracy_score,
+            score_kwargs={"normalize": True, "sample_weight": None},
+        )
+    ).set_index(keys=["parcels", "prediction_type"])
+
+    df = pd.DataFrame(
+        _calc_accuracy(
+            df_predict,
+            score_name="precision_macro",
+            score_fn=skmetrics.precision_score,
+            score_kwargs={"average": "macro"},
+        )
+    ).set_index(keys=["parcels", "prediction_type"])
+    result_df = result_df.join(df)
+
+    df = pd.DataFrame(
+        _calc_accuracy(
+            df_predict,
+            score_name="recall_macro",
+            score_fn=skmetrics.recall_score,
+            score_kwargs={"average": "macro"},
+        )
+    ).set_index(keys=["parcels", "prediction_type"])
+    result_df = result_df.join(df)
+
+    df = pd.DataFrame(
+        _calc_accuracy(
+            df_predict,
+            score_name="f1_macro",
+            score_fn=skmetrics.f1_score,
+            score_kwargs={"average": "macro"},
+        )
+    ).set_index(keys=["parcels", "prediction_type"])
+    result_df = result_df.join(df)
+
+    df = pd.DataFrame(
+        _calc_accuracy(
+            df_predict,
+            score_name="f1_weighted",
+            score_fn=skmetrics.f1_score,
+            score_kwargs={"average": "weighted"},
+        )
+    ).set_index(keys=["parcels", "prediction_type"])
+    result_df = result_df.join(df)
+
+    return result_df
+
+
+def _calc_accuracy(df_predict, score_name: str, score_fn, score_kwargs):
+    # Calculate accuracies for all parcels
+    result = []
+    try:
+        oa = (
+            score_fn(
+                df_predict[conf.columns["class"]], df_predict["pred1"], **score_kwargs
+            )
+            * 100
+        )
+        result.append({"parcels": "All", "prediction_type": "standard", score_name: oa})
+
+        oa = (
+            score_fn(
+                df_predict[conf.columns["class"]],
+                df_predict[conf.columns["prediction_full_alpha"]],
+                **score_kwargs,
+            )
+            * 100
+        )
+        result.append(
+            {"parcels": "All", "prediction_type": "consolidated", score_name: oa}
+        )
+    except Exception:
+        logger.exception("Error calculating overall accuracies!")
+
+    # Calculate while ignoring the classes to be ignored...
+    df_predict_accuracy_no_ignore = df_predict[
+        ~df_predict[conf.columns["class"]].isin(
+            conf.marker.getlist("classes_to_ignore_for_train")
+        )
+    ]
+    df_predict_accuracy_no_ignore = df_predict_accuracy_no_ignore[
+        ~df_predict_accuracy_no_ignore[conf.columns["class"]].isin(
+            conf.marker.getlist("classes_to_ignore")
+        )
+    ]
+
+    oa = (
+        score_fn(
+            df_predict_accuracy_no_ignore[conf.columns["class"]],
+            df_predict_accuracy_no_ignore["pred1"],
+            **score_kwargs,
+        )
+        * 100
+    )
+    result.append(
+        {
+            "parcels": "Exclude classes_to_ignore(_for_train) classes",
+            "prediction_type": "standard",
+            score_name: oa,
+        }
+    )
+
+    oa = (
+        score_fn(
+            df_predict_accuracy_no_ignore[conf.columns["class"]],
+            df_predict_accuracy_no_ignore[conf.columns["prediction_full_alpha"]],
+            **score_kwargs,
+        )
+        * 100
+    )
+    result.append(
+        {
+            "parcels": "Exclude classes_to_ignore(_for_train) classes",
+            "prediction_type": "consolidated",
+            score_name: oa,
+        }
+    )
+
+    # Calculate ignoring both classes to ignored + parcels not having a valid
+    # prediction
+    df_predict_no_ignore_has_prediction = df_predict_accuracy_no_ignore.loc[
+        (
+            df_predict_accuracy_no_ignore[conf.columns["prediction_full_alpha"]]
+            != "NODATA"
+        )
+        & (
+            df_predict_accuracy_no_ignore[conf.columns["prediction_full_alpha"]]
+            != "DOUBT:NOT_ENOUGH_PIXELS"
+        )
+    ]
+    oa = (
+        score_fn(
+            df_predict_no_ignore_has_prediction[conf.columns["class"]],
+            df_predict_no_ignore_has_prediction["pred1"],
+            **score_kwargs,
+        )
+        * 100
+    )
+    result.append(
+        {
+            "parcels": (
+                "Exclude ignored ones + with prediction (= excl. NODATA, "
+                "NOT_ENOUGH_PIXELS)"
+            ),
+            "prediction_type": "standard",
+            score_name: oa,
+        }
+    )
+
+    oa = (
+        score_fn(
+            df_predict_no_ignore_has_prediction[conf.columns["class"]],
+            df_predict_no_ignore_has_prediction[conf.columns["prediction_full_alpha"]],
+            **score_kwargs,
+        )
+        * 100
+    )
+    result.append(
+        {
+            "parcels": (
+                "Exclude ignored ones + with prediction (= excl. NODATA, "
+                "NOT_ENOUGH_PIXELS)"
+            ),
+            "prediction_type": "consolidated",
+            score_name: oa,
+        }
+    )
+    return result

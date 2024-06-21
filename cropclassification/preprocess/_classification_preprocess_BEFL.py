@@ -1624,11 +1624,11 @@ def prepare_input_landcover(
                 ["SER", "PLA", "PLO", "SGM", "NPO", "LOO"]
             ),
             column_output_class,
-        ] = "MON_LC_OVERK_LOO"
+        ] = "MON_OVERK_LOO"
         # Containers
         parceldata_df.loc[
             parceldata_df[column_BEFL_gesp_pm].isin(["CON"]), column_output_class
-        ] = "MON_LC_IGNORE_DIFFICULT_PERMANENT_CLASS_NS"
+        ] = "MON_CONTAINERS"
         # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
         # parceldata_df.loc[
         #     parceldata_df[column_BEFL_gesp_pm] == "CIV", class_columnname
@@ -1647,7 +1647,7 @@ def prepare_input_landcover(
     parceldata_df.loc[
         parceldata_df[column_output_class].str.startswith("nvt", na=True),
         column_output_class,
-    ] = "MON_LC_UNKNOWN"
+    ] = "MON_ONBEKEND_MET_KLASSIFICATIE"
 
     # Set classes with very few elements to IGNORE_NOT_ENOUGH_SAMPLES!
     if not is_groundtruth and min_parcels_in_class > 1:

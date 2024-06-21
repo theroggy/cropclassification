@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.3 (yyyy-mm-dd)
+
+### Deprecations and compatibility notes
+- Consolidated some landcover pre-processing ignore codes (#120)
+
+### Improvements
+
+- Add some extra global accuracies (precision, recall, f1) to report (#119)
+
 ## 0.2 (2024-06-17)
 
 ### Deprecations and compatibility notes
