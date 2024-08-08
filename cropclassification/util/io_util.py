@@ -95,8 +95,9 @@ def output_exists(
             return False
         else:
             log_prefix = f"{log_prefix}: " if log_prefix is not None else ""
-            logger.info(f"{log_prefix}force is False and {path.name} exists already")
+            logger.debug(f"{log_prefix}force is False and {path.name} exists already")
             return True
+
     elif not path.parent.exists():
         raise ValueError(f"output directory does not exist: {path.parent}")
 
