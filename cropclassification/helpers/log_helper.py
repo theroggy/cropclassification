@@ -50,4 +50,16 @@ def main_log_init(log_dir: Path, log_basefilename: str, log_level: str = "INFO")
     fh.setFormatter(logging.Formatter("%(asctime)s|%(levelname)s|%(name)s|%(message)s"))
     logger.addHandler(fh)
 
+    # Filter out "Defining non-color channels as ExtraSamples." messages from rasterio.
+    class ExtraSamplesFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            if record.getMessage().endswith(
+                "Defining non-color channels as ExtraSamples."
+            ):
+                return False
+            else:
+                return True
+
+    logging.getLogger("rasterio._env").addFilter(ExtraSamplesFilter())
+
     return logger
