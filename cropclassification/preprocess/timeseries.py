@@ -67,6 +67,7 @@ def calc_timeseries_data(
             sensordata_to_get=sensordata_to_get_onda,
             dest_data_dir=dest_data_dir,
         )
+
     if len(sensordata_to_get_openeo) > 0:
         # Prepare periodic images + calculate base timeseries on them
         import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
@@ -82,6 +83,9 @@ def calc_timeseries_data(
             dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
             dest_data_dir=dest_data_dir,
             nb_parallel=conf.general.getint("nb_parallel", -1),
+            on_missing_image=conf.calc_marker_params.get(
+                "on_missing_image", "calculate_raise"
+            ),
         )
 
 
