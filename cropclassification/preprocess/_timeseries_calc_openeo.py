@@ -28,12 +28,18 @@ def calculate_periodic_timeseries(
     dest_image_data_dir: Path,
     dest_data_dir: Path,
     nb_parallel: int,
+    on_missing_image: str,
 ):
     """
     Calculate timeseries data for the input parcels.
 
     args
         imageprofiles_to_get: an array with data you want to be calculated.
+        on_missing_image: what to do when an image is missing. Options are:
+            - ignore: ignore that the image, don't try to download it
+            - calculate_raise: calculate the image and raise an error if it fails
+            - calculate_ignore: calculate the image and ignore the error if it fails
+
     """
     info = gfo.get_layerinfo(input_parcel_path)
     if info.crs is not None and not info.crs.equals(roi_crs):
@@ -51,14 +57,21 @@ def calculate_periodic_timeseries(
         output_base_dir=dest_image_data_dir,
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
+        on_missing_image=on_missing_image,
         force=False,
     )
 
     # Now calculate the timeseries
-    images_bands = [
-        (image_info["path"], image_info["bands"])
-        for image_info in periodic_images_result
-    ]
+    images_bands = []
+    for image_info in periodic_images_result:
+        if not image_info["path"].exists():
+            if on_missing_image in ("ignore", "calculate_ignore"):
+                logger.info(f"Image {image_info['path']} is missing: ignore")
+                continue
+            else:
+                raise RuntimeError(f"Image {image_info['path']} is missing")
+        images_bands.append((image_info["path"], image_info["bands"]))
+
     temp_dir = conf.dirs.getpath("temp_dir")
     if temp_dir == "None":
         temp_dir = Path(tempfile.gettempdir())
