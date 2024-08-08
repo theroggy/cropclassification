@@ -10,7 +10,7 @@
 
 - Add some extra global accuracies (precision, recall, f1) to report (#119)
 - Add option `calc_marker_params.on_missing_images` to be able to ignore errors in the
-  calculation of images if needed (#125)
+  calculation of images if needed (#125, #126)
 
 ## 0.2 (2024-06-17)
 
