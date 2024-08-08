@@ -114,7 +114,7 @@ def get_images(
                     logger.warning(ex)
     else:
         # Process jobs that are still on the server
-        image_paths, job_errors = get_job_results(conn)
+        image_paths, job_errors = get_job_results(conn, raise_errors=raise_errors)
         for image_path in image_paths:
             band_descriptions = None
             if image_path in images_to_get_dict:
@@ -166,7 +166,7 @@ def get_images(
         ).start_job()
 
     # Get the results
-    image_paths, job_errors = get_job_results(conn)
+    image_paths, job_errors = get_job_results(conn, raise_errors=raise_errors)
 
     # Postprocess the images created
     for image_path in image_paths:
@@ -295,7 +295,7 @@ def create_mosaic_job(
 
 
 def get_job_results(
-    conn: openeo.Connection, ignore_errors: bool = False
+    conn: openeo.Connection, raise_errors: bool = True
 ) -> tuple[list[Path], list[str]]:
     """Get results of the completed jobs."""
 
@@ -373,9 +373,15 @@ def get_job_results(
             # We are ready, so deal with error jobs and break
             for job in jobs_per_status["error"]:
                 batch_job = openeo.rest.job.BatchJob(job["id"], conn)
-                logger.error(f"Error processing job '{job['title']}', id: {job['id']}")
-                errorlog = pprint.pformat(batch_job.logs())
-                logger.error(errorlog)
+                logger.error(
+                    f"Error processing job id: {job['id']}, title: {job['title']}'"
+                )
+                errorlog = pprint.pformat(batch_job.logs(), indent=4)
+                logger.error(
+                    "openeo batch job logs (chronological executed steps):\n"
+                    "-----------------------------------------------------\n"
+                    f"{errorlog}"
+                )
                 batch_job.delete()
                 errors.append(f"Error for job '{job['title']}', id: {job['id']}")
             for job in jobs_per_status["created"]:
@@ -385,7 +391,7 @@ def get_job_results(
 
             break
 
-    if not ignore_errors and len(errors) > 0:
+    if raise_errors and len(errors) > 0:
         raise RuntimeError(f"openeo processing errors: {pprint.pformat(errors)}")
 
     return output_paths, errors
