@@ -398,6 +398,8 @@ def get_job_results(
 
 
 def postprocess_image(path: Path, band_descriptions: Optional[list[str]]):
+    # Set no data value
+    raster_util.set_no_data(path)
     raster_util.add_overviews(path)
 
     # if band_descriptions is None, try to read them from the json metadata file.
