@@ -12,6 +12,7 @@
 - Add option `calc_marker_params.on_missing_images` to be able to ignore errors in the
   calculation of images if needed (#125, #126)
 - Filter away rasterio logging for extrasamples (#127)
+- Change nodata value when equal to Nan after downloading files form openeo (#129)
 
 ## 0.2 (2024-06-17)
 
