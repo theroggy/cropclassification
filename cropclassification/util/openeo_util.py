@@ -283,6 +283,17 @@ def create_mosaic_job(
         cube = cube.filter_bands(bands=bands)
         cube = cube.reduce_dimension(dimension="t", reducer=time_reducer)
 
+        # If the source data is in int16, set range so it is exported as int16 as well.
+        collection_info = conn.describe_collection(collection)
+        for band_info in collection_info["summaries"]["eo:bands"]:
+            if band_info["name"] == bands[0]:
+                if band_info["type"] == "int16":
+                    # Set the range of the values so the image will be saved as int16.
+                    logger.info("Input band is int16, so force output to int16")
+                    cube = cube.linear_scale_range(0, 10000, 0, 10000)
+
+                break
+
         # The NDVI collection needs to be recalculated
         if collection == "TERRASCOPE_S2_NDVI_V2":
             cube = cube.apply(lambda x: 0.004 * x - 0.08)
