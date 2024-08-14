@@ -52,7 +52,7 @@ def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
 
     if not conf.calc_periodic_mosaic_params.getboolean("simulate"):
         _ = mosaic_util.calc_periodic_mosaic(
-            roi_bounds=conf.calc_periodic_mosaic_params.getint("roi_bounds"),
+            roi_bounds=conf.calc_periodic_mosaic_params.getlistfloat("roi_bounds"),
             roi_crs=conf.calc_periodic_mosaic_params.getint("roi_crs"),
             start_date=start_date,
             end_date=end_date,
