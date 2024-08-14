@@ -12,6 +12,7 @@
 - Add option `calc_marker_params.on_missing_images` to be able to ignore errors in the
   calculation of images if needed (#125, #126)
 - Filter away rasterio logging for extrasamples (#127)
+- Save openeo images with int16 bands as int16 locally as well (again) (#131)
 
 ### Bugs fixed
 
