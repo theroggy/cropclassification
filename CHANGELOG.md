@@ -13,6 +13,11 @@
   calculation of images if needed (#125, #126)
 - Filter away rasterio logging for extrasamples (#127)
 
+### Bugs fixed
+
+- Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
+  config (#130)
+
 ## 0.2 (2024-06-17)
 
 ### Deprecations and compatibility notes
