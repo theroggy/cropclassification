@@ -134,3 +134,16 @@ def test_set_band_descriptions_remove(tmp_path):
     with rioxarray.open_rasterio(test_path, cache=False) as image_file:
         image = image_file.to_dataset("band")
         assert "long_name" not in image.attrs
+
+
+def test_set_no_data(tmp_path):
+    # Prepare and validate test file
+    test_path = tmp_path / SampleData.image_s2_mean_path.name
+    shutil.copy(SampleData.image_s2_mean_path, test_path)
+
+    # Set nodata value
+    raster_util.set_no_data(test_path)
+
+    # Validate result
+    with rasterio.open(test_path) as file:
+        assert file.nodata == 32767

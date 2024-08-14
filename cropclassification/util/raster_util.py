@@ -1,9 +1,10 @@
+import math
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Union
-from collections.abc import Iterable
 
-from osgeo import gdal
 import rasterio
+from osgeo import gdal
 
 # Suppress errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
@@ -71,3 +72,9 @@ def set_band_descriptions(
 
         for index, band_description in band_descriptions.items():
             file.set_band_description(index, band_description)
+
+
+def set_no_data(path: Path, nodata_value: int = 32767):
+    with rasterio.open(path, "r+") as src:
+        if math.isnan(src.nodata):
+            src.nodata = nodata_value
