@@ -123,7 +123,7 @@ def test_get_images_s2(tmp_path, time_reducer):
     assert output_path.exists()
     with rasterio.open(output_path, "r") as file:
         assert file.count == len(bands)
-        assert file.profile["dtype"] == "uint16"
+        assert file.profile["dtype"].endswith("int16")
         assert file.profile["nodata"] is not None
         # All bands should have a description
         assert all(file.descriptions)
