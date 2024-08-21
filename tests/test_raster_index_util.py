@@ -12,16 +12,27 @@ gdal.UseExceptions()
 
 
 def create_gdal_raster(
-    fname, values, *, gt=None, gdal_type=None, nodata=None, scale=None, offset=None
+    fname,
+    values,
+    *,
+    gt=None,
+    gdal_type=None,
+    nodata=None,
+    scale=None,
+    offset=None,
+    bands=None,
 ):
     gdal = pytest.importorskip("osgeo.gdal")
     gdal_array = pytest.importorskip("osgeo.gdal_array")
     drv = gdal.GetDriverByName("GTiff")
-    bands = 1 if len(values.shape) == 2 else values.shape[0]
     if gdal_type is None:
         gdal_type = gdal_array.NumericTypeCodeToGDALTypeCode(values.dtype)
     ds = drv.Create(
-        str(fname), values.shape[-2], values.shape[-1], bands=bands, eType=gdal_type
+        str(fname),
+        values.shape[-2],
+        values.shape[-1],
+        bands=len(bands),
+        eType=gdal_type,
     )
     if gt is None:
         ds.SetGeoTransform((0.0, 1.0, 0.0, values.shape[-2], 0.0, -1.0))
@@ -34,14 +45,16 @@ def create_gdal_raster(
         else:
             ds.GetRasterBand(1).SetNoDataValue(nodata)
     if scale:
-        ds.GetRasterBand(1).SetScale(scale)
-    if offset:
-        ds.GetRasterBand(1).SetOffset(offset)
-    if len(values.shape) == 2:
-        ds.WriteArray(values)
-    else:
         for i in range(bands):
-            ds.GetRasterBand(i + 1).WriteArray(values[i, :, :])
+            ds.GetRasterBand(i + 1).SetScale(scale)
+        for i in range(bands):
+            ds.GetRasterBand(i + 1).SetOffset(offset)
+        ds.GetRasterBand(1).SetOffset(offset)
+    if bands:
+        for i, band in enumerate(bands):
+            rasterband = ds.GetRasterBand(i + 1)
+            rasterband.SetDescription(band)
+            rasterband.WriteArray(values)
 
 
 def make_rect(xmin, ymin, xmax, ymax, id=None, properties=None):
@@ -131,16 +144,16 @@ def test_calc_index_s2(tmp_path, index, save_as_byte):
 
 
 @pytest.mark.parametrize(
-    "index, save_as_byte, gdal_type, nodata, exp_dtype, exp_nodata",
+    "index, save_as_byte, gdal_type, nodata, bands, exp_dtype, exp_nodata",
     [
-        ("ndvi", True, gdal.GDT_UInt16, 32676, "uint8", 255),
-        ("ndvi", True, gdal.GDT_Float32, np.nan, "uint8", 255),
-        ("ndvi", False, gdal.GDT_UInt16, 32676, "float32", np.nan),
-        ("ndvi", False, gdal.GDT_Float32, np.nan, "float32", np.nan),
-        ("dprvi", True, gdal.GDT_UInt16, 32676, "uint8", 255),
-        ("dprvi", True, gdal.GDT_Float32, np.nan, "uint8", 255),
-        ("dprvi", False, gdal.GDT_UInt16, 32676, "float32", np.nan),
-        ("dprvi", False, gdal.GDT_Float32, np.nan, "float32", np.nan),
+        ("ndvi", True, gdal.GDT_UInt16, 32676, ["B04", "B08"], "uint8", 255),
+        ("ndvi", True, gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
+        ("ndvi", False, gdal.GDT_UInt16, 32676, ["B04", "B08"], "float32", np.nan),
+        ("ndvi", False, gdal.GDT_Float32, np.nan, ["B04", "B08"], "float32", np.nan),
+        ("dprvi", True, gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255),
+        ("dprvi", True, gdal.GDT_Float32, np.nan, ["VH", "VV"], "uint8", 255),
+        ("dprvi", False, gdal.GDT_UInt16, 32676, ["VH", "VV"], "float32", np.nan),
+        ("dprvi", False, gdal.GDT_Float32, np.nan, ["VH", "VV"], "float32", np.nan),
     ],
 )
 def test_calc_index(
@@ -149,6 +162,7 @@ def test_calc_index(
     save_as_byte,
     gdal_type,
     nodata,
+    bands,
     exp_dtype,
     exp_nodata,
 ):
@@ -167,6 +181,7 @@ def test_calc_index(
         ),
         gdal_type=gdal_type,
         nodata=nodata,
+        bands=bands,
     )
 
     if gdal_type == gdal.GDT_UInt16:
@@ -174,10 +189,6 @@ def test_calc_index(
     elif gdal_type == gdal.GDT_Float32:
         dtype = "float32"
 
-    if index == "ndvi":
-        bands = ["B04", "B08"]
-    elif index == "dprvi":
-        bands = ["VH", "VV"]
     with rasterio.open(
         input_path, "w", width=3, height=3, count=len(bands), dtype=dtype
     ) as src:
