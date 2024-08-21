@@ -123,6 +123,8 @@ def calc_index(
             raise ValueError(f"unsupported index type: {index}")
 
     if not save_as_byte:
+        # Set nodata pixels to nan
+        index_data.rio.write_nodata(np.nan, inplace=True)
         # Save as float. Use only 16 bit precision to save diskspace.
         index_data.rio.to_raster(
             output_path, nbits=16, tiled=True, compress="DEFLATE", predictor=3
