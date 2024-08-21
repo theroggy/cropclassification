@@ -20,7 +20,7 @@ def calc_index(
         return
 
     # Open the image file and calculate indexes
-    with rioxarray.open_rasterio(input_path, cache=False) as image_file:
+    with rioxarray.open_rasterio(input_path, cache=False, masked=True) as image_file:
         image = image_file.to_dataset("band")
         if "long_name" not in image.attrs:
             raise ValueError(
@@ -138,8 +138,9 @@ def calc_index(
         # Apply the scale factors + clip the data to maximum value
         index_data_scaled = (index_data - add_offset) / scale_factor
         index_data_scaled = index_data_scaled.clip(max=250)
-        # Set nodata pixels from the original index (value 0) to 255 in the scaled index
-        index_data_scaled = index_data_scaled.where(index_data != 0, other=255)
+        # Set nodata pixels from the original index (value=nan)
+        # to 255 in the scaled index
+        index_data_scaled = index_data_scaled.where(~np.isnan(index_data), other=255)
         # We don't need index_data anymore, so set to None to free memory
         index_data = None
         # Now clip low values to 0
