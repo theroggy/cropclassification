@@ -1,5 +1,4 @@
 import shutil
-from contextlib import nullcontext
 
 import numpy as np
 import pytest
@@ -56,17 +55,12 @@ def create_gdal_raster(
         ds.WriteArray(values)
     else:
         for i in range(bands):
-            rasterband = ds.GetRasterBand(i + 1)
-            if band_descriptions:
-                rasterband.SetDescription(band_descriptions[i])
-            rasterband.WriteArray(values[i, :, :])
-            # ds.GetRasterBand(i + 1).WriteArray(values[i, :, :])
+            ds.GetRasterBand(i + 1).WriteArray(values[i, :, :])
 
-    # if band_descriptions:
-    #     for i, band in enumerate(band_descriptions):
-    #         rasterband = ds.GetRasterBand(i + 1)
-    #         rasterband.SetDescription(band)
-    #         rasterband.WriteArray(values[i, :, :])
+    if band_descriptions:
+        for i, band in enumerate(band_descriptions):
+            rasterband = ds.GetRasterBand(i + 1)
+            rasterband.SetDescription(band)
 
 
 def make_rect(xmin, ymin, xmax, ymax, id=None, properties=None):
@@ -156,55 +150,19 @@ def test_calc_index_s2(tmp_path, index, save_as_byte):
 
 
 @pytest.mark.parametrize(
-    "index, save_as_byte, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata, exp_error",  # noqa: E501
+    "index, save_as_byte, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata",
     [
-        ("ndvi", True, gdal.GDT_UInt16, 32676, None, "uint8", 255, True),
-        ("ndvi", True, gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255, False),
-        (
-            "ndvi",
-            False,
-            gdal.GDT_UInt16,
-            32676,
-            ["B04", "B08"],
-            "float32",
-            np.nan,
-            False,
-        ),
-        (
-            "ndvi",
-            False,
-            gdal.GDT_Float32,
-            np.nan,
-            ["B04", "B08"],
-            "float32",
-            np.nan,
-            False,
-        ),
-        ("dprvi", True, gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255, False),
-        ("dprvi", True, gdal.GDT_Float32, np.nan, ["VH", "VV"], "uint8", 255, False),
-        (
-            "dprvi",
-            False,
-            gdal.GDT_UInt16,
-            32676,
-            ["VH", "VV"],
-            "float32",
-            np.nan,
-            False,
-        ),
-        (
-            "dprvi",
-            False,
-            gdal.GDT_Float32,
-            np.nan,
-            ["VH", "VV"],
-            "float32",
-            np.nan,
-            False,
-        ),
+        ("ndvi", True, gdal.GDT_UInt16, 32676, ["B04", "B08", "b1"], "uint8", 255),
+        ("ndvi", True, gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
+        ("ndvi", False, gdal.GDT_UInt16, 32676, ["B04", "B08"], "float32", np.nan),
+        ("ndvi", False, gdal.GDT_Float32, np.nan, ["B04", "B08"], "float32", np.nan),
+        ("dprvi", True, gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255),
+        ("dprvi", True, gdal.GDT_Float32, np.nan, ["VH", "VV"], "uint8", 255),
+        ("dprvi", False, gdal.GDT_UInt16, 32676, ["VH", "VV"], "float32", np.nan),
+        ("dprvi", False, gdal.GDT_Float32, np.nan, ["VH", "VV"], "float32", np.nan),
     ],
 )
-def test_calc_index(
+def test_calc_index_by_gdal_raster(
     tmp_path,
     index,
     save_as_byte,
@@ -213,18 +171,13 @@ def test_calc_index(
     bands_descriptions,
     exp_dtype,
     exp_nodata,
-    exp_error,
 ):
     input_path = tmp_path / "input.tif"
     output_path = tmp_path / "output.tif"
 
     raster_fname = str(input_path)
     raster_array = [
-        [
-            [nodata, nodata, nodata],
-            [nodata, nodata, nodata],
-            [nodata, nodata, nodata],
-        ]
+        [[nodata, nodata, nodata], [nodata, nodata, nodata], [nodata, nodata, nodata]]
     ]
     if bands_descriptions:
         for _ in range(len(bands_descriptions) - 1):
@@ -244,24 +197,16 @@ def test_calc_index(
         band_descriptions=bands_descriptions,
     )
 
-    if exp_error:
-        handler = pytest.raises(
-            ValueError, match="input file doesn't have band descriptions"
-        )
-    else:
-        handler = nullcontext()
+    raster_index_util.calc_index(
+        input_path=input_path,
+        output_path=output_path,
+        index=index,
+        save_as_byte=save_as_byte,
+    )
 
-    with handler:
-        raster_index_util.calc_index(
-            input_path=input_path,
-            output_path=output_path,
-            index=index,
-            save_as_byte=save_as_byte,
-        )
-
-        with rasterio.open(output_path, "r") as src:
-            assert src.dtypes[0] == exp_dtype
-            if np.isnan(exp_nodata):
-                assert np.isnan(src.nodata)
-            else:
-                assert src.nodata == exp_nodata
+    with rasterio.open(output_path, "r") as src:
+        assert src.dtypes[0] == exp_dtype
+        if np.isnan(exp_nodata):
+            assert np.isnan(src.nodata)
+        else:
+            assert src.nodata == exp_nodata

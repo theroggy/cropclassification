@@ -56,9 +56,7 @@ def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
             roi_crs=conf.calc_periodic_mosaic_params.getint("roi_crs"),
             start_date=start_date,
             end_date=end_date,
-            output_base_dir=Path(
-                conf.calc_periodic_mosaic_params["dest_image_data_dir"]
-            ),
+            output_base_dir=Path(conf.dirs["images_periodic_dir"]),
             imageprofiles_to_get=imageprofiles_to_get,
             imageprofiles=imageprofiles,
             force=False,
