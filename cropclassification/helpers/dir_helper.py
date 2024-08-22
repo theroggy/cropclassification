@@ -2,10 +2,10 @@
 Helper regarding directory operations.
 """
 
-from datetime import datetime
 import os
-from pathlib import Path
 import re
+from datetime import datetime
+from pathlib import Path
 
 
 def create_run_dir(class_base_dir: Path, reuse_last_run_dir: bool) -> Path:

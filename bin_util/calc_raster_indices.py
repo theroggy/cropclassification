@@ -1,8 +1,7 @@
 import logging
 from pathlib import Path
 
-from cropclassification.util import openeo_util
-from cropclassification.util import raster_index_util
+from cropclassification.util import openeo_util, raster_index_util
 
 
 def main():

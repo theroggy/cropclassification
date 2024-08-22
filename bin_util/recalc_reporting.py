@@ -3,8 +3,8 @@ from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.postprocess import classification_postprocess as class_post
-from cropclassification.preprocess import classification_preprocess as class_pre
 from cropclassification.postprocess import classification_reporting as class_report
+from cropclassification.preprocess import classification_preprocess as class_pre
 
 
 def main():

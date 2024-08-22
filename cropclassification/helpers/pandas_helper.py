@@ -2,12 +2,12 @@
 Module with helper functions to expand on some features of pandas.
 """
 
-from pathlib import Path
 import os
+import sqlite3
+from pathlib import Path
 from typing import Any, Optional, Union
 
 import pandas as pd
-import sqlite3
 
 
 def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
