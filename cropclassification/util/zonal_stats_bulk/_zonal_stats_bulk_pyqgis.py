@@ -29,8 +29,8 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 # Set path for qgis
 qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
 sys.path.insert(0, str(qgis_path))
-import qgis.analysis  # noqa: E402
-import qgis.core  # noqa: E402
+import qgis.analysis
+import qgis.core
 
 logger = logging.getLogger(__name__)
 

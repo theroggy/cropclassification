@@ -31,7 +31,7 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
             return result
 
         except Exception as ex:
-            raise RuntimeError(f"Error reading data from {str(path)}") from ex
+            raise RuntimeError(f"Error reading data from {path!s}") from ex
         finally:
             if sql_db is not None:
                 sql_db.close()
@@ -101,7 +101,7 @@ def read_file(
                 f'select {cols_to_select} from "{table_name}"', sql_db
             )
         except Exception as ex:
-            raise Exception(f"Error reading data from {str(path)}") from ex
+            raise Exception(f"Error reading data from {path!s}") from ex
         finally:
             if sql_db is not None:
                 sql_db.close()
@@ -156,7 +156,7 @@ def to_file(
                 chunksize=50000,
             )
         except Exception as ex:
-            raise Exception(f"Error in to_file to file {str(path)}") from ex
+            raise Exception(f"Error in to_file to file {path!s}") from ex
         finally:
             if sql_db is not None:
                 sql_db.close()

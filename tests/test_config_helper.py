@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -18,7 +19,7 @@ from tests.test_helper import IMAGEPROFILES, SampleData
         ("s1-coh-weekly", None),
     ],
 )
-def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float):
+def test_get_image_profiles(sensor: str, exp_max_cloud_cover: Optional[float]):
     config_path = SampleData.config_dir / "image_profiles.ini"
     image_profiles = conf._get_image_profiles(config_path)
 
@@ -26,7 +27,7 @@ def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float):
     assert profile is not None
     assert profile.name == sensor
     if exp_max_cloud_cover is None:
-        profile.max_cloud_cover is None
+        assert profile.max_cloud_cover is None
     else:
         assert profile.max_cloud_cover == exp_max_cloud_cover
 

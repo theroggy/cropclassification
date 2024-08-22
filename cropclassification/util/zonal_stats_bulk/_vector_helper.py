@@ -49,7 +49,7 @@ def reproject_synced(
 
     # Prepare filename for a "busy file" to ensure proper behaviour in a parallel
     # processing context
-    vector_prepr_path_busy = Path(f"{str(vector_prepr_path)}_busy")
+    vector_prepr_path_busy = Path(f"{vector_prepr_path!s}_busy")
 
     # If the file exists already or if a busy file exists, return
     vector_gdf = None

@@ -13,7 +13,7 @@
   calculation of images if needed (#125, #126)
 - Filter away rasterio logging for extrasamples (#127)
 - Save openeo images with int16 bands as int16 locally as well (again) (#131)
-- Linting improvements: add isort (#133)
+- Linting improvements: add isort, sync rules with geofileops (#133, #)
 
 ### Bugs fixed
 
