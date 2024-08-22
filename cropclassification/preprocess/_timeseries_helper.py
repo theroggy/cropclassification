@@ -2,10 +2,10 @@
 Calculates periodic timeseries for input parcels.
 """
 
-from datetime import datetime, timedelta
-import logging
 import gc
+import logging
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 

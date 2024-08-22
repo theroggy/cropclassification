@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
+
 import pytest
 
 from cropclassification.helpers import config_helper as conf

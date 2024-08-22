@@ -2,13 +2,13 @@
 Calaculate the timeseries data per week based on per image data.
 """
 
-from datetime import datetime
 import os
+from datetime import datetime
 from pathlib import Path
 
+import cropclassification.preprocess._timeseries_helper as ts_helper
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
-import cropclassification.preprocess._timeseries_helper as ts_helper
 
 
 def main():

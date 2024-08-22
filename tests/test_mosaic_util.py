@@ -1,7 +1,8 @@
+import shutil
 from datetime import datetime
 from pathlib import Path
+
 import pytest
-import shutil
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.util import mosaic_util

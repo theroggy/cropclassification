@@ -3,7 +3,6 @@ from pathlib import Path
 
 from cropclassification.util.mosaic_util import ImageProfile
 
-
 testdata_dir = Path(__file__).resolve().parent / "data"
 
 

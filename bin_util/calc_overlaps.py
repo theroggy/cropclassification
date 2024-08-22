@@ -3,10 +3,9 @@ Module calculate overlaps between two layers.
 """
 
 import os
-from pathlib import Path
 import pprint
-
 import sqlite3
+from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.helpers import log_helper

@@ -1,20 +1,20 @@
-from concurrent import futures
-from datetime import datetime
 import logging
 import math
 import multiprocessing
 import os
-from pathlib import Path
 import shutil
 import time
+from concurrent import futures
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import geofileops as gfo
 import geopandas as gpd
-from geofileops.util import _io_util
 import psutil
-from psutil._common import bytes2human
+from geofileops.util import _io_util
 from osgeo import gdal
+from psutil._common import bytes2human
 
 # ... and suppress errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")

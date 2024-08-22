@@ -11,7 +11,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 88
-select = [
+lint.select = [
     # pyflakes
     "F",
     # pycodestyle
@@ -48,6 +48,8 @@ select = [
     "PGH",
     # Ruff-specific rules
     "RUF",
+    # isort
+    "I",
     # pyupgrade
     "UP",
     # pydocstyle
@@ -55,7 +57,7 @@ select = [
 ]
 
 target-version = "py39"
-ignore = [ # space before : (needed for how black formats slicing)
+lint.ignore = [ # space before : (needed for how black formats slicing)
     # "E203",  # not yet implemented
     # do not assign a lambda expression, use a def
     "E731",
@@ -147,8 +149,8 @@ exclude = [
     "geopandas/_version.py",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"

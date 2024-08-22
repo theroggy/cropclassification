@@ -2,9 +2,9 @@
 Module with helper functions regarding (keras) models.
 """
 
-import os
 import glob
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 

@@ -1,4 +1,5 @@
 import shutil
+
 import pytest
 
 from cropclassification.util import raster_index_util, raster_util

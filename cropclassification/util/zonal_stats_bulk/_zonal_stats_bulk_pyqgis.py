@@ -1,13 +1,13 @@
-from concurrent import futures
-from datetime import datetime
 import logging
 import multiprocessing
 import os
-from pathlib import Path
 import shutil
 import signal
 import sys
 import tempfile
+from concurrent import futures
+from datetime import datetime
+from pathlib import Path
 from typing import Union
 
 import geofileops as gfo
@@ -16,11 +16,12 @@ import pandas as pd
 import psutil
 
 from cropclassification.helpers import pandas_helper as pdh
+
+from . import Statistic
 from . import _general_helper as general_helper
 from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
-from . import Statistic
 
 # Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
 # Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
@@ -28,8 +29,8 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 # Set path for qgis
 qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
 sys.path.insert(0, str(qgis_path))
-import qgis.core  # noqa: E402
 import qgis.analysis  # noqa: E402
+import qgis.core  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

@@ -17,7 +17,6 @@ import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.model_helper as mh
 import cropclassification.helpers.pandas_helper as pdh
 
-
 # -------------------------------------------------------------
 # First define/init some general variables/constants
 # -------------------------------------------------------------
