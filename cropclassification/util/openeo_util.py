@@ -287,7 +287,7 @@ def create_mosaic_job(
         collection_info = conn.describe_collection(collection)
         for band_info in collection_info["summaries"]["eo:bands"]:
             if band_info["name"] == bands[0]:
-                if band_info["type"] == "int16":
+                if "type" in band_info and band_info["type"] == "int16":
                     # Set the range of the values so the image will be saved as int16.
                     logger.info("Input band is int16, so force output to int16")
                     cube = cube.linear_scale_range(0, 10000, 0, 10000)
