@@ -547,8 +547,8 @@ def _prepare_calc(
     temp_features_dir = tmp_dir / image_path.stem
     ret_val["temp_features_dir"] = temp_features_dir
     if temp_features_dir.exists():
-        logger.info(f"Remove dir {str(temp_features_dir)}{os.sep}")
-        shutil.rmtree(f"{str(temp_features_dir)}{os.sep}")
+        logger.info(f"Remove dir {temp_features_dir!s}{os.sep}")
+        shutil.rmtree(f"{temp_features_dir!s}{os.sep}")
     temp_features_dir.mkdir(parents=True, exist_ok=True)
 
     # Loop over the batches, pickle them and add the paths to the result...

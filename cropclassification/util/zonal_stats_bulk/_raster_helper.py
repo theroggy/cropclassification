@@ -12,10 +12,10 @@ from osgeo import gdal
 # Suppress gdal warnings/errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
 
-import rasterio  # noqa: E402
-import shapely.geometry as sh_geom  # noqa: E402
+import rasterio
+import shapely.geometry as sh_geom
 
-from cropclassification.util import io_util  # noqa: E402
+from cropclassification.util import io_util
 
 # General init
 logger = logging.getLogger(__name__)

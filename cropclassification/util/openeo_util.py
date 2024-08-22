@@ -14,7 +14,7 @@ import openeo.rest.job
 import pyproj
 from openeo.api.process import Parameter
 from openeo.processes import if_, is_nan
-from scipy.signal.windows import gaussian  # type: ignore  # noqa: PGH003
+from scipy.signal.windows import gaussian  # type: ignore
 from shapely.geometry import Polygon
 
 from . import raster_util

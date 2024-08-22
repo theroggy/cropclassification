@@ -173,10 +173,10 @@ def get_models(
     # glob search string
     if model_base_filename is not None:
         model_weight_paths = glob.glob(
-            f"{str(model_dir)}{os.sep}{model_base_filename}_*.hdf5"
+            f"{model_dir!s}{os.sep}{model_base_filename}_*.hdf5"
         )
     else:
-        model_weight_paths = glob.glob(f"{str(model_dir)}{os.sep}*.hdf5")
+        model_weight_paths = glob.glob(f"{model_dir!s}{os.sep}*.hdf5")
 
     # Loop through all models and extract necessary info...
     model_info_list = []
@@ -223,9 +223,9 @@ def get_best_model(
 
     if len(model_info_df) > 0:
         if acc_metric_mode == "max":
-            return model_info_df.loc[model_info_df["acc_combined"].values.argmax()]  # type: ignore  # noqa: PGH003
+            return model_info_df.loc[model_info_df["acc_combined"].values.argmax()]  # type: ignore
         else:
-            return model_info_df.loc[model_info_df["acc_combined"].values.argmin()]  # type: ignore  # noqa: PGH003
+            return model_info_df.loc[model_info_df["acc_combined"].values.argmin()]  # type: ignore
     else:
         return None
 

@@ -276,7 +276,7 @@ def collect_and_prepare_timeseries_data(
     parcel_many_null_df = result_df[result_df.isnull().sum(axis=1) > max_number_null]
     if len(parcel_many_null_df.index) > 0:
         # Write the rows with empty data to a file
-        parcel_many_null_path = Path(f"{str(output_path)}_rows_many_null.sqlite")
+        parcel_many_null_path = Path(f"{output_path!s}_rows_many_null.sqlite")
         logger.warning(
             f"Write {len(parcel_many_null_df.index)} rows with > {max_number_null} of "
             f"{len(result_df.columns)} columns==null to {parcel_many_null_path}"

@@ -18,7 +18,7 @@ from psutil._common import bytes2human
 
 # ... and suppress errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
-import rasterstats  # noqa: E402
+import rasterstats
 
 logger = logging.getLogger()
 
