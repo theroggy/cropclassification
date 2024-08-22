@@ -20,7 +20,7 @@ def create_gdal_raster(
     nodata=None,
     scale=None,
     offset=None,
-    bands=None,
+    band_descriptions=None,
 ):
     gdal = pytest.importorskip("osgeo.gdal")
     gdal_array = pytest.importorskip("osgeo.gdal_array")
@@ -31,7 +31,7 @@ def create_gdal_raster(
         str(fname),
         values.shape[-2],
         values.shape[-1],
-        bands=len(bands),
+        bands=len(band_descriptions),
         eType=gdal_type,
     )
     if gt is None:
@@ -45,16 +45,17 @@ def create_gdal_raster(
         else:
             ds.GetRasterBand(1).SetNoDataValue(nodata)
     if scale:
-        for i in range(bands):
+        for i in range(len(band_descriptions)):
             ds.GetRasterBand(i + 1).SetScale(scale)
-        for i in range(bands):
+    if offset:
+        for i in range(len(band_descriptions)):
             ds.GetRasterBand(i + 1).SetOffset(offset)
-        ds.GetRasterBand(1).SetOffset(offset)
-    if bands:
-        for i, band in enumerate(bands):
+
+    if band_descriptions:
+        for i, band in enumerate(band_descriptions):
             rasterband = ds.GetRasterBand(i + 1)
             rasterband.SetDescription(band)
-            rasterband.WriteArray(values)
+            rasterband.WriteArray(values[i, :, :])
 
 
 def make_rect(xmin, ymin, xmax, ymax, id=None, properties=None):
@@ -144,7 +145,7 @@ def test_calc_index_s2(tmp_path, index, save_as_byte):
 
 
 @pytest.mark.parametrize(
-    "index, save_as_byte, gdal_type, nodata, bands, exp_dtype, exp_nodata",
+    "index, save_as_byte, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata",
     [
         ("ndvi", True, gdal.GDT_UInt16, 32676, ["B04", "B08"], "uint8", 255),
         ("ndvi", True, gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
@@ -162,7 +163,7 @@ def test_calc_index(
     save_as_byte,
     gdal_type,
     nodata,
-    bands,
+    bands_descriptions,
     exp_dtype,
     exp_nodata,
 ):
@@ -170,29 +171,23 @@ def test_calc_index(
     output_path = tmp_path / "output.tif"
 
     raster_fname = str(input_path)
-    create_gdal_raster(
-        raster_fname,
-        np.array(
+    raster_array = []
+    for _ in range(len(bands_descriptions)):
+        raster_array.append(
             [
                 [nodata, nodata, nodata],
                 [nodata, nodata, nodata],
                 [nodata, nodata, nodata],
             ]
-        ),
+        )
+
+    create_gdal_raster(
+        raster_fname,
+        np.array(raster_array),
         gdal_type=gdal_type,
         nodata=nodata,
-        bands=bands,
+        band_descriptions=bands_descriptions,
     )
-
-    if gdal_type == gdal.GDT_UInt16:
-        dtype = "uint16"
-    elif gdal_type == gdal.GDT_Float32:
-        dtype = "float32"
-
-    with rasterio.open(
-        input_path, "w", width=3, height=3, count=len(bands), dtype=dtype
-    ) as src:
-        src.descriptions = bands
 
     raster_index_util.calc_index(
         input_path=input_path,
