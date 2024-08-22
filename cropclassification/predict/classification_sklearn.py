@@ -8,13 +8,12 @@ import logging
 import os
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-import joblib
+from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 
 import cropclassification.helpers.config_helper as conf

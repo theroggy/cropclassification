@@ -4,11 +4,11 @@ Module that manages configuration data.
 
 import configparser
 import json
-from pathlib import Path
 import pprint
 import tempfile
-from typing import Any, Optional, Union
 from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, Optional, Union
 
 from cropclassification.util.mosaic_util import ImageProfile
 

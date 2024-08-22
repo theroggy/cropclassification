@@ -1,7 +1,7 @@
-from datetime import datetime
 import logging
-from pathlib import Path
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import geofileops as gfo

@@ -2,33 +2,30 @@
 Calculate timeseries data per image.
 """
 
-from concurrent import futures
-from datetime import datetime
 import logging
 import math
 import multiprocessing
 import os
-from pathlib import Path
 import shutil
 import signal  # To catch CTRL-C explicitly and kill children
 import sys
 import time
+from concurrent import futures
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional, Union
 
-from osgeo import gdal
-
-from affine import Affine
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
 import rasterstats
+from affine import Affine
+from osgeo import gdal
 
 from cropclassification.helpers import pandas_helper as pdh
-from . import _general_helper
-from . import _processing_util as processing_util
-from . import _raster_helper
-from . import _vector_helper
 from cropclassification.util import io_util
-from . import Statistic
+
+from . import Statistic, _general_helper, _raster_helper, _vector_helper
+from . import _processing_util as processing_util
 
 # Suppress gdal warnings/errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")

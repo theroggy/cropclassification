@@ -1,7 +1,7 @@
-from datetime import datetime
 import logging
-from pathlib import Path
 import tempfile
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import geofileops as gfo
@@ -9,9 +9,8 @@ import pyproj
 import shapely
 
 from cropclassification.helpers import config_helper as conf
-from cropclassification.util import mosaic_util
+from cropclassification.util import mosaic_util, zonal_stats_bulk
 from cropclassification.util.mosaic_util import ImageProfile
-from cropclassification.util import zonal_stats_bulk
 
 # Get a logger...
 logger = logging.getLogger(__name__)

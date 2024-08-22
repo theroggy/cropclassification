@@ -2,10 +2,10 @@
 
 import logging
 import os
-from pathlib import Path
 import time
-from typing import Any, Optional
 import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Any, Optional
 
 from osgeo import gdal
 

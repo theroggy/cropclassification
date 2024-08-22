@@ -1,9 +1,9 @@
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Union
-from collections.abc import Iterable
 
-from osgeo import gdal
 import rasterio
+from osgeo import gdal
 
 # Suppress errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
