@@ -183,6 +183,9 @@ def read_config(
     if config["marker"].get("roi_name") == "MUST_OVERRIDE":
         raise ValueError("marker.roi_name must be overridden")
 
+    if config["dirs"].get("images_periodic_dir") == "MUST_OVERRIDE":
+        raise ValueError("dirs.images_periodic_dir must be overridden")
+
     global config_paths_used
     config_paths_used = config_paths
 
