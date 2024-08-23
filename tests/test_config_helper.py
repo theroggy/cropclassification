@@ -40,7 +40,7 @@ def test_read_config():
         config_paths=config_paths,
         default_basedir=SampleData.marker_basedir,
         overrules=[
-            "dirs.images_periodic_dir=//dg3.be/alp/datagis/satellite_periodic/BEFL",
+            "dirs.images_periodic_dir=_satellite_periodic/BEFL",
         ],
     )
 
@@ -91,7 +91,7 @@ def test_read_config_overrule():
         overrules=[
             "calc_marker_params.country_code=COUNTRY_TEST",
             "marker.roi_name=ROI_NAME_TEST",
-            "dirs.images_periodic_dir=//dg3.be/alp/datagis/satellite_periodic/BEFL",
+            "dirs.images_periodic_dir=_satellite_periodic/BEFL",
         ],
     )
 
