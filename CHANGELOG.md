@@ -5,7 +5,8 @@
 ### Deprecations and compatibility notes
 
 - Consolidated some landcover pre-processing ignore codes (#120)
-- Restructure configuration file to avoid duplicate keys and improve parameter names:
+- Restructure + cleanup of configuration file, mainly to avoid duplicate keys and to
+  improve parameter names:
     - Consolidate and rename `start_date_str`, `end_date_str` and
       `end_date_subtract_days` from sections `marker` and `calc_periodic_mosaic_params`
       to respectively `start_date`, `end_date` and `images_available_delay` in a new
@@ -21,6 +22,7 @@
     - Drop `calc_periodic_mosaic_params.dest_image_data_dir` and use
       `dirs.images_periodic_dir` instead.
     - Rename section `dirs` to `paths`.
+    - Remove `general.run_id`.
 
 ### Improvements
 
