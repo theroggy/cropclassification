@@ -24,8 +24,8 @@ def calculate_periodic_timeseries(
     end_date: datetime,
     imageprofiles_to_get: list[str],
     imageprofiles: dict[str, ImageProfile],
-    dest_image_data_dir: Path,
-    dest_data_dir: Path,
+    images_periodic_dir: Path,
+    timeseries_periodic_dir: Path,
     nb_parallel: int,
     on_missing_image: str,
 ):
@@ -33,7 +33,7 @@ def calculate_periodic_timeseries(
     Calculate timeseries data for the input parcels.
 
     args
-        imageprofiles_to_get: an array with data you want to be calculated.
+        imageprofiles_to_get: an array with images you want to be calculated.
         on_missing_image: what to do when an image is missing. Options are:
             - ignore: ignore that the image, don't try to download it
             - calculate_raise: calculate the image and raise an error if it fails
@@ -53,7 +53,7 @@ def calculate_periodic_timeseries(
         roi_crs=roi_crs,
         start_date=start_date,
         end_date=end_date,
-        output_base_dir=dest_image_data_dir,
+        output_base_dir=images_periodic_dir,
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
         on_missing_image=on_missing_image,
@@ -71,14 +71,14 @@ def calculate_periodic_timeseries(
                 raise RuntimeError(f"Image {image_info['path']} is missing")
         images_bands.append((image_info["path"], image_info["bands"]))
 
-    temp_dir = conf.dirs.getpath("temp_dir")
+    temp_dir = conf.paths.getpath("temp_dir")
     if temp_dir == "None":
         temp_dir = Path(tempfile.gettempdir())
     zonal_stats_bulk.zonal_stats(
         vector_path=input_parcel_path,
         id_column=conf.columns["id"],
         rasters_bands=images_bands,
-        output_dir=dest_data_dir,
+        output_dir=timeseries_periodic_dir,
         stats=["count", "mean", "median", "std", "min", "max"],  # type: ignore[arg-type]
         engine="pyqgis",
         nb_parallel=nb_parallel,

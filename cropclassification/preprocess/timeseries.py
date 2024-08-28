@@ -24,31 +24,31 @@ def calc_timeseries_data(
     roi_crs: Optional[pyproj.CRS],
     start_date: datetime,
     end_date: datetime,
-    sensordata_to_get: dict[str, conf.SensorData],
-    dest_data_dir: Path,
+    images_to_use: dict[str, conf.ImageConfig],
+    timeseries_periodic_dir: Path,
 ):
     """
     Calculate timeseries data for the input parcels
 
     Args:
         input_parcel_path (str): [description]
-        start_date_str (datetime): [description]
-        end_date_str (datetime): [description]
-        sensordata_to_get (List[str]): an array with data you want to be calculated:
+        start_date (datetime): the start date for the timeseries to generate, inclusive.
+        end_date (datetime): the end date for the timeseries to generate, exclusive.
+        images_to_use (List[str]): an array with data you want to be calculated:
             check out the constants starting with DATA_TO_GET... for the options.
-        dest_data_dir (str): [description]
+        timeseries_periodic_dir (Path): Directory the timeseries will be written to.
     """
     # Check some variables...
-    if sensordata_to_get is None:
+    if images_to_use is None:
         raise Exception("sensordata_to_get cannot be None")
-    if not dest_data_dir.exists():
-        dest_data_dir.mkdir(parents=True, exist_ok=True)
+    if not timeseries_periodic_dir.exists():
+        timeseries_periodic_dir.mkdir(parents=True, exist_ok=True)
 
     sensordata_to_get_onda = [
-        sensor for sensor in sensordata_to_get if sensor not in conf.image_profiles
+        sensor for sensor in images_to_use if sensor not in conf.image_profiles
     ]
     sensordata_to_get_openeo = [
-        sensor for sensor in sensordata_to_get if sensor in conf.image_profiles
+        sensor for sensor in images_to_use if sensor in conf.image_profiles
     ]
 
     if len(sensordata_to_get_onda) > 0:
@@ -60,11 +60,11 @@ def calc_timeseries_data(
         # Now all image data is available per image, calculate periodic data
         ts_helper.calculate_periodic_timeseries(
             parcel_path=input_parcel_path,
-            timeseries_per_image_dir=conf.dirs.getpath("timeseries_per_image_dir"),
+            timeseries_per_image_dir=conf.paths.getpath("timeseries_per_image_dir"),
             start_date=start_date,
             end_date=end_date,
             sensordata_to_get=sensordata_to_get_onda,
-            dest_data_dir=dest_data_dir,
+            timeseries_periodic_dir=timeseries_periodic_dir,
         )
 
     if len(sensordata_to_get_openeo) > 0:
@@ -79,8 +79,8 @@ def calc_timeseries_data(
             end_date=end_date,
             imageprofiles_to_get=sensordata_to_get_openeo,
             imageprofiles=conf.image_profiles,
-            dest_image_data_dir=conf.dirs.getpath("images_periodic_dir"),
-            dest_data_dir=dest_data_dir,
+            images_periodic_dir=conf.paths.getpath("images_periodic_dir"),
+            timeseries_periodic_dir=timeseries_periodic_dir,
             nb_parallel=conf.general.getint("nb_parallel", -1),
             on_missing_image=conf.calc_marker_params.get(
                 "on_missing_image", "calculate_raise"
@@ -95,7 +95,7 @@ def collect_and_prepare_timeseries_data(
     output_path: Path,
     start_date: datetime,
     end_date: datetime,
-    sensordata_to_use: dict[str, conf.SensorData],
+    images_to_use: dict[str, conf.ImageConfig],
     parceldata_aggregations_to_use: list[str],
     force: bool = False,
 ):
@@ -133,20 +133,18 @@ def collect_and_prepare_timeseries_data(
         # Only process data that is of the right sensor types
         fileinfo = ts_helper.get_fileinfo_timeseries_periods(curr_path)
         image_profile = fileinfo["image_profile"].lower()
-        if image_profile not in sensordata_to_use:
-            logger.debug(
-                f"SKIP: file not needed (only {sensordata_to_use}): {curr_path}"
-            )
+        if image_profile not in images_to_use:
+            logger.debug(f"SKIP: file not needed (only {images_to_use}): {curr_path}")
             continue
         # The only data we want to process is the data in the range of dates
         if fileinfo["start_date"] < start_date or fileinfo["end_date"] >= end_date:
             logger.debug(f"SKIP: file doesn't match the period asked: {curr_path}")
             continue
         band = fileinfo["band"]
-        if band not in sensordata_to_use[image_profile].bands:
+        if band not in images_to_use[image_profile].bands:
             logger.debug(f"SKIP: file doesn't match the bands asked: {curr_path}")
             continue
-        time_reducer_asked = sensordata_to_use[image_profile].imageprofile.time_reducer
+        time_reducer_asked = images_to_use[image_profile].imageprofile.time_reducer
         if time_reducer_asked is not None:
             time_reducer = fileinfo.get("time_reducer")
             if time_reducer is None:

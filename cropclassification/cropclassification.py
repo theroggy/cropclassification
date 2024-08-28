@@ -74,8 +74,8 @@ def cropclassification(tasksdir: Path, config_overrules: list[str] = []):
         # Now get the info we want from the task config
         action = task_config["task"].get("action")
         default_basedir = None
-        if "dirs" in task_config:
-            default_basedir = Path(task_config["dirs"].get("marker_basedir"))
+        if "paths" in task_config:
+            default_basedir = Path(task_config["paths"].get("marker_basedir"))
         if default_basedir is None:
             default_basedir = task_path.parent.parent
 

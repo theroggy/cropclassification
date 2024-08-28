@@ -41,13 +41,12 @@ def test_read_config():
         config_paths=config_paths,
         default_basedir=SampleData.marker_basedir,
         overrules=[
-            "dirs.images_periodic_dir=_satellite_periodic/BEFL",
+            "paths.images_periodic_dir=_satellite_periodic/BEFL",
         ],
     )
 
     assert conf.marker["markertype"] == "CROPGROUP"
-    assert conf.calc_marker_params["country_code"] == "BEFL"
-    assert conf.marker["roi_name"] == "roi_test"
+    assert conf.roi["roi_name"] == "roi_test"
 
 
 @pytest.mark.parametrize(
@@ -57,16 +56,9 @@ def test_read_config():
         ("Config file doesn't exist", Path("not_existing_config.ini"), None, False, []),
         ("default_basedir does not exist", None, Path("not_existing_dir"), True, []),
         (
-            "dirs.data_dir is relative, but no default_basedir supplied",
+            "paths.data_dir is relative, but no default_basedir supplied",
             None,
             None,
-            True,
-            [],
-        ),
-        (
-            "calc_marker_params.country_code must be overridden",
-            None,
-            SampleData.marker_basedir,
             True,
             [],
         ),
@@ -90,15 +82,13 @@ def test_read_config_overrule():
         config_paths=config_paths,
         default_basedir=SampleData.marker_basedir,
         overrules=[
-            "calc_marker_params.country_code=COUNTRY_TEST",
-            "marker.roi_name=ROI_NAME_TEST",
-            "dirs.images_periodic_dir=_satellite_periodic/BEFL",
+            "roi.roi_name=ROI_NAME_TEST",
+            "paths.images_periodic_dir=_satellite_periodic/BEFL",
         ],
     )
 
     assert conf.marker["markertype"] == "CROPGROUP"
-    assert conf.calc_marker_params["country_code"] == "COUNTRY_TEST"
-    assert conf.marker["roi_name"] == "ROI_NAME_TEST"
+    assert conf.roi["roi_name"] == "ROI_NAME_TEST"
 
 
 def test_validate_image_profiles():
