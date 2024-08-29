@@ -83,5 +83,17 @@ def zonal_stats(
             nb_parallel=nb_parallel,
             force=force,
         )
+    elif engine == "exactextract":
+        from . import _zonal_stats_bulk_exactextract
+
+        return _zonal_stats_bulk_exactextract.zonal_stats(
+            vector_path=vector_path,
+            rasters_bands=rasters_bands,
+            output_dir=output_dir,
+            stats=stats,
+            columns=[id_column],
+            nb_parallel=nb_parallel,
+            force=force,
+        )
     else:
         raise ValueError(f"invalid engine: {engine}")

@@ -8,7 +8,7 @@ from cropclassification.util import zonal_stats_bulk
 from tests.test_helper import SampleData
 
 
-@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats"])
+@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
 def test_zonal_stats_bulk(tmp_path, engine):
     # Prepare test data
     sample_dir = SampleData.marker_basedir
