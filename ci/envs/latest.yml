@@ -20,6 +20,7 @@ dependencies:
   - rasterstats
   - rioxarray
   - numpy<2
+  - exactextract
   # testing
   - pytest
   - pytest-cov
