@@ -30,7 +30,7 @@ def test_zonal_stats_bulk(tmp_path, engine):
         id_column="UID",
         rasters_bands=images_bands,
         output_dir=tmp_path,
-        stats=["mean"],
+        stats=["mean", "count"],
         engine=engine,
     )
 

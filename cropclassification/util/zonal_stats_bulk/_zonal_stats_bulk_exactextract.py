@@ -12,7 +12,6 @@ import exactextract
 import geopandas as gpd
 import pandas as pd
 import psutil
-import rasterio
 
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import io_util
@@ -39,18 +38,24 @@ def zonal_stats(
     Calculate zonal statistics.
 
     Args:
-        features_path (Path): _description_
-        id_column (str): _description_
-        images_bands (List[Tuple[Path, List[str]]]): _description_
-        stats (List[Statistic]): statistics to calculate.
+        vector_path (Path): _description_
+        columns (list[str]): _description_
+        rasters_bands (list[tuple[Path, list[str]]]): _description_
         output_dir (Path): _description_
+        stats (list[Statistic]): _description_
         nb_parallel (int, optional): the number of parallel processes to use.
-            Defaults to -1: use all available processors.
+             Defaults to -1: use all available processors.
         force (bool, optional): _description_. Defaults to False.
 
     Raises:
         Exception: _description_
     """
+    # Add extra columns to the columns list
+    include_cols = ["index", "UID", "x_ref"]
+    include_cols.extend(columns)
+    # Make the list unique
+    columns = list(set(include_cols))
+
     # Some checks on the input parameters
     if len(rasters_bands) == 0:
         logger.info("No image paths... so nothing to do, so return")
@@ -94,7 +99,7 @@ def zonal_stats(
             if bands is None:
                 bands = raster_info.bands
                 assert bands is not None
-            bands_todo = {}
+            output_paths = {}
 
             for band in bands:
                 # Prepare the output paths...
@@ -115,39 +120,39 @@ def zonal_stats(
                         continue
                     else:
                         output_band_path.unlink()
-                bands_todo[band] = output_band_path
+                output_paths[band] = output_band_path
 
-                # If all bands already processed, skip image...
-                if len(bands_todo) == 0:
-                    logger.info(
-                        "SKIP image: output files for all bands exist already for "
-                        f"{output_base_path}"
-                    )
-                    continue
-
-                nb_todo += 1
-                future = pool.submit(
-                    zonal_stats_band_tofile,
-                    vector_path=vector_path,
-                    raster_path=raster_path,
-                    band=band,
-                    stats=stats,
-                    tmp_dir=tmp_dir,
-                    columns=columns,
-                    output_band_path=output_band_path,
+            # If all bands already processed, skip image...
+            if len(output_paths) == 0:
+                logger.info(
+                    "SKIP image: output files for all bands exist already for "
+                    f"{output_base_path}"
                 )
-                calc_queue[future] = {
-                    "vector_path": vector_path,
-                    "raster_path": raster_path,
-                    "bands": bands,
-                    "bands_todo": bands_todo,
-                    "prepare_calc_future": future,
-                    "image_info": raster_info,
-                    "prepare_calc_starttime": datetime.now(),
-                    "output_base_path": output_base_path,
-                    "output_base_busy_path": output_base_busy_path,
-                    "status": "IMAGE_PREPARE_CALC_BUSY",
-                }
+                continue
+
+            nb_todo += 1
+            future = pool.submit(
+                zonal_stats_band_tofile,
+                vector_path=vector_path,
+                raster_path=raster_path,
+                bands=bands,
+                stats=stats,
+                tmp_dir=tmp_dir,
+                include_cols=columns,
+                output_paths=output_paths,
+            )
+            calc_queue[future] = {
+                "vector_path": vector_path,
+                "raster_path": raster_path,
+                "bands": bands,
+                "bands_todo": output_paths,
+                "prepare_calc_future": future,
+                "image_info": raster_info,
+                "prepare_calc_starttime": datetime.now(),
+                "output_base_path": output_base_path,
+                "output_base_busy_path": output_base_busy_path,
+                "status": "IMAGE_PREPARE_CALC_BUSY",
+            }
 
         # Already write progress to indicate we have started
         logger.info(
@@ -209,18 +214,14 @@ def zonal_stats(
 def zonal_stats_band(
     vector_path,
     raster_path: Path,
-    band: str,
     tmp_dir: Path,
     stats: list[Statistic],
-    columns: list[str],
+    include_cols: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Init
-    stats_mask = None
+    stats_mask = []
     for stat in stats:
-        if stats_mask is None:
-            stats_mask = stat_to_exactextract_stat(stat)
-        else:
-            stats_mask |= stat_to_exactextract_stat(stat)
+        stats_mask.append(stat_to_exactextract_stat(stat))
 
     # Get the image info
     image_info = raster_helper.get_image_info(raster_path)
@@ -229,43 +230,23 @@ def zonal_stats_band(
     tmp_dir.mkdir(exist_ok=True, parents=True)
     vector_proj_path = vector_helper.reproject_synced(
         path=vector_path,
-        columns=columns + ["geometry"],
+        columns=include_cols + ["geometry"],
         target_epsg=image_info.image_epsg,
         dst_dir=tmp_dir,
     )
-    # layer = gfo.get_only_layer(vector_proj_path)
-
-    # Calculates zonal stats with raster
-    raster = Path(image_info.bands[band].path)
 
     try:
-        # HACK: split raster in individual bands
-        with rasterio.open(raster) as src:
-            # Iterate over each band
-            # for i in range(1, src.count + 1):  # rasterio bands are 1-indexed
-            # Read the band
-            band = src.read(image_info.bands[band].band_index)
-
-            # Create output file name
-            raster_single_band = tmp_dir / raster.name
-
-            # Define the metadata for the output file
-            out_meta = src.meta.copy()
-            out_meta.update({"count": 1})
-
-            # Write the band to a new file
-            with rasterio.open(raster_single_band, "w", **out_meta) as dest:
-                dest.write(band, 1)
-
+        # include_cols = list(gfo.get_layerinfo(path=vector_proj_path).columns)
         stats_df = exactextract.exact_extract(
-            rast=raster_single_band,
+            rast=raster_path,
             vec=vector_proj_path,
             ops=stats_mask,
             # strategy="raster-sequential",
             include_geom=False,
             output="pandas",
-            include_cols=["index", "UID", "x_ref"],
+            include_cols=include_cols,
         )
+
     except Exception:
         raise
 
@@ -275,43 +256,48 @@ def zonal_stats_band(
 def zonal_stats_band_tofile(
     vector_path,
     raster_path: Path,
-    output_band_path: Path,
-    band: str,
+    output_paths: dict[str, Path],
+    bands: list[str],
     tmp_dir: Path,
     stats: list[Statistic],
-    columns: list[str],
+    include_cols: list[str],
     force: bool = False,
-) -> Path:
-    if output_band_path.exists():
+) -> dict[str, Path]:
+    if all(output_path.exists() for output_path in output_paths.values()):
         if force:
-            output_band_path.unlink()
-        else:
-            return output_band_path
+            for output_path in output_paths.values():
+                if output_path.exists():
+                    output_path.unlink()
+        return output_paths
 
     stats_df = zonal_stats_band(
         vector_path=vector_path,
         raster_path=raster_path,
-        band=band,
         stats=stats,
         tmp_dir=tmp_dir,
-        columns=columns,
+        include_cols=include_cols,
     )
+    # Split stats_df in different dataframes for each band index
+    raster_info = raster_helper.get_image_info(raster_path)
+    for band in bands:
+        index = raster_info.bands[band].band_index
+        band_columns = include_cols.copy()
+        band_columns.extend([f"band_{index}_{stat}" for stat in stats])
+        band_stats_df = stats_df[band_columns].copy()
+        band_stats_df.rename(
+            columns={f"band_{index}_{stat}": stat for stat in stats},
+            inplace=True,
+        )
+        # Add fid column to the beginning of the dataframe
+        band_stats_df.insert(0, "fid", range(len(band_stats_df)))
 
-    # Add fid column
-    stats_df["fid"] = range(len(stats_df))
-    # Reorder columns
-    columns = ["fid", "index", "UID", "x_ref"]
-    columns.extend(stats)
-    stats_df = stats_df[columns]
-
-    # Remove rows with empty data
-    # stats_df.dropna(inplace=True)
-
-    logger.info(
-        f"Write data for {len(stats_df.index)} parcels found to {output_band_path}"
-    )
-    pdh.to_file(stats_df, output_band_path, index=False)
-    return output_band_path
+        if band in output_paths:
+            logger.info(
+                f"Write data for {len(band_stats_df.index)} parcels found to {output_paths[band]}"  # noqa: E501
+            )
+            if not output_paths[band].exists():
+                pdh.to_file(band_stats_df, output_paths[band], index=False)
+    return output_paths
 
 
 def stat_to_exactextract_stat(stat: str):
@@ -351,6 +337,6 @@ def stat_to_exactextract_stat(stat: str):
     elif stat == "std":
         return "stdev"
     elif stat == "range":
-        return "values"
+        raise ValueError(f"unsupported value in stats: {stat}")
     else:
         raise ValueError(f"unsupported value in stats: {stat}")
