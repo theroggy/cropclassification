@@ -21,6 +21,7 @@ dependencies:
   - rasterio
   - rasterstats
   - rioxarray
+  - exactextract
   # testing
   - pytest
   - pytest-cov
