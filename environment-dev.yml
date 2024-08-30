@@ -17,11 +17,12 @@ dependencies:
   - psutil
   - pyproj
   - scikit-learn
-  - qgis
   - rasterio
   - rasterstats
   - rioxarray
-  - exactextract
+  # Optional
+  - qgis
+  - conda-forge/label/exactextract_dev::exactextract
   # testing
   - pytest
   - pytest-cov
