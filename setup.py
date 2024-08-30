@@ -28,6 +28,7 @@ setuptools.setup(
         "scikit-learn",
         "tensorflow",
         "numpy<2",
+        "exactextract",
     ],
     entry_points="""
         [console_scripts]
