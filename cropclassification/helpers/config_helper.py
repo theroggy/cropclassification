@@ -20,6 +20,7 @@ general: Any
 calc_timeseries_params: Any
 calc_marker_params: Any
 calc_periodic_mosaic_params: Any
+images: Any
 marker: Any
 timeseries: Any
 preprocess: Any
@@ -201,6 +202,8 @@ def read_config(
         calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
     else:
         calc_periodic_mosaic_params = None
+    global images
+    images = config["images"]
     global marker
     marker = config["marker"]
     global timeseries

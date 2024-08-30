@@ -9,8 +9,8 @@
 ### Improvements
 
 - Add some extra global accuracies (precision, recall, f1) to report (#119)
-- Add option `calc_marker_params.on_missing_images` to be able to ignore errors in the
-  calculation of images if needed (#125, #126)
+- Add option `images.on_missing_images` to be able to ignore errors in the
+  calculation of images if needed (#125, #126, #138)
 - Filter away rasterio logging for extrasamples (#127)
 - Save openeo images with int16 bands as int16 locally as well (again) (#131, #135)
 - Linting improvements: add isort, sync rules with geofileops (#133, #134)
