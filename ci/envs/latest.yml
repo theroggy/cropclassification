@@ -21,7 +21,10 @@ dependencies:
   - numpy<2
   # Optional
   - qgis
-  - conda-forge/label/exactextract_dev::exactextract
+  # - exactextract
   # testing
   - pytest
   - pytest-cov
+  - pip:
+    # Optional
+    - exactextract==0.2.0.dev252

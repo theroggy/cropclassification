@@ -22,7 +22,6 @@ dependencies:
   - rioxarray
   # Optional
   - qgis
-  - conda-forge/label/exactextract_dev::exactextract
   # testing
   - pytest
   - pytest-cov
@@ -37,3 +36,4 @@ dependencies:
   - pip:
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12
+    - exactextract==0.2.0.dev252
