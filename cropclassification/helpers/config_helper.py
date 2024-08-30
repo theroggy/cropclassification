@@ -332,9 +332,11 @@ def _validate_image_profiles(profiles: dict[str, ImageProfile]):
 
 
 def pformat_config():
-    message = f"Config files used: {pprint.pformat(config_paths_used)} \n"
-    message += "Config info listing:\n"
-    message += pprint.pformat(as_dict())
+    message = (
+        f"Config files used: {pprint.pformat(config_paths_used)} \n"
+        "Config info listing:\n"
+        f"{pprint.pformat(as_dict())}"
+    )
 
     return message
 
