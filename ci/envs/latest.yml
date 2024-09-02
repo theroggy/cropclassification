@@ -21,7 +21,6 @@ dependencies:
   - numpy<2
   # Optional
   - qgis
-  - exactextract
   # testing
   - pytest
   - pytest-cov
