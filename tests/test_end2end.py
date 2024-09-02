@@ -8,6 +8,8 @@ from pandas.api.types import is_numeric_dtype
 from cropclassification import cropclassification
 from tests import test_helper
 
+exactextract = pytest.importorskip("exactextract")
+
 
 @pytest.mark.parametrize(
     "task, balancing_strategy",
@@ -21,7 +23,6 @@ from tests import test_helper
     ],
 )
 def test_end2end_task(tmp_path, task, balancing_strategy):
-    pytest.importorskip("exactextract")
     marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
     shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
 
