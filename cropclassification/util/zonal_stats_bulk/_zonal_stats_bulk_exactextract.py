@@ -218,11 +218,6 @@ def zonal_stats_band(
     stats: list[Statistic],
     include_cols: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
-    # Init
-    stats_mask = []
-    for stat in stats:
-        stats_mask.append(stat_to_exactextract_stat(stat))
-
     # Get the image info
     image_info = raster_helper.get_image_info(raster_path)
 
@@ -240,7 +235,7 @@ def zonal_stats_band(
         stats_df = exactextract.exact_extract(
             rast=raster_path,
             vec=vector_proj_path,
-            ops=stats_mask,
+            ops=stats,
             # strategy="raster-sequential",
             include_geom=False,
             output="pandas",
@@ -263,6 +258,11 @@ def zonal_stats_band_tofile(
     include_cols: list[str],
     force: bool = False,
 ) -> dict[str, Path]:
+    # Init
+    stats_mask = []
+    for stat in stats:
+        stats_mask.append(stat_to_exactextract_stat(stat))
+
     if all(output_path.exists() for output_path in output_paths.values()):
         if force:
             for output_path in output_paths.values():
@@ -273,7 +273,7 @@ def zonal_stats_band_tofile(
     stats_df = zonal_stats_band(
         vector_path=vector_path,
         raster_path=raster_path,
-        stats=stats,
+        stats=stats_mask,
         tmp_dir=tmp_dir,
         include_cols=include_cols,
     )
@@ -282,10 +282,10 @@ def zonal_stats_band_tofile(
     for band in bands:
         index = raster_info.bands[band].band_index
         band_columns = include_cols.copy()
-        band_columns.extend([f"band_{index}_{stat}" for stat in stats])
+        band_columns.extend([f"band_{index}_{stat}" for stat in stats_mask])
         band_stats_df = stats_df[band_columns].copy()
         band_stats_df.rename(
-            columns={f"band_{index}_{stat}": stat for stat in stats},
+            columns={f"band_{index}_{stat}": stat for stat in stats_mask},
             inplace=True,
         )
         # Add fid column to the beginning of the dataframe
