@@ -10,6 +10,7 @@ from tests.test_helper import SampleData
 
 @pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
 def test_zonal_stats_bulk(tmp_path, engine):
+    pytest.importskip("exactextract")
     # Prepare test data
     sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name

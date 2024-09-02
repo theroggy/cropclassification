@@ -21,6 +21,7 @@ from tests import test_helper
     ],
 )
 def test_end2end_task(tmp_path, task, balancing_strategy):
+    pytest.importskip("exactextract")
     marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
     shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
 
