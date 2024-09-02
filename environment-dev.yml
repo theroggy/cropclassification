@@ -17,11 +17,11 @@ dependencies:
   - psutil
   - pyproj
   - scikit-learn
-  - qgis
   - rasterio
   - rasterstats
   - rioxarray
-  - exactextract
+  # Optional
+  - qgis
   # testing
   - pytest
   - pytest-cov
@@ -36,3 +36,4 @@ dependencies:
   - pip:
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12
+    - exactextract==0.2.0.dev252
