@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python
-  - pip
   # required
   - fiona
   - geofileops
@@ -21,10 +20,7 @@ dependencies:
   - numpy<2
   # Optional
   - qgis
-  # - exactextract
+  - exactextract
   # testing
   - pytest
   - pytest-cov
-  - pip:
-    # Optional
-    - exactextract==0.2.0.dev252
