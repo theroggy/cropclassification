@@ -240,8 +240,10 @@ def zonal_stats_band(
     layer = gfo.get_only_layer(vector_proj_path)
 
     # Init qgis
-    # Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
-    # Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
+    # Avoid QGIS/QT trying to laod "xcb" on linux,
+    # even though QGIS is started without GUI.
+    # Avoids "Could not load the Qt platform plugin "xcb" in ""
+    # even though it was found."
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
     # Set path for qgis
     qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
