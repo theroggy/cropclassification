@@ -23,15 +23,6 @@ from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
 
-# Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
-# Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-# Set path for qgis
-qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
-sys.path.insert(0, str(qgis_path))
-import qgis.analysis
-import qgis.core
-
 logger = logging.getLogger(__name__)
 
 
@@ -249,6 +240,15 @@ def zonal_stats_band(
     layer = gfo.get_only_layer(vector_proj_path)
 
     # Init qgis
+    # Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
+    # Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    # Set path for qgis
+    qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
+    sys.path.insert(0, str(qgis_path))
+    import qgis.analysis
+    import qgis.core
+
     qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
     qgs = qgis.core.QgsApplication([], False)
     qgs.initQgis()
@@ -344,6 +344,8 @@ def zonal_stats_band_tofile(
 
 
 def stat_to_qgisstat(stat: str):
+    import qgis.analysis
+
     if stat == "count":
         return qgis.analysis.QgsZonalStatistics.Count
     elif stat == "sum":

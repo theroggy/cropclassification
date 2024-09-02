@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import exactextract
 import geopandas as gpd
 import pandas as pd
 import psutil
@@ -231,6 +230,8 @@ def zonal_stats_band(
     )
 
     try:
+        import exactextract
+
         # include_cols = list(gfo.get_layerinfo(path=vector_proj_path).columns)
         stats_df = exactextract.exact_extract(
             rast=raster_path,

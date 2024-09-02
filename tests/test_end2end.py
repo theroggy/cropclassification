@@ -9,6 +9,8 @@ from cropclassification import cropclassification
 from tests import test_helper
 
 exactextract = pytest.importorskip("exactextract")
+qgis_analysis = pytest.importorskip("qgis.analysis")
+qgis_core = pytest.importorskip("qgis.core")
 
 
 @pytest.mark.parametrize(
