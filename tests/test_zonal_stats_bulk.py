@@ -1,4 +1,7 @@
+import os
 import shutil
+import sys
+from pathlib import Path
 
 import geofileops as gfo
 import pytest
@@ -7,6 +10,15 @@ from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
 from tests.test_helper import SampleData
 
+# Init qgis
+# Avoid QGIS/QT trying to laod "xcb" on linux,
+# even though QGIS is started without GUI.
+# Avoids "Could not load the Qt platform plugin "xcb" in ""
+# even though it was found."
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+# Set path for qgis
+qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
+sys.path.insert(0, str(qgis_path))
 qgis_analysis = pytest.importorskip("qgis.analysis")
 qgis_core = pytest.importorskip("qgis.core")
 
