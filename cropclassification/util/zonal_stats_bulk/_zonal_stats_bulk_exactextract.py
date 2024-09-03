@@ -232,12 +232,10 @@ def zonal_stats_band(
     try:
         import exactextract
 
-        # include_cols = list(gfo.get_layerinfo(path=vector_proj_path).columns)
         stats_df = exactextract.exact_extract(
             rast=raster_path,
             vec=vector_proj_path,
             ops=stats,
-            # strategy="raster-sequential",
             include_geom=False,
             output="pandas",
             include_cols=include_cols,
@@ -267,8 +265,7 @@ def zonal_stats_band_tofile(
     if all(output_path.exists() for output_path in output_paths.values()):
         if force:
             for output_path in output_paths.values():
-                if output_path.exists():
-                    output_path.unlink()
+                output_path.unlink(missing_ok=True)
         return output_paths
 
     stats_df = zonal_stats_band(
@@ -278,6 +275,7 @@ def zonal_stats_band_tofile(
         tmp_dir=tmp_dir,
         include_cols=include_cols,
     )
+
     # Split stats_df in different dataframes for each band index
     raster_info = raster_helper.get_image_info(raster_path)
     for band in bands:
@@ -298,6 +296,7 @@ def zonal_stats_band_tofile(
             )
             if not output_paths[band].exists():
                 pdh.to_file(band_stats_df, output_paths[band], index=False)
+
     return output_paths
 
 
