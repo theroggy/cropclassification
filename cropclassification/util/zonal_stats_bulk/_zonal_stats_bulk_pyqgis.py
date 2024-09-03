@@ -261,9 +261,11 @@ def zonal_stats_band(
     )
     layer = gfo.get_only_layer(vector_proj_path)
 
+    # Init QGIS
     qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
     qgs = qgis.core.QgsApplication([], False)
     qgs.initQgis()
+
     # Read the vector file + copy to memory layer for:
     #   - improved performance
     #   - QgsZonalStatistics actually adds the data to the input file, so copy needed
