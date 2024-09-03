@@ -1,30 +1,19 @@
-import os
 import shutil
-import sys
-from pathlib import Path
 
 import geofileops as gfo
 import pytest
 
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
+from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests.test_helper import SampleData
-
-# Init qgis
-# Avoid QGIS/QT trying to laod "xcb" on linux,
-# even though QGIS is started without GUI.
-# Avoids "Could not load the Qt platform plugin "xcb" in ""
-# even though it was found."
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-# Set path for qgis
-qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
-sys.path.insert(0, str(qgis_path))
-qgis_analysis = pytest.importorskip("qgis.analysis")
-qgis_core = pytest.importorskip("qgis.core")
 
 
 @pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
 def test_zonal_stats_bulk(tmp_path, engine):
+    if engine == "pyqgis" and not HAS_QGIS:
+        pytest.skip("QGIS is not available on this system.")
+
     # Prepare test data
     sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name

@@ -23,6 +23,24 @@ from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
 
+try:
+    # Init qgis
+    # Avoid QGIS/QT trying to laod "xcb" on linux, even though QGIS is started without
+    # GUI. Avoids following error:
+    #   -> "Could not load the Qt platform plugin "xcb" in "" even though it was found."
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    # Set path for qgis
+    qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
+    sys.path.insert(0, str(qgis_path))
+    import qgis.analysis
+    import qgis.core
+
+    HAS_QGIS = True
+
+except ImportError:
+    HAS_QGIS = False
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,6 +69,10 @@ def zonal_stats(
     Raises:
         Exception: _description_
     """
+    # Make sure QGIS is available
+    if not HAS_QGIS:
+        raise RuntimeError("QGIS is not available on this system.")
+
     # Some checks on the input parameters
     if len(rasters_bands) == 0:
         logger.info("No image paths... so nothing to do, so return")
@@ -238,18 +260,6 @@ def zonal_stats_band(
         dst_dir=tmp_dir,
     )
     layer = gfo.get_only_layer(vector_proj_path)
-
-    # Init qgis
-    # Avoid QGIS/QT trying to laod "xcb" on linux,
-    # even though QGIS is started without GUI.
-    # Avoids "Could not load the Qt platform plugin "xcb" in ""
-    # even though it was found."
-    os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    # Set path for qgis
-    qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
-    sys.path.insert(0, str(qgis_path))
-    import qgis.analysis
-    import qgis.core
 
     qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
     qgs = qgis.core.QgsApplication([], False)
