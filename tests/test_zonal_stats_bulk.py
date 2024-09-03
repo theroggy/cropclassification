@@ -7,10 +7,6 @@ from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
 from tests.test_helper import SampleData
 
-exactextract = pytest.importorskip("exactextract")
-qgis_analysis = pytest.importorskip("qgis.analysis")
-qgis_core = pytest.importorskip("qgis.core")
-
 
 @pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
 def test_zonal_stats_bulk(tmp_path, engine):
