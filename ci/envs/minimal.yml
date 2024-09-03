@@ -18,9 +18,11 @@ dependencies:
   - rasterstats
   - rioxarray
   - numpy<2
+  - pip
   # Optional
   # - qgis
-  # - exactextract
   # testing
   - pytest
   - pytest-cov
+  - pip:
+    - exactextract
