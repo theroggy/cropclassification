@@ -22,6 +22,9 @@ from tests import test_helper
     ],
 )
 def test_end2end_task(tmp_path, task, balancing_strategy):
+    if task == "calc_marker" and not HAS_QGIS:
+        pytest.skip("QGIS is not available on this system.")
+
     marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
     shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
 
@@ -40,9 +43,6 @@ def test_end2end_task(tmp_path, task, balancing_strategy):
     )
 
     if task == "calc_marker":
-        if not HAS_QGIS:
-            pytest.skip("QGIS is not available on this system.")
-
         run_dir = (
             marker_basedir
             / "2024_CROPGROUP"
