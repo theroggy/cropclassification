@@ -6,6 +6,7 @@ import pytest
 from pandas.api.types import is_numeric_dtype
 
 from cropclassification import cropclassification
+from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests import test_helper
 
 
@@ -39,6 +40,9 @@ def test_end2end_task(tmp_path, task, balancing_strategy):
     )
 
     if task == "calc_marker":
+        if not HAS_QGIS:
+            pytest.skip("QGIS is not available on this system.")
+
         run_dir = (
             marker_basedir
             / "2024_CROPGROUP"
