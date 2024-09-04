@@ -143,25 +143,22 @@ def write_full_report(
         html_data["PARAMETERS_USED_TEXT"] = message
 
         logger.info(f"{dict(conf.marker)}")
-        parameter_list = [["marker", key, value] for key, value in conf.marker.items()]
-        parameter_list += [
+        params = [["marker", key, value] for key, value in conf.marker.items()]
+        params += [
             ["calc_marker_params", key, value] for key, value in conf.timeseries.items()
         ]
-        parameter_list += [
-            ["timeseries", key, value] for key, value in conf.timeseries.items()
-        ]
-        parameter_list += [
-            ["preprocess", key, value] for key, value in conf.preprocess.items()
-        ]
-        parameter_list += [
-            ["classifier", key, value] for key, value in conf.classifier.items()
-        ]
-        parameter_list += [
+        params += [["period", key, value] for key, value in conf.period.items()]
+        params += [["roi", key, value] for key, value in conf.roi.items()]
+        params += [["images", key, value] for key, value in conf.images.items()]
+        params += [["timeseries", key, value] for key, value in conf.timeseries.items()]
+        params += [["preprocess", key, value] for key, value in conf.preprocess.items()]
+        params += [["classifier", key, value] for key, value in conf.classifier.items()]
+        params += [
             ["postprocess", key, value] for key, value in conf.postprocess.items()
         ]
 
         parameters_used_df = pd.DataFrame(
-            parameter_list, columns=["parameter_type", "parameter", "value"]
+            params, columns=["parameter_type", "parameter", "value"]
         )
         with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
             outputfile.write(f"\n{parameters_used_df}\n")
