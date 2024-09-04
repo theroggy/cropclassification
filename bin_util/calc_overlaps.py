@@ -22,14 +22,16 @@ def main():
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
-    logger = log_helper.main_log_init(conf.dirs.getpath("log_dir"), __name__, log_level)
+    logger = log_helper.main_log_init(
+        conf.paths.getpath("log_dir"), __name__, log_level
+    )
     logger.info("Start")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     logger.info(pprint.pformat(dict(os.environ)))
 
     # Init variables
-    input_preprocessed_dir = conf.dirs.getpath("input_preprocessed_dir")
+    input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
     overlap_path = input_preprocessed_dir / "Prc_BEFL_2019_2019-07-02_bufm5_32632.gpkg"
 
     # Read parcels file to memory (isn't that large...)

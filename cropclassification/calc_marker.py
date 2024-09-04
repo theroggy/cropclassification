@@ -59,7 +59,7 @@ def calc_marker_task(
         "reuse_last_run_dir_config"
     )
     run_dir = dir_helper.create_run_dir(
-        conf.dirs.getpath("marker_dir"), reuse_last_run_dir
+        conf.paths.getpath("marker_dir"), reuse_last_run_dir
     )
     print(run_dir)
     if not run_dir.exists():
@@ -134,7 +134,7 @@ def calc_marker_task(
     # Prepare input paths
     if input_model_to_use_relativepath is not None:
         input_model_to_use_path = (
-            conf.dirs.getpath("model_dir") / input_model_to_use_relativepath
+            conf.paths.getpath("model_dir") / input_model_to_use_relativepath
         )
         if not input_model_to_use_path.exists():
             raise Exception(
@@ -144,14 +144,14 @@ def calc_marker_task(
     else:
         input_model_to_use_path = None
 
-    input_dir = conf.dirs.getpath("input_dir")
+    input_dir = conf.paths.getpath("input_dir")
     input_parcel_path = input_dir / input_parcel_filename
     if input_groundtruth_filename is not None:
         input_groundtruth_path = input_dir / input_groundtruth_filename
     else:
         input_groundtruth_path = None
 
-    refe_dir = conf.dirs.getpath("refe_dir")
+    refe_dir = conf.paths.getpath("refe_dir")
     classes_refe_path = refe_dir / classes_refe_filename
 
     # Check if the necessary input files exist...
@@ -175,13 +175,13 @@ def calc_marker_task(
     # Prepare the input data for optimal image data extraction:
     #    1) apply a negative buffer on the parcel to evade mixels
     #    2) remove features that became null because of buffer
-    input_preprocessed_dir = conf.dirs.getpath("input_preprocessed_dir")
-    buffer = conf.marker.getint("buffer")
+    input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
+    buffer = conf.timeseries.getfloat("buffer")
     input_parcel_nogeo_path = (
         input_preprocessed_dir / f"{input_parcel_filename.stem}{data_ext}"
     )
     imagedata_input_parcel_filename = (
-        f"{input_parcel_filename.stem}_bufm{buffer}{geofile_ext}"
+        f"{input_parcel_filename.stem}_bufm{buffer:g}{geofile_ext}"
     )
     imagedata_input_parcel_path = (
         input_preprocessed_dir / imagedata_input_parcel_filename
@@ -197,25 +197,22 @@ def calc_marker_task(
     # Get the time series data (eg. S1, S2,...) to be used for the classification
     # Result: data is put in files in timeseries_periodic_dir, in one file per
     #         date/period
-    period_name = conf.marker.get("period_name", "weekly")
-    timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
-    timeseries_periodic_dir = (
-        timeseries_periodic_dir / f"{imagedata_input_parcel_path.stem}_{period_name}"
-    )
-    start_date = datetime.fromisoformat(conf.marker["start_date_str"])
-    end_date = datetime.fromisoformat(conf.marker["end_date_str"])
-    sensordata_to_use = conf.parse_sensordata_to_use(conf.marker["sensordata_to_use"])
+    timeseries_periodic_dir = conf.paths.getpath("timeseries_periodic_dir")
+    timeseries_periodic_dir /= f"{imagedata_input_parcel_path.stem}"
+    start_date = datetime.fromisoformat(conf.period["start_date"])
+    end_date = datetime.fromisoformat(conf.period["end_date"])
+    images_to_use = conf.parse_image_config(conf.images["images"])
     parceldata_aggregations_to_use = conf.marker.getlist(
         "parceldata_aggregations_to_use"
     )
     ts.calc_timeseries_data(
         input_parcel_path=imagedata_input_parcel_path,
-        roi_bounds=tuple(conf.marker.getlistfloat("roi_bounds")),
-        roi_crs=pyproj.CRS.from_user_input(conf.marker.get("roi_crs")),
+        roi_bounds=tuple(conf.roi.getlistfloat("roi_bounds")),
+        roi_crs=pyproj.CRS.from_user_input(conf.roi.get("roi_crs")),
         start_date=start_date,
         end_date=end_date,
-        sensordata_to_get=sensordata_to_use,
-        dest_data_dir=timeseries_periodic_dir,
+        images_to_use=images_to_use,
+        timeseries_periodic_dir=timeseries_periodic_dir,
     )
 
     # STEP 3: Preprocess all data needed for the classification
@@ -235,7 +232,7 @@ def calc_marker_task(
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
     min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
-    base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
+    base_filename = f"{input_parcel_filename.stem}_bufm{buffer:g}_weekly"
     class_pre.prepare_input(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
@@ -259,7 +256,7 @@ def calc_marker_task(
         output_path=parcel_classification_data_path,
         start_date=start_date,
         end_date=end_date,
-        sensordata_to_use=sensordata_to_use,
+        images_to_use=images_to_use,
         parceldata_aggregations_to_use=parceldata_aggregations_to_use,
     )
 

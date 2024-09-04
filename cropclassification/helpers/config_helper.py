@@ -20,6 +20,8 @@ general: Any
 calc_timeseries_params: Any
 calc_marker_params: Any
 calc_periodic_mosaic_params: Any
+roi: Any
+period: Any
 images: Any
 marker: Any
 timeseries: Any
@@ -27,11 +29,11 @@ preprocess: Any
 classifier: Any
 postprocess: Any
 columns: Any
-dirs: Any
+paths: Any
 image_profiles: dict[str, ImageProfile]
 
 
-class SensorData:
+class ImageConfig:
     def __init__(
         self,
         imageprofile_name: str,
@@ -141,51 +143,50 @@ def read_config(
     )
     config.read(config_paths)
 
+    # Basic check if the config file is of an old version.
+    if "dirs" in config:
+        raise ValueError(
+            "Old version of config file detected. Please update your config file to "
+            "the new format. More info in changelog of version 0.3.0."
+        )
+
     # If the data_dir parameter is a relative path, try to resolve it towards
     # the default basedir of, if specfied.
-    data_dir = config["dirs"].getpath("data_dir")
+    data_dir = config["paths"].getpath("data_dir")
     if not data_dir.is_absolute():
         if default_basedir is None:
             raise ValueError(
-                "Config parameter dirs.data_dir is relative, but no default_basedir "
+                "Config parameter paths.data_dir is relative, but no default_basedir "
                 "supplied!"
             )
         data_dir_absolute = (default_basedir / data_dir).resolve()
         print(
-            "Config parameter dirs.data_dir was relative, so is now resolved to "
+            "Config parameter paths.data_dir was relative, so is now resolved to "
             f"{data_dir_absolute}"
         )
-        config["dirs"]["data_dir"] = data_dir_absolute.as_posix()
+        config["paths"]["data_dir"] = data_dir_absolute.as_posix()
 
     # If the marker_basedir parameter is a relative path, try to resolve it towards
     # the default basedir of, if specfied.
-    marker_basedir = config["dirs"].getpath("marker_basedir")
+    marker_basedir = config["paths"].getpath("marker_basedir")
     if not marker_basedir.is_absolute():
         if default_basedir is None:
             raise ValueError(
-                "Config parameter dirs.marker_basedir is relative, but no "
+                "Config parameter paths.marker_basedir is relative, but no "
                 "default_basedir supplied!"
             )
         marker_basedir_absolute = (default_basedir / marker_basedir).resolve()
         print(
-            "Config parameter dirs.marker_basedir was relative, so is now resolved to "
+            "Config parameter paths.marker_basedir was relative, so is now resolved to "
             f"{marker_basedir_absolute}"
         )
-        config["dirs"]["marker_basedir"] = marker_basedir_absolute.as_posix()
+        config["paths"]["marker_basedir"] = marker_basedir_absolute.as_posix()
 
     # Fill out placeholder in the temp_dir (if it is there)
     tmp_dir_str = tempfile.gettempdir()
-    config["dirs"]["temp_dir"] = config["dirs"]["temp_dir"].format(tmp_dir=tmp_dir_str)
-
-    # Check some parameters that should be overriden to have a valid config
-    if config["calc_marker_params"].get("country_code") == "MUST_OVERRIDE":
-        raise ValueError("calc_marker_params.country_code must be overridden")
-
-    if config["marker"].get("roi_name") == "MUST_OVERRIDE":
-        raise ValueError("marker.roi_name must be overridden")
-
-    if config["dirs"].get("images_periodic_dir") == "MUST_OVERRIDE":
-        raise ValueError("dirs.images_periodic_dir must be overridden")
+    config["paths"]["temp_dir"] = config["paths"]["temp_dir"].format(
+        tmp_dir=tmp_dir_str
+    )
 
     global config_paths_used
     config_paths_used = config_paths
@@ -202,6 +203,10 @@ def read_config(
         calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
     else:
         calc_periodic_mosaic_params = None
+    global roi
+    roi = config["roi"]
+    global period
+    period = config["period"]
     global images
     images = config["images"]
     global marker
@@ -216,52 +221,59 @@ def read_config(
     postprocess = config["postprocess"]
     global columns
     columns = config["columns"]
-    global dirs
-    dirs = config["dirs"]
+    global paths
+    paths = config["paths"]
+
+    # Check some parameters that should be overriden to have a valid config
+    if config["roi"].get("roi_name") == "MUST_OVERRIDE":
+        raise ValueError("roi.roi_name must be overridden")
+
+    if config["paths"].get("images_periodic_dir") == "MUST_OVERRIDE":
+        raise ValueError("paths.images_periodic_dir must be overridden")
 
     # Load image profiles
     global image_profiles
-    image_profiles_config_filepath = marker.getpath("image_profiles_config_filepath")
+    image_profiles_config_filepath = paths.getpath("image_profiles_config_filepath")
     if image_profiles_config_filepath is not None:
         image_profiles = _get_image_profiles(
-            marker.getpath("image_profiles_config_filepath")
+            paths.getpath("image_profiles_config_filepath")
         )
     else:
         # For backwards compatibility: old runs didn't have image profile configuration.
         image_profiles = {}
 
 
-def parse_sensordata_to_use(input) -> dict[str, SensorData]:
+def parse_image_config(input) -> dict[str, ImageConfig]:
     result = None
-    sensordata_parsed = None
+    imageconfig_parsed = None
     try:
-        sensordata_parsed = json.loads(input)
+        imageconfig_parsed = json.loads(input)
     except Exception:
         pass
 
-    if sensordata_parsed is not None:
+    if imageconfig_parsed is not None:
         # It was a json object, so parse as such
         result = {}
-        for imageprofile in sensordata_parsed:
-            if isinstance(imageprofile, str):
-                result[imageprofile] = SensorData(imageprofile)
-            elif isinstance(imageprofile, dict):
-                if len(imageprofile) != 1:
+        for imageconfig in imageconfig_parsed:
+            if isinstance(imageconfig, str):
+                result[imageconfig] = ImageConfig(imageconfig)
+            elif isinstance(imageconfig, dict):
+                if len(imageconfig) != 1:
                     raise ValueError(
-                        "invalid sensordata_to_use: this should be a single key dict: "
-                        f"{imageprofile}"
+                        "Invalid element in json list images.images: this should be a "
+                        f"single key dict, not: {imageconfig}"
                     )
-                imageprofile_name = next(iter(imageprofile.keys()))
-                bands = next(iter(imageprofile.values()))
-                result[imageprofile_name] = SensorData(imageprofile_name, bands=bands)
+                imageprofile_name = next(iter(imageconfig.keys()))
+                bands = next(iter(imageconfig.values()))
+                result[imageprofile_name] = ImageConfig(imageprofile_name, bands=bands)
             else:
                 raise ValueError(
-                    "invalid sensordata_to_use: only str or dict elements allowed, "
-                    f"not: {imageprofile}"
+                    "Invalid element in json list images.images: only str or dict "
+                    f"elements allowed, not: {imageconfig}"
                 )
     else:
         # It was no json object, so it must be a list
-        result = {i.strip(): SensorData(i.strip()) for i in input.split(",")}
+        result = {i.strip(): ImageConfig(i.strip()) for i in input.split(",")}
 
     return result
 
@@ -320,9 +332,11 @@ def _validate_image_profiles(profiles: dict[str, ImageProfile]):
 
 
 def pformat_config():
-    message = f"Config files used: {pprint.pformat(config_paths_used)} \n"
-    message += "Config info listing:\n"
-    message += pprint.pformat(as_dict())
+    message = (
+        f"Config files used: {pprint.pformat(config_paths_used)} \n"
+        "Config info listing:\n"
+        f"{pprint.pformat(as_dict())}"
+    )
 
     return message
 

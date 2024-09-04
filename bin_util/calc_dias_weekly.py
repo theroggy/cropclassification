@@ -19,7 +19,7 @@ def main():
     conf.read_config(config_paths)
 
     # Init logging
-    base_log_dir = conf.dirs.getpath("log_dir")
+    base_log_dir = conf.paths.getpath("log_dir")
     log_dir = (
         base_log_dir / f"{os.sep}calc_dias_weekly{datetime.now():%Y-%m-%d_%H-%M-%S}"
     )
@@ -29,8 +29,8 @@ def main():
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # Get the config needed
-    timeseries_per_image_dir = conf.dirs.getpath("timeseries_per_image_dir")
-    timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
+    timeseries_per_image_dir = conf.paths.getpath("timeseries_per_image_dir")
+    timeseries_periodic_dir = conf.paths.getpath("timeseries_periodic_dir")
 
     # Input features file depends on the year
     if year == 2017:
@@ -44,14 +44,14 @@ def main():
         raise Exception(f"Not a valid year: {year}")
 
     # Calculate!
-    input_parcel_path = conf.dirs.getpath("input_dir") / input_features_filename
+    input_parcel_path = conf.paths.getpath("input_dir") / input_features_filename
     ts_helper.calculate_periodic_timeseries(
         parcel_path=input_parcel_path,
         timeseries_per_image_dir=timeseries_per_image_dir,
         start_date=datetime.fromisoformat(f"{year}-03-15"),
         end_date=datetime.fromisoformat(f"{year}-08-15"),
         sensordata_to_get=["SENSORDATA_S1_COHERENCE"],
-        dest_data_dir=timeseries_periodic_dir,
+        timeseries_periodic_dir=timeseries_periodic_dir,
         force=False,
     )
 

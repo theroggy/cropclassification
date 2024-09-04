@@ -11,24 +11,26 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     # Some variables that need to be choosen
+    year = 2023
+    if year == 2022:
+        input_groundtruth_filename = "Prc_BEFL_2022_2024_05_13_groundtruth.tsv"
+    elif year == 2023:
+        input_groundtruth_filename = "Prc_BEFL_2023_2024_05_13_groundtruth.tsv"
+    else:
+        raise ValueError(f"invalid year: {year}")
 
-    input_groundtruth_filename = "Prc_BEFL_2022_2024_05_13_groundtruth.tsv"
     run_dir = Path(
-        "X:/Monitoring/Markers/dev/2022_CROPGROUP/Run_2022-08-02_001_91.63_groundtruth"
+        "X:/Monitoring/Markers/dev/2023_CROPGROUP/Run_2023-08-08_001_prd_groundtruth"
     )
     basedir = run_dir.parent.parent
-    overrules = [
-        "columns.class_declared2=NOT_AVAILABLE",
-        "marker.roi_name=BEFL",
-        # "calc_marker_params.country_code=BEFL",
-    ]
+    overrules = ["columns.class_declared2=NOT_AVAILABLE", "roi.roi_name=BEFL"]
     """
     input_groundtruth_filename = "Prc_BEFL_2022_2024_05_13_groundtruth.tsv"
     run_dir = Path(
         "X:/Monitoring/Markers/dev/2022_CROPGROUP/Run_2024-05-17_008_96.13_rf_min80pct"
     )
     basedir = run_dir.parent.parent
-    overrules = []  # ["marker.roi_name=BEFL"]
+    overrules = []  # ["roi.roi_name=BEFL"]
     """
     # Init
     if not run_dir.exists():
@@ -49,10 +51,10 @@ def main():
 
     conf.read_config(configfiles_used, default_basedir=basedir, overrules=overrules)
 
-    input_dir = conf.dirs.getpath("input_dir")
+    input_dir = conf.paths.getpath("input_dir")
     input_groundtruth_path = input_dir / input_groundtruth_filename
     input_parcel_filetype = conf.calc_marker_params["input_parcel_filetype"]
-    input_preprocessed_dir = conf.dirs.getpath("input_preprocessed_dir")
+    input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
 
     data_ext = conf.general["data_ext"]
     geofile_ext = conf.general["geofile_ext"]
@@ -65,23 +67,23 @@ def main():
         input_preprocessed_dir / f"{input_parcel_filename.stem}{data_ext}"
     )
 
-    buffer = conf.marker.getint("buffer")
+    buffer = conf.timeseries.getfloat("buffer")
     imagedata_input_parcel_filename = (
-        f"{input_parcel_filename.stem}_bufm{buffer}{geofile_ext}"
+        f"{input_parcel_filename.stem}_bufm{buffer:g}{geofile_ext}"
     )
     imagedata_input_parcel_path = (
         input_preprocessed_dir / imagedata_input_parcel_filename
     )
 
     # TODO: periode_name shouldn't be here!
-    base_filename = f"{input_parcel_filename.stem}_bufm{buffer}_weekly"
+    base_filename = f"{input_parcel_filename.stem}_bufm{buffer:g}_weekly"
     period_name = conf.marker.get("period_name", "weekly")
-    timeseries_periodic_dir = conf.dirs.getpath("timeseries_periodic_dir")
+    timeseries_periodic_dir = conf.paths.getpath("timeseries_periodic_dir")
     timeseries_periodic_dir = (
         timeseries_periodic_dir / f"{imagedata_input_parcel_path.stem}_{period_name}"
     )
 
-    refe_dir = conf.dirs.getpath("refe_dir")
+    refe_dir = conf.paths.getpath("refe_dir")
     classes_refe_filename = conf.calc_marker_params.getpath("classes_refe_filename")
     classes_refe_path = refe_dir / classes_refe_filename
 

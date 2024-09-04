@@ -109,7 +109,7 @@ def prepare_input(
     # Apply buffer
     parceldata_buf_gdf = parceldata_gdf.copy()
     # resolution = number of segments per circle
-    buffer_size = -conf.marker.getint("buffer")
+    buffer_size = -conf.timeseries.getfloat("buffer")
     logger.info(f"Apply buffer of {buffer_size} on parcel")
     parceldata_buf_gdf[conf.columns["geom"]] = parceldata_buf_gdf[
         conf.columns["geom"]
@@ -173,7 +173,7 @@ def calculate_periodic_timeseries(
     start_date: datetime,
     end_date: datetime,
     sensordata_to_get: list[str],
-    dest_data_dir: Path,
+    timeseries_periodic_dir: Path,
     force: bool = False,
 ):
     """
@@ -189,7 +189,7 @@ def calculate_periodic_timeseries(
         end_date (datetime): End date. Needs to be aligned already on
             the periods wanted + data on this date is excluded.
         sensordata_to_get ([]):
-        dest_data_dir (Path): [description]
+        timeseries_periodic_dir (Path): Directory the timeseries will be written to.
         force (bool, optional): [description]. Defaults to False.
     """
     logger.info("calculate_periodic_data")
@@ -202,7 +202,7 @@ def calculate_periodic_timeseries(
     year = start_date.year
 
     # Prepare output dir
-    dest_data_dir.mkdir(parents=True, exist_ok=True)
+    timeseries_periodic_dir.mkdir(parents=True, exist_ok=True)
 
     # Create Dataframe with all files with their info
     logger.debug("Create Dataframe with all files and their properties")
@@ -281,7 +281,7 @@ def calculate_periodic_timeseries(
 
         # There should also be one pixcount file
         pixcount_filename = f"{parcel_path.stem}_weekly_pixcount{output_ext}"
-        pixcount_path = dest_data_dir / pixcount_filename
+        pixcount_path = timeseries_periodic_dir / pixcount_filename
 
         # For each week
         start_week = int(datetime.strftime(start_date, "%W"))
@@ -299,7 +299,7 @@ def calculate_periodic_timeseries(
                 f"{parcel_path.stem}_weekly_{period_date_str_long}_{sensordata_type}"
                 f"{output_ext}"
             )
-            period_data_path = dest_data_dir / period_data_filename
+            period_data_path = timeseries_periodic_dir / period_data_filename
 
             # Check if output file exists already
             if period_data_path.exists() and pixcount_path.exists():

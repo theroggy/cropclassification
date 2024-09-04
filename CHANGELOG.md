@@ -1,10 +1,28 @@
 # CHANGELOG
 
-## 0.3 (yyyy-mm-dd)
+## 0.3.0 (yyyy-mm-dd)
 
 ### Deprecations and compatibility notes
 
 - Consolidated some landcover pre-processing ignore codes (#120)
+- Restructure + cleanup of configuration file, mainly to avoid duplicate keys and to
+  improve parameter names:
+    - Consolidate and rename `start_date_str`, `end_date_str` and
+      `end_date_subtract_days` from sections `marker` and `calc_periodic_mosaic_params`
+      to respectively `start_date`, `end_date` and `images_available_delay` in a new
+      section `period`.
+    - Consolidate `roi_bounds`, `roi_crs` and `roi_name` from
+      sections `marker` and `calc_periodic_mosaic_params` to a new section `roi`.
+    - Consolidate `marker.sensordata_to_use` and
+      `calc_periodic_mosaic_params.imageprofiles_to_get` to `images.images`.
+    - Move `marker.buffer` to section `timeseries`.
+    - Move `marker.image_profiles_config_filepath` to
+      `paths.image_profiles_config_filepath`
+    - Move `marker.year` to `period.year`.
+    - Drop `calc_periodic_mosaic_params.dest_image_data_dir` and use
+      `dirs.images_periodic_dir` instead.
+    - Rename section `dirs` to `paths`.
+    - Remove `general.run_id`.
 
 ### Improvements
 
@@ -21,7 +39,7 @@
 - Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
   config (#130)
 
-## 0.2 (2024-06-17)
+## 0.2.0 (2024-06-17)
 
 ### Deprecations and compatibility notes
 
