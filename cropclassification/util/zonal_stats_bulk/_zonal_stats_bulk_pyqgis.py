@@ -17,20 +17,28 @@ import psutil
 
 from cropclassification.helpers import pandas_helper as pdh
 
-from . import Statistic
 from . import _general_helper as general_helper
 from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
 from . import _vector_helper as vector_helper
 
-# Avoid QGIS/QT trying to load "xcb" on linux, even though QGIS is starten without GUI.
-# Avoids "Could not load the Qt platform plugin "xcb" in "" even though it was found."
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-# Set path for qgis
-qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
-sys.path.insert(0, str(qgis_path))
-import qgis.analysis
-import qgis.core
+try:
+    # Init qgis
+    # Avoid QGIS/QT trying to laod "xcb" on linux, even though QGIS is started without
+    # GUI. Avoids following error:
+    #   -> "Could not load the Qt platform plugin "xcb" in "" even though it was found."
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    # Set path for qgis
+    qgis_path = Path(os.environ["CONDA_PREFIX"]) / "Library/python"
+    sys.path.insert(0, str(qgis_path))
+    import qgis.analysis
+    import qgis.core
+
+    HAS_QGIS = True
+
+except ImportError:
+    HAS_QGIS = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +48,7 @@ def zonal_stats(
     columns: list[str],
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     nb_parallel: int = -1,
     force: bool = False,
 ):
@@ -51,7 +59,7 @@ def zonal_stats(
         features_path (Path): _description_
         id_column (str): _description_
         images_bands (List[Tuple[Path, List[str]]]): _description_
-        stats (List[Statistic]): statistics to calculate.
+        stats (List[str]): statistics to calculate.
         output_dir (Path): _description_
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
@@ -60,6 +68,10 @@ def zonal_stats(
     Raises:
         Exception: _description_
     """
+    # Make sure QGIS is available
+    if not HAS_QGIS:
+        raise RuntimeError("QGIS is not available on this system.")
+
     # Some checks on the input parameters
     if len(rasters_bands) == 0:
         logger.info("No image paths... so nothing to do, so return")
@@ -116,8 +128,7 @@ def zonal_stats(
 
                 # If a busy output file exists, remove it, otherwise we can get
                 # double data in it...
-                if output_band_busy_path.exists():
-                    output_band_busy_path.unlink()
+                output_band_busy_path.unlink(missing_ok=True)
 
                 # Check if the output file exists already
                 if output_band_path.exists():
@@ -224,7 +235,7 @@ def zonal_stats_band(
     raster_path: Path,
     band: str,
     tmp_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     columns: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Init
@@ -248,10 +259,11 @@ def zonal_stats_band(
     )
     layer = gfo.get_only_layer(vector_proj_path)
 
-    # Init qgis
+    # Init QGIS
     qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
     qgs = qgis.core.QgsApplication([], False)
     qgs.initQgis()
+
     # Read the vector file + copy to memory layer for:
     #   - improved performance
     #   - QgsZonalStatistics actually adds the data to the input file, so copy needed
@@ -315,7 +327,7 @@ def zonal_stats_band_tofile(
     output_band_path: Path,
     band: str,
     tmp_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     columns: list[str],
     force: bool = False,
 ) -> Path:
@@ -344,6 +356,8 @@ def zonal_stats_band_tofile(
 
 
 def stat_to_qgisstat(stat: str):
+    import qgis.analysis
+
     if stat == "count":
         return qgis.analysis.QgsZonalStatistics.Count
     elif stat == "sum":

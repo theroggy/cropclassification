@@ -24,7 +24,7 @@ from osgeo import gdal
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import io_util
 
-from . import Statistic, _general_helper, _raster_helper, _vector_helper
+from . import _general_helper, _raster_helper, _vector_helper
 from . import _processing_util as processing_util
 
 # Suppress gdal warnings/errors
@@ -39,7 +39,7 @@ def zonal_stats(
     id_column: str,
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     nb_parallel: int = -1,
@@ -145,8 +145,7 @@ def zonal_stats(
 
                     # If a busy output file exists, remove it, otherwise we can get
                     # double data in it...
-                    if output_band_busy_path.exists():
-                        output_band_busy_path.unlink()
+                    output_band_busy_path.unlink(missing_ok=True)
 
                     # Check if the output file exists already
                     if output_band_path.exists():
@@ -578,7 +577,7 @@ def _zonal_stats_image_gdf(
     image_path: Path,
     bands: Union[list[str], str],
     output_base_path: Path,
-    stats: list[Statistic],
+    stats: list[str],
     log_dir: Path,
     log_level: Union[str, int],
     future_start_time=None,

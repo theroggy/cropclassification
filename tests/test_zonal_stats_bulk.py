@@ -5,11 +5,15 @@ import pytest
 
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
+from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests.test_helper import SampleData
 
 
-@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats"])
+@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
 def test_zonal_stats_bulk(tmp_path, engine):
+    if engine == "pyqgis" and not HAS_QGIS:
+        pytest.skip("QGIS is not available on this system.")
+
     # Prepare test data
     sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
@@ -30,7 +34,7 @@ def test_zonal_stats_bulk(tmp_path, engine):
         id_column="UID",
         rasters_bands=images_bands,
         output_dir=tmp_path,
-        stats=["mean"],
+        stats=["mean", "count"],
         engine=engine,
     )
 

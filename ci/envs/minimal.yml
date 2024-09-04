@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python
-  - pip
   # required
   - fiona
   - geofileops
@@ -15,11 +14,15 @@ dependencies:
   - psutil
   - pyproj
   - scikit-learn
-  - qgis
   - rasterio
   - rasterstats
   - rioxarray
   - numpy<2
+  - pip
+  # Optional
+  # - qgis
   # testing
   - pytest
   - pytest-cov
+  - pip:
+    - exactextract

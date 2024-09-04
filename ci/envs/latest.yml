@@ -15,11 +15,14 @@ dependencies:
   - psutil
   - pyproj
   - scikit-learn
-  - qgis
   - rasterio
   - rasterstats
   - rioxarray
   - numpy<2
+  # Optional
+  - qgis
   # testing
   - pytest
   - pytest-cov
+  - pip:
+    - exactextract

@@ -1,22 +1,7 @@
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Optional, Union
 
 from ._raster_helper import *  # noqa: F403
-
-Statistic = Literal[
-    "count",
-    "sum",
-    "mean",
-    "median",
-    "std",
-    "min",
-    "max",
-    "range",
-    "minority",
-    "majority",
-    "variance",
-]
-DEFAULT_STATS = ["count", "median"]
 
 
 def zonal_stats(
@@ -24,7 +9,7 @@ def zonal_stats(
     id_column: str,
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: Union[list[Statistic], Statistic] = DEFAULT_STATS,  # type: ignore[assignment]
+    stats: Union[list[str], str] = ["count", "median"],
     cloud_filter_band: Optional[str] = None,
     calc_bands_parallel: bool = True,
     engine: str = "rasterstats",
@@ -41,14 +26,20 @@ def zonal_stats(
         rasters_bands (List[Tuple[Path, List[str]]]): List of tuples with the path to
             the raster files and the bands to calculate the zonal statistics on.
         output_dir (Path): directory to write the results to.
-        stats (List[Statistic]): statistics to calculate.
+        stats (List[str]): statistics to calculate. Available statistics and
+            special options are dependent on the `engine` specified:
+
+                - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
+                - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
+                        "range", "minority", "majority" and "variance".
+                - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
+
+        engine (str, optional): the engine to use for the calculation. Options are
+            "exactextract", "rasterstats" and "pyqgis". Defaults to "rasterstats".
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
         force (bool, optional): False to skip calculating existing output files. True to
             recalculate and overwrite existing output files. Defaults to False.
-
-    Raises:
-        Exception: _description_
     """
     if isinstance(stats, str):
         stats = [stats]
@@ -80,6 +71,18 @@ def zonal_stats(
             stats=stats,
             cloud_filter_band=cloud_filter_band,
             calc_bands_parallel=calc_bands_parallel,
+            nb_parallel=nb_parallel,
+            force=force,
+        )
+    elif engine == "exactextract":
+        from . import _zonal_stats_bulk_exactextract
+
+        return _zonal_stats_bulk_exactextract.zonal_stats(
+            vector_path=vector_path,
+            rasters_bands=rasters_bands,
+            output_dir=output_dir,
+            stats=stats,
+            columns=[id_column],
             nb_parallel=nb_parallel,
             force=force,
         )
