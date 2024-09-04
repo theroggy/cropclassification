@@ -15,7 +15,6 @@ import psutil
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import io_util
 
-from . import Statistic
 from . import _general_helper as general_helper
 from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
@@ -29,7 +28,7 @@ def zonal_stats(
     columns: list[str],
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     nb_parallel: int = -1,
     force: bool = False,
 ):
@@ -41,7 +40,7 @@ def zonal_stats(
         columns (list[str]): _description_
         rasters_bands (list[tuple[Path, list[str]]]): _description_
         output_dir (Path): _description_
-        stats (list[Statistic]): _description_
+        stats (list[str]): _description_
         nb_parallel (int, optional): the number of parallel processes to use.
              Defaults to -1: use all available processors.
         force (bool, optional): _description_. Defaults to False.
@@ -214,7 +213,7 @@ def zonal_stats_band(
     vector_path,
     raster_path: Path,
     tmp_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     include_cols: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Get the image info
@@ -253,15 +252,11 @@ def zonal_stats_band_tofile(
     output_paths: dict[str, Path],
     bands: list[str],
     tmp_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     include_cols: list[str],
     force: bool = False,
 ) -> dict[str, Path]:
     # Init
-    stats_mask = []
-    for stat in stats:
-        stats_mask.append(stat_to_exactextract_stat(stat))
-
     if all(output_path.exists() for output_path in output_paths.values()):
         if force:
             for output_path in output_paths.values():
@@ -271,7 +266,7 @@ def zonal_stats_band_tofile(
     stats_df = zonal_stats_band(
         vector_path=vector_path,
         raster_path=raster_path,
-        stats=stats_mask,
+        stats=stats,
         tmp_dir=tmp_dir,
         include_cols=include_cols,
     )
@@ -281,10 +276,10 @@ def zonal_stats_band_tofile(
     for band in bands:
         index = raster_info.bands[band].band_index
         band_columns = include_cols.copy()
-        band_columns.extend([f"band_{index}_{stat}" for stat in stats_mask])
+        band_columns.extend([f"band_{index}_{stat}" for stat in stats])
         band_stats_df = stats_df[band_columns].copy()
         band_stats_df.rename(
-            columns={f"band_{index}_{stat}": stat for stat in stats_mask},
+            columns={f"band_{index}_{stat}": stat for stat in stats},
             inplace=True,
         )
         # Add fid column to the beginning of the dataframe
@@ -298,45 +293,3 @@ def zonal_stats_band_tofile(
                 pdh.to_file(band_stats_df, output_paths[band], index=False)
 
     return output_paths
-
-
-def stat_to_exactextract_stat(stat: str):
-    if stat in [
-        "cell_id",
-        "center_x",
-        "center_y",
-        "coefficient_of_variation",
-        "count",
-        "coverage",
-        "frac",
-        "majority",
-        "max",
-        "max_center_x",
-        "max_center_y",
-        "mean",
-        "median",
-        "min",
-        "min_center_x",
-        "min_center_y",
-        "minority",
-        "quantile",
-        "stdev",
-        "sum",
-        "unique",
-        "values",
-        "variance",
-        "variety",
-        "weighted_frac",
-        "weighted_mean",
-        "weighted_stdev",
-        "weighted_sum",
-        "weighted_variance",
-        "weights",
-    ]:
-        return stat
-    elif stat == "std":
-        return "stdev"
-    elif stat == "range":
-        raise ValueError(f"unsupported value in stats: {stat}")
-    else:
-        raise ValueError(f"unsupported value in stats: {stat}")

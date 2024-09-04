@@ -17,7 +17,6 @@ import psutil
 
 from cropclassification.helpers import pandas_helper as pdh
 
-from . import Statistic
 from . import _general_helper as general_helper
 from . import _processing_util as processing_util
 from . import _raster_helper as raster_helper
@@ -49,7 +48,7 @@ def zonal_stats(
     columns: list[str],
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     nb_parallel: int = -1,
     force: bool = False,
 ):
@@ -60,7 +59,7 @@ def zonal_stats(
         features_path (Path): _description_
         id_column (str): _description_
         images_bands (List[Tuple[Path, List[str]]]): _description_
-        stats (List[Statistic]): statistics to calculate.
+        stats (List[str]): statistics to calculate.
         output_dir (Path): _description_
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
@@ -237,7 +236,7 @@ def zonal_stats_band(
     raster_path: Path,
     band: str,
     tmp_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     columns: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Init
@@ -329,7 +328,7 @@ def zonal_stats_band_tofile(
     output_band_path: Path,
     band: str,
     tmp_dir: Path,
-    stats: list[Statistic],
+    stats: list[str],
     columns: list[str],
     force: bool = False,
 ) -> Path:
