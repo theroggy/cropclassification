@@ -128,8 +128,7 @@ def zonal_stats(
 
                 # If a busy output file exists, remove it, otherwise we can get
                 # double data in it...
-                if output_band_busy_path.exists():
-                    output_band_busy_path.unlink()
+                output_band_busy_path.unlink(missing_ok=True)
 
                 # Check if the output file exists already
                 if output_band_path.exists():
