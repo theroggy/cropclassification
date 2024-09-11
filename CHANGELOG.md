@@ -4,6 +4,8 @@
 
 ### Deprecations and compatibility notes
 
+- Add feature "cross-prediction-models" to avoid markers being calculated on parcels
+  using a model that used this parcel in its training (#142)
 - Consolidated some landcover pre-processing ignore codes (#120)
 - Restructure + cleanup of configuration file, mainly to avoid duplicate keys and to
   improve parameter names:
