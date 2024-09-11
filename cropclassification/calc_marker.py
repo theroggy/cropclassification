@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo  # noqa: F401
+import geofileops as gfo
 import pandas as pd
 import pyproj
 
