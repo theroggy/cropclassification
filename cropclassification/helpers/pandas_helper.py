@@ -124,6 +124,9 @@ def to_file(
     # TODO: think about if possible/how to support  adding optional parameter and pass
     # them to next function, example encoding, float_format,...
     """
+    if df is None:
+        raise ValueError("Dataframe df is None")
+
     ext_lower = path.suffix.lower()
     if ext_lower == ".csv":
         if append:
