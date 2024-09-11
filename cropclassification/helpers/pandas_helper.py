@@ -111,7 +111,7 @@ def read_file(
 
 
 def to_file(
-    df: Union[pd.DataFrame, pd.Series],
+    df: Optional[Union[pd.DataFrame, pd.Series]],
     path: Path,
     table_name: str = "info",
     index: bool = True,

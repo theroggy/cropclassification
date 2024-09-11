@@ -34,6 +34,7 @@ def train_test_predict(
     output_classifier_basepath: Path,
     output_predictions_test_path: Path,
     output_predictions_all_path: Path,
+    predict_query: Optional[str] = None,
     force: bool = False,
 ):
     """Train a classifier, test it and do full predictions.
@@ -51,6 +52,8 @@ def train_test_predict(
         output_predictions_test_path: the file path where to save the test predictions.
         output_predictions_all_path: the file path where to save the predictions for
             all parcels.
+        predict_query: only predict the parcels that comply with the query. Defaults to
+            None, which means all parcels are predicted.
         force: if True, overwrite all existing output files, if False, don't overwrite
             them.
     """
@@ -116,6 +119,7 @@ def train_test_predict(
         output_predictions_path=output_predictions_all_path,
         force=force,
         input_parcel_classification_data_df=input_parcel_classification_data_df,
+        predict_query=predict_query,
     )
 
 
@@ -204,6 +208,7 @@ def predict(
     output_predictions_path: Path,
     force: bool = False,
     input_parcel_classification_data_df: Optional[pd.DataFrame] = None,
+    predict_query: Optional[str] = None,
 ):
     """Predict the classes for the input data."""
 
@@ -217,17 +222,22 @@ def predict(
 
     # Read the input parcels
     logger.info(f"Read input file: {input_parcel_path}")
-    input_parcel_df = pdh.read_file(
-        input_parcel_path,
-        columns=[
-            conf.columns["id"],
-            conf.columns["class"],
-            conf.columns["class_declared"],
-        ],
-    )
+    columns = [
+        conf.columns["id"],
+        conf.columns["class"],
+        conf.columns["class_declared"],
+    ]
+    if predict_query is not None:
+        columns.append(conf.columns["cross_model_id"])
+    input_parcel_df = pdh.read_file(input_parcel_path, columns=columns)
     if input_parcel_df.index.name != conf.columns["id"]:
         input_parcel_df.set_index(conf.columns["id"], inplace=True)
-    logger.debug("Read train file ready")
+
+    if predict_query is not None:
+        logger.info(f"Filter predict parcels with query: {predict_query}")
+        input_parcel_df = input_parcel_df.query(predict_query)
+        input_parcel_df = input_parcel_df.drop(columns=[conf.columns["cross_model_id"]])
+    logger.debug("Read predict input file ready")
 
     # For parcels of a class that should be ignored, don't predict
     input_parcel_df = input_parcel_df.loc[
