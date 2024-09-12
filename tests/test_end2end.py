@@ -13,11 +13,11 @@ from tests import test_helper
 @pytest.mark.parametrize(
     "task, balancing_strategy, cross_pred_models",
     [
-        ("calc_periodic_mosaic", None, None),
-        ("calc_marker", "BALANCING_STRATEGY_MEDIUM", None),
-        ("calc_marker", "BALANCING_STRATEGY_MEDIUM2", None),
-        ("calc_marker", "BALANCING_STRATEGY_PROPORTIONAL_GROUPS", None),
-        ("calc_marker", "BALANCING_STRATEGY_UPPER_LIMIT", None),
+        ("calc_periodic_mosaic", None, 0),
+        ("calc_marker", "BALANCING_STRATEGY_MEDIUM", 0),
+        ("calc_marker", "BALANCING_STRATEGY_MEDIUM2", 0),
+        ("calc_marker", "BALANCING_STRATEGY_PROPORTIONAL_GROUPS", 0),
+        ("calc_marker", "BALANCING_STRATEGY_UPPER_LIMIT", 0),
         ("calc_marker", "BALANCING_STRATEGY_EQUAL", 2),
     ],
 )
