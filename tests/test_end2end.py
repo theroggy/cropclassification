@@ -11,17 +11,17 @@ from tests import test_helper
 
 
 @pytest.mark.parametrize(
-    "task, balancing_strategy",
+    "task, balancing_strategy, cross_pred_models",
     [
-        ("calc_periodic_mosaic", None),
-        ("calc_marker", "BALANCING_STRATEGY_MEDIUM"),
-        ("calc_marker", "BALANCING_STRATEGY_MEDIUM2"),
-        ("calc_marker", "BALANCING_STRATEGY_PROPORTIONAL_GROUPS"),
-        ("calc_marker", "BALANCING_STRATEGY_UPPER_LIMIT"),
-        ("calc_marker", "BALANCING_STRATEGY_EQUAL"),
+        ("calc_periodic_mosaic", None, None),
+        ("calc_marker", "BALANCING_STRATEGY_MEDIUM", None),
+        ("calc_marker", "BALANCING_STRATEGY_MEDIUM2", None),
+        ("calc_marker", "BALANCING_STRATEGY_PROPORTIONAL_GROUPS", None),
+        ("calc_marker", "BALANCING_STRATEGY_UPPER_LIMIT", None),
+        ("calc_marker", "BALANCING_STRATEGY_EQUAL", 2),
     ],
 )
-def test_end2end_task(tmp_path, task, balancing_strategy):
+def test_end2end_task(tmp_path, task, balancing_strategy, cross_pred_models):
     if task == "calc_marker" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -39,6 +39,7 @@ def test_end2end_task(tmp_path, task, balancing_strategy):
         tasksdir=tasks_dir,
         config_overrules=[
             f"marker.balancing_strategy={balancing_strategy}",
+            f"classifier.cross_pred_models={cross_pred_models}",
         ],
     )
 
