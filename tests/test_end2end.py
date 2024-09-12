@@ -49,7 +49,7 @@ def test_end2end_task(tmp_path, task, balancing_strategy):
             / f"Run_{datetime.now().strftime('%Y-%m-%d')}_001"
         )
         assert run_dir.exists()
-        assert (run_dir / "CROPGROUP_01_mlp.hdf5").exists()
+        assert (run_dir / "model.hdf5").exists()
         assert (
             run_dir / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_all.gpkg"
         ).exists()
