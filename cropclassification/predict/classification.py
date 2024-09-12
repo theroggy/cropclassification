@@ -9,21 +9,154 @@ import os
 from pathlib import Path
 from typing import Optional
 
+import geofileops as gfo
 import pandas as pd
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
+from cropclassification.helpers import model_helper as mh
+from cropclassification.predict import data_balancing
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
 
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
+
+def classify(
+    parcel_path: Path,
+    parcel_classification_data_path: Path,
+    output_dir: Path,
+    output_base_filename: str,
+    cross_pred_models: bool,
+    cross_pred_model_id_column: str,
+    input_model_to_use_path: Optional[Path],
+    data_ext: str,
+    classifier_ext: str,
+    force: bool = False,
+) -> tuple[Path, Path]:
+    # Prepare output filenames
+    output_proba_all_path = (
+        output_dir / f"{output_base_filename}_predict_proba_all{data_ext}"
+    )
+    output_proba_test_path = (
+        output_dir / f"{output_base_filename}_predict_proba_test{data_ext}"
+    )
+
+    # If the predictions file doesn't exist, do the classification
+    if not force and output_proba_all_path.exists():
+        return (output_proba_all_path, output_proba_test_path)
+
+    if cross_pred_models > 1:
+        # Use "cross models": train multiple models, so prediction of a parcel is
+        # always done with a model where the parcel wasn't used to train it.
+
+        # Assign each parcel to a model where it will be predicted with.
+        gfo.add_column(
+            path=parcel_path,
+            name=cross_pred_model_id_column,
+            type="int",
+            expression=f"ABS(RANDOM() % {cross_pred_models})",
+        )
+        if input_model_to_use_path is not None:
+            raise ValueError(
+                "cross_pred_models not supported with input_model_to_use_path"
+            )
+
+    pred_test_files = []
+    pred_all_files = []
+    for cross_pred_model_idx in range(cross_pred_models):
+        if cross_pred_models == 1:
+            # Only one model, so no need to create subdirectory
+            model_dir = output_dir
+
+            # Output can be the final file immediately
+            parcel_preds_proba_test_model_path = output_proba_test_path
+            parcel_preds_proba_all_model_path = output_proba_all_path
+
+            # No need to filter percels based on cross model indexes
+            training_query = None
+            predict_query = None
+        else:
+            # Create a subfolder for each model
+            model_dir = output_dir / f"cross_pred_model_{cross_pred_model_idx}"
+            model_dir.mkdir(parents=True, exist_ok=True)
+
+            # Temporary output files in the subdirectory
+            parcel_preds_proba_test_model_path = model_dir / output_proba_test_path.name
+            pred_test_files.append(parcel_preds_proba_test_model_path)
+            parcel_preds_proba_all_model_path = model_dir / output_proba_all_path.name
+            pred_all_files.append(parcel_preds_proba_all_model_path)
+
+            # The training will be done on all parcels with another index
+            training_cross_pred_model_ids = [
+                idx for idx in range(cross_pred_models) if idx != cross_pred_model_idx
+            ]
+            training_query = (
+                f"{cross_pred_model_id_column} in {training_cross_pred_model_ids}"
+            )
+            predict_query = f"{cross_pred_model_id_column} == {cross_pred_model_idx}"
+            # TODO: is there a use of keeping test data seperate if
+            # cross-prediction-models are used?
+
+        # Check if a model exists already
+        if input_model_to_use_path is None:
+            best_model = mh.get_best_model(model_dir, acc_metric_mode="min")
+            if best_model is not None:
+                input_model_to_use_path = best_model["path"]
+
+        # If we cannot reuse an existing model, train one!
+        parcel_train_path = model_dir / f"parcel_train{data_ext}"
+        parcel_test_path = model_dir / f"parcel_test{data_ext}"
+        classifier_basepath = model_dir / f"model{classifier_ext}"
+        if input_model_to_use_path is None:
+            # Create the training sample.
+            # Remark: this creates a list of representative test parcel + a list of
+            # (candidate) training parcel
+            balancing_strategy = conf.marker["balancing_strategy"]
+            data_balancing.create_train_test_sample(
+                input_parcel_path=parcel_path,
+                output_parcel_train_path=parcel_train_path,
+                output_parcel_test_path=parcel_test_path,
+                balancing_strategy=balancing_strategy,
+                training_query=training_query,
+                force=force,
+            )
+
+            # Train the classifier and output predictions
+            train_test_predict(
+                input_parcel_train_path=parcel_train_path,
+                input_parcel_test_path=parcel_test_path,
+                input_parcel_all_path=parcel_path,
+                input_parcel_classification_data_path=parcel_classification_data_path,
+                output_classifier_basepath=classifier_basepath,
+                output_predictions_test_path=parcel_preds_proba_test_model_path,
+                output_predictions_all_path=parcel_preds_proba_all_model_path,
+                predict_query=predict_query,
+                force=force,
+            )
+        else:
+            # There exists already a classifier, so just use it!
+            predict(
+                input_parcel_path=parcel_path,
+                input_parcel_classification_data_path=parcel_classification_data_path,
+                input_classifier_basepath=classifier_basepath,
+                input_classifier_path=input_model_to_use_path,
+                output_predictions_path=parcel_preds_proba_all_model_path,
+                predict_query=predict_query,
+                force=force,
+            )
+
+    # Merge all predictions to a single output file
+    if cross_pred_models > 1:
+        # Merge all "all" predictions to single output file.
+        # The "test" predictions are not very useful when cross prediction models
+        # are used, as the "all" predictions are independent of the training.
+        pred_all_df = None
+        for path in pred_all_files:
+            df = pdh.read_file(path)
+            pred_all_df = pd.concat([pred_all_df, df], ignore_index=True)
+        pdh.to_file(pred_all_df, output_proba_all_path, index=False)
+
+    return (output_proba_all_path, output_proba_test_path)
 
 
 def train_test_predict(
@@ -301,9 +434,3 @@ def predict(
             classifier_path=input_classifier_path,
             output_parcel_predictions_path=output_predictions_path,
         )
-
-
-# If the script is run directly...
-if __name__ == "__main__":
-    logger.critical("Not implemented exception!")
-    raise Exception("Not implemented")
