@@ -16,9 +16,9 @@ from tests import test_helper
         ("calc_periodic_mosaic", None, 0),
         ("calc_marker", "BALANCING_STRATEGY_MEDIUM", 0),
         ("calc_marker", "BALANCING_STRATEGY_MEDIUM2", 0),
-        ("calc_marker", "BALANCING_STRATEGY_PROPORTIONAL_GROUPS", 0),
+        ("calc_marker", "BALANCING_STRATEGY_PROPORTIONAL_GROUPS", 2),
         ("calc_marker", "BALANCING_STRATEGY_UPPER_LIMIT", 0),
-        ("calc_marker", "BALANCING_STRATEGY_EQUAL", 2),
+        ("calc_marker", "BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
 def test_end2end_task(tmp_path, task, balancing_strategy, cross_pred_models):
