@@ -1382,8 +1382,12 @@ def prepare_input_latecrop_early(
     is_groundtruth: bool,
 ):
     """
-    Prepare a dataframe based on the BEFL input file so it onclused a classname
-    column ready to classify the landcover for early crops.
+    Prepare a dataframe based on the BEFL input file for early latecrop detection.
+
+    Prepare a classname column to classify the crop groups for early detection of
+    late crops. During this early detection, some main crops will still be on the field
+    during the entire perios. For these cases, replace the class with a class based on
+    the main crop.
     """
     # First run the standard latecrop prepare
     parceldata_df = prepare_input_latecrop(
@@ -1397,23 +1401,24 @@ def prepare_input_latecrop_early(
         is_groundtruth=is_groundtruth,
     )
 
-    # Set crops not in early crops to ignore
-    # 396: mengteelt mais en vlinderbloemigen
-    # "71", "91", "8532", "9532": bieten
+    # Set parcels having a main crop that stays late on the field to another class, as
+    # the main crop will still be on the field:
     # TODO: should be in REFE instead of hardcoded!!!
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_maincrop].isin(
-            ["396", "201", "202", "71", "91", "8532", "9532"]
-        ),
-        column_output_class,
-    ] = "IGNORE_LATE_MAINCROP"
-    if not is_groundtruth:
+    late_main_crops = {
+        "MAINCROP_BEETS": ["71", "91", "8532", "9532"],
+        "MAINCROP_MAIZE": ["201", "202"],
+        "IGNORE_LATE_MAINCROP": ["396"],
+    }
+
+    for class_name, cropcodes in late_main_crops.items():
         parceldata_df.loc[
-            parceldata_df[column_BEFL_maincrop].isin(
-                ["396", "201", "202", "71", "91", "8532", "9532"]
-            ),
-            conf.columns["class_declared"],
-        ] = "IGNORE_LATE_MAINCROP"
+            parceldata_df[column_BEFL_maincrop].isin(cropcodes), column_output_class
+        ] = class_name
+        if not is_groundtruth:
+            parceldata_df.loc[
+                parceldata_df[column_BEFL_maincrop].isin(cropcodes),
+                conf.columns["class_declared"],
+            ] = class_name
 
     return parceldata_df
 

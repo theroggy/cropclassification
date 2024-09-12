@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
 import geofileops as gfo
 import pandas as pd
@@ -14,16 +15,8 @@ import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 import cropclassification.preprocess._classification_preprocess_BEFL as befl
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
-
 # Get a logger...
 logger = logging.getLogger(__name__)
-
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
 
 
 def prepare_input(
@@ -135,11 +128,12 @@ def create_train_test_sample(
     output_parcel_train_path: Path,
     output_parcel_test_path: Path,
     balancing_strategy: str,
+    training_query: Optional[str] = None,
     force: bool = False,
 ):
     """Create a seperate train and test sample from the general input file."""
 
-    # If force == False Check and the output files exist already, stop.
+    # If force False and the output files exist already, stop.
     if (
         force is False
         and output_parcel_train_path.exists() is True
@@ -157,6 +151,13 @@ def create_train_test_sample(
     )
     logger.info(f"Read input file {input_parcel_path}")
     df_in = pdh.read_file(input_parcel_path)
+
+    # If training_cross_pred_model_indexes is not None, only keep the parcels that have
+    # one of the indexes specified
+    if training_query is not None:
+        logger.info(f"Filter parcels with {training_query=}")
+        df_in = df_in.query(training_query)
+
     logger.debug(f"Read input file ready, shape: {df_in.shape}")
 
     # Init some many-used variables from config
