@@ -59,20 +59,6 @@ def test_end2end_task(tmp_path, task, balancing_strategy):
         ).exists()
         assert (
             run_dir
-            / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_test.sqlite_accuracy_report.txt_groundtruth_pred_quality_details.gpkg"  # noqa: E501
-        )
-        df_predict = gfo.read_file(
-            path=run_dir
-            / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_test.sqlite_accuracy_report.txt_groundtruth_pred_quality_details.gpkg"  # noqa: E501
-        )
-        assert is_numeric_dtype(df_predict["LAYER_ID"].dtype)
-        assert is_numeric_dtype(df_predict["PRC_ID"].dtype)
-        assert is_numeric_dtype(df_predict["pixcount"].dtype)
-        assert is_numeric_dtype(df_predict["pred1_prob"].dtype)
-        assert is_numeric_dtype(df_predict["pred2_prob"].dtype)
-        assert is_numeric_dtype(df_predict["pred3_prob"].dtype)
-        assert (
-            run_dir
             / "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_all.sqlite_accuracy_report.txt_groundtruth_pred_quality_details.gpkg"  # noqa: E501
         )
         df_predict = gfo.read_file(
