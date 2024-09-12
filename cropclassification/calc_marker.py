@@ -21,7 +21,7 @@ from cropclassification.postprocess import classification_postprocess as class_p
 from cropclassification.postprocess import classification_reporting as class_report
 from cropclassification.predict import classification
 from cropclassification.preprocess import _timeseries_helper as ts_helper
-from cropclassification.preprocess import classification_preprocess as class_pre
+from cropclassification.preprocess import prepare_input as class_pre
 from cropclassification.preprocess import timeseries as ts
 
 # -------------------------------------------------------------
@@ -341,6 +341,8 @@ def calc_marker_task(
                 predict_query = (
                     f"{cross_pred_model_id_column} == {cross_pred_model_idx}"
                 )
+                # TODO: is there a use of keeping test data seperate if
+                # cross-prediction-models are used?
 
             # Check if a model exists already
             if input_model_to_use_path is None:
@@ -389,14 +391,9 @@ def calc_marker_task(
 
         # Merge all prediction to single output file
         if cross_pred_models > 1:
-            # Merge all test predictions to single output file
-            pred_test_df = None
-            for path in pred_test_files:
-                df = pdh.read_file(path)
-                pred_test_df = pd.concat([pred_test_df, df], ignore_index=True)
-            pdh.to_file(pred_test_df, parcel_predictions_proba_test_path, index=False)
-
-            # Merge all "all" predictions to single output file
+            # Merge all "all" predictions to single output file.
+            # The "test" predictions are not very useful when cross prediction models
+            # are used, as the "all" predictions are independent of the training.
             pred_all_df = None
             for path in pred_all_files:
                 df = pdh.read_file(path)
