@@ -19,9 +19,9 @@ from cropclassification.helpers import dir_helper, log_helper
 from cropclassification.helpers import model_helper as mh
 from cropclassification.postprocess import classification_postprocess as class_post
 from cropclassification.postprocess import classification_reporting as class_report
-from cropclassification.predict import classification
+from cropclassification.predict import classification, data_balancing
 from cropclassification.preprocess import _timeseries_helper as ts_helper
-from cropclassification.preprocess import prepare_input as class_pre
+from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
 
 # -------------------------------------------------------------
@@ -235,7 +235,7 @@ def calc_marker_task(
     min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
     base_filename = f"{input_parcel_filename.stem}_bufm{buffer:g}_weekly"
-    class_pre.prepare_input(
+    prepare_input.prepare(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
         timeseries_periodic_dir=timeseries_periodic_dir,
@@ -359,7 +359,7 @@ def calc_marker_task(
                 # Remark: this creates a list of representative test parcel + a list of
                 # (candidate) training parcel
                 balancing_strategy = conf.marker["balancing_strategy"]
-                class_pre.create_train_test_sample(
+                data_balancing.create_train_test_sample(
                     input_parcel_path=parcel_path,
                     output_parcel_train_path=parcel_train_path,
                     output_parcel_test_path=parcel_test_path,
@@ -456,7 +456,7 @@ def calc_marker_task(
             run_dir
             / f"{input_groundtruth_path.stem}_classes{input_groundtruth_path.suffix}"
         )
-        class_pre.prepare_input(
+        prepare_input.prepare(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
             timeseries_periodic_dir=timeseries_periodic_dir,

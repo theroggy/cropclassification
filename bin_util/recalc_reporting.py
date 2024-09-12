@@ -109,7 +109,7 @@ def main():
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
 
     # Prepare parcel input file
-    class_pre.prepare_input(
+    class_pre.prepare(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
         timeseries_periodic_dir=timeseries_periodic_dir,
@@ -165,7 +165,7 @@ def main():
             run_dir
             / f"{input_groundtruth_path.stem}_classes{input_groundtruth_path.suffix}"
         )
-        class_pre.prepare_input(
+        class_pre.prepare(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
             timeseries_periodic_dir=timeseries_periodic_dir,

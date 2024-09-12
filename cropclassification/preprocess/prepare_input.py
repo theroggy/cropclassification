@@ -17,7 +17,7 @@ import cropclassification.preprocess._prepare_input_BEFL as befl
 logger = logging.getLogger(__name__)
 
 
-def prepare_input(
+def prepare(
     input_parcel_path: Path,
     input_parcel_filetype: str,
     timeseries_periodic_dir: Path,
