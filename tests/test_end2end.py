@@ -39,7 +39,7 @@ def test_end2end_task_calc_marker(tmp_path, balancing_strategy, cross_pred_model
         config_overrules=[
             f"marker.balancing_strategy={balancing_strategy}",
             f"classifier.cross_pred_models={cross_pred_models}",
-            "min_parcels_in_class=1",
+            "preprocess.min_parcels_in_class=1",
         ],
     )
 
