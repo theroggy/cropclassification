@@ -18,8 +18,6 @@ import cropclassification.preprocess._classification_preprocess_BEFL as befl
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-CROSS_MODEL_IDX_COLUMN = "cross_model_idx"
-
 
 def prepare_input(
     input_parcel_path: Path,
@@ -154,8 +152,8 @@ def create_train_test_sample(
     logger.info(f"Read input file {input_parcel_path}")
     df_in = pdh.read_file(input_parcel_path)
 
-    # If training_cross_model_indexes is not None, only keep the parcels that have one
-    # of the indexes specified
+    # If training_cross_pred_model_indexes is not None, only keep the parcels that have
+    # one of the indexes specified
     if training_query is not None:
         logger.info(f"Filter parcels with {training_query=}")
         df_in = df_in.query(training_query)

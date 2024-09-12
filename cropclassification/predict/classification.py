@@ -228,7 +228,7 @@ def predict(
         conf.columns["class_declared"],
     ]
     if predict_query is not None:
-        columns.append(conf.columns["cross_model_id"])
+        columns.append(conf.columns["cross_pred_model_id"])
     input_parcel_df = pdh.read_file(input_parcel_path, columns=columns)
     if input_parcel_df.index.name != conf.columns["id"]:
         input_parcel_df.set_index(conf.columns["id"], inplace=True)
@@ -236,7 +236,9 @@ def predict(
     if predict_query is not None:
         logger.info(f"Filter predict parcels with query: {predict_query}")
         input_parcel_df = input_parcel_df.query(predict_query)
-        input_parcel_df = input_parcel_df.drop(columns=[conf.columns["cross_model_id"]])
+        input_parcel_df = input_parcel_df.drop(
+            columns=[conf.columns["cross_pred_model_id"]]
+        )
     logger.debug("Read predict input file ready")
 
     # For parcels of a class that should be ignored, don't predict

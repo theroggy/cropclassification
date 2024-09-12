@@ -271,37 +271,39 @@ def calc_marker_task(
     parcel_predictions_proba_test_path = (
         run_dir / f"{base_filename}_predict_proba_test{data_ext}"
     )
-    cross_models = conf.classifier.get("cross_models", 1)
-    cross_models = (
-        1 if cross_models is None or int(cross_models) < 1 else int(cross_models)
+    cross_pred_models = conf.classifier.get("cross_pred_models", 1)
+    cross_pred_models = (
+        1
+        if cross_pred_models is None or int(cross_pred_models) < 1
+        else int(cross_pred_models)
     )
     classifier_ext = conf.classifier["classifier_ext"]
-    cross_model_id_column = conf.columns["cross_model_id"]
+    cross_pred_model_id_column = conf.columns["cross_pred_model_id"]
     parcel_test_path = None
     parcel_train_path = None
 
     # If the predictions file doesn't exist, do the classification
     if not parcel_predictions_proba_all_path.exists():
-        if cross_models > 1:
+        if cross_pred_models > 1:
             # Use "cross models": train multiple models, so prediction of a parcel is
             # always done with a model where the parcel wasn't used to train it.
 
             # Assign each parcel to a model where it will be predicted with.
             gfo.add_column(
                 path=parcel_path,
-                name=cross_model_id_column,
+                name=cross_pred_model_id_column,
                 type="int",
-                expression=f"ABS(RANDOM() % {cross_models})",
+                expression=f"ABS(RANDOM() % {cross_pred_models})",
             )
             if input_model_to_use_path is not None:
                 raise ValueError(
-                    "cross_models not supported with input_model_to_use_path"
+                    "cross_pred_models not supported with input_model_to_use_path"
                 )
 
         pred_test_files = []
         pred_all_files = []
-        for cross_model_idx in range(cross_models):
-            if cross_models == 1:
+        for cross_pred_model_idx in range(cross_pred_models):
+            if cross_pred_models == 1:
                 # Only one model, so no need to create subdirectory
                 model_dir = run_dir
 
@@ -314,7 +316,7 @@ def calc_marker_task(
                 predict_query = None
             else:
                 # Create a subfolder for each model
-                model_dir = run_dir / f"cross_model_{cross_model_idx}"
+                model_dir = run_dir / f"cross_pred_model_{cross_pred_model_idx}"
                 model_dir.mkdir(parents=True, exist_ok=True)
 
                 # Temporary output files in the subdirectory
@@ -328,13 +330,17 @@ def calc_marker_task(
                 pred_all_files.append(parcel_preds_proba_all_model_path)
 
                 # The training will be done on all parcels with another index
-                training_cross_model_ids = [
-                    idx for idx in range(cross_models) if idx != cross_model_idx
+                training_cross_pred_model_ids = [
+                    idx
+                    for idx in range(cross_pred_models)
+                    if idx != cross_pred_model_idx
                 ]
                 training_query = (
-                    f"{cross_model_id_column} in {training_cross_model_ids}"
+                    f"{cross_pred_model_id_column} in {training_cross_pred_model_ids}"
                 )
-                predict_query = f"{cross_model_id_column} == {cross_model_idx}"
+                predict_query = (
+                    f"{cross_pred_model_id_column} == {cross_pred_model_idx}"
+                )
 
             # Check if a model exists already
             if input_model_to_use_path is None:
@@ -382,7 +388,7 @@ def calc_marker_task(
                 )
 
         # Merge all prediction to single output file
-        if cross_models > 1:
+        if cross_pred_models > 1:
             # Merge all test predictions to single output file
             pred_test_df = None
             for path in pred_test_files:
