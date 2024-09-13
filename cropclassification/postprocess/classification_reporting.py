@@ -551,7 +551,8 @@ def write_full_report(
             alpha_denominator_conclusions = [
                 "FARMER-WRONG_PRED-CORRECT",
                 "FARMER-WRONG_PRED-WRONG",
-            ] + alpha_numerator_conclusions
+                *alpha_numerator_conclusions,
+            ]
             columnname = f"gt_conclusion_{conf.columns['prediction_full_alpha']}"
             alpha_numerator = len(
                 df_parcel_gt.loc[
