@@ -20,7 +20,7 @@ def main():
     # roi_test
     start_date = datetime(2023, 3, 6)
     end_date = datetime(2023, 3, 13)
-    roi_bounds = [161_400, 188_000, 161_900, 188_500]
+    roi_bounds = (161_400, 188_000, 161_900, 188_500)
     images_periodic_dir = Path("c:/temp/periodic_mosaic/roi_test")
 
     imageprofiles_to_get = ["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"]

@@ -253,7 +253,7 @@ def zonal_stats_band(
     tmp_dir.mkdir(exist_ok=True, parents=True)
     vector_proj_path = vector_helper.reproject_synced(
         path=vector_path,
-        columns=columns + ["geometry"],
+        columns=[*columns, "geometry"],
         target_epsg=image_info.image_epsg,
         dst_dir=tmp_dir,
     )
@@ -304,7 +304,7 @@ def zonal_stats_band(
     if "geometry" in columns:
         columns = [f.name() for f in vector_mem.fields()] + ["geometry"]
         data = [
-            dict(zip(columns, f.attributes() + [f.geometry().asWkt()]))
+            dict(zip(columns, [*f.attributes(), f.geometry().asWkt()]))
             for f in vector_mem.getFeatures()
         ]
     else:

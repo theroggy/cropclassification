@@ -4,9 +4,6 @@
 
 ### Deprecations and compatibility notes
 
-- Add feature "cross-prediction-models" to avoid markers being calculated on parcels
-  using a model that used this parcel in its training (#142, #143)
-- Consolidated some landcover pre-processing ignore codes (#120)
 - Restructure + cleanup of configuration file, mainly to avoid duplicate keys and to
   improve parameter names:
     - Consolidate and rename `start_date_str`, `end_date_str` and
@@ -28,6 +25,9 @@
 
 ### Improvements
 
+- Add feature "cross-prediction-models" to avoid markers being calculated on parcels
+  using a model that used this parcel in its training (#142, #143)
+- Consolidated some landcover pre-processing ignore codes (#120)
 - Add some extra global accuracies (precision, recall, f1) to report (#119)
 - Add option `images.on_missing_images` to be able to ignore errors in the
   calculation of images if needed (#125, #126, #138)
@@ -35,6 +35,7 @@
 - Save openeo images with int16 bands as int16 locally as well (again) (#131, #135)
 - Linting improvements: add isort, sync rules with geofileops (#133, #134)
 - Add support for zonalstats calculation with ExactExctract (#139)
+- General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
 

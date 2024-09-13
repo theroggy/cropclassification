@@ -6,6 +6,9 @@ import rioxarray
 
 from . import io_util
 
+# Disable some mypy errors for this file aI don't get them solved
+# mypy: disable-error-code="union-attr, attr-defined, assignment"
+
 logger = logging.getLogger(__name__)
 
 

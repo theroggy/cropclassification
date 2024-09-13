@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from cropclassification.util import openeo_util, raster_index_util
+from cropclassification.util import raster_index_util, raster_util
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
     for input_path in input_paths:
         # Set band descriptions in input file
         band_descriptions = {1: "B02", 2: "B03", 3: "B04", 4: "B08", 5: "B11", 6: "B12"}
-        openeo_util.add_band_descriptions(
+        raster_util.set_band_descriptions(
             input_path, band_descriptions=band_descriptions
         )
 
