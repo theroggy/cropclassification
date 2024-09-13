@@ -57,25 +57,12 @@ def classify(
         # To avoid impacting the data balancing, the are divided evenly over the models
         # based on the class_balancing_column.
         class_balancing_column = conf.columns["class_balancing"]
-        layer = gfo.get_only_layer(parcel_path)
-        gfo.add_column(
-            path=parcel_path, layer=layer, name=cross_pred_model_id_column, type="int"
+        add_cross_pred_model_id(
+            parcel_path=parcel_path,
+            cross_pred_models=cross_pred_models,
+            columnname=cross_pred_model_id_column,
+            class_balancing_column=class_balancing_column,
         )
-        sql = f"""
-            WITH tmp AS
-              (SELECT rowid
-                     ,row_number() OVER
-                        (PARTITION BY "{class_balancing_column}" ORDER BY rowid)
-                      AS rownum
-                 FROM "{layer}"
-              )
-            UPDATE "{layer}"
-               SET "{cross_pred_model_id_column}" = (
-                     SELECT rownum % {cross_pred_models} AS model_id FROM tmp
-                      WHERE tmp.rowid = "{layer}".rowid
-                   )
-        """
-        gfo.execute_sql(path=parcel_path, sql_stmt=sql)
 
     pred_test_files = []
     pred_all_files = []
@@ -173,6 +160,53 @@ def classify(
         pdh.to_file(pred_all_df, output_proba_all_path, index=False)
 
     return (output_proba_all_path, output_proba_test_path)
+
+
+def add_cross_pred_model_id(
+    parcel_path: Path,
+    cross_pred_models: int,
+    columnname: Optional[str] = None,
+    class_balancing_column: Optional[str] = None,
+):
+    """Add a column to the parcel file that assigns each parcel to a model.
+
+    Args:
+        parcel_path (Path): path with parcels to add the column to.
+        cross_pred_models (int): the number of models to divide the parcels over.
+        cross_pred_model_id_column (Optional[str], optional): the column name for the
+            column to add to `parcel_path`. If None, conf.columns["cross_pred_model_id"]
+            is used. Defaults to None.
+        class_balancing_column (Optional[str], optional): the column in the
+            `parcel_path` file to use for balancing the model ids. If None,
+            conf.columns["class_balancing"] is used. Defaults to None.
+    """
+    if columnname is None:
+        columnname = conf.columns["cross_pred_model_id"]
+    if class_balancing_column is None:
+        class_balancing_column = conf.columns["class_balancing"]
+    assert columnname is not None
+    assert class_balancing_column is not None
+
+    layer = gfo.get_only_layer(parcel_path)
+    gfo.add_column(path=parcel_path, layer=layer, name=columnname, type="int")
+    # Remarks:
+    #   - ORDER BY rowid is used to get a deterministic order
+    #   - row_number() starts at 1, so we subtract 1 to get a 0-based number
+    sql = f"""
+            WITH tmp AS
+              (SELECT rowid
+                     ,row_number() OVER
+                        (PARTITION BY "{class_balancing_column}" ORDER BY rowid)
+                      AS rownum
+                 FROM "{layer}"
+              )
+            UPDATE "{layer}"
+               SET "{columnname}" = (
+                     SELECT (rownum -1) % {cross_pred_models} AS model_id FROM tmp
+                      WHERE tmp.rowid = "{layer}".rowid
+                   )
+        """
+    gfo.execute_sql(path=parcel_path, sql_stmt=sql)
 
 
 def train_test_predict(
