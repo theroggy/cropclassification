@@ -26,14 +26,13 @@ def classify(
     parcel_classification_data_path: Path,
     output_dir: Path,
     output_base_filename: str,
-    cross_pred_models: bool,
-    cross_pred_model_id_column: str,
+    cross_pred_models: int,
     input_model_to_use_path: Optional[Path],
-    data_ext: str,
-    classifier_ext: str,
     force: bool = False,
 ) -> tuple[Path, Path]:
     # Prepare output filenames
+    data_ext = conf.general["data_ext"]
+    classifier_ext = conf.classifier["classifier_ext"]
     output_proba_all_path = (
         output_dir / f"{output_base_filename}_predict_proba_all{data_ext}"
     )
@@ -45,21 +44,38 @@ def classify(
     if not force and output_proba_all_path.exists():
         return (output_proba_all_path, output_proba_test_path)
 
+    cross_pred_model_id_column = conf.columns["cross_pred_model_id"]
     if cross_pred_models > 1:
         # Use "cross models": train multiple models, so prediction of a parcel is
         # always done with a model where the parcel wasn't used to train it.
-
-        # Assign each parcel to a model where it will be predicted with.
-        gfo.add_column(
-            path=parcel_path,
-            name=cross_pred_model_id_column,
-            type="int",
-            expression=f"ABS(RANDOM() % {cross_pred_models})",
-        )
         if input_model_to_use_path is not None:
             raise ValueError(
                 "cross_pred_models not supported with input_model_to_use_path"
             )
+
+        # Assign each parcel to a model where it will be predicted with.
+        # To avoid impacting the data balancing, the are divided evenly over the models
+        # based on the class_balancing_column.
+        class_balancing_column = conf.columns["class_balancing"]
+        layer = gfo.get_only_layer(parcel_path)
+        gfo.add_column(
+            path=parcel_path, layer=layer, name=cross_pred_model_id_column, type="int"
+        )
+        sql = f"""
+            WITH tmp AS
+              (SELECT rowid
+                     ,row_number() OVER
+                        (PARTITION BY "{class_balancing_column}" ORDER BY rowid)
+                      AS rownum
+                 FROM "{layer}"
+              )
+            UPDATE "{layer}"
+               SET "{cross_pred_model_id_column}" = (
+                     SELECT rownum % {cross_pred_models} AS model_id FROM tmp
+                      WHERE tmp.rowid = "{layer}".rowid
+                   )
+        """
+        gfo.execute_sql(path=parcel_path, sql_stmt=sql)
 
     pred_test_files = []
     pred_all_files = []

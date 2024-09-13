@@ -277,10 +277,7 @@ def calc_marker_task(
             output_dir=run_dir,
             output_base_filename=base_filename,
             cross_pred_models=cross_pred_models,
-            cross_pred_model_id_column=conf.columns["cross_pred_model_id"],
             input_model_to_use_path=input_model_to_use_path,
-            data_ext=data_ext,
-            classifier_ext=conf.classifier["classifier_ext"],
             force=False,
         )
     )
