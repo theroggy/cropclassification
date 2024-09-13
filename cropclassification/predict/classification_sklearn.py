@@ -92,7 +92,7 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
 
     # Write the learned model to a file...
     logger.info(f"Write the learned model file to {output_classifier_path}")
-    joblib.dump(classifier, output_classifier_path)
+    joblib.dump(classifier, output_classifier_path, protocol=-1, compress=6)
 
     return output_classifier_path
 
