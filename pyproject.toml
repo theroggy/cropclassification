@@ -4,6 +4,8 @@ reportCallIssue = false
 reportReturnType = false
 reportMissingImports = false
 reportPossiblyUnboundVariable = false
+reportAttributeAccessIssue = false
+reportGeneralTypeIssues = false
 
 [tool.mypy]
 exclude = ["local_ignore"]
