@@ -264,21 +264,21 @@ def calc_marker_task(
     cross_pred_models = conf.classifier.getint("cross_pred_models", 1)
     test_size = conf.classifier.getfloat("test_size")
 
-    parcel_test_path = None
-    parcel_train_path = None
-
-    parcel_predictions_proba_all_path, parcel_predictions_proba_test_path = (
-        classification.classify(
-            classifier_type=conf.classifier["classifier_type"],
-            parcel_path=parcel_path,
-            parcel_classification_data_path=parcel_classification_data_path,
-            output_dir=run_dir,
-            output_base_filename=base_filename,
-            test_size=test_size,
-            cross_pred_models=cross_pred_models,
-            input_model_to_use_path=input_model_to_use_path,
-            force=False,
-        )
+    (
+        parcel_predictions_proba_all_path,
+        parcel_predictions_proba_test_path,
+        parcel_train_path,
+        parcel_test_path,
+    ) = classification.classify(
+        classifier_type=conf.classifier["classifier_type"],
+        parcel_path=parcel_path,
+        parcel_classification_data_path=parcel_classification_data_path,
+        output_dir=run_dir,
+        output_base_filename=base_filename,
+        test_size=test_size,
+        cross_pred_models=cross_pred_models,
+        input_model_to_use_path=input_model_to_use_path,
+        force=False,
     )
 
     # STEP 5: if necessary, do extra postprocessing
@@ -289,14 +289,10 @@ def calc_marker_task(
 
     # STEP 6: do the default, mandatory postprocessing
     # -------------------------------------------------------------
-    # If it was necessary to train, there will be a test prediction... so postprocess it
+    # If there is a test dataset, so postprocess it
     parcel_predictions_test_path = None
     parcel_predictions_test_geopath = None
-    if (
-        input_model_to_use_path is None
-        and parcel_test_path is not None
-        and parcel_predictions_proba_test_path is not None
-    ):
+    if input_model_to_use_path is None and parcel_test_path is not None:
         parcel_predictions_test_path = (
             run_dir / f"{base_filename}_predict_test{data_ext}"
         )

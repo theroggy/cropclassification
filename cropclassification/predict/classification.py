@@ -31,7 +31,7 @@ def classify(
     cross_pred_models: int,
     input_model_to_use_path: Optional[Path],
     force: bool = False,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, Optional[Path], Optional[Path]]:
     # Prepare output filenames
     data_ext = conf.general["data_ext"]
     classifier_ext = conf.classifier["classifier_ext"]
@@ -44,10 +44,14 @@ def classify(
 
     # If the predictions file doesn't exist, do the classification
     if not force and output_proba_all_path.exists():
-        return (output_proba_all_path, output_proba_test_path)
+        return (output_proba_all_path, output_proba_test_path, None, None)
 
     cross_pred_model_id_column = conf.columns["cross_pred_model_id"]
-    if cross_pred_models > 1:
+
+    if cross_pred_models <= 1:
+        # Simplifies code further on to set to 1 when not using cross prediction models
+        cross_pred_models = 1
+    else:
         # Use "cross models": train multiple models, so prediction of a parcel is
         # always done with a model where the parcel wasn't used to train it.
         if input_model_to_use_path is not None:
@@ -166,7 +170,14 @@ def classify(
             pred_all_df = pd.concat([pred_all_df, df], ignore_index=True)
         pdh.to_file(pred_all_df, output_proba_all_path, index=False)
 
-    return (output_proba_all_path, output_proba_test_path)
+        return (output_proba_all_path, output_proba_test_path, None, None)
+
+    return (
+        output_proba_all_path,
+        output_proba_test_path,
+        parcel_train_path,
+        parcel_test_path,
+    )
 
 
 def add_cross_pred_model_id(
