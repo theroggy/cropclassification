@@ -222,7 +222,7 @@ def zonal_stats_band(
     tmp_dir.mkdir(exist_ok=True, parents=True)
     vector_proj_path = vector_helper.reproject_synced(
         path=vector_path,
-        columns=include_cols + ["geometry"],
+        columns=[*include_cols, "geometry"],
         target_epsg=image_info.image_epsg,
         dst_dir=tmp_dir,
     )

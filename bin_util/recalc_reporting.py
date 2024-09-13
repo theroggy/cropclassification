@@ -160,6 +160,7 @@ def main():
 
     # Recalculate reports
     # -------------------
+    groundtruth_path = None
     if input_groundtruth_path is not None:
         groundtruth_path = (
             run_dir
@@ -179,14 +180,15 @@ def main():
         )
 
     # Print full reporting on the accuracy of the test dataset
-    report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
-    class_report.write_full_report(
-        parcel_predictions_geopath=parcel_predictions_test_geopath,
-        parcel_train_path=parcel_train_path,
-        output_report_txt=report_txt,
-        parcel_ground_truth_path=groundtruth_path,
-        force=True,
-    )
+    if parcel_predictions_test_geopath is not None:
+        report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
+        class_report.write_full_report(
+            parcel_predictions_geopath=parcel_predictions_test_geopath,
+            parcel_train_path=parcel_train_path,
+            output_report_txt=report_txt,
+            parcel_ground_truth_path=groundtruth_path,
+            force=True,
+        )
 
     # Print full reporting on the accuracy of the full dataset
     report_txt = Path(f"{parcel_predictions_all_path!s}_accuracy_report.txt")

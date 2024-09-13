@@ -145,7 +145,7 @@ class ImageProfile:
 
 def calc_periodic_mosaic(
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: Optional[Any],
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: list[str],
@@ -171,7 +171,7 @@ def calc_periodic_mosaic(
     Args:
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
             of the region of interest to download the mosaic for.
-        roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
+        roi_crs (Optional[Any]): the CRS of the roi.
         start_date (datetime): start date, included. Depending on the period used in the
             imageprofiles, the start_date might be adjusted to e.g. the next monday for
             "weekly",...

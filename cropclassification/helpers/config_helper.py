@@ -85,7 +85,7 @@ def read_config(
         if config_paths is None:
             config_paths = [general_ini]
         else:
-            config_paths = [general_ini] + config_paths
+            config_paths = [general_ini, *config_paths]
 
     if config_paths is None:
         raise ValueError("config_paths is None and preload_defaults is False")
