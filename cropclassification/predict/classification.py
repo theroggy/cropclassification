@@ -32,6 +32,28 @@ def classify(
     input_model_to_use_path: Optional[Path],
     force: bool = False,
 ) -> tuple[Path, Path, Optional[Path], Optional[Path]]:
+    """Classify the parcels.
+
+    Args:
+        classifier_type (str): the classifier to use.
+        parcel_path (Path): path to the parcels to classify.
+        parcel_classification_data_path (Path): path to the classification data.
+        output_dir (Path): output directory.
+        output_base_filename (str): base filename for the output files.
+        test_size (float): size of the test set to use. Float between 0 and 1.
+        cross_pred_models (int): the number of models to use for cross prediction.
+            If <= 1, no cross prediction models are used.
+        input_model_to_use_path (Optional[Path]): path to an existing model to use.
+        force (bool, optional): True to force training a new model. Defaults to False.
+
+    Returns:
+        Tuple with the following paths:
+            - output_proba_all_path: file with the predictions for all parcels
+            - output_proba_test_path: file with the predictions for the test parcels
+            - parcel_train_path: file with the training parcels
+            - parcel_test_path: file with the test parcels
+
+    """
     # Prepare output filenames
     data_ext = conf.general["data_ext"]
     classifier_ext = conf.classifier["classifier_ext"]
