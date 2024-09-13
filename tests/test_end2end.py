@@ -20,7 +20,7 @@ from tests import test_helper
         ("BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
-def test_end2end_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
+def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
     if not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -68,7 +68,7 @@ def test_end2end_task_calc_marker(tmp_path, balancing_strategy, cross_pred_model
     assert is_numeric_dtype(df_predict["pred3_prob"].dtype)
 
 
-def test_end2end_task_calc_periodic_mosaic(tmp_path):
+def test_task_calc_periodic_mosaic(tmp_path):
     marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
     shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
     # Create configparser and read task file!
