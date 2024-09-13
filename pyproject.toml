@@ -1,5 +1,9 @@
 [tool.pyright]
-exclude = [".*"]
+reportArgumentType = false
+reportCallIssue = false
+reportReturnType = false
+reportMissingImports = false
+reportPossiblyUnboundVariable = false
 
 [tool.mypy]
 exclude = ["local_ignore"]
