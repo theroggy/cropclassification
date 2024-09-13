@@ -262,11 +262,9 @@ def calc_marker_task(
     # STEP 4: Train a model and predict
     # ---------------------------------
     cross_pred_models = conf.classifier.get("cross_pred_models", 1)
-    cross_pred_models = (
-        1
-        if cross_pred_models is None or int(cross_pred_models) < 1
-        else int(cross_pred_models)
-    )
+    cross_pred_models = 1 if cross_pred_models is None else int(cross_pred_models)
+    cross_pred_models = 1 if cross_pred_models < 1 else cross_pred_models
+
     parcel_test_path = None
     parcel_train_path = None
 
