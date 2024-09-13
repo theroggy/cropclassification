@@ -338,11 +338,12 @@ def get_job_results(
                     logger.warning(ex)
             else:
                 # Download results + delete job
+                output_path = Path(job["title"])
+
                 try:
                     logger.info(f"job {job} finished, so download results")
 
                     # Download to tmp file first so we are sure download was complete
-                    output_path = Path(job["title"])
                     output_tmp_path = Path(f"{output_path}.download")
                     if output_path.exists():
                         output_path.unlink()
