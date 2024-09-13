@@ -22,10 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 def classify(
+    classifier_type: str,
     parcel_path: Path,
     parcel_classification_data_path: Path,
     output_dir: Path,
     output_base_filename: str,
+    test_size: float,
     cross_pred_models: int,
     input_model_to_use_path: Optional[Path],
     force: bool = False,
@@ -64,10 +66,14 @@ def classify(
             class_balancing_column=class_balancing_column,
         )
 
-    pred_test_files = []
+        # No need to split the data in test and train when using cross prediction models
+        # with an sklearn model.
+        if not classifier_type.lower().startswith("keras_"):
+            test_size = 0.0
+
     pred_all_files = []
     for cross_pred_model_idx in range(cross_pred_models):
-        if cross_pred_models == 1:
+        if cross_pred_models <= 1:
             # Only one model, so no need to create subdirectory
             model_dir = output_dir
 
@@ -83,9 +89,8 @@ def classify(
             model_dir = output_dir / f"cross_pred_model_{cross_pred_model_idx}"
             model_dir.mkdir(parents=True, exist_ok=True)
 
-            # Temporary output files in the subdirectory
+            # Temporary output partial files in the subdirectory
             parcel_preds_proba_test_model_path = model_dir / output_proba_test_path.name
-            pred_test_files.append(parcel_preds_proba_test_model_path)
             parcel_preds_proba_all_model_path = model_dir / output_proba_all_path.name
             pred_all_files.append(parcel_preds_proba_all_model_path)
 
@@ -113,19 +118,21 @@ def classify(
         if input_model_to_use_path is None:
             # Create the training sample.
             # Remark: this creates a list of representative test parcel + a list of
-            # (candidate) training parcel
+            # (candidate) training parcels
             balancing_strategy = conf.marker["balancing_strategy"]
             data_balancing.create_train_test_sample(
                 input_parcel_path=parcel_path,
                 output_parcel_train_path=parcel_train_path,
                 output_parcel_test_path=parcel_test_path,
                 balancing_strategy=balancing_strategy,
+                test_size=test_size,
                 training_query=training_query,
                 force=force,
             )
 
             # Train the classifier and output predictions
             train_test_predict(
+                classifier_type=classifier_type,
                 input_parcel_train_path=parcel_train_path,
                 input_parcel_test_path=parcel_test_path,
                 input_parcel_all_path=parcel_path,
@@ -210,6 +217,7 @@ def add_cross_pred_model_id(
 
 
 def train_test_predict(
+    classifier_type: str,
     input_parcel_train_path: Path,
     input_parcel_test_path: Path,
     input_parcel_all_path: Path,
@@ -223,6 +231,7 @@ def train_test_predict(
     """Train a classifier, test it and do full predictions.
 
     Args
+        classifier_type: the type of classifier to use.
         input_parcel_classes_train_path: the list of parcels with classes to train the
             classifier, without data!
         input_parcel_classes_test_path: the list of parcels with classes to test the
@@ -274,6 +283,7 @@ def train_test_predict(
 
     # Train the classification
     output_classifier_path = train(
+        classifier_type=classifier_type,
         input_parcel_train_path=input_parcel_train_path,
         input_parcel_test_path=input_parcel_test_path,
         input_parcel_classification_data_path=input_parcel_classification_data_path,
@@ -283,15 +293,16 @@ def train_test_predict(
     )
 
     # Predict the test parcels
-    predict(
-        input_parcel_path=input_parcel_test_path,
-        input_parcel_classification_data_path=input_parcel_classification_data_path,
-        input_classifier_basepath=output_classifier_basepath,
-        input_classifier_path=output_classifier_path,
-        output_predictions_path=output_predictions_test_path,
-        force=force,
-        input_parcel_classification_data_df=input_parcel_classification_data_df,
-    )
+    if input_parcel_test_path.exists():
+        predict(
+            input_parcel_path=input_parcel_test_path,
+            input_parcel_classification_data_path=input_parcel_classification_data_path,
+            input_classifier_basepath=output_classifier_basepath,
+            input_classifier_path=output_classifier_path,
+            output_predictions_path=output_predictions_test_path,
+            force=force,
+            input_parcel_classification_data_df=input_parcel_classification_data_df,
+        )
 
     # Predict all parcels
     predict(
@@ -307,6 +318,7 @@ def train_test_predict(
 
 
 def train(
+    classifier_type: str,
     input_parcel_train_path: Path,
     input_parcel_test_path: Path,
     input_parcel_classification_data_path: Path,
@@ -353,20 +365,25 @@ def train(
     train_df = train_df.join(input_parcel_classification_data_df, how="inner")
 
     # Read the test/validation data
-    logger.info(f"Read test file: {input_parcel_test_path}")
-    test_df = pdh.read_file(
-        input_parcel_test_path, columns=[conf.columns["id"], conf.columns["class"]]
-    )
-    if test_df.index.name != conf.columns["id"]:
-        test_df.set_index(conf.columns["id"], inplace=True)
-    logger.debug("Read test file ready")
+    test_df = None
+    if input_parcel_test_path.exists():
+        logger.info(f"Read test file: {input_parcel_test_path}")
+        test_df = pdh.read_file(
+            input_parcel_test_path, columns=[conf.columns["id"], conf.columns["class"]]
+        )
+        if test_df.index.name != conf.columns["id"]:
+            test_df.set_index(conf.columns["id"], inplace=True)
+        logger.debug("Read test file ready")
 
-    # Join the columns of input_parcel_classification_data_df that aren't yet in test_df
-    logger.info("Join test sample with the classification data")
-    test_df = test_df.join(input_parcel_classification_data_df, how="inner")
+        # Join the columns of input_parcel_classification_data_df that aren't in test_df
+        logger.info("Join test sample with the classification data")
+        test_df = test_df.join(input_parcel_classification_data_df, how="inner")
 
     # Train
-    if conf.classifier["classifier_type"].lower() == "keras_multilayer_perceptron":
+    if classifier_type.lower() == "keras_multilayer_perceptron":
+        if test_df is None:
+            raise ValueError("test_df is mandatory when using a keras classifier")
+
         import cropclassification.predict.classification_keras as class_core_keras
 
         return class_core_keras.train(

@@ -261,19 +261,20 @@ def calc_marker_task(
 
     # STEP 4: Train a model and predict
     # ---------------------------------
-    cross_pred_models = conf.classifier.get("cross_pred_models", 1)
-    cross_pred_models = 1 if cross_pred_models is None else int(cross_pred_models)
-    cross_pred_models = 1 if cross_pred_models < 1 else cross_pred_models
+    cross_pred_models = conf.classifier.getint("cross_pred_models", 1)
+    test_size = conf.classifier.getfloat("test_size")
 
     parcel_test_path = None
     parcel_train_path = None
 
     parcel_predictions_proba_all_path, parcel_predictions_proba_test_path = (
         classification.classify(
+            classifier_type=conf.classifier["classifier_type"],
             parcel_path=parcel_path,
             parcel_classification_data_path=parcel_classification_data_path,
             output_dir=run_dir,
             output_base_filename=base_filename,
+            test_size=test_size,
             cross_pred_models=cross_pred_models,
             input_model_to_use_path=input_model_to_use_path,
             force=False,

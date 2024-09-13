@@ -20,6 +20,7 @@ def create_train_test_sample(
     output_parcel_train_path: Path,
     output_parcel_test_path: Path,
     balancing_strategy: str,
+    test_size: float,
     training_query: Optional[str] = None,
     force: bool = False,
 ):
@@ -68,22 +69,28 @@ def create_train_test_sample(
     #     groups above the data and evades having to do
     #     .reset_index(level=class_balancing_column_NAME, drop=True)
     #     to get rid of the group level
-    test_df = (
-        df_in.groupby(class_balancing_column)
-        .apply(pd.DataFrame.sample, frac=0.20, include_groups=False)
-        .reset_index()
-    )
-    if not test_df.empty:
-        test_df.set_index("level_1", inplace=True)
-        test_df.index.name = None
+    if test_size > 0.0:
+        test_df = (
+            df_in.groupby(class_balancing_column)
+            .apply(pd.DataFrame.sample, frac=test_size, include_groups=False)
+            .reset_index()
+        )
+        if not test_df.empty:
+            test_df.set_index("level_1", inplace=True)
+            test_df.index.name = None
 
-    logger.debug(
-        f"df_test after sampling 20% of data per class, shape: {test_df.shape}"
-    )
+        logger.debug(
+            f"df_test after sampling a fraction of {test_size} of the data per class, "
+            f"shape: {test_df.shape}"
+        )
 
-    # The candidate parcel for training are all non-test parcel
-    train_base_df = df_in[~df_in.index.isin(test_df.index)]
-    logger.debug(f"df_train_base after isin\n{train_base_df}")
+        # The candidate parcel for training are all non-test parcel
+        train_base_df = df_in[~df_in.index.isin(test_df.index)]
+    else:
+        train_base_df = df_in
+        test_df = None
+
+    logger.debug("df_train_base after splitting off test data\n%s", train_base_df)
 
     # Remove parcels with too few pixels from the train sample
     min_pixcount = conf.marker.getfloat("min_nb_pixels_train")
@@ -548,22 +555,27 @@ def create_train_test_sample(
             )
 
     # Log the resulting numbers per class in the test sample
-    with pd.option_context("display.max_rows", None, "display.max_columns", None):
-        count_per_class = test_df.groupby(class_balancing_column, as_index=False).size()
-        logger.info(
-            "Number of elements per class_balancing_column in test dataset:\n"
-            f"{count_per_class}"
-        )
-        if class_balancing_column != class_column:
-            count_per_class = test_df.groupby(class_column, as_index=False).size()
+    if test_df is not None:
+        with pd.option_context("display.max_rows", None, "display.max_columns", None):
+            count_per_class = test_df.groupby(
+                class_balancing_column, as_index=False
+            ).size()
             logger.info(
-                "Number of elements per class_column in test dataset:\n"
+                "Number of elements per class_balancing_column in test dataset:\n"
                 f"{count_per_class}"
             )
+            if class_balancing_column != class_column:
+                count_per_class = test_df.groupby(class_column, as_index=False).size()
+                logger.info(
+                    "Number of elements per class_column in test dataset:\n"
+                    f"{count_per_class}"
+                )
 
     # Write to output files
     logger.info("Write the output files")
     train_df.set_index(conf.columns["id"], inplace=True)
-    test_df.set_index(conf.columns["id"], inplace=True)
     pdh.to_file(train_df, output_parcel_train_path)  # The ID column is the index...
-    pdh.to_file(test_df, output_parcel_test_path)  # The ID column is the index...
+
+    if test_df is not None:
+        test_df.set_index(conf.columns["id"], inplace=True)
+        pdh.to_file(test_df, output_parcel_test_path)  # The ID column is the index...
