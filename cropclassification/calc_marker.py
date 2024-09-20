@@ -9,19 +9,16 @@ from datetime import datetime
 from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
-import geofileops as gfo
-import pandas as pd
+import geofileops as gfo  # noqa: F401
 import pyproj
 
-import cropclassification.helpers.pandas_helper as pdh
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper, log_helper
-from cropclassification.helpers import model_helper as mh
 from cropclassification.postprocess import classification_postprocess as class_post
 from cropclassification.postprocess import classification_reporting as class_report
 from cropclassification.predict import classification
 from cropclassification.preprocess import _timeseries_helper as ts_helper
-from cropclassification.preprocess import classification_preprocess as class_pre
+from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
 
 # -------------------------------------------------------------
@@ -235,7 +232,7 @@ def calc_marker_task(
     min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
     base_filename = f"{input_parcel_filename.stem}_bufm{buffer:g}_weekly"
-    class_pre.prepare_input(
+    prepare_input.prepare(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
         timeseries_periodic_dir=timeseries_periodic_dir,
@@ -262,146 +259,27 @@ def calc_marker_task(
         parceldata_aggregations_to_use=parceldata_aggregations_to_use,
     )
 
-    # STEP 4: Train and test if necessary... and predict
-    # -------------------------------------------------------------
-    markertype = conf.marker.get("markertype")
-    parcel_predictions_proba_all_path = (
-        run_dir / f"{base_filename}_predict_proba_all{data_ext}"
+    # STEP 4: Train a model and predict
+    # ---------------------------------
+    cross_pred_models = conf.classifier.getint("cross_pred_models", 1)
+    test_size = conf.classifier.getfloat("test_size")
+
+    (
+        parcel_predictions_proba_all_path,
+        parcel_predictions_proba_test_path,
+        parcel_train_path,
+        parcel_test_path,
+    ) = classification.classify(
+        classifier_type=conf.classifier["classifier_type"],
+        parcel_path=parcel_path,
+        parcel_classification_data_path=parcel_classification_data_path,
+        output_dir=run_dir,
+        output_base_filename=base_filename,
+        test_size=test_size,
+        cross_pred_models=cross_pred_models,
+        input_model_to_use_path=input_model_to_use_path,
+        force=False,
     )
-    parcel_predictions_proba_test_path = (
-        run_dir / f"{base_filename}_predict_proba_test{data_ext}"
-    )
-    cross_pred_models = conf.classifier.get("cross_pred_models", 1)
-    cross_pred_models = (
-        1
-        if cross_pred_models is None or int(cross_pred_models) < 1
-        else int(cross_pred_models)
-    )
-    classifier_ext = conf.classifier["classifier_ext"]
-    cross_pred_model_id_column = conf.columns["cross_pred_model_id"]
-    parcel_test_path = None
-    parcel_train_path = None
-
-    # If the predictions file doesn't exist, do the classification
-    if not parcel_predictions_proba_all_path.exists():
-        if cross_pred_models > 1:
-            # Use "cross models": train multiple models, so prediction of a parcel is
-            # always done with a model where the parcel wasn't used to train it.
-
-            # Assign each parcel to a model where it will be predicted with.
-            gfo.add_column(
-                path=parcel_path,
-                name=cross_pred_model_id_column,
-                type="int",
-                expression=f"ABS(RANDOM() % {cross_pred_models})",
-            )
-            if input_model_to_use_path is not None:
-                raise ValueError(
-                    "cross_pred_models not supported with input_model_to_use_path"
-                )
-
-        pred_test_files = []
-        pred_all_files = []
-        for cross_pred_model_idx in range(cross_pred_models):
-            if cross_pred_models == 1:
-                # Only one model, so no need to create subdirectory
-                model_dir = run_dir
-
-                # Output can be the final file immediately
-                parcel_preds_proba_test_model_path = parcel_predictions_proba_test_path
-                parcel_preds_proba_all_model_path = parcel_predictions_proba_all_path
-
-                # No need to filter percels based on cross model indexes
-                training_query = None
-                predict_query = None
-            else:
-                # Create a subfolder for each model
-                model_dir = run_dir / f"cross_pred_model_{cross_pred_model_idx}"
-                model_dir.mkdir(parents=True, exist_ok=True)
-
-                # Temporary output files in the subdirectory
-                parcel_preds_proba_test_model_path = (
-                    model_dir / parcel_predictions_proba_test_path.name
-                )
-                pred_test_files.append(parcel_preds_proba_test_model_path)
-                parcel_preds_proba_all_model_path = (
-                    model_dir / parcel_predictions_proba_all_path.name
-                )
-                pred_all_files.append(parcel_preds_proba_all_model_path)
-
-                # The training will be done on all parcels with another index
-                training_cross_pred_model_ids = [
-                    idx
-                    for idx in range(cross_pred_models)
-                    if idx != cross_pred_model_idx
-                ]
-                training_query = (
-                    f"{cross_pred_model_id_column} in {training_cross_pred_model_ids}"
-                )
-                predict_query = (
-                    f"{cross_pred_model_id_column} == {cross_pred_model_idx}"
-                )
-
-            # Check if a model exists already
-            if input_model_to_use_path is None:
-                best_model = mh.get_best_model(model_dir, acc_metric_mode="min")
-                if best_model is not None:
-                    input_model_to_use_path = best_model["path"]
-
-            # If we cannot reuse an existing model, train one!
-            parcel_train_path = model_dir / f"{base_filename}_parcel_train{data_ext}"
-            parcel_test_path = model_dir / f"{base_filename}_parcel_test{data_ext}"
-            classifier_basepath = model_dir / f"{markertype}_01_mlp{classifier_ext}"
-            if input_model_to_use_path is None:
-                # Create the training sample.
-                # Remark: this creates a list of representative test parcel + a list of
-                # (candidate) training parcel
-                balancing_strategy = conf.marker["balancing_strategy"]
-                class_pre.create_train_test_sample(
-                    input_parcel_path=parcel_path,
-                    output_parcel_train_path=parcel_train_path,
-                    output_parcel_test_path=parcel_test_path,
-                    balancing_strategy=balancing_strategy,
-                    training_query=training_query,
-                )
-
-                # Train the classifier and output predictions
-                classification.train_test_predict(
-                    input_parcel_train_path=parcel_train_path,
-                    input_parcel_test_path=parcel_test_path,
-                    input_parcel_all_path=parcel_path,
-                    input_parcel_classification_data_path=parcel_classification_data_path,
-                    output_classifier_basepath=classifier_basepath,
-                    output_predictions_test_path=parcel_preds_proba_test_model_path,
-                    output_predictions_all_path=parcel_preds_proba_all_model_path,
-                    predict_query=predict_query,
-                )
-            else:
-                # There exists already a classifier, so just use it!
-                classification.predict(
-                    input_parcel_path=parcel_path,
-                    input_parcel_classification_data_path=parcel_classification_data_path,
-                    input_classifier_basepath=classifier_basepath,
-                    input_classifier_path=input_model_to_use_path,
-                    output_predictions_path=parcel_preds_proba_all_model_path,
-                    predict_query=predict_query,
-                )
-
-        # Merge all prediction to single output file
-        if cross_pred_models > 1:
-            # Merge all test predictions to single output file
-            pred_test_df = None
-            for path in pred_test_files:
-                df = pdh.read_file(path)
-                pred_test_df = pd.concat([pred_test_df, df], ignore_index=True)
-            pdh.to_file(pred_test_df, parcel_predictions_proba_test_path, index=False)
-
-            # Merge all "all" predictions to single output file
-            pred_all_df = None
-            for path in pred_all_files:
-                df = pdh.read_file(path)
-                pred_all_df = pd.concat([pred_all_df, df], ignore_index=True)
-            pdh.to_file(pred_all_df, parcel_predictions_proba_all_path, index=False)
 
     # STEP 5: if necessary, do extra postprocessing
     # -------------------------------------------------------------
@@ -411,14 +289,10 @@ def calc_marker_task(
 
     # STEP 6: do the default, mandatory postprocessing
     # -------------------------------------------------------------
-    # If it was necessary to train, there will be a test prediction... so postprocess it
+    # If there is a test dataset, so postprocess it
     parcel_predictions_test_path = None
     parcel_predictions_test_geopath = None
-    if (
-        input_model_to_use_path is None
-        and parcel_test_path is not None
-        and parcel_predictions_proba_test_path is not None
-    ):
+    if input_model_to_use_path is None and parcel_test_path is not None:
         parcel_predictions_test_path = (
             run_dir / f"{base_filename}_predict_test{data_ext}"
         )
@@ -459,7 +333,7 @@ def calc_marker_task(
             run_dir
             / f"{input_groundtruth_path.stem}_classes{input_groundtruth_path.suffix}"
         )
-        class_pre.prepare_input(
+        prepare_input.prepare(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
             timeseries_periodic_dir=timeseries_periodic_dir,

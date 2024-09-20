@@ -26,7 +26,7 @@
 ### Improvements
 
 - Add feature "cross-prediction-models" to avoid markers being calculated on parcels
-  using a model that used this parcel in its training (#142)
+  using a model that used this parcel in its training (#142, #143)
 - Consolidated some landcover pre-processing ignore codes (#120)
 - Add some extra global accuracies (precision, recall, f1) to report (#119)
 - Add option `images.on_missing_images` to be able to ignore errors in the
