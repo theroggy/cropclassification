@@ -292,6 +292,7 @@ def calc_marker_task(
     # If there is a test dataset, so postprocess it
     parcel_predictions_test_path = None
     parcel_predictions_test_geopath = None
+    top_classes = conf.postprocess.getint("top_classes")
     if input_model_to_use_path is None and parcel_test_path is not None:
         parcel_predictions_test_path = (
             run_dir / f"{base_filename}_predict_test{data_ext}"
@@ -299,7 +300,7 @@ def calc_marker_task(
         parcel_predictions_test_geopath = (
             run_dir / f"{base_filename}_predict_test{geofile_ext}"
         )
-        class_post.calc_topx_and_consolidation(
+        class_post.calc_top_classes_and_consolidation(
             input_parcel_path=parcel_test_path,
             input_parcel_probabilities_path=parcel_predictions_proba_test_path,
             input_parcel_geopath=input_parcel_path,
@@ -315,12 +316,13 @@ def calc_marker_task(
     parcel_predictions_all_output_path = (
         run_dir / f"{base_filename}_predict_all_output{output_ext}"
     )
-    class_post.calc_topx_and_consolidation(
+    class_post.calc_top_classes_and_consolidation(
         input_parcel_path=parcel_path,
         input_parcel_probabilities_path=parcel_predictions_proba_all_path,
         input_parcel_geopath=input_parcel_path,
         output_predictions_path=parcel_predictions_all_path,
         output_predictions_geopath=parcel_predictions_all_geopath,
+        top_classes=top_classes,
         output_predictions_output_path=parcel_predictions_all_output_path,
     )
 
