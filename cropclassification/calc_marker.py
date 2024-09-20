@@ -15,7 +15,7 @@ import pyproj
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper, log_helper
 from cropclassification.postprocess import classification_postprocess as class_post
-from cropclassification.postprocess import classification_reporting as class_report
+from cropclassification.postprocess import classification_reporting as report
 from cropclassification.predict import classification
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import prepare_input

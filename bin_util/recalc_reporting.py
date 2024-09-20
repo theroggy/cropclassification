@@ -3,7 +3,7 @@ from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.postprocess import classification_postprocess as class_post
-from cropclassification.postprocess import classification_reporting as class_report
+from cropclassification.postprocess import classification_reporting as report
 from cropclassification.preprocess import prepare_input as class_pre
 
 
@@ -182,7 +182,7 @@ def main():
     # Print full reporting on the accuracy of the test dataset
     if parcel_predictions_test_geopath is not None:
         report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
-        class_report.write_full_report(
+        report.write_full_report(
             parcel_predictions_geopath=parcel_predictions_test_geopath,
             parcel_train_path=parcel_train_path,
             output_report_txt=report_txt,
@@ -192,7 +192,7 @@ def main():
 
     # Print full reporting on the accuracy of the full dataset
     report_txt = Path(f"{parcel_predictions_all_path!s}_accuracy_report.txt")
-    class_report.write_full_report(
+    report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
         parcel_train_path=parcel_train_path,
         output_report_txt=report_txt,
