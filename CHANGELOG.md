@@ -35,7 +35,7 @@
 - Save openeo images with int16 bands as int16 locally as well (again) (#131, #135)
 - Linting improvements: add isort, sync rules with geofileops (#133, #134)
 - Add support for zonalstats calculation with ExactExctract (#139)
-- Retain top5 instead of top3 classification results (#145)
+- Make the number of top classes of the classification to retain configurable (#145)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
