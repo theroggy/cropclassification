@@ -133,7 +133,7 @@ def main():
         parcel_predictions_test_geopath = (
             run_dir / f"{base_filename}_predict_test{geofile_ext}"
         )
-        class_post.calc_top3_and_consolidation(
+        class_post.calc_topx_and_consolidation(
             input_parcel_path=parcel_test_path,
             input_parcel_probabilities_path=parcel_predictions_proba_test_path,
             input_parcel_geopath=input_parcel_path,
@@ -149,7 +149,7 @@ def main():
     parcel_predictions_all_output_path = (
         run_dir / f"{base_filename}_predict_all_output{output_ext}"
     )
-    class_post.calc_top3_and_consolidation(
+    class_post.calc_topx_and_consolidation(
         input_parcel_path=parcel_path,
         input_parcel_probabilities_path=parcel_predictions_proba_all_path,
         input_parcel_geopath=input_parcel_path,

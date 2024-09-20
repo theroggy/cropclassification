@@ -18,13 +18,14 @@ import cropclassification.helpers.pandas_helper as pdh
 logger = logging.getLogger(__name__)
 
 
-def calc_top3_and_consolidation(
+def calc_topx_and_consolidation(
     input_parcel_path: Path,
     input_parcel_probabilities_path: Path,
     input_parcel_geopath: Path,
     output_predictions_path: Path,
     output_predictions_geopath: Path,
     output_predictions_output_path: Optional[Path] = None,
+    topx: int = 5,
     force: bool = False,
 ):
     """
@@ -41,6 +42,7 @@ def calc_top3_and_consolidation(
         output_predictions_geopath (Path): [description]
         output_predictions_output_path (Path, optional): [description].
             Defaults to None.
+        topx (int, optional): Number of top predictions to retain. Defaults to 3.
         force (bool, optional): [description]. Defaults to False.
     """
 
@@ -60,18 +62,18 @@ def calc_top3_and_consolidation(
     logger.info("Read input file")
     proba_df = pdh.read_file(input_parcel_probabilities_path)
 
-    top3_df = calc_top3(proba_df)
+    topx_df = calc_topx(proba_df, topx)
 
     # Read input files
     logger.info("Read input file")
     input_parcel_df = pdh.read_file(input_parcel_path)
 
     # All input parcels must stay in the output, so left join input with pred
-    top3_df.set_index(conf.columns["id"], inplace=True)
+    topx_df.set_index(conf.columns["id"], inplace=True)
     if input_parcel_df.index.name != conf.columns["id"]:
         input_parcel_df.set_index(conf.columns["id"], inplace=True)
-    cols_to_join = top3_df.columns.difference(input_parcel_df.columns)
-    pred_df = input_parcel_df.join(top3_df[cols_to_join], how="left")
+    cols_to_join = topx_df.columns.difference(input_parcel_df.columns)
+    pred_df = input_parcel_df.join(topx_df[cols_to_join], how="left")
 
     # The parcels added by the join don't have a prediction yet, so apply it
     # For the ignore classes, set the prediction to the ignore type
@@ -171,53 +173,47 @@ def calc_top3_and_consolidation(
     pdh.to_file(pred_df, output_predictions_path)
 
 
-def calc_top3(proba_df: pd.DataFrame) -> pd.DataFrame:
-    # Calculate the top 3 predictions
-    logger.info("Calculate top3")
+def calc_topx(proba_df: pd.DataFrame, topx: int = 3) -> pd.DataFrame:
+    # Calculate the top x predictions
+    logger.info("Calculate topx")
     proba_tmp_df = proba_df.copy()
     for column in proba_tmp_df.columns:
         if column in conf.preprocess.getlist("dedicated_data_columns"):
             proba_tmp_df.drop(column, axis=1, inplace=True)
 
-    # Get the top 3 predictions for each row
-    # First get the indices of the top 3 predictions for each row
+    # Get the top x predictions for each row
+    # First get the indices of the top x predictions for each row
     # Remark: argsort sorts ascending, so we need to take:
     #     - "[:,": for all rows
-    #     - ":-4": the last 3 elements of the values
+    #     - ":-topx-1": the last x elements of the values
     #     - ":-1]": and than reverse the order with a negative step
-    top3_pred_classes_idx = np.argsort(proba_tmp_df.values, axis=1)[:, :-4:-1]
+    topx_filter = topx + 1
+    top_pred_classes_idx = np.argsort(proba_tmp_df.values, axis=1)[:, :-topx_filter:-1]
     # Convert the indices to classes
-    top3_pred_classes = np.take(proba_tmp_df.columns, top3_pred_classes_idx)
-    # Get the values of the top 3 predictions
-    top3_pred_values = np.sort(proba_tmp_df.values, axis=1)[:, :-4:-1]
+    top_pred_classes = np.take(proba_tmp_df.columns, top_pred_classes_idx)
+    # Get the values of the top predictions
+    top_pred_values = np.sort(proba_tmp_df.values, axis=1)[:, :-topx_filter:-1]
     # Concatenate both
-    top3_pred = np.concatenate([top3_pred_classes, top3_pred_values], axis=1)
-    # Concatenate the ids, the classes and the top3 predictions
-    id_class_top3 = np.concatenate(
+    top_pred = np.concatenate([top_pred_classes, top_pred_values], axis=1)
+    # Concatenate the ids, the classes and the top predictions
+    id_class_top = np.concatenate(
         [
             proba_df[[conf.columns["id"], conf.columns["class_declared"]]].values,
-            top3_pred,
+            top_pred,
         ],
         axis=1,
     )
 
     # Convert to dataframe
     # Also apply infer_objects: otherwise the float columns are of object dtype.
-    top3_df = pd.DataFrame(
-        id_class_top3,
-        columns=[
-            conf.columns["id"],
-            conf.columns["class_declared"],
-            "pred1",
-            "pred2",
-            "pred3",
-            "pred1_prob",
-            "pred2_prob",
-            "pred3_prob",
-        ],
-    ).infer_objects()
+    columns = [conf.columns["id"], conf.columns["class_declared"]]
+    for i in range(topx):
+        columns.append(f"pred{i+1}")
+    for i in range(topx):
+        columns.append(f"pred{i+1}_prob")
+    top_df = pd.DataFrame(id_class_top, columns=columns).infer_objects()
 
-    return top3_df
+    return top_df
 
 
 def add_doubt_column(

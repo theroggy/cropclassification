@@ -299,7 +299,7 @@ def calc_marker_task(
         parcel_predictions_test_geopath = (
             run_dir / f"{base_filename}_predict_test{geofile_ext}"
         )
-        class_post.calc_top3_and_consolidation(
+        class_post.calc_topx_and_consolidation(
             input_parcel_path=parcel_test_path,
             input_parcel_probabilities_path=parcel_predictions_proba_test_path,
             input_parcel_geopath=input_parcel_path,
@@ -315,7 +315,7 @@ def calc_marker_task(
     parcel_predictions_all_output_path = (
         run_dir / f"{base_filename}_predict_all_output{output_ext}"
     )
-    class_post.calc_top3_and_consolidation(
+    class_post.calc_topx_and_consolidation(
         input_parcel_path=parcel_path,
         input_parcel_probabilities_path=parcel_predictions_proba_all_path,
         input_parcel_geopath=input_parcel_path,
@@ -349,7 +349,7 @@ def calc_marker_task(
     if input_model_to_use_path is None and parcel_predictions_test_geopath is not None:
         # Print full reporting on the accuracy of the test dataset
         report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
-        class_report.write_full_report(
+        report.write_full_report(
             parcel_predictions_geopath=parcel_predictions_test_geopath,
             output_report_txt=report_txt,
             parcel_ground_truth_path=groundtruth_path,
@@ -359,7 +359,7 @@ def calc_marker_task(
 
     # Print full reporting on the accuracy of the full dataset
     report_txt = Path(f"{parcel_predictions_all_path!s}_accuracy_report.txt")
-    class_report.write_full_report(
+    report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
         output_report_txt=report_txt,
         parcel_ground_truth_path=groundtruth_path,
