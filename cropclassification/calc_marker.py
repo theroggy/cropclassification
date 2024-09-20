@@ -306,6 +306,7 @@ def calc_marker_task(
             input_parcel_geopath=input_parcel_path,
             output_predictions_path=parcel_predictions_test_path,
             output_predictions_geopath=parcel_predictions_test_geopath,
+            top_classes=top_classes,
         )
 
     # Postprocess predictions
