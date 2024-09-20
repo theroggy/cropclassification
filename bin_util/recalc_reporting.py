@@ -107,6 +107,7 @@ def main():
 
     min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
+    top_classes = conf.postprocess.getint("top_classes")
 
     # Prepare parcel input file
     class_pre.prepare(
@@ -139,6 +140,7 @@ def main():
             input_parcel_geopath=input_parcel_path,
             output_predictions_path=parcel_predictions_test_path,
             output_predictions_geopath=parcel_predictions_test_geopath,
+            top_classes=top_classes,
         )
 
     # Postprocess predictions
@@ -155,6 +157,7 @@ def main():
         input_parcel_geopath=input_parcel_path,
         output_predictions_path=parcel_predictions_all_path,
         output_predictions_geopath=parcel_predictions_all_geopath,
+        top_classes=top_classes,
         output_predictions_output_path=parcel_predictions_all_output_path,
     )
 
