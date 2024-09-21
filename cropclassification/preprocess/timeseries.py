@@ -4,10 +4,13 @@ This module contains general functions that apply to timeseries data...
 
 import logging
 import os
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import geofileops as gfo
+import numpy as np
 import pyproj
 
 import cropclassification.helpers.config_helper as conf
@@ -123,6 +126,7 @@ def collect_and_prepare_timeseries_data(
     if len(ts_data_paths) == 0:
         raise ValueError(f"No timeseries data found for pattern {glob_pattern}")
 
+    min_parcels_with_data_pct = conf.timeseries.getfloat("min_parcels_with_data_pct")
     for curr_path in sorted(ts_data_paths):
         # Skip the pixcount file
         if curr_path.stem.endswith("_pixcount"):
@@ -163,30 +167,14 @@ def collect_and_prepare_timeseries_data(
             logger.info(f"SKIP: file is empty: {curr_path}")
             continue
 
-        # Read data, and check if there is enough data in it
-        data_read_df = pdh.read_file(curr_path)
-        nb_data_read = len(data_read_df.index)
-        data_available_pct = nb_data_read * 100 / nb_input_parcels
-        min_parcels_with_data_pct = conf.timeseries.getfloat(
-            "min_parcels_with_data_pct"
-        )
-        if data_available_pct < min_parcels_with_data_pct:
-            logger.info(
-                f"SKIP: only data for {data_available_pct:.2f}% of parcels, should be "
-                f"> {min_parcels_with_data_pct}%: {curr_path}"
-            )
-            continue
-
-        # Start processing the file
-        logger.info(f"Process file: {curr_path}")
-        if data_read_df.index.name != conf.columns["id"]:
-            data_read_df.set_index(conf.columns["id"], inplace=True)
-
-        # Loop over columns to check if there are columns that need to be dropped.
+        # Determine the columns to be read from the file and which to rename.
+        info = gfo.get_layerinfo(curr_path, raise_on_nogeom=False)
+        columns = []
         columns_to_rename = {}
-        for column in data_read_df.columns:
-            # If it is the id column, continue
+        for column in info.columns:
+            # The id column shoul be read
             if column == conf.columns["id"]:
+                columns.append(column)
                 continue
 
             # Check if the column is "asked"
@@ -207,7 +195,29 @@ def collect_and_prepare_timeseries_data(
                     "Drop column as it's column aggregation isn't to be used: "
                     f"{curr_path.stem}.{column}"
                 )
-                data_read_df.drop(column, axis=1, inplace=True)
+                continue
+
+            columns.append(column)
+
+        # Read data, and check if there is enough data in it
+        data_read_df = pdh.read_file(curr_path, columns=columns)
+        nb_data_read = len(data_read_df.index)
+        data_available_pct = nb_data_read * 100 / nb_input_parcels
+        if data_available_pct < min_parcels_with_data_pct:
+            logger.info(
+                f"SKIP: only data for {data_available_pct:.2f}% of parcels, should be "
+                f"> {min_parcels_with_data_pct}%: {curr_path}"
+            )
+            continue
+
+        # Start processing the file
+        logger.info(f"Process file: {curr_path}")
+        if data_read_df.index.name != conf.columns["id"]:
+            data_read_df.set_index(conf.columns["id"], inplace=True)
+
+        for column in data_read_df.columns:
+            # If it is the id column, continue
+            if column == conf.columns["id"]:
                 continue
 
             # Check if the column contains data for enough parcels
@@ -239,25 +249,62 @@ def collect_and_prepare_timeseries_data(
         # If s1 grd, rescale data
         if image_profile.startswith("s1-grd"):
             for column in data_read_df.columns:
-                logger.info(f"Column with s1-grd data: clip to upper=1: {column}")
-                data_read_df[column] = data_read_df[column].clip(upper=1)
+                # Just clipping gives the best results (tested with random forest)
+                normalization_steps = ["clip"]
+                for step in normalization_steps:
+                    if step == "log":
+                        logger.info(f"Convert to db, but in range ~0-~1: {column}")
+                        data_read_df[column] = (
+                            np.log(data_read_df[column]) * 0.21714724095 + 1
+                        )
+                    if step == "clip":
+                        logger.info(f"Column with s1-grd: clip to upper=1: {column}")
+                        data_read_df[column] = data_read_df[column].clip(upper=1)
+                    if step == "normalize":
+                        # normalize all values to be between 0 and 1
+                        min = np.min(data_read_df[column])
+                        max = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min) / (
+                            max - min
+                        )
+                    if step == "abs":
+                        data_read_df[column] = np.abs(data_read_df[column])
 
         # If s1 coherence, rescale data
         if image_profile.startswith(("s1coh", "s1-coh")):
             for column in data_read_df.columns:
-                logger.info(
-                    f"Column with s1 coherence: scale it by dividing by 300: {column}"
-                )
-                data_read_df[column] = data_read_df[column] / 300
+                # Just scale gives same results as log (tested with random forest)
+                normalization_steps = ["scale"]
+                for step in normalization_steps:
+                    if step == "log":
+                        logger.info(f"Convert to db, but in range ~0-~1: {column}")
+                        data_read_df[column] = (
+                            np.log(data_read_df[column]) * 0.21714724095 + 1
+                        )
+                    if step == "clip":
+                        logger.info(f"Column with s1-grd: clip to upper=1: {column}")
+                        data_read_df[column] = data_read_df[column].clip(upper=1)
+                    if step == "normalize":
+                        # normalize all values to be between 0 and 1
+                        min = np.min(data_read_df[column])
+                        max = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min) / (
+                            max - min
+                        )
+                    if step == "abs":
+                        data_read_df[column] = np.abs(data_read_df[column])
+                    if step == "scale":
+                        logger.info(f"Column with s1-coh: divide by 300: {column}")
+                        data_read_df[column] = data_read_df[column] / 300
 
         # Write warning if the data isn't scaled between 0 and 1
         for column in data_read_df.columns:
-            value_max = data_read_df[column].max()
-            value_min = data_read_df[column].min()
-            if value_max > 1 or value_min < 0:
-                logger.warning(
-                    f"column {column} in {curr_path} is not fully normalized "
-                    f"({value_min=}, {value_max=})"
+            max = data_read_df[column].max()
+            min = data_read_df[column].min()
+            if max > 1 or min < 0:
+                warnings.warn(
+                    f"{column=} in {curr_path} isn't fully normalized ({min=}, {max=})",
+                    stacklevel=1,
                 )
 
         # Join the data to the result...
