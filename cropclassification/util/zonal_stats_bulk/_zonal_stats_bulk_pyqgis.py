@@ -246,8 +246,18 @@ def zonal_stats_band(
         else:
             stats_mask |= stat_to_qgisstat(stat)
 
-    # Get the image info
+    # Init QGIS
+    qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
+    qgs = qgis.core.QgsApplication([], False)
+    qgs.initQgis()
+
+    # The rasterBand parameter in QgsZonalStatistics is the 1 based index in the raster
+    # file. Verify if it exists, as there is no error if this is wrong.
     image_info = raster_helper.get_image_info(raster_path)
+    raster = qgis.core.QgsRasterLayer(image_info.bands[band].path)
+    band_index = image_info.bands[band].band_index
+    if band_index < 1 or band_index > raster.bandCount():
+        raise ValueError(f"invalid {band_index=} in {image_info.bands[band]}")
 
     # Reproject the vector data
     tmp_dir.mkdir(exist_ok=True, parents=True)
@@ -259,11 +269,6 @@ def zonal_stats_band(
     )
     layer = gfo.get_only_layer(vector_proj_path)
 
-    # Init QGIS
-    qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
-    qgs = qgis.core.QgsApplication([], False)
-    qgs.initQgis()
-
     # Read the vector file + copy to memory layer for:
     #   - improved performance
     #   - QgsZonalStatistics actually adds the data to the input file, so copy needed
@@ -272,15 +277,6 @@ def zonal_stats_band(
         qgis.core.QgsFeatureRequest().setFilterFids(vector.allFeatureIds())
     )
     del vector
-
-    # Calculates zonal stats with raster
-    raster = qgis.core.QgsRasterLayer(image_info.bands[band].path)
-
-    # rasterband is the 1 based index in the raster file. Verify, as QgsZonalStatistics
-    # doesn't give an error if this is wrong.
-    band_index = image_info.bands[band].band_index
-    if band_index < 1 or band_index > raster.bandCount():
-        raise ValueError(f"invalid {band_index=} in {image_info.bands[band]}")
 
     try:
         zoneStats = qgis.analysis.QgsZonalStatistics(

@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import rioxarray
 
-from . import io_util
+from . import io_util, raster_util
 
 # Disable some mypy errors for this file aI don't get them solved
 # mypy: disable-error-code="union-attr, attr-defined, assignment"
@@ -177,6 +177,8 @@ def calc_index(
         index_data_scaled.rio.to_raster(
             output_path, tiled=True, compress="DEFLATE", predictor=2
         )
+
+    raster_util.set_band_descriptions(output_path, band_descriptions=[index])
 
 
 def remove(path: Path, missing_ok: bool = False):
