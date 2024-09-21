@@ -26,7 +26,7 @@ def main():
     """
 
     imageprofiles_to_get = ["s1-rvi-asc-weekly", "s1-rvi-desc-weekly"]
-    #imageprofiles_to_get = ["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"]
+    # imageprofiles_to_get = ["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"]
     # imageprofiles_to_get = ["s2-agri-weekly"]
 
     image_profiles_path = (
