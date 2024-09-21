@@ -1,11 +1,6 @@
 [tool.pyright]
-reportArgumentType = false
-reportCallIssue = false
-reportReturnType = false
-reportMissingImports = false
-reportPossiblyUnboundVariable = false
-reportAttributeAccessIssue = false
-reportGeneralTypeIssues = false
+exclude = ["local_ignore"]
+ignore = ["*"]
 
 [tool.mypy]
 exclude = ["local_ignore"]
