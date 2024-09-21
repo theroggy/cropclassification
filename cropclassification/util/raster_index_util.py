@@ -122,6 +122,24 @@ def calc_index(
             index_data = np.divide(N, D, dtype=np.float32)
             index_data.name = "DpRVI"
 
+        elif index == "rvi":
+            if save_as_byte:
+                scale_factor = 0.004
+                add_offset = 0
+
+            vh = image["VH"]
+            vv = image["VV"]
+
+            # Calculate RVI ratio
+            # var rvi = image.expression('sqrt(vv/(vv + vh))*(vv/vh)'
+            # By default, dividing ints results in float64, but we only need float32
+            index_data = np.multiply(
+                np.sqrt(vv / (vv + vh)),
+                (vv / vh),
+                dtype=np.float32,
+            )
+            index_data.name = "RVI"
+
         else:
             raise ValueError(f"unsupported index type: {index}")
 
