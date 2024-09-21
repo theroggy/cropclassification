@@ -12,19 +12,22 @@ def main():
     # Init some variables
     roi_crs = 31370
     # BEFL
-    start_date = datetime(2023, 2, 6)
-    end_date = datetime(2023, 7, 30)
+    start_date = datetime(2023, 7, 1)
+    end_date = datetime(2023, 12, 31)
     roi_bounds = [20_000, 150_000, 260_000, 245_000]
     images_periodic_dir = Path("//dg3.be/alp/Datagis/satellite_periodic/BEFL")
 
     # roi_test
-    start_date = datetime(2023, 3, 6)
-    end_date = datetime(2023, 3, 13)
+    """
+    start_date = datetime(2023, 7, 1)
+    end_date = datetime(2023, 10, 13)
     roi_bounds = (161_400, 188_000, 161_900, 188_500)
     images_periodic_dir = Path("c:/temp/periodic_mosaic/roi_test")
+    """
 
-    imageprofiles_to_get = ["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"]
-    imageprofiles_to_get = ["s2-agri-weekly"]
+    imageprofiles_to_get = ["s1-rvi-asc-weekly", "s1-rvi-desc-weekly"]
+    #imageprofiles_to_get = ["s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly"]
+    # imageprofiles_to_get = ["s2-agri-weekly"]
 
     image_profiles_path = (
         Path(__file__).resolve().parent.parent
