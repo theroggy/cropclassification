@@ -70,4 +70,12 @@ def set_band_descriptions(
             band_descriptions = dict(enumerate(band_descriptions, start=1))
 
         for index, band_description in band_descriptions.items():
+            index = int(index)
+
+            # Compare the current band description if it exists.
+            if len(file.descriptions) >= index:
+                curr_description = file.descriptions[index - 1]
+                if curr_description == band_description:
+                    continue
+
             file.set_band_description(index, band_description)

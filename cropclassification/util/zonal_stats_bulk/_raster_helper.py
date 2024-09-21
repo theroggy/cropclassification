@@ -757,6 +757,9 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
         for band_idx in src.indexes:
             band_tags = src.tags(band_idx)
             band_name = band_tags.get("DESCRIPTION", None)
+            if band_name is None:
+                if src.descriptions is not None and len(src.descriptions) >= band_idx:
+                    band_name = src.descriptions[band_idx - 1]
             band_name = band_name if band_name is not None else str(band_idx)
             bands[band_name] = BandInfo(
                 path=str(image_path),
