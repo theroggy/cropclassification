@@ -16,6 +16,9 @@ from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper, log_helper
 from cropclassification.postprocess import classification_postprocess as class_post
 from cropclassification.postprocess import classification_reporting as report
+from cropclassification.postprocess import (
+    classification_reporting_class as report_class,
+)
 from cropclassification.predict import classification
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import prepare_input
@@ -368,6 +371,17 @@ def calc_marker_task(
         parcel_ground_truth_path=groundtruth_path,
         parcel_train_path=parcel_train_path,
         parcel_classification_data_path=parcel_classification_data_path,
+    )
+
+    # Print reporting with details per class
+    report_dir = run_dir / "reports_per_class"
+    report_class.write_class_reports(
+        parcel_predictions_geopath=parcel_predictions_all_geopath,
+        output_dir=report_dir,
+        parcel_ground_truth_path=groundtruth_path,
+        parcel_train_path=parcel_train_path,
+        parcel_classification_data_path=parcel_classification_data_path,
+        force=True,
     )
 
     logging.shutdown()

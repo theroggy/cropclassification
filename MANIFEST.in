@@ -1,6 +1,7 @@
 include cropclassification/general.ini
 include cropclassification/postprocess/html_rapport_template.html
 include cropclassification/postprocess/html_rapport_script.js
+include cropclassification/postprocess/html_report_class_template.html
 
 # Include the version.txt file
 include cropclassification/version.txt
