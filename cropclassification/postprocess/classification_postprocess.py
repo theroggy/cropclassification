@@ -185,13 +185,14 @@ def calc_top_classes(proba_df: pd.DataFrame, top_classes: int = 3) -> pd.DataFra
     # First get the indices of the top x predictions for each row
     # Remark: argsort sorts ascending, so we need to take:
     #     - "[:,": for all rows
-    #     - ":-top_classes": the last x elements of the values (= the top x predictions)
+    #     - ":-top_filter": the last x elements of the values (= the top x predictions)
     #     - ":-1]": and than reverse the order with a negative step
-    top_pred_classes_idx = np.argsort(proba_tmp_df.values, axis=1)[:, :-top_classes:-1]
+    top_filter = top_classes + 1
+    top_pred_classes_idx = np.argsort(proba_tmp_df.values, axis=1)[:, :-top_filter:-1]
     # Convert the indices to classes
     top_pred_classes = np.take(proba_tmp_df.columns, top_pred_classes_idx)
     # Get the values of the top predictions
-    top_pred_values = np.sort(proba_tmp_df.values, axis=1)[:, :-top_classes:-1]
+    top_pred_values = np.sort(proba_tmp_df.values, axis=1)[:, :-top_filter:-1]
     # Concatenate both
     top_pred = np.concatenate([top_pred_classes, top_pred_values], axis=1)
     # Concatenate the ids, the classes and the top predictions
