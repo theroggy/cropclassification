@@ -20,7 +20,6 @@ def calc_index(
     force: bool = False,
 ):
     if io_util.output_exists(output_path, remove_if_exists=force):
-        raster_util.set_band_descriptions(output_path, band_descriptions=[index])
         return
 
     # Open the image file and calculate indexes
