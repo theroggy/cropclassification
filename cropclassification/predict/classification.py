@@ -140,7 +140,9 @@ def classify(
         # If we cannot reuse an existing model, train one!
         parcel_train_path = model_dir / f"parcel_train{data_ext}"
         parcel_test_path = model_dir / f"parcel_test{data_ext}"
-        classifier_basepath = model_dir / f"model{classifier_ext}"
+        classifier_basepath = (
+            model_dir / f"marker_01_{classifier_type.replace('_', '-')}{classifier_ext}"
+        )
         if input_model_to_use_path is None:
             # Create the training sample.
             # Remark: this creates a list of representative test parcel + a list of

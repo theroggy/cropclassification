@@ -140,6 +140,19 @@ def calc_index(
             )
             index_data.name = "RVI"
 
+        elif index == "vvdvh":
+            if pixel_type != "FLOAT32":
+                raise ValueError("vvdvh index can only be saved as FLOAT32")
+
+            vh = image["VH"]
+            vv = image["VV"]
+
+            # Calculate VV versus VH ratio
+            # By default, calculations results in float64, but we only need float32
+            index_data = np.divide(vv, vh, dtype=np.float32)
+
+            index_data.name = "VVdVH"
+
         else:
             raise ValueError(f"unsupported index type: {index}")
 
