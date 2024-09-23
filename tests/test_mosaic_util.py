@@ -93,9 +93,10 @@ def test_ImageProfile_local():
         name="s2-ndvi",
         satellite="s2",
         image_source="local",
-        index_type="ndvi",
         bands=["ndvi"],
         base_image_profile="s2-agri",
+        index_type="ndvi",
+        pixel_type="BYTE",
     )
     assert image_profile.name == "s2-ndvi"
     assert image_profile.index_type == "ndvi"

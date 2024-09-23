@@ -8,9 +8,9 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     index = "ndvi"
-    save_as_byte = True
+    pixel_type = "BYTE"
     index = "bsi"
-    save_as_byte = False
+    pixel_type = "FLOAT16"
 
     input_dir = Path("//dg3.be/alp/Datagis/satellite_periodic/BEFL/s2-agri")
     input_paths = input_dir.glob("*.tif")
@@ -30,7 +30,7 @@ def main():
         # output_path = output_path.with_stem(f"{output_path.stem}_byte")
         # print(rioxarray.open_rasterio(output_path).to_dataset("band"))
         raster_index_util.calc_index(
-            input_path, output_path, index=index, save_as_byte=save_as_byte, force=False
+            input_path, output_path, index=index, pixel_type=pixel_type, force=False
         )
 
 

@@ -30,6 +30,7 @@ class ImageProfile:
     period_days: Optional[int] = None
     base_imageprofile: Optional[str] = None
     index_type: Optional[str] = None
+    pixel_type: Optional[str] = None
     max_cloud_cover: Optional[float] = None
     process_options: Optional[dict] = None
     job_options: Optional[dict] = None
@@ -46,6 +47,7 @@ class ImageProfile:
         period_days: Optional[int] = None,
         base_image_profile: Optional[str] = None,
         index_type: Optional[str] = None,
+        pixel_type: Optional[str] = None,
         max_cloud_cover: Optional[float] = None,
         process_options: Optional[dict] = None,
         job_options: Optional[dict] = None,
@@ -82,6 +84,8 @@ class ImageProfile:
             base_image_profile (Optional[str], optional): only supported if
                 `image_source="local"`. The image profile of the image an index image
                 should be based on. Defaults to None.
+            pixel_type (Optional[str], optional): pixel type to use when saving. E.g.
+                BYTE, FLOAT16, FLOAT32. Defaults to None.
             max_cloud_cover (Optional[float], optional): the maximum cloud cover an
                 input image can have to be used. Defaults to None.
             process_options (Optional[dict], optional): extra process options.
@@ -102,6 +106,7 @@ class ImageProfile:
         self.period_days = period_days
         self.base_imageprofile = base_image_profile
         self.index_type = index_type
+        self.pixel_type = pixel_type
         self.max_cloud_cover = max_cloud_cover
         self.process_options = process_options
         self.job_options = job_options
@@ -119,6 +124,8 @@ class ImageProfile:
                 errors.append(f"index_type can't be None if {image_source=}")
             if base_image_profile is None:
                 errors.append(f"base_image_profile can't be None if {image_source=}")
+            if pixel_type is None:
+                errors.append(f"pixel_type can't be None if {image_source=}")
 
             if len(errors) > 0:
                 raise ValueError(f"Invalid input in init of {self}: {errors}")
@@ -128,6 +135,8 @@ class ImageProfile:
                 errors.append(f"collection can't be None if {image_source=}")
             if base_image_profile is not None:
                 errors.append(f"base_image_profile must be None if {image_source=}")
+            if pixel_type is not None:
+                errors.append(f"pixel_type must be None if {image_source=}")
 
             # The period name and days need some extra validation/preprocessing
             try:
@@ -253,7 +262,7 @@ def calc_periodic_mosaic(
                 image_local["base_image_path"],
                 image_local["path"],
                 index=image_local["index_type"],
-                save_as_byte=True,
+                pixel_type=image_local["pixel_type"],
                 force=force,
             )
 
@@ -526,6 +535,7 @@ def _prepare_mosaic_image_params(
         "max_cloud_cover": imageprofile.max_cloud_cover,
         "image_source": imageprofile.image_source,
         "base_imageprofile": imageprofile.base_imageprofile,
+        "pixel_type": imageprofile.pixel_type,
         "satellite": satellite,
         "roi_bounds": roi_bounds,
         "roi_crs": roi_crs,
