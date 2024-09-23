@@ -38,6 +38,7 @@
 - Make the number of top classes of the classification to retain configurable (#145)
 - Add support to configure pixel type for indices (#150)
 - Add support for rvi index (#146)
+- Add support for vvdvh index (#151)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
