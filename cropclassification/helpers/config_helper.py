@@ -310,6 +310,7 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
             period_name=profiles_config[profile].get("period_name"),
             period_days=profiles_config[profile].getint("period_days"),
             base_image_profile=profiles_config[profile].get("base_image_profile"),
+            pixel_type=profiles_config[profile].get("pixel_type"),
             max_cloud_cover=profiles_config[profile].getfloat("max_cloud_cover"),
             process_options=profiles_config[profile].getdict("process_options"),
             job_options=profiles_config[profile].getdict("job_options"),

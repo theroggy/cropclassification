@@ -116,11 +116,11 @@ def test_calc_index_invalid(tmp_path):
 
 
 @pytest.mark.parametrize("index", ["dprvi"])
-@pytest.mark.parametrize("save_as_byte", [True, False])
-def test_calc_index_s1(tmp_path, index, save_as_byte):
+@pytest.mark.parametrize("pixel_type", ["BYTE", "FLOAT16", "FLOAT32"])
+def test_calc_index_s1(tmp_path, index, pixel_type):
     # Prepare test data
     input_path = SampleData.image_s1_asc_path
-    output_path = tmp_path / f"{input_path.stem}_{index}_{save_as_byte}.tif"
+    output_path = tmp_path / f"{input_path.stem}_{index}_{pixel_type}.tif"
 
     # Prepare parameters
     assert not output_path.exists()
@@ -131,12 +131,12 @@ def test_calc_index_s1(tmp_path, index, save_as_byte):
 
 
 @pytest.mark.parametrize(
-    "index, save_as_byte", [("ndvi", True), ("ndvi", False), ("bsi", False)]
+    "index, pixel_type", [("ndvi", "BYTE"), ("ndvi", "FLOAT16"), ("bsi", "FLOAT16")]
 )
-def test_calc_index_s2(tmp_path, index, save_as_byte):
+def test_calc_index_s2(tmp_path, index, pixel_type):
     # Prepare test data
     input_path = SampleData.image_s2_mean_path
-    output_path = tmp_path / f"{input_path.stem}_{index}_{save_as_byte}.tif"
+    output_path = tmp_path / f"{input_path.stem}_{index}_{pixel_type}.tif"
 
     # Prepare parameters
     assert not output_path.exists()
@@ -144,28 +144,36 @@ def test_calc_index_s2(tmp_path, index, save_as_byte):
         input_path=input_path,
         output_path=output_path,
         index=index,
-        save_as_byte=save_as_byte,
+        pixel_type=pixel_type,
     )
     assert output_path.exists()
 
 
 @pytest.mark.parametrize(
-    "index, save_as_byte, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata",
+    "index, pixel_type, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata",
     [
-        ("ndvi", True, gdal.GDT_UInt16, 32676, ["B04", "B08", "b1"], "uint8", 255),
-        ("ndvi", True, gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
-        ("ndvi", False, gdal.GDT_UInt16, 32676, ["B04", "B08"], "float32", np.nan),
-        ("ndvi", False, gdal.GDT_Float32, np.nan, ["B04", "B08"], "float32", np.nan),
-        ("dprvi", True, gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255),
-        ("dprvi", True, gdal.GDT_Float32, np.nan, ["VH", "VV"], "uint8", 255),
-        ("dprvi", False, gdal.GDT_UInt16, 32676, ["VH", "VV"], "float32", np.nan),
-        ("dprvi", False, gdal.GDT_Float32, np.nan, ["VH", "VV"], "float32", np.nan),
+        ("ndvi", "BYTE", gdal.GDT_UInt16, 32676, ["B04", "B08", "b1"], "uint8", 255),
+        ("ndvi", "BYTE", gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
+        ("ndvi", "FLOAT16", gdal.GDT_UInt16, 32676, ["B04", "B08"], "float32", np.nan),
+        (
+            "ndvi",
+            "FLOAT16",
+            gdal.GDT_Float32,
+            np.nan,
+            ["B04", "B08"],
+            "float32",
+            np.nan,
+        ),
+        ("dprvi", "BYTE", gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255),
+        ("dprvi", "BYTE", gdal.GDT_Float32, np.nan, ["VH", "VV"], "uint8", 255),
+        ("dprvi", "FLOAT16", gdal.GDT_UInt16, 32676, ["VH", "VV"], "float32", np.nan),
+        ("dprvi", "FLOAT16", gdal.GDT_Float32, np.nan, ["VH", "VV"], "float32", np.nan),
     ],
 )
 def test_calc_index_by_gdal_raster(
     tmp_path,
     index,
-    save_as_byte,
+    pixel_type,
     gdal_type,
     nodata,
     bands_descriptions,
@@ -201,7 +209,7 @@ def test_calc_index_by_gdal_raster(
         input_path=input_path,
         output_path=output_path,
         index=index,
-        save_as_byte=save_as_byte,
+        pixel_type=pixel_type,
     )
 
     with rasterio.open(output_path, "r") as src:
