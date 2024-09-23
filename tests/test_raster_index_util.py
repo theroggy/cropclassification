@@ -89,7 +89,11 @@ def test_calc_index_force(tmp_path, force):
 
     # Test
     raster_index_util.calc_index(
-        input_path=input_path, output_path=output_path, index="ndvi", force=force
+        input_path=input_path,
+        output_path=output_path,
+        index="ndvi",
+        pixel_type="BYTE",
+        force=force,
     )
 
     if force:
@@ -111,7 +115,10 @@ def test_calc_index_invalid(tmp_path):
     # Test
     with pytest.raises(ValueError, match="input file doesn't have band descriptions"):
         raster_index_util.calc_index(
-            input_path=test_input_path, output_path=output_path, index="ndvi"
+            input_path=test_input_path,
+            output_path=output_path,
+            index="ndvi",
+            pixel_type="BYTE",
         )
 
 
@@ -125,7 +132,10 @@ def test_calc_index_s1(tmp_path, index, pixel_type):
     # Prepare parameters
     assert not output_path.exists()
     raster_index_util.calc_index(
-        input_path=input_path, output_path=output_path, index=index
+        input_path=input_path,
+        output_path=output_path,
+        index=index,
+        pixel_type=pixel_type,
     )
     assert output_path.exists()
 
