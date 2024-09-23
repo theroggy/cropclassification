@@ -36,6 +36,7 @@
 - Linting improvements: add isort, sync rules with geofileops (#133, #134)
 - Add support for zonalstats calculation with ExactExctract (#139)
 - Make the number of top classes of the classification to retain configurable (#145)
+- Add support to configure pixel type for indices (#150)
 - Add support for rvi index (#146)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 

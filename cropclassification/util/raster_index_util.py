@@ -16,7 +16,7 @@ def calc_index(
     input_path: Path,
     output_path: Path,
     index: str,
-    save_as_byte: bool = True,
+    pixel_type: str,
     force: bool = False,
 ):
     if io_util.output_exists(output_path, remove_if_exists=force):
@@ -41,7 +41,7 @@ def calc_index(
             red = image["B04"]
             nir = image["B08"]
 
-            if save_as_byte:
+            if pixel_type == "BYTE":
                 scale_factor = 0.004
                 add_offset = -0.08
 
@@ -74,7 +74,7 @@ def calc_index(
             # Implementation derived from one of by Dr. Dipankar Mandal:
             # https://custom-scripts.sentinel-hub.com/custom-scripts/sentinel-1/radar_vegetation_index/
 
-            if save_as_byte:
+            if pixel_type == "BYTE":
                 scale_factor = 0.004
                 add_offset = 0
 
@@ -123,7 +123,7 @@ def calc_index(
             index_data.name = "DpRVI"
 
         elif index == "rvi":
-            if save_as_byte:
+            if pixel_type == "BYTE":
                 scale_factor = 0.004
                 add_offset = 0
 
@@ -143,14 +143,7 @@ def calc_index(
         else:
             raise ValueError(f"unsupported index type: {index}")
 
-    if not save_as_byte:
-        # Set nodata pixels to nan
-        index_data.rio.write_nodata(np.nan, inplace=True)
-        # Save as float. Use only 16 bit precision to save diskspace.
-        index_data.rio.to_raster(
-            output_path, nbits=16, tiled=True, compress="DEFLATE", predictor=3
-        )
-    else:
+    if pixel_type == "BYTE":
         # Scale factor specified, so rescale and save as Byte.
         if scale_factor is None or add_offset is None:
             raise ValueError(
@@ -176,6 +169,19 @@ def calc_index(
         index_data_scaled = index_data_scaled.astype("B")
         index_data_scaled.rio.to_raster(
             output_path, tiled=True, compress="DEFLATE", predictor=2
+        )
+    else:
+        # Save as float
+        # Set nodata pixels to nan
+        index_data.rio.write_nodata(np.nan, inplace=True)
+
+        kwargs = {}
+        if pixel_type == "FLOAT16":
+            # Use only 16 bit precision to save diskspace.
+            kwargs["nbits"] = 16
+
+        index_data.rio.to_raster(
+            output_path, tiled=True, compress="DEFLATE", predictor=3, **kwargs
         )
 
     raster_util.set_band_descriptions(output_path, band_descriptions=[index])

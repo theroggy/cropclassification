@@ -59,8 +59,9 @@ IMAGEPROFILES: dict[str, ImageProfile] = {
         name="s2-ndvi",
         satellite="s2",
         image_source="local",
-        index_type="ndvi",
         bands=["ndvi"],
         base_image_profile="s2-agri",
+        index_type="ndvi",
+        pixel_type="BYTE",
     ),
 }
