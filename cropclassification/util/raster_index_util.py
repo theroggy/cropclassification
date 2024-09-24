@@ -198,7 +198,6 @@ def save_index(
         )
 
 
-
 def remove(path: Path, missing_ok: bool = False):
     path.unlink(missing_ok=missing_ok)
     for file_path in path.parent.glob(f"{path.name}*"):
