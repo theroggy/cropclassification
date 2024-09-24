@@ -31,6 +31,20 @@ def add_overviews(path: Path, min_pixels=512, resampling="average"):
             dst.update_tags(ns="rio_overview", resampling=resampling)
 
 
+def get_band_descriptions(path: Path) -> dict[str, int]:
+    """
+    Get the band descriptions of a raster file.
+
+    Args:
+        path (Path): the file to get the band descriptions from
+
+    Returns:
+        dict: the band descriptions
+    """
+    with rasterio.open(path, "r") as file:
+        return {name: index for index, name in enumerate(file.descriptions, start=1)}
+
+
 def set_band_descriptions(
     path: Path,
     band_descriptions: Union[Iterable[str], dict[int, str], str],
