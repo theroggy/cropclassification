@@ -158,6 +158,8 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
     )
     assert output_path.exists()
 
+    assert raster_util.get_band_descriptions(output_path) == {index: 1}
+
 
 @pytest.mark.parametrize(
     "index, pixel_type, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata",

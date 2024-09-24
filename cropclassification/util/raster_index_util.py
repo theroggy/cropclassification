@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import rioxarray
 
-from . import io_util, raster_util
+from . import io_util
 
 # Disable some mypy errors for this file aI don't get them solved
 # mypy: disable-error-code="union-attr, attr-defined, assignment"
@@ -35,8 +36,8 @@ def calc_index(
         # Allow division by 0
         np.seterr(divide="ignore", invalid="ignore")
 
-        scale_factor = None
-        add_offset = None
+        scale_factor: float = None
+        add_offset: float = None
         if index == "ndvi":
             red = image["B04"]
             nir = image["B08"]
@@ -45,9 +46,9 @@ def calc_index(
                 scale_factor = 0.004
                 add_offset = -0.08
 
-            # By default, dividing ints results in float64, but we only need float32
-            index_data = np.divide((nir - red), (nir + red), dtype=np.float32)
-            index_data.name = "NDVI"
+            ndvi = (nir - red) / (nir + red)
+            ndvi.name = index
+            save_index(ndvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "bsi":
             # A Modified Bare Soil Index to Identify Bare Land Features during
@@ -60,30 +61,15 @@ def calc_index(
             nir = image["B08"]
             swir2 = image["B11"]
 
-            # By default, dividing ints results in float64, but we only need float32
-            index_data = np.divide(
-                ((swir2 + red) - (nir + blue)),
-                ((swir2 + red) + (nir + blue)),
-                dtype=np.float32,
-            )
-            index_data.name = "BSI"
+            bsi = ((swir2 + red) - (nir + blue)) / ((swir2 + red) + (nir + blue))
+            bsi.name = index
+            save_index(bsi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "dprvi":
             # "New" dual-pol radar vegetation index for Sentinel-1.
             # Paper:= https://www.sciencedirect.com/science/article/abs/pii/S0034425720303242
             # Implementation derived from one of by Dr. Dipankar Mandal:
             # https://custom-scripts.sentinel-hub.com/custom-scripts/sentinel-1/radar_vegetation_index/
-
-            if pixel_type == "BYTE":
-                scale_factor = 0.004
-                add_offset = 0
-
-            vh = image["VH"]
-            vv = image["VV"]
-
-            # Calculate VH/VV ratio
-            # By default, dividing ints results in float64, but we only need float32
-            q = np.divide(vh, vv, dtype=np.float32)
 
             # Calculate ~degree of polarization: co-pol purity parameter m
             # (values are 0-1).
@@ -116,46 +102,60 @@ def calc_index(
             # Depolarization within the vegetation
             # value = (Math.sqrt(dop)) * ((4 * (vh)) / (vv + vh))
 
+            if pixel_type == "BYTE":
+                scale_factor = 0.004
+                add_offset = 0
+
+            vv = image["VV"]
+            vh = image["VH"]
+
             # It can be written in fewer steps like this:
-            N = np.multiply(q, (q + 3), dtype=np.float32)
-            D = np.multiply((q + 1), (q + 1), dtype=np.float32)
-            index_data = np.divide(N, D, dtype=np.float32)
-            index_data.name = "DpRVI"
+            q = vh / vv
+            dprvi = (q * (q + 3)) / ((q + 1) * (q + 1))
+
+            dprvi.name = index
+            save_index(dprvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "rvi":
             if pixel_type == "BYTE":
                 scale_factor = 0.004
                 add_offset = 0
 
-            vh = image["VH"]
             vv = image["VV"]
+            vh = image["VH"]
 
             # Calculate RVI ratio
+            # Source: https://forum.step.esa.int/t/creating-radar-vegetation-index/12444/28
+            # RVI=4*VH/(VV+VH)
             # var rvi = image.expression('sqrt(vv/(vv + vh))*(vv/vh)'
-            # By default, dividing ints results in float64, but we only need float32
-            index_data = np.multiply(
-                np.sqrt(vv / (vv + vh)),
-                (vv / vh),
-                dtype=np.float32,
-            )
-            index_data.name = "RVI"
+            rvi = (4 * vh) / (vv + vh)
+            rvi.name = index
+            save_index(rvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "vvdvh":
             if pixel_type != "FLOAT32":
                 raise ValueError("vvdvh index can only be saved as FLOAT32")
 
-            vh = image["VH"]
             vv = image["VV"]
+            vh = image["VH"]
 
             # Calculate VV versus VH ratio
-            # By default, calculations results in float64, but we only need float32
-            index_data = np.divide(vv, vh, dtype=np.float32)
+            vvdvh = vv / vh
+            vvdvh.name = index
+            save_index(vvdvh, output_path, pixel_type, scale_factor, add_offset)
 
-            index_data.name = "VVdVH"
 
         else:
             raise ValueError(f"unsupported index type: {index}")
 
+
+def save_index(
+    index_data: xr.DataArray,
+    output_path: Path,
+    pixel_type: str,
+    scale_factor: Optional[float],
+    add_offset: Optional[float],
+):
     if pixel_type == "BYTE":
         # Scale factor specified, so rescale and save as Byte.
         if scale_factor is None or add_offset is None:
@@ -197,7 +197,6 @@ def calc_index(
             output_path, tiled=True, compress="DEFLATE", predictor=3, **kwargs
         )
 
-    raster_util.set_band_descriptions(output_path, band_descriptions=[index])
 
 
 def remove(path: Path, missing_ok: bool = False):
