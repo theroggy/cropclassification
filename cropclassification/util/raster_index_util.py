@@ -144,7 +144,6 @@ def calc_index(
             vvdvh.name = index
             save_index(vvdvh, output_path, pixel_type, scale_factor, add_offset)
 
-
         else:
             raise ValueError(f"unsupported index type: {index}")
 
