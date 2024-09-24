@@ -64,7 +64,7 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
     assert is_numeric_dtype(df_predict["pred3_prob"].dtype)
 
     if cross_pred_models <= 1:
-        assert (run_dir / "model.hdf5").exists()
+        assert (run_dir / "marker_01_randomforest.hdf5").exists()
     else:
         for model_id in range(cross_pred_models):
             assert (run_dir / f"cross_pred_model_{model_id}").exists()
