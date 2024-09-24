@@ -4,6 +4,7 @@ from typing import Optional
 
 import numpy as np
 import rioxarray
+import xarray as xr
 
 from . import io_util
 
