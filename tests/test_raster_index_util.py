@@ -122,8 +122,16 @@ def test_calc_index_invalid(tmp_path):
         )
 
 
-@pytest.mark.parametrize("index", ["dprvi"])
-@pytest.mark.parametrize("pixel_type", ["BYTE", "FLOAT16", "FLOAT32"])
+@pytest.mark.parametrize(
+    "index, pixel_type",
+    [
+        ("dprvi", "BYTE"),
+        ("dprvi", "FLOAT16"),
+        ("dprvi", "FLOAT32"),
+        ("rvi", "BYTE"),
+        ("vvdvh", "FLOAT16"),
+    ],
+)
 def test_calc_index_s1(tmp_path, index, pixel_type):
     # Prepare test data
     input_path = SampleData.image_s1_asc_path
@@ -138,6 +146,8 @@ def test_calc_index_s1(tmp_path, index, pixel_type):
         pixel_type=pixel_type,
     )
     assert output_path.exists()
+
+    assert raster_util.get_band_descriptions(output_path) == {index: 1}
 
 
 @pytest.mark.parametrize(
@@ -162,7 +172,7 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
 
 
 @pytest.mark.parametrize(
-    "index, pixel_type, gdal_type, nodata, bands_descriptions, exp_dtype, exp_nodata",
+    "index, pixel_type, gdal_type, nodata, input_bands, exp_dtype, exp_nodata",
     [
         ("ndvi", "BYTE", gdal.GDT_UInt16, 32676, ["B04", "B08", "b1"], "uint8", 255),
         ("ndvi", "BYTE", gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
@@ -188,7 +198,7 @@ def test_calc_index_by_gdal_raster(
     pixel_type,
     gdal_type,
     nodata,
-    bands_descriptions,
+    input_bands,
     exp_dtype,
     exp_nodata,
 ):
@@ -199,8 +209,8 @@ def test_calc_index_by_gdal_raster(
     raster_array = [
         [[nodata, nodata, nodata], [nodata, nodata, nodata], [nodata, nodata, nodata]]
     ]
-    if bands_descriptions:
-        for _ in range(len(bands_descriptions) - 1):
+    if input_bands:
+        for _ in range(len(input_bands) - 1):
             raster_array.append(
                 [
                     [nodata, nodata, nodata],
@@ -214,7 +224,7 @@ def test_calc_index_by_gdal_raster(
         np.array(raster_array),
         gdal_type=gdal_type,
         nodata=nodata,
-        band_descriptions=bands_descriptions,
+        band_descriptions=input_bands,
     )
 
     raster_index_util.calc_index(

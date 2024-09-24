@@ -134,8 +134,8 @@ def calc_index(
             save_index(rvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "vvdvh":
-            if pixel_type != "FLOAT32":
-                raise ValueError("vvdvh index can only be saved as FLOAT32")
+            if pixel_type not in ("FLOAT16", "FLOAT32"):
+                raise ValueError("vvdvh index can only be saved as FLOAT16 or FLOAT32")
 
             vv = image["VV"]
             vh = image["VH"]
