@@ -667,9 +667,6 @@ def exclude_erase_layer(
     # Check if ignore_erase_layer_df has columns IGNORE_ERASE_LAYER
     if "IGNORE_ERASE_LAYER" not in classes_refe_df.columns:
         raise Exception("IGNORE_ERASE_LAYER column not found in classes reference file")
-    # Check if classes_refe_df is not empty
-    if classes_refe_df.empty:
-        raise Exception("Classes reference file is empty")
 
     ignore_erase_layer_df = classes_refe_df[classes_refe_df["IGNORE_ERASE_LAYER"] == 1][
         "CROPCODE"
