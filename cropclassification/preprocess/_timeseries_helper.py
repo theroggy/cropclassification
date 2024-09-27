@@ -654,8 +654,8 @@ def get_fileinfo_timeseries_periods(path: Path) -> dict:
 def exclude_erase_layer(
     input_parcel_path: Path,
     output_imagedata_parcel_input_path: Path,
-    erase_layer_path: Path,
     classes_refe_path: Path,
+    erase_layer_path: Path,
 ) -> Path:
     """
     This function excludes the erase layer from the agricultural parcels.
