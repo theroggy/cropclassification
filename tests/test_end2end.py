@@ -20,7 +20,10 @@ from tests import test_helper
         ("BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
-def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
+@pytest.mark.parametrize("exclude_erase_layer", [True, False])
+def test_task_calc_marker(
+    tmp_path, balancing_strategy, cross_pred_models, exclude_erase_layer
+):
     if not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -39,6 +42,13 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
         f"classifier.cross_pred_models={cross_pred_models}",
         "preprocess.min_parcels_in_class=1",
     ]
+    if exclude_erase_layer:
+        config_overrules.extend(
+            [
+                "calc_marker_params.erase_layer_filename=trees_19_162_BEFL-2022-2023-ofw.gpkg",
+                "calc_marker_params.classes_refe_filename=BEFL_2023_mon_refe_2023-07-24_eraselayer.tsv",
+            ]
+        )
     cropclassification.cropclassification(
         tasksdir=tasks_dir,
         config_overrules=config_overrules,
