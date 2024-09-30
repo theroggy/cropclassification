@@ -39,6 +39,7 @@
 - Add support to configure pixel type for indices (#150)
 - Add support for rvi index (#146)
 - Add support for vvdvh index (#151)
+- Add support for sar rgb db index and enhanced lee despeckling (#157)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
