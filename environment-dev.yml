@@ -5,9 +5,8 @@ dependencies:
   - python=3.10
   - pip
   # required
-  - fiona
   - geofileops
-  - geopandas>=0.11
+  - geopandas-base>=0.11
   - h5py
   - numpy<2
   # Openeo >=0.14 +- doesn't work on windows.
@@ -16,10 +15,10 @@ dependencies:
   - pandas
   - psutil
   - pyproj
-  - scikit-learn
   - rasterio
   - rasterstats
   - rioxarray
+  - scikit-learn
   - tqdm
   # Optional
   - qgis
