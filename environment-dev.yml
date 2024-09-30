@@ -20,6 +20,7 @@ dependencies:
   - rasterio
   - rasterstats
   - rioxarray
+  - tqdm
   # Optional
   - qgis
   # testing

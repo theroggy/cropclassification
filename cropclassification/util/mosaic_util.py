@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pyproj
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
 from . import date_util, openeo_util, raster_index_util, raster_util
 
@@ -256,15 +258,16 @@ def calc_periodic_mosaic(
         )
 
         # Process the mosaic images to be generated locally.
-        for image_local in images_local:
-            # Prepare index output file path
-            raster_index_util.calc_index(
-                image_local["base_image_path"],
-                image_local["path"],
-                index=image_local["index_type"],
-                pixel_type=image_local["pixel_type"],
-                force=force,
-            )
+        with logging_redirect_tqdm():
+            for image_local in tqdm(images_local):
+                # Prepare index output file path
+                raster_index_util.calc_index(
+                    image_local["base_image_path"],
+                    image_local["path"],
+                    index=image_local["index_type"],
+                    pixel_type=image_local["pixel_type"],
+                    force=force,
+                )
 
     return periodic_mosaic_params
 
