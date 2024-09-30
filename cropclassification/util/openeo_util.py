@@ -555,6 +555,7 @@ def best_available_pixel(
 
     kernel_size = int(150 * 20 / spatial_resolution) + 1
     gaussian_1d = gaussian(M=kernel_size, std=1)
+    assert isinstance(gaussian_1d, np.ndarray)
     gaussian_kernel = np.outer(gaussian_1d, gaussian_1d)
     gaussian_kernel /= gaussian_kernel.sum()
 

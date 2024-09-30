@@ -6,7 +6,7 @@ import numpy as np
 import rioxarray
 import xarray as xr
 
-from . import io_util
+from . import io_util, lee_enhanced
 
 # Disable some mypy errors for this file aI don't get them solved
 # mypy: disable-error-code="union-attr, attr-defined, assignment"
@@ -19,13 +19,32 @@ def calc_index(
     output_path: Path,
     index: str,
     pixel_type: str,
+    despeckle: Optional[str] = None,
     force: bool = False,
 ):
     if io_util.output_exists(output_path, remove_if_exists=force):
         return
 
+    # First despeckle if asked for
+    despeckle = "lee_enhanced"
+    if despeckle is not None:
+        if despeckle == "lee_enhanced":
+            filtersize = 5
+            tmp_path = output_path.parent / f"{output_path.stem}_tmp_{filtersize}.tif"
+            lee_enhanced.lee_enhanced_file(
+                input_path, tmp_path, filtersize=filtersize, nlooks=10.0, dfactor=10.0
+            )
+        else:
+            raise ValueError(f"unsupported despeckle type: {despeckle}")
+        input_path = tmp_path
+
     # Open the image file and calculate indexes
-    with rioxarray.open_rasterio(input_path, cache=False, masked=True) as image_file:
+    # Remarks:
+    #   - use chunks=True to reduce memory usage.
+    #   - lock=False is not faster, but uses more memory.
+    with rioxarray.open_rasterio(
+        tmp_path, cache=False, masked=True, chunks=True
+    ) as image_file:
         image = image_file.to_dataset("band")
         if "long_name" not in image.attrs:
             raise ValueError(
@@ -145,6 +164,55 @@ def calc_index(
             vvdvh.name = index
             save_index(vvdvh, output_path, pixel_type, scale_factor, add_offset)
 
+        elif index == "sarrgbdb":
+            calc_sar_rgb_db(
+                image=image,
+                output_path=output_path,
+                pixel_type=pixel_type,
+                scale_profile="visual-despecled",
+            )
+
+        elif index == "sarrgbdb-ai":
+            calc_sar_rgb_db(
+                image=image,
+                output_path=output_path,
+                pixel_type=pixel_type,
+                scale_profile="ai-despecled",
+            )
+
+        elif index == "sarfalse":
+            """
+            // SAR False Color Visualization
+            // The script visualizes Earth surface in False Color from Sentinel-1 data.
+            // Author: Annamaria Luongo (Twitter: @annamaria_84, https://www.linkedin.com/in/annamaria-luongo-RS )
+            // License: CC BY 4.0 International
+
+            var c1 = 10e-4;
+            var c2 = 0.01;
+            var c3 = 0.02;
+            var c4 = 0.03;
+            var c5 = 0.045;
+            var c6 = 0.05;
+            var c7 = 0.9;
+            var c8 = 0.25;
+
+            //Enhanced or non-enhanced option (set to "true" if you want enhanced)
+            var enhanced = false;
+
+            if (enhanced != true) {
+                //Non-enhanced option
+                var band1 = c4 + Math.log(c1 - Math.log(c6 / (c3 + 2 * VV)));
+                var band2 = c6 + Math.exp(c8 * (Math.log(c2 + 2 * VV) + Math.log(c3 + 5 * VH)));
+                var band3 = 1 - Math.log(c6 / (c5 - c7 * VV));
+            }
+            else {
+                //Enhanced option
+                var band1 = c4 + Math.log(c1 - Math.log(c6 / (c3 + 2.5 * VV)) + Math.log(c6 / (c3 + 1.5 * VH)));
+                var band2 = c6 + Math.exp(c8 * (Math.log(c2 + 2 * VV) + Math.log(c3 + 7 * VH)));
+                var band3 = 0.8 - Math.log(c6 / (c5 - c7 * VV));
+            }
+            """  # noqa: E501
+
         else:
             raise ValueError(f"unsupported index type: {index}")
 
@@ -180,9 +248,14 @@ def save_index(
         index_data_scaled.attrs["add_offset"] = add_offset
         index_data_scaled.rio.write_nodata(255, inplace=True)
         index_data_scaled = index_data_scaled.astype("B")
-        index_data_scaled.rio.to_raster(
-            output_path, tiled=True, compress="DEFLATE", predictor=2
-        )
+
+        try:
+            index_data_scaled.rio.to_raster(
+                output_path, tiled=True, windowed=True, compress="DEFLATE", predictor=2
+            )
+        except Exception as ex:
+            remove(output_path, missing_ok=True)
+            raise ex
     else:
         # Save as float
         # Set nodata pixels to nan
@@ -193,9 +266,104 @@ def save_index(
             # Use only 16 bit precision to save diskspace.
             kwargs["nbits"] = 16
 
-        index_data.rio.to_raster(
-            output_path, tiled=True, compress="DEFLATE", predictor=3, **kwargs
+        try:
+            index_data.rio.to_raster(
+                output_path,
+                tiled=True,
+                compress="DEFLATE",
+                predictor=3,
+                **kwargs,
+            )
+        except Exception as ex:
+            remove(output_path, missing_ok=True)
+            raise ex
+
+
+def calc_sar_rgb_db(
+    image: xr.Dataset, output_path: Path, pixel_type: str, scale_profile: str
+):
+    if pixel_type != "BYTE":
+        raise ValueError("sarrgbdb index can only be saved as BYTE")
+
+    if scale_profile == "visual":
+        vvdb_min, vvdb_max = (-22, -5)
+        vhdb_min, vhdb_max = (-23, -12)
+        vvdvhdb_min, vvdvhdb_max = (2, 13)
+    elif scale_profile == "visual-despecled":
+        vvdb_min, vvdb_max = (-21, -5)
+        vhdb_min, vhdb_max = (-23, -12)
+        vvdvhdb_min, vvdvhdb_max = (3, 12)
+    elif scale_profile == "ai-despecled":
+        vvdb_min, vvdb_max = (-21, 0)
+        vhdb_min, vhdb_max = (-30, -6)
+        vvdvhdb_min, vvdvhdb_max = (5, 14)
+    else:
+        raise ValueError(f"unsupported scale profile: {scale_profile}")
+
+    # Convert to dB
+    vvdb = 10 * np.log10(image["VV"], dtype=np.float32)
+    vvdb.name = "vvdb"
+    vhdb = 10 * np.log10(image["VH"], dtype=np.float32)
+    vhdb.name = "vhdb"
+
+    # Add VV/VH ratio band. In dB dividing becomes minus
+    vvdvhdb = vvdb - vhdb
+    vvdvhdb.name = "vvdvhdb"
+
+    # Save float version to file
+    if True:  # pixel_type != "BYTE":
+        sar_rgb_db_float = xr.merge([vvdb, vhdb, vvdvhdb])  # type: ignore[list-item]
+        output_db_raw_path = output_path.parent / f"{output_path.stem}_db_raw.tif"
+        try:
+            # Remarks:
+            #   - specifying lock to enable parallel writing halves the memory usage,
+            #     but it is a lot slower and results in double the file size.
+            sar_rgb_db_float.rio.to_raster(
+                output_db_raw_path,
+                tiled=True,
+                compress="DEFLATE",
+                predictor=3,
+            )
+        except Exception as ex:
+            remove(output_path, missing_ok=True)
+            raise ex
+
+    # Scale the data to 0-1 so it is ready for visualisation
+    #
+    # Initial min_val and max_val values based on following page:
+    # https://gis.stackexchange.com/questions/400726/creating-composite-rgb-images-from-sentinel-1-channels
+    #
+    # Then "optimized" based on the histogram of S1 mosaic of Belgium-Flanders of
+    # 2023-09-04 -> 2023-09-10.
+
+    # Scale VV (Red) to byte
+    # Remarks:
+    #   - lower VV values can be important for difference between water and bare soil:
+    #       -> Based on an example: water (mean): -21 db, bare soil (mean): -15 db
+    vvdb_scaled = (vvdb - vvdb_min) * 254 / (vvdb_max - vvdb_min)
+    vvdb_scaled = vvdb_scaled.clip(0, 254)
+    vvdb_scaled.name = "vvdb"
+
+    # Scale VH (Green) to byte
+    vhdb_scaled = (vhdb - vhdb_min) * 254 / (vhdb_max - vhdb_min)
+    vhdb_scaled = vhdb_scaled.clip(0, 254)
+    vhdb_scaled.name = "vhdb"
+
+    # Scale VV/VH (Blue) to byte
+    vvdvhdb_scaled = (vvdvhdb - vvdvhdb_min) * 254 / (vvdvhdb_max - vvdvhdb_min)
+    vvdvhdb_scaled = vvdvhdb_scaled.clip(0, 254)
+    vvdvhdb_scaled.name = "vvdvhdb"
+
+    # Save to file
+    sar_rgb_db = xr.merge([vvdb_scaled, vhdb_scaled, vvdvhdb_scaled])  # type: ignore[list-item]
+
+    try:
+        sar_rgb_db.rio.to_raster(
+            output_path, tiled=True, compress="DEFLATE", predictor=2, dtype="uint8"
         )
+    except Exception as ex:
+        remove(output_path, missing_ok=True)
+        raise ex
 
 
 def remove(path: Path, missing_ok: bool = False):
