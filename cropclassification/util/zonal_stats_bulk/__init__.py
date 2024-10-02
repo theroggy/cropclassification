@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Optional, Union
 
+from cropclassification.helpers import config_helper as conf
+
 from ._raster_helper import *  # noqa: F403
 
 
@@ -81,7 +83,12 @@ def zonal_stats(
             vector_path=vector_path,
             rasters_bands=rasters_bands,
             output_dir=output_dir,
-            stats=stats,
+            stats={
+                "spatial_aggregations": stats,
+                "spatial_aggregation_args": conf.timeseries.getdict(
+                    "spatial_aggregation_args"
+                ),
+            },
             columns=[id_column],
             nb_parallel=nb_parallel,
             force=force,

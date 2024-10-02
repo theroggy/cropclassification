@@ -3,8 +3,12 @@ import shutil
 import geofileops as gfo
 import pytest
 
+from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
+from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_exactextract import (
+    get_ops,
+)
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests.test_helper import SampleData
 
@@ -18,6 +22,16 @@ def test_zonal_stats_bulk(tmp_path, engine):
     sample_dir = SampleData.marker_basedir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
+
+    # Read the configuration
+    config_paths = [
+        SampleData.config_dir / "cropgroup.ini",
+        SampleData.tasks_dir / "local_overrule.ini",
+    ]
+    conf.read_config(
+        config_paths=config_paths,
+        default_basedir=SampleData.marker_basedir,
+    )
 
     # Make sure the s2-agri input file was copied
     test_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
@@ -46,3 +60,26 @@ def test_zonal_stats_bulk(tmp_path, engine):
         assert len(result_df) == vector_info.featurecount
         # The calculates stats should not be nan for any row.
         assert not any(result_df["mean"].isna())
+
+
+def test_spatial_aggregations():
+    # Read the configuration
+    config_paths = [
+        SampleData.config_dir / "cropgroup.ini",
+        SampleData.tasks_dir / "local_overrule.ini",
+    ]
+    conf.read_config(
+        config_paths=config_paths,
+        default_basedir=SampleData.marker_basedir,
+    )
+    spatial_aggregations = conf.timeseries.getlist("spatial_aggregations")
+    spatial_aggregation_args = conf.timeseries.getdict("spatial_aggregation_args")
+
+    ops = get_ops(
+        {
+            "spatial_aggregations": spatial_aggregations,
+            "spatial_aggregation_args": spatial_aggregation_args,
+        }
+    )
+
+    assert len(ops) == 6
