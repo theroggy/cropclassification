@@ -328,7 +328,7 @@ def calc_sar_rgb_db(
             remove(output_path, missing_ok=True)
             raise ex
 
-    # Scale the data to 0-1 so it is ready for visualisation
+    # Scale the data to 0-255 so it is ready for visualisation
     #
     # Initial min_val and max_val values based on following page:
     # https://gis.stackexchange.com/questions/400726/creating-composite-rgb-images-from-sentinel-1-channels
@@ -342,16 +342,22 @@ def calc_sar_rgb_db(
     #       -> Based on an example: water (mean): -21 db, bare soil (mean): -15 db
     vvdb_scaled = (vvdb - vvdb_min) * 254 / (vvdb_max - vvdb_min)
     vvdb_scaled = vvdb_scaled.clip(0, 254)
+    vvdb_scaled = vvdb_scaled.where(~np.isnan(image["VV"]), other=255)
+    vvdb_scaled.rio.write_nodata(255, inplace=True)
     vvdb_scaled.name = "vvdb"
 
     # Scale VH (Green) to byte
     vhdb_scaled = (vhdb - vhdb_min) * 254 / (vhdb_max - vhdb_min)
     vhdb_scaled = vhdb_scaled.clip(0, 254)
+    vhdb_scaled = vhdb_scaled.where(~np.isnan(image["VV"]), other=255)
+    vhdb_scaled.rio.write_nodata(255, inplace=True)
     vhdb_scaled.name = "vhdb"
 
     # Scale VV/VH (Blue) to byte
     vvdvhdb_scaled = (vvdvhdb - vvdvhdb_min) * 254 / (vvdvhdb_max - vvdvhdb_min)
     vvdvhdb_scaled = vvdvhdb_scaled.clip(0, 254)
+    vvdvhdb_scaled = vvdvhdb_scaled.where(~np.isnan(image["VV"]), other=255)
+    vvdvhdb_scaled.rio.write_nodata(255, inplace=True)
     vvdvhdb_scaled.name = "vvdvhdb"
 
     # Save to file
