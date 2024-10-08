@@ -123,16 +123,19 @@ def test_calc_index_invalid(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "index, pixel_type",
+    "index, pixel_type, process_options, expected_bands",
     [
-        ("dprvi", "BYTE"),
-        ("dprvi", "FLOAT16"),
-        ("dprvi", "FLOAT32"),
-        ("rvi", "BYTE"),
-        ("vvdvh", "FLOAT16"),
+        ("dprvi", "BYTE", {}, ["dprvi"]),
+        ("dprvi", "FLOAT16", None, ["dprvi"]),
+        ("dprvi", "FLOAT32", {}, ["dprvi"]),
+        ("rvi", "BYTE", {}, ["rvi"]),
+        ("vvdvh", "FLOAT16", {}, ["vvdvh"]),
+        ("sarrgb", "FLOAT16", {}, ["vv", "vh", "vvdvh"]),
+        ("sarrgb", "FLOAT32", {"log10": True}, ["vvdb", "vhdb", "vvdvhdb"]),
+        ("sarrgb", "BYTE", {"log10": True}, ["vvdb", "vhdb", "vvdvhdb"]),
     ],
 )
-def test_calc_index_s1(tmp_path, index, pixel_type):
+def test_calc_index_s1(tmp_path, index, pixel_type, process_options, expected_bands):
     # Prepare test data
     input_path = SampleData.image_s1_asc_path
     output_path = tmp_path / f"{input_path.stem}_{index}_{pixel_type}.tif"
@@ -143,11 +146,12 @@ def test_calc_index_s1(tmp_path, index, pixel_type):
         input_path=input_path,
         output_path=output_path,
         index=index,
+        process_options=process_options,
         pixel_type=pixel_type,
     )
     assert output_path.exists()
 
-    assert raster_util.get_band_descriptions(output_path) == {index: 1}
+    assert list(raster_util.get_band_descriptions(output_path)) == expected_bands
 
 
 @pytest.mark.parametrize(

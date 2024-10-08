@@ -1,4 +1,6 @@
 import logging
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -19,32 +21,50 @@ def calc_index(
     output_path: Path,
     index: str,
     pixel_type: str,
-    despeckle: Optional[str] = None,
+    process_options: dict = {},
     force: bool = False,
 ):
     if io_util.output_exists(output_path, remove_if_exists=force):
         return
 
-    # First despeckle if asked for
-    despeckle = "lee_enhanced"
-    if despeckle is not None:
-        if despeckle == "lee_enhanced":
-            filtersize = 5
-            tmp_path = output_path.parent / f"{output_path.stem}_tmp_{filtersize}.tif"
+    # Some processing options can be applied for multiple indexes
+    tmp_dir = None
+    if process_options is None:
+        process_options = {}
+
+    for process_option in process_options:
+        # Remark: it's normal to encounter unknown processing options here as some are
+        # applied later on.
+        if process_option == "lee_enhanced":
+            # Despeckle filter for sentinel 1 images
+            filter = process_options[process_option]
+            if filter is None:
+                continue
+            if not isinstance(filter, dict):
+                raise ValueError("process_option lee_enhanced should be a dict")
+
+            filtersize = filter.get("filtersize")
+            if filtersize is None or not isinstance(filtersize, int):
+                raise ValueError(
+                    "process_option lee_enhanced should have a filtersize int parameter"
+                )
+
+            tmp_dir = Path(tempfile.mkdtemp(prefix="calc_index_"))
+            tmp_path = tmp_dir / f"{output_path.stem}_tmp_lee_{filtersize}.tif"
             lee_enhanced.lee_enhanced_file(
                 input_path, tmp_path, filtersize=filtersize, nlooks=10.0, dfactor=10.0
             )
-        else:
-            raise ValueError(f"unsupported despeckle type: {despeckle}")
-        input_path = tmp_path
+            input_path = tmp_path
 
     # Open the image file and calculate indexes
+    #
     # Remarks:
     #   - use chunks=True to reduce memory usage.
     #   - lock=False is not faster, but uses more memory.
-    with rioxarray.open_rasterio(
-        tmp_path, cache=False, masked=True, chunks=True
-    ) as image_file:
+    try:
+        image_file = rioxarray.open_rasterio(
+            input_path, cache=False, masked=True, chunks=True
+        )
         image = image_file.to_dataset("band")
         if "long_name" not in image.attrs:
             raise ValueError(
@@ -164,20 +184,16 @@ def calc_index(
             vvdvh.name = index
             save_index(vvdvh, output_path, pixel_type, scale_factor, add_offset)
 
-        elif index == "sarrgbdb":
-            calc_sar_rgb_db(
-                image=image,
-                output_path=output_path,
-                pixel_type=pixel_type,
-                scale_profile="visual-despecled",
-            )
+        elif index == "sarrgb":
+            log10 = process_options.get("log10", False)
+            despeckled = "lee_enhanced" in process_options
 
-        elif index == "sarrgbdb-ai":
-            calc_sar_rgb_db(
+            calc_sar_rgb(
                 image=image,
                 output_path=output_path,
+                log10=log10,
+                despeckled=despeckled,
                 pixel_type=pixel_type,
-                scale_profile="ai-despecled",
             )
 
         elif index == "sarfalse":
@@ -215,6 +231,11 @@ def calc_index(
 
         else:
             raise ValueError(f"unsupported index type: {index}")
+    finally:
+        image_file.close()
+
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def save_index(
@@ -279,97 +300,136 @@ def save_index(
             raise ex
 
 
-def calc_sar_rgb_db(
-    image: xr.Dataset, output_path: Path, pixel_type: str, scale_profile: str
+def calc_sar_rgb(
+    image: xr.Dataset,
+    output_path: Path,
+    log10: bool,
+    despeckled: bool,
+    pixel_type: str,
 ):
-    if pixel_type != "BYTE":
-        raise ValueError("sarrgbdb index can only be saved as BYTE")
+    """
+    Calculates and saves a SAR RGB image.
 
-    if scale_profile == "visual":
-        vvdb_min, vvdb_max = (-22, -5)
-        vhdb_min, vhdb_max = (-23, -12)
-        vvdvhdb_min, vvdvhdb_max = (2, 13)
-    elif scale_profile == "visual-despecled":
-        vvdb_min, vvdb_max = (-21, -5)
-        vhdb_min, vhdb_max = (-23, -12)
-        vvdvhdb_min, vvdvhdb_max = (3, 12)
-    elif scale_profile == "ai-despecled":
-        vvdb_min, vvdb_max = (-21, 0)
-        vhdb_min, vhdb_max = (-30, -6)
-        vvdvhdb_min, vvdvhdb_max = (5, 14)
+    Args:
+        image (xr.Dataset): the input SAR image.
+        output_path (Path): the output path to save the SAR RGB image.
+        log10 (bool): True to convert the bands to dB.
+        despeckled (bool): True if the input image is despeckled.
+        pixel_type (str): One of ...
+    """
+    # Init some variables
+    if pixel_type == "BYTE":
+        if not log10:
+            raise ValueError("pixel_type==BYTE is only implemented for log10=True")
+
+        if despeckled:
+            vvdb_min, vvdb_max = (-21, -5)
+            vhdb_min, vhdb_max = (-23, -12)
+            vvdvhdb_min, vvdvhdb_max = (3, 12)
+        else:
+            vvdb_min, vvdb_max = (-22, -5)
+            vhdb_min, vhdb_max = (-23, -12)
+            vvdvhdb_min, vvdvhdb_max = (2, 13)
+
+    vv = image["VV"]
+    vh = image["VH"]
+
+    if not np.isnan(vv.rio.nodata) or not np.isnan(vh.rio.nodata):
+        raise ValueError("VV and VH should have nodata values set to nan")
+
+    # Convert to dB if needed + add VV/VH ratio band
+    if log10:
+        # Convert to dB + add VV/VH ratio band
+        vv = 10 * np.log10(vv, dtype=np.float32)
+        vv.name = "vvdb"
+        vv.rio.write_nodata(np.nan, inplace=True)
+        vh = 10 * np.log10(vh, dtype=np.float32)
+        vh.name = "vhdb"
+        vh.rio.write_nodata(np.nan, inplace=True)
+
+        # Add VV/VH ratio band. In dB dividing becomes minus
+        vvdvh = vv - vh
+        vvdvh.name = "vvdvhdb"
+        vvdvh.rio.write_nodata(np.nan, inplace=True)
     else:
-        raise ValueError(f"unsupported scale profile: {scale_profile}")
+        vv.name = "vv"
+        vh.name = "vh"
 
-    # Convert to dB
-    vvdb = 10 * np.log10(image["VV"], dtype=np.float32)
-    vvdb.name = "vvdb"
-    vhdb = 10 * np.log10(image["VH"], dtype=np.float32)
-    vhdb.name = "vhdb"
+        # Add VV/VH ratio band
+        vvdvh = vv / vh
+        vvdvh.name = "vvdvh"
+        vvdvh.rio.write_nodata(np.nan, inplace=True)
 
-    # Add VV/VH ratio band. In dB dividing becomes minus
-    vvdvhdb = vvdb - vhdb
-    vvdvhdb.name = "vvdvhdb"
+    # Save the SAR RGB image
+    if pixel_type.startswith("FLOAT"):
+        # Save float version to file
+        sar_rgb_db_float = xr.merge([vv, vh, vvdvh])  # type: ignore[list-item]
 
-    # Save float version to file
-    if True:  # pixel_type != "BYTE":
-        sar_rgb_db_float = xr.merge([vvdb, vhdb, vvdvhdb])  # type: ignore[list-item]
-        output_db_raw_path = output_path.parent / f"{output_path.stem}_db_raw.tif"
+        kwargs = {}
+        if pixel_type == "FLOAT16":
+            # Use only 16 bit precision to save diskspace.
+            kwargs["nbits"] = 16
+
         try:
             # Remarks:
             #   - specifying lock to enable parallel writing halves the memory usage,
             #     but it is a lot slower and results in double the file size.
             sar_rgb_db_float.rio.to_raster(
-                output_db_raw_path,
+                output_path,
                 tiled=True,
                 compress="DEFLATE",
                 predictor=3,
+                **kwargs,
             )
         except Exception as ex:
             remove(output_path, missing_ok=True)
             raise ex
 
-    # Scale the data to 0-255 so it is ready for visualisation
-    #
-    # Initial min_val and max_val values based on following page:
-    # https://gis.stackexchange.com/questions/400726/creating-composite-rgb-images-from-sentinel-1-channels
-    #
-    # Then "optimized" based on the histogram of S1 mosaic of Belgium-Flanders of
-    # 2023-09-04 -> 2023-09-10.
+    elif pixel_type == "BYTE":
+        # Scale the data to 0-255 so it is ready for visualisation
+        #
+        # Initial min_val and max_val values based on following page:
+        # https://gis.stackexchange.com/questions/400726/creating-composite-rgb-images-from-sentinel-1-channels
+        #
+        # Then "optimized" based on the histogram of S1 mosaic of Belgium-Flanders of
+        # 2023-09-04 -> 2023-09-10.
 
-    # Scale VV (Red) to byte
-    # Remarks:
-    #   - lower VV values can be important for difference between water and bare soil:
-    #       -> Based on an example: water (mean): -21 db, bare soil (mean): -15 db
-    vvdb_scaled = (vvdb - vvdb_min) * 254 / (vvdb_max - vvdb_min)
-    vvdb_scaled = vvdb_scaled.clip(0, 254)
-    vvdb_scaled = vvdb_scaled.where(~np.isnan(image["VV"]), other=255)
-    vvdb_scaled.rio.write_nodata(255, inplace=True)
-    vvdb_scaled.name = "vvdb"
+        # Scale VV (Red) to byte
+        # Remarks:
+        #   - lower VV values can be important for difference water vs bare soil:
+        #       -> Based on an example: water (mean): -21 db, bare soil (mean): -15 db
+        vvdb_scaled = (vv - vvdb_min) * 254 / (vvdb_max - vvdb_min)
+        vvdb_scaled = vvdb_scaled.clip(0, 254)
+        vvdb_scaled = vvdb_scaled.where(~np.isnan(image["VV"]), other=255)
+        vvdb_scaled.rio.write_nodata(255, inplace=True)
+        vvdb_scaled.name = "vvdb"
 
-    # Scale VH (Green) to byte
-    vhdb_scaled = (vhdb - vhdb_min) * 254 / (vhdb_max - vhdb_min)
-    vhdb_scaled = vhdb_scaled.clip(0, 254)
-    vhdb_scaled = vhdb_scaled.where(~np.isnan(image["VV"]), other=255)
-    vhdb_scaled.rio.write_nodata(255, inplace=True)
-    vhdb_scaled.name = "vhdb"
+        # Scale VH (Green) to byte
+        vhdb_scaled = (vh - vhdb_min) * 254 / (vhdb_max - vhdb_min)
+        vhdb_scaled = vhdb_scaled.clip(0, 254)
+        vhdb_scaled = vhdb_scaled.where(~np.isnan(image["VV"]), other=255)
+        vhdb_scaled.rio.write_nodata(255, inplace=True)
+        vhdb_scaled.name = "vhdb"
 
-    # Scale VV/VH (Blue) to byte
-    vvdvhdb_scaled = (vvdvhdb - vvdvhdb_min) * 254 / (vvdvhdb_max - vvdvhdb_min)
-    vvdvhdb_scaled = vvdvhdb_scaled.clip(0, 254)
-    vvdvhdb_scaled = vvdvhdb_scaled.where(~np.isnan(image["VV"]), other=255)
-    vvdvhdb_scaled.rio.write_nodata(255, inplace=True)
-    vvdvhdb_scaled.name = "vvdvhdb"
+        # Scale VV/VH (Blue) to byte
+        vvdvhdb_scaled = (vvdvh - vvdvhdb_min) * 254 / (vvdvhdb_max - vvdvhdb_min)
+        vvdvhdb_scaled = vvdvhdb_scaled.clip(0, 254)
+        vvdvhdb_scaled = vvdvhdb_scaled.where(~np.isnan(image["VV"]), other=255)
+        vvdvhdb_scaled.rio.write_nodata(255, inplace=True)
+        vvdvhdb_scaled.name = "vvdvhdb"
 
-    # Save to file
-    sar_rgb_db = xr.merge([vvdb_scaled, vhdb_scaled, vvdvhdb_scaled])  # type: ignore[list-item]
+        # Save to file
+        sar_rgb_db = xr.merge([vvdb_scaled, vhdb_scaled, vvdvhdb_scaled])  # type: ignore[list-item]
 
-    try:
-        sar_rgb_db.rio.to_raster(
-            output_path, tiled=True, compress="DEFLATE", predictor=2, dtype="uint8"
-        )
-    except Exception as ex:
-        remove(output_path, missing_ok=True)
-        raise ex
+        try:
+            sar_rgb_db.rio.to_raster(
+                output_path, tiled=True, compress="DEFLATE", predictor=2, dtype="uint8"
+            )
+        except Exception as ex:
+            remove(output_path, missing_ok=True)
+            raise ex
+    else:
+        raise ValueError(f"unsupported pixel type: {pixel_type}")
 
 
 def remove(path: Path, missing_ok: bool = False):

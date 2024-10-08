@@ -263,6 +263,7 @@ def calc_periodic_mosaic(
                 image_local["path"],
                 index=image_local["index_type"],
                 pixel_type=image_local["pixel_type"],
+                process_options=image_local["process_options"],
                 force=force,
             )
 
