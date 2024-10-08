@@ -38,9 +38,7 @@ def calc_index(
         if process_option == "lee_enhanced":
             # Despeckle filter for sentinel 1 images
             filter = process_options[process_option]
-            if filter is None:
-                continue
-            if not isinstance(filter, dict):
+            if filter is None or not isinstance(filter, dict):
                 raise ValueError("process_option lee_enhanced should be a dict")
 
             filtersize = filter.get("filtersize")

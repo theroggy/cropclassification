@@ -167,6 +167,12 @@ def test_calc_index_s1(tmp_path, index, pixel_type, process_options, expected_ba
         (
             "sarrgb",
             "FLOAT32",
+            {"lee_enhanced": None},
+            "process_option lee_enhanced should be a dict",
+        ),
+        (
+            "sarrgb",
+            "FLOAT32",
             {"lee_enhanced": "test"},
             "process_option lee_enhanced should be a dict",
         ),
