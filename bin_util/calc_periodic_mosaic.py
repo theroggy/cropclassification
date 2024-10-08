@@ -26,15 +26,15 @@ def main():
     """
 
     imageprofiles_to_get = [
-        "s2-agri-weekly",
-        "s1-grd-sigma0-asc-weekly",
-        "s1-grd-sigma0-desc-weekly",
-        "s1-coh-weekly",
-        "s1-grd-sigma0-vvdvh-asc-weekly",
-        "s1-grd-sigma0-vvdvh-desc-weekly",
+        # "s2-agri-weekly",
+        # "s2-ndvi-weekly",
+        # "s1-grd-sigma0-asc-weekly",
+        # "s1-grd-sigma0-desc-weekly",
+        # "s1-coh-weekly",
+        # "s1-grd-sigma0-vvdvh-asc-weekly",
+        # "s1-grd-sigma0-vvdvh-desc-weekly",
         # "s1-sarrgbdb-asc-weekly",
-        # "s1-sarrgbdb-ai-desc-weekly",
-        # "s1-sarrgbdb-asc-weekly", "s1-sarrgbdb-desc-weekly",
+        "s1-sarrgbdb-desc-weekly",
         # "s1-rvi-asc-weekly", "s1-rvi-desc-weekly",
         # "s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly",
     ]
