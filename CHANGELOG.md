@@ -22,6 +22,8 @@
       `dirs.images_periodic_dir` instead.
     - Rename section `dirs` to `paths`.
     - Remove `general.run_id`.
+- Rename some main modules to make naming more logical with non-cropclassification
+  markers being added (#162)
 
 ### Improvements
 
