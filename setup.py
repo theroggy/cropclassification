@@ -1,3 +1,5 @@
+"""Setup file for the cropclassification package."""
+
 import setuptools
 
 with open("README.md") as fh:
@@ -33,7 +35,7 @@ setuptools.setup(
     ],
     entry_points="""
         [console_scripts]
-        cropclassification=cropclassification.cropclassification:main
+        cropclassification=cropclassification.taskrunner:main
         """,
     classifiers=[
         "Programming Language :: Python :: 3",

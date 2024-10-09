@@ -1,6 +1,4 @@
-"""
-Module that implements the classification logic.
-"""
+"""Module that implements the classification logic."""
 
 import ast
 import glob
@@ -215,9 +213,9 @@ def add_cross_pred_model_id(
     Args:
         parcel_path (Path): path with parcels to add the column to.
         cross_pred_models (int): the number of models to divide the parcels over.
-        cross_pred_model_id_column (Optional[str], optional): the column name for the
-            column to add to `parcel_path`. If None, conf.columns["cross_pred_model_id"]
-            is used. Defaults to None.
+        columnname (Optional[str], optional): the column name for the column to add to
+            `parcel_path`. If None, conf.columns["cross_pred_model_id"] is used.
+            Defaults to None.
         class_balancing_column (Optional[str], optional): the column in the
             `parcel_path` file to use for balancing the model ids. If None,
             conf.columns["class_balancing"] is used. Defaults to None.
@@ -265,13 +263,13 @@ def train_test_predict(
 ):
     """Train a classifier, test it and do full predictions.
 
-    Args
+    Args:
         classifier_type: the type of classifier to use.
-        input_parcel_classes_train_path: the list of parcels with classes to train the
+        input_parcel_train_path: the list of parcels with classes to train the
             classifier, without data!
-        input_parcel_classes_test_path: the list of parcels with classes to test the
+        input_parcel_test_path: the list of parcels with classes to test the
             classifier, without data!
-        input_parcel_classes_all_path: the list of parcels with classes that need to be
+        input_parcel_all_path: the list of parcels with classes that need to be
             classified, without data!
         input_parcel_classification_data_path: the data to be used for the
             classification for all parcels.
@@ -284,7 +282,6 @@ def train_test_predict(
         force: if True, overwrite all existing output files, if False, don't overwrite
             them.
     """
-
     logger.info("train_test_predict: Start")
 
     if (
@@ -362,7 +359,6 @@ def train(
     input_parcel_classification_data_df: Optional[pd.DataFrame] = None,
 ) -> Path:
     """Train a classifier and test it by predicting the test cases."""
-
     logger.info("train_and_test: Start")
     if force is False and output_classifier_basepath.exists():
         logger.warning(
@@ -446,7 +442,6 @@ def predict(
     predict_query: Optional[str] = None,
 ):
     """Predict the classes for the input data."""
-
     # If force is False, and the output file exist already, return
     if force is False and output_predictions_path.exists():
         logger.warning(
@@ -523,7 +518,6 @@ def predict(
 
         class_core_keras.predict_proba(
             parcel_df=input_parcel_for_predict_df,
-            classifier_basepath=input_classifier_basepath,
             classifier_path=input_classifier_path,
             output_parcel_predictions_path=output_predictions_path,
         )
@@ -532,7 +526,6 @@ def predict(
 
         class_core_sklearn.predict_proba(
             parcel_df=input_parcel_for_predict_df,
-            classifier_basepath=input_classifier_basepath,
             classifier_path=input_classifier_path,
             output_parcel_predictions_path=output_predictions_path,
         )

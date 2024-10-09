@@ -1,3 +1,5 @@
+"""Test script to generate a classification report for a test classification."""
+
 import os
 from pathlib import Path
 

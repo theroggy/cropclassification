@@ -1,6 +1,4 @@
-"""
-Main script to do a classification.
-"""
+"""Run a crop classification."""
 
 import logging
 import os
@@ -21,18 +19,13 @@ from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
-
 
 def calc_marker_task(
     config_paths: list[Path],
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """
-    Runs a marker using the setting in the config_paths.
+    """Runs a marker using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load

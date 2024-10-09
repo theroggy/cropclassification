@@ -1,17 +1,18 @@
+"""Date utility functions."""
+
 from datetime import datetime
 from typing import Union
 
 
 def get_monday(date: Union[str, datetime], before: bool = True) -> datetime:
-    """
-    If date is no monday yet, return the monday before or after it.
+    """If date is no monday yet, return the monday before or after it.
 
     Args:
        date (datetime, str): if a string, expected format: %Y-%m-%d
        before (bool): if True, return the monday before the date, otherwise the monday
         after. Defaults to True.
 
-    Return
+    Return:
         datetime: a monday.
     """
     if isinstance(date, str):
@@ -32,8 +33,7 @@ def get_monday(date: Union[str, datetime], before: bool = True) -> datetime:
 
 
 def get_monday_biweekly(date: Union[str, datetime], before: bool = True) -> datetime:
-    """
-    Determines the "biweekly" monday for the date provided.
+    """Determines the "biweekly" monday for the date provided.
 
     In practice the first monday before or after the date will be returned, aligned to
     every second week of the year.
@@ -43,7 +43,7 @@ def get_monday_biweekly(date: Union[str, datetime], before: bool = True) -> date
        before (bool): if True, return the monday before the date, otherwise the monday
             after. Defaults to True.
 
-    Return
+    Return:
         datetime: a monday.
     """
     # First determine the monday before or after the date

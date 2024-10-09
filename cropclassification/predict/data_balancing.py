@@ -1,6 +1,4 @@
-"""
-Module with helper functions to prepare the data to use for the classification.
-"""
+"""Module with helper functions to prepare the data to use for the classification."""
 
 import logging
 from pathlib import Path
@@ -25,7 +23,6 @@ def create_train_test_sample(
     force: bool = False,
 ):
     """Create a seperate train and test sample from the general input file."""
-
     # If force False and the output files exist already, stop.
     if (
         force is False

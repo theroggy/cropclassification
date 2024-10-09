@@ -32,8 +32,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """
-    Calculate zonal statistics.
+    """Calculate zonal statistics.
 
     Args:
         vector_path (Path): _description_

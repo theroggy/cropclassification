@@ -1,6 +1,4 @@
-"""
-Process the tasks in the tasks directory.
-"""
+"""Run the tasks in the tasks directory."""
 
 import argparse
 import configparser
@@ -9,8 +7,6 @@ from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo  # noqa: F401
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 def _get_version():
@@ -23,6 +19,7 @@ __version__ = _get_version()
 
 
 def main():
+    """Parse the arguments and run the tasks."""
     # Interprete arguments
     parser = argparse.ArgumentParser(add_help=False)
 
@@ -45,11 +42,11 @@ def main():
 
     # If tasks dir is specified, use it
     if args.tasksdir is not None:
-        return cropclassification(tasksdir=Path(args.tasksdir))
+        return run_tasks(tasksdir=Path(args.tasksdir))
     else:
         usertasksdir = Path.home() / "cropclassification" / "tasks"
         if usertasksdir.exists():
-            return cropclassification(tasksdir=usertasksdir)
+            return run_tasks(tasksdir=usertasksdir)
         else:
             print(
                 f"Error: no tasksdir specified, and default tasks dir ({usertasksdir}) "
@@ -59,7 +56,14 @@ def main():
             sys.exit(1)
 
 
-def cropclassification(tasksdir: Path, config_overrules: list[str] = []):
+def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
+    """Run the tasks in the tasks directory.
+
+    Args:
+        tasksdir (Path): path to the directory where the tasks are located.
+        config_overrules (list[str], optional): list of overrules to apply on the
+            configuration. Defaults to [].
+    """
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
     for task_path in task_paths:
@@ -100,10 +104,10 @@ def cropclassification(tasksdir: Path, config_overrules: list[str] = []):
                     ).resolve()
                 config_paths.append(Path(config_file_formatted))
 
-        if action == "calc_marker":
-            from cropclassification import calc_marker
+        if action in ("calc_marker", "calc_cropclass"):
+            from cropclassification import calc_cropclass
 
-            calc_marker.calc_marker_task(
+            calc_cropclass.calc_marker_task(
                 config_paths=config_paths,
                 default_basedir=default_basedir,
                 config_overrules=config_overrules,

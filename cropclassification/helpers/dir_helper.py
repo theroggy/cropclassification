@@ -1,6 +1,4 @@
-"""
-Helper regarding directory operations.
-"""
+"""Helper regarding directory operations."""
 
 import os
 import re
@@ -9,15 +7,13 @@ from pathlib import Path
 
 
 def create_run_dir(class_base_dir: Path, reuse_last_run_dir: bool) -> Path:
-    """
-    Create a new run dir, or get the last run dir.
+    """Create a new run dir, or get the last run dir.
 
-    Args
+    Args:
         class_base_dir: the base dir to use to create the run dir in
         reuse_last_run_dir: True to find the latest existing run dir and return that,
             False to create a new run dir
     """
-
     # Create class_base_dir if it doesn't exist
     if not class_base_dir.exists():
         os.makedirs(class_base_dir)

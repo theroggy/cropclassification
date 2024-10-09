@@ -1,3 +1,5 @@
+"""Generate periodic mosaics."""
+
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -7,17 +9,13 @@ from cropclassification.util import mosaic_util
 
 
 def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
-    """
-    Runs a periodic mosaic using the setting in the config_paths.
+    """Runs a periodic mosaic using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load
         default_basedir (Path): the dir to resolve relative paths in the config
             file to.
 
-    Raises:
-        Exception: [description]
-        Exception: [description]
     """
     # Read the configuration files
     conf.read_config(config_paths=config_paths, default_basedir=default_basedir)

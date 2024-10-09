@@ -1,6 +1,4 @@
-"""
-Calaculate the timeseries data per week based on per image data.
-"""
+"""Calculate the timeseries data per week based on per image data."""
 
 import os
 from datetime import datetime

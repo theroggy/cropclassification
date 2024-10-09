@@ -5,7 +5,7 @@ import geofileops as gfo
 import pytest
 from pandas.api.types import is_numeric_dtype
 
-from cropclassification import cropclassification
+from cropclassification import taskrunner
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests import test_helper
 
@@ -34,7 +34,7 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
-    cropclassification.cropclassification(
+    taskrunner.run_tasks(
         tasksdir=tasks_dir,
         config_overrules=[
             f"marker.balancing_strategy={balancing_strategy}",
@@ -80,7 +80,7 @@ def test_task_calc_periodic_mosaic(tmp_path):
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
-    cropclassification.cropclassification(tasksdir=tasks_dir)
+    taskrunner.run_tasks(tasksdir=tasks_dir)
 
     # Check if a log file was written
     log_dir = marker_basedir / "log"

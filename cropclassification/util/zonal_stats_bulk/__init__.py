@@ -1,3 +1,5 @@
+"""Calculate zonal statistics for a vector file with many raster files."""
+
 from pathlib import Path
 from typing import Optional, Union
 
@@ -16,8 +18,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """
-    Calculate zonal statistics.
+    """Calculate zonal statistics.
 
     Args:
         vector_path (Path): input file with vector data.
@@ -34,6 +35,10 @@ def zonal_stats(
                         "range", "minority", "majority" and "variance".
                 - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
 
+        cloud_filter_band (str, optional): the band to use as a cloud filter. Only
+            supported for engine "rasterstats". Defaults to None.
+        calc_bands_parallel (bool, optional): True to calculate the bands in parallel.
+            Only supported for engine "rasterstats". Defaults to True.
         engine (str, optional): the engine to use for the calculation. Options are
             "exactextract", "rasterstats" and "pyqgis". Defaults to "rasterstats".
         nb_parallel (int, optional): the number of parallel processes to use.
