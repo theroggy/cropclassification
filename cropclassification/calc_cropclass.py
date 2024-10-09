@@ -1,6 +1,4 @@
-"""
-Main script to do a classification.
-"""
+"""Run a crop classification."""
 
 import logging
 import os
@@ -20,10 +18,6 @@ from cropclassification.predict import classification
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
-
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 
 
 def calc_marker_task(
