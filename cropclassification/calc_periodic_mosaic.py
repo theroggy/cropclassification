@@ -17,9 +17,6 @@ def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
         default_basedir (Path): the dir to resolve relative paths in the config
             file to.
 
-    Raises:
-        Exception: [description]
-        Exception: [description]
     """
     # Read the configuration files
     conf.read_config(config_paths=config_paths, default_basedir=default_basedir)
