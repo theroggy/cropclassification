@@ -10,8 +10,7 @@ gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 
 def add_overviews(path: Path, min_pixels=512, resampling="average"):
-    """
-    Add overviews to the file.
+    """Add overviews to the file.
 
     Args:
         path (Path): path to the file.
@@ -32,8 +31,7 @@ def add_overviews(path: Path, min_pixels=512, resampling="average"):
 
 
 def get_band_descriptions(path: Path) -> dict[str, int]:
-    """
-    Get the band descriptions of a raster file.
+    """Get the band descriptions of a raster file.
 
     Args:
         path (Path): the file to get the band descriptions from
@@ -50,8 +48,7 @@ def set_band_descriptions(
     band_descriptions: Union[Iterable[str], dict[int, str], str],
     overwrite: bool = True,
 ):
-    """
-    Add band descriptions to a raster file.
+    """Add band descriptions to a raster file.
 
     Args:
         path (Path): the file to add band descriptions to

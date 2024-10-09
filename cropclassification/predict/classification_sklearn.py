@@ -1,6 +1,4 @@
-"""
-Module that implements the classification logic.
-"""
+"""Module that implements the classification logic."""
 
 import ast
 import glob
@@ -24,10 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
-    """
-    Train a classifier and output the trained classifier to the output file.
+    """Train a classifier and output the trained classifier to the output file.
 
-    Args
+    Args:
         train_df: pandas DataFrame containing the train data. Columns:
             * global_settings.id_column: the id of the parcel
             * global_settings.class_column: the class of the parcel
@@ -103,11 +100,10 @@ def predict_proba(
     classifier_path: Path,
     output_parcel_predictions_path: Path,
 ) -> pd.DataFrame:
-    """
-    Predict the probabilities for all input data using the classifier provided and
+    """Predict the probabilities for all input data using the classifier provided and
     write it to the output file.
 
-    Args
+    Args:
         parcel_df: pandas DataFrame containing the data to classify. Columns:
             * global_settings.id_column: the id of the parcel.
             * global_settings.class_column: the class of the parcel. Isn't really used.
@@ -115,7 +111,6 @@ def predict_proba(
         classifier_path: the path where the classifier can be written.
         output_parcel_predictions_path: file to write the predictions to.
     """
-
     # Some basic checks that input is ok
     column_class = conf.columns["class"]
     column_class_declared = conf.columns["class_declared"]

@@ -1,6 +1,4 @@
-"""
-Module with helper functions to preprocess the data to use for the classification.
-"""
+"""Module with helper functions to preprocess the data to use for the classification."""
 
 import logging
 import os
@@ -29,11 +27,9 @@ def prepare(
     output_parcel_path: Path,
     force: bool = False,
 ):
-    """
-    Prepare a raw input file by eg. adding the classification classes to use for the
+    """Prepare a raw input file by eg. adding the classification classes to use for the
     classification,...
     """
-
     # If force == False Check and the output file exists already, stop.
     if not force and output_parcel_path.exists():
         logger.warning(

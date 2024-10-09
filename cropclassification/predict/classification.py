@@ -1,6 +1,4 @@
-"""
-Module that implements the classification logic.
-"""
+"""Module that implements the classification logic."""
 
 import ast
 import glob
@@ -265,7 +263,7 @@ def train_test_predict(
 ):
     """Train a classifier, test it and do full predictions.
 
-    Args
+    Args:
         classifier_type: the type of classifier to use.
         input_parcel_classes_train_path: the list of parcels with classes to train the
             classifier, without data!
@@ -284,7 +282,6 @@ def train_test_predict(
         force: if True, overwrite all existing output files, if False, don't overwrite
             them.
     """
-
     logger.info("train_test_predict: Start")
 
     if (
@@ -362,7 +359,6 @@ def train(
     input_parcel_classification_data_df: Optional[pd.DataFrame] = None,
 ) -> Path:
     """Train a classifier and test it by predicting the test cases."""
-
     logger.info("train_and_test: Start")
     if force is False and output_classifier_basepath.exists():
         logger.warning(
@@ -446,7 +442,6 @@ def predict(
     predict_query: Optional[str] = None,
 ):
     """Predict the classes for the input data."""
-
     # If force is False, and the output file exist already, return
     if force is False and output_predictions_path.exists():
         logger.warning(

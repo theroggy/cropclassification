@@ -305,8 +305,7 @@ def calc_sar_rgb(
     despeckled: bool,
     pixel_type: str,
 ):
-    """
-    Calculates and saves a SAR RGB image.
+    """Calculates and saves a SAR RGB image.
 
     Args:
         image (xr.Dataset): the input SAR image.

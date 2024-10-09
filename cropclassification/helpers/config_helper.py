@@ -1,6 +1,4 @@
-"""
-Module that manages configuration data.
-"""
+"""Module that manages configuration data."""
 
 import configparser
 import json
@@ -57,8 +55,7 @@ def read_config(
     overrules: list[str] = [],
     preload_defaults: bool = True,
 ):
-    """
-    Read cropclassification configuration file(s).
+    """Read cropclassification configuration file(s).
 
     Args:
         config_paths (Path): path(s) to the configuration file(s) to read. If None, and
@@ -343,8 +340,7 @@ def pformat_config():
 
 
 def as_dict():
-    """
-    Converts the config objects into a dictionary.
+    """Converts the config objects into a dictionary.
 
     The resulting dictionary has sections as keys which point to a dict of the
     sections options as key => value pairs.

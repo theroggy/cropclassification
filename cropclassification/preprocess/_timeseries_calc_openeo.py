@@ -29,10 +29,9 @@ def calculate_periodic_timeseries(
     nb_parallel: int,
     on_missing_image: str,
 ):
-    """
-    Calculate timeseries data for the input parcels.
+    """Calculate timeseries data for the input parcels.
 
-    args
+    Args:
         imageprofiles_to_get: an array with images you want to be calculated.
         on_missing_image: what to do when an image is missing. Options are:
             - ignore: ignore that the image, don't try to download it

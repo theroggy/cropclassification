@@ -1,6 +1,4 @@
-"""
-Module with postprocessing functions on classification results.
-"""
+"""Module with postprocessing functions on classification results."""
 
 import datetime
 import logging
@@ -28,8 +26,7 @@ def calc_top_classes_and_consolidation(
     output_predictions_output_path: Optional[Path] = None,
     force: bool = False,
 ):
-    """
-    Calculate the top3 prediction and a consolidation prediction.
+    """Calculate the top3 prediction and a consolidation prediction.
 
     Remark: in this logic the declared crop/class (class_declared) is used, as we want
     to compare with the declaration of the farmer, rather than taking into account
@@ -45,7 +42,6 @@ def calc_top_classes_and_consolidation(
         top_classes (int, optional): Number of top predictions to retain. Defaults to 3.
         force (bool, optional): [description]. Defaults to False.
     """
-
     # If force is false and output exists, already, return
     if force is False and output_predictions_path.exists():
         logger.warning(

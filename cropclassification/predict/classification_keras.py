@@ -1,6 +1,4 @@
-"""
-Module that implements the classification logic.
-"""
+"""Module that implements the classification logic."""
 
 import ast
 import glob
@@ -43,10 +41,9 @@ K.set_session(session)
 def train(
     train_df: pd.DataFrame, test_df: pd.DataFrame, output_classifier_basepath: Path
 ) -> Path:
-    """
-    Train a classifier and output the trained classifier to the output file.
+    """Train a classifier and output the trained classifier to the output file.
 
-    Args
+    Args:
         train_df: pandas DataFrame containing the train data. Columns:
             * global_settings.id_column: the id of the parcel
             * global_settings.class_column: the class of the parcel
@@ -54,7 +51,6 @@ def train(
         test_df: pandas DataFrame containing the test/validation data.
         output_classifier_path: the path where the classifier can be written
     """
-
     # Prepare and check some input + init some variables
     output_classifier_path_noext, output_ext = os.path.splitext(
         output_classifier_basepath
@@ -300,18 +296,16 @@ def predict_proba(
     classifier_path: Path,
     output_parcel_predictions_path: Path,
 ) -> pd.DataFrame:
-    """
-    Predict the probabilities for all input data using the classifier provided and
+    """Predict the probabilities for all input data using the classifier provided and
     write it to the output file.
 
-    Args
+    Args:
         parcel_df: pandas DataFrame containing the data to classify. Columns:
             * global_settings.id_column: the id of the parcel.
             * global_settings.class_column: the class of the parcel. Isn't really used.
             * ... all columns that will be used as classification data.
         classifier_path: the path where the classifier can be written.
     """
-
     # Some basic checks that input is ok
     column_class = conf.columns["class"]
     column_class_declared = conf.columns["class_declared"]
@@ -396,9 +390,7 @@ def predict_proba(
 
 
 def safe_math_eval(string):
-    """
-    Function to evaluate a mathematical expression safely.
-    """
+    """Function to evaluate a mathematical expression safely."""
     if string is None:
         return None
 
@@ -434,7 +426,6 @@ class ModelCheckpointExt(kr.callbacks.Callback):
             verbose (bool, optional): [description]. Defaults to True.
             only_report (bool, optional): [description]. Defaults to False.
         """
-
         acc_metric_mode_values = ["min", "max"]
         if acc_metric_mode not in acc_metric_mode_values:
             raise Exception(

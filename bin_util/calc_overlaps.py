@@ -1,6 +1,4 @@
-"""
-Module calculate overlaps between two layers.
-"""
+"""Module calculate overlaps between two layers."""
 
 import os
 import pprint

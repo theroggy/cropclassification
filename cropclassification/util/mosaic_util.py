@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ImageProfile:
-    """
-    Profile of the image to be calculated.
-    """
+    """Profile of the image to be calculated."""
 
     name: str
     satellite: str
@@ -52,8 +50,7 @@ class ImageProfile:
         process_options: Optional[dict] = None,
         job_options: Optional[dict] = None,
     ):
-        """
-        Profile of the image to be calculated.
+        """Profile of the image to be calculated.
 
         The `period_name` and `period_days` are used to determine the periods of the
         images to be generated. For some pre-defined values of `period_name`, the
@@ -164,8 +161,7 @@ def calc_periodic_mosaic(
     on_missing_image: str = "calculate_raise",
     force: bool = False,
 ) -> list[dict[str, Any]]:
-    """
-    Generate a periodic mosaic.
+    """Generate a periodic mosaic.
 
     Depending on the period_name specified in the ImageProfiles, the `start_date` and
     `end_date` will  be adjusted:
@@ -276,8 +272,7 @@ def _prepare_periods(
     period_name: Optional[str],
     period_days: Optional[int],
 ) -> list[dict[str, Any]]:
-    """
-    Prepare the periods to download a periodic mosaic.
+    """Prepare the periods to download a periodic mosaic.
 
     Args:
         start_date (datetime): start date, included.
@@ -343,8 +338,7 @@ def _prepare_periods(
 def _prepare_period_params(
     period_name: Optional[str], period_days: Optional[int]
 ) -> tuple[str, int]:
-    """
-    Interprete period_name and period_days and return cleaned version.
+    """Interprete period_name and period_days and return cleaned version.
 
     Args:
         period_name (str): _description_
@@ -388,8 +382,7 @@ def _prepare_periodic_mosaic_params(
     imageprofiles: dict[str, ImageProfile],
     output_base_dir: Path,
 ) -> list[dict[str, Any]]:
-    """
-    Prepare the parameters needed to generate a list of periodic mosaics.
+    """Prepare the parameters needed to generate a list of periodic mosaics.
 
     Args:
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
@@ -489,8 +482,7 @@ def _prepare_mosaic_image_params(
     output_base_dir: Path,
     base_imageprofile: Optional[ImageProfile] = None,
 ) -> dict[str, Any]:
-    """
-    Prepares the relevant parameters + saves them as json file.
+    """Prepares the relevant parameters + saves them as json file.
 
     Args:
         roi_bounds (Tuple[float, float, float, float]): _description_
@@ -571,8 +563,7 @@ def _prepare_mosaic_image_path(
     time_reducer: str,
     output_base_dir: Path,
 ) -> Path:
-    """
-    Returns an image_path.
+    """Returns an image_path.
 
     Args:
         imageprofile (str): name of the image profile.

@@ -1,6 +1,4 @@
-"""
-Module to init logging.
-"""
+"""Module to init logging."""
 
 import datetime
 import logging

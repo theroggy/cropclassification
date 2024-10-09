@@ -30,8 +30,7 @@ def get_images(
     raise_errors: bool = True,
     force: bool = False,
 ):
-    """
-    Get a list of images from openeo.
+    """Get a list of images from openeo.
 
     ``images_to_get`` is a list with a dict for each image to get with the following
     properties:
@@ -309,7 +308,6 @@ def get_job_results(
     conn: openeo.Connection, raise_errors: bool = True
 ) -> tuple[list[Path], list[str]]:
     """Get results of the completed jobs."""
-
     output_paths = []
     errors = []
     while True:
@@ -435,8 +433,7 @@ def best_available_pixel(
     bands: list[str],
     max_cloud_cover: Optional[float],
 ):
-    """
-    Create image mosaic using the Best Available Pixel (BAP) method.
+    """Create image mosaic using the Best Available Pixel (BAP) method.
 
     Link to the article:
     https://documentation.dataspace.copernicus.eu/APIs/openEO/openeo-community-examples/python/RankComposites/bap_composite.html

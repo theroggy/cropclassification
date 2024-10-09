@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_file_atomic(path: Path):
-    """
-    Create a lock file in an atomic way, so it is threadsafe.
+    """Create a lock file in an atomic way, so it is threadsafe.
 
     Returns True if the file was created by this thread, False if the file existed
     already.
@@ -27,13 +26,11 @@ def create_file_atomic(path: Path):
 
 
 def create_tempdir(base_dirname: str, parent_dir: Optional[Path] = None) -> Path:
-    """
-    Creates a new tempdir in the default temp location.
+    """Creates a new tempdir in the default temp location.
 
     Remark: the temp dir won't be cleaned up automatically!
 
     Examples:
-
         - base_dirname="foo" -> /tmp/foo_000001
         - base_dirname="foo/bar" -> /tmp/foo/bar_000001
 
@@ -51,7 +48,6 @@ def create_tempdir(base_dirname: str, parent_dir: Optional[Path] = None) -> Path
     Returns:
         Path: the path to the temp dir created.
     """
-
     if parent_dir is None:
         parent_dir = Path(tempfile.gettempdir())
 
@@ -72,8 +68,7 @@ def create_tempdir(base_dirname: str, parent_dir: Optional[Path] = None) -> Path
 def output_exists(
     path: Path, remove_if_exists: bool, log_prefix: Optional[str] = None
 ) -> bool:
-    """
-    Check if the output file exists.
+    """Check if the output file exists.
 
     If ``remove_if_exists`` is True, the file is removed and False is returned.
 

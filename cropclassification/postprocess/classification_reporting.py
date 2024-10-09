@@ -1,6 +1,4 @@
-"""
-Module with some helper functions to report on the classification results.
-"""
+"""Module with some helper functions to report on the classification results."""
 
 import logging
 from pathlib import Path
@@ -47,7 +45,6 @@ def write_full_report(
 
     TODO: refactor function to split logic more...
     """
-
     # If force == False Check and the output file exists already, stop.
     output_report_html = Path(str(output_report_txt).replace(".txt", ".html"))
     if force is False and output_report_txt.exists() and output_report_html.exists():
@@ -1142,7 +1139,6 @@ def write_full_report(
 
 def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
     """Returns a dataset with an extended confusion matrix."""
-
     classes = sorted(
         np.unique(
             np.append(
@@ -1214,8 +1210,7 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
 def _add_prediction_conclusion(
     in_df, new_columnname, prediction_column_to_use, detailed: bool
 ):
-    """
-    Calculate the "conclusions" for the predictions
+    """Calculate the "conclusions" for the predictions
 
     REMARK: calculating it like this, using native pandas operations, is 300 times
             faster than using DataFrame.apply() with a function!!!
@@ -1310,7 +1305,6 @@ def _add_prediction_conclusion(
 
 def _add_gt_conclusions(in_df, prediction_column_to_use):
     """Add some columns with groundtruth conclusions."""
-
     # Add the new column with a fixed value first
     gt_vs_declared_column = f"gt_vs_input_{prediction_column_to_use}"
     gt_vs_prediction_column = f"gt_vs_prediction_{prediction_column_to_use}"
@@ -1501,9 +1495,7 @@ def _get_errors_per_column(
     include_cumulative_columns: bool,
     ascending: bool = True,
 ):
-    """
-    Calculates a detailed overview about the number of errors per group specified.
-    """
+    """Calculates a detailed overview about the number of errors per group specified."""
     # First filter on the parcels we need to calculate the pct alpha errors
     df_predquality_filtered = df_predquality[
         df_predquality[pred_quality_column].isin(error_codes_denominator)

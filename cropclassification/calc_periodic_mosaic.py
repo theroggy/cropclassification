@@ -9,8 +9,7 @@ from cropclassification.util import mosaic_util
 
 
 def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
-    """
-    Runs a periodic mosaic using the setting in the config_paths.
+    """Runs a periodic mosaic using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load

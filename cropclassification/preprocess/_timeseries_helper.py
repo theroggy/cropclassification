@@ -1,6 +1,4 @@
-"""
-Calculates periodic timeseries for input parcels.
-"""
+"""Calculates periodic timeseries for input parcels."""
 
 import gc
 import logging
@@ -31,11 +29,10 @@ def prepare_input(
     output_parcel_nogeo_path: Optional[Path] = None,
     force: bool = False,
 ) -> bool:
-    """
-    This function creates a file that is preprocessed to be a good input file for
+    """This function creates a file that is preprocessed to be a good input file for
     timeseries extraction of sentinel images.
 
-    Args
+    Args:
         input_parcel_path (Path): input file
         output_imagedata_parcel_input_path (Path): prepared output file
         output_parcel_nogeo_path (Path): output file with a copy of the non-geo data
@@ -176,8 +173,7 @@ def calculate_periodic_timeseries(
     timeseries_periodic_dir: Path,
     force: bool = False,
 ):
-    """
-    This function creates a file that is a weekly aggregation of timeseries files.
+    """This function creates a file that is a weekly aggregation of timeseries files.
 
     TODO: add possibility to choose which values to extract (mean, min, max,...)?
 
@@ -492,8 +488,7 @@ def calculate_periodic_timeseries(
 
 
 def get_fileinfo_timeseries(path: Path) -> dict:
-    """
-    This function gets info of a timeseries data file.
+    """This function gets info of a timeseries data file.
 
     Args:
         path (Path): The path to the file to get info about.
@@ -501,7 +496,6 @@ def get_fileinfo_timeseries(path: Path) -> dict:
     Returns:
         dict: a dict containing info about the file
     """
-
     try:
         # Split name on parcelinfo versus imageinfo
         filename_splitted = path.stem.split("__")
@@ -606,8 +600,7 @@ def get_fileinfo_timeseries(path: Path) -> dict:
 
 
 def get_fileinfo_timeseries_periods(path: Path) -> dict:
-    """
-    This function gets info of a period timeseries data file.
+    """This function gets info of a period timeseries data file.
 
     Args:
         path (Path): The path to the file to get info about.
