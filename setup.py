@@ -32,7 +32,7 @@ setuptools.setup(
     ],
     entry_points="""
         [console_scripts]
-        cropclassification=cropclassification.cropclassification:main
+        cropclassification=cropclassification.taskrunner:main
         """,
     classifiers=[
         "Programming Language :: Python :: 3",

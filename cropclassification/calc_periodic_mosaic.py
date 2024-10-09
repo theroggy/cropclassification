@@ -1,3 +1,5 @@
+"""Generate periodic mosaics."""
+
 from datetime import datetime, timedelta
 from pathlib import Path
 

@@ -1,6 +1,4 @@
-"""
-Main script to do a classification.
-"""
+"""Run a crop classification."""
 
 import logging
 import os
