@@ -1,4 +1,4 @@
-"""Module calculate overlaps between two layers."""
+"""Script to calculate overlaps between two layers."""
 
 import os
 import pprint
@@ -7,10 +7,6 @@ from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.helpers import log_helper
-
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
 
 
 def main():
