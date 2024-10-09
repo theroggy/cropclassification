@@ -20,25 +20,20 @@ from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
 
 
-def calc_marker_task(
+def run_cropclass(
     config_paths: list[Path],
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """Runs a marker using the setting in the config_paths.
+    """Runs a crop classification marker using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load
         default_basedir (Path): the dir to resolve relative paths in the config
             file to.
         config_overrules (List[str], optional): list of config options that will
-            overrule other ways to supply configuration.
-            They should be specified as a list of
-            "<section>.<parameter>=<value>" strings. Defaults to [].
-
-    Raises:
-        Exception: [description]
-        Exception: [description]
+            overrule other ways to supply configuration. They should be specified as a
+            list of "<section>.<parameter>=<value>" strings. Defaults to [].
     """
     # Read the configuration files
     conf.read_config(

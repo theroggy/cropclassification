@@ -62,7 +62,8 @@ def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
     Args:
         tasksdir (Path): path to the directory where the tasks are located.
         config_overrules (list[str], optional): list of overrules to apply on the
-            configuration. Defaults to [].
+            configuration. They should be specified as a list of
+            "<section>.<parameter>=<value>" strings. Defaults to [].
     """
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
@@ -107,7 +108,7 @@ def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
         if action in ("calc_marker", "calc_cropclass"):
             from cropclassification import calc_cropclass
 
-            calc_cropclass.calc_marker_task(
+            calc_cropclass.run_cropclass(
                 config_paths=config_paths,
                 default_basedir=default_basedir,
                 config_overrules=config_overrules,
