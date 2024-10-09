@@ -1,6 +1,4 @@
-"""
-Module that implements the classification logic.
-"""
+"""Module that implements the classification logic."""
 
 import ast
 import glob
@@ -35,26 +33,22 @@ session = tf.Session(config=config)
 K.set_session(session)
 """
 
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
-
 
 def train(
     train_df: pd.DataFrame, test_df: pd.DataFrame, output_classifier_basepath: Path
 ) -> Path:
-    """
-    Train a classifier and output the trained classifier to the output file.
+    """Train a classifier and output the trained classifier to the output file.
 
-    Args
+    Args:
         train_df: pandas DataFrame containing the train data. Columns:
+
             * global_settings.id_column: the id of the parcel
             * global_settings.class_column: the class of the parcel
             * ... all columns that will be used as classification data
-        test_df: pandas DataFrame containing the test/validation data.
-        output_classifier_path: the path where the classifier can be written
-    """
 
+        test_df: pandas DataFrame containing the test/validation data.
+        output_classifier_basepath: the path where the classifier can be written
+    """
     # Prepare and check some input + init some variables
     output_classifier_path_noext, output_ext = os.path.splitext(
         output_classifier_basepath
@@ -296,22 +290,21 @@ def train(
 
 def predict_proba(
     parcel_df: pd.DataFrame,
-    classifier_basepath: Path,
     classifier_path: Path,
     output_parcel_predictions_path: Path,
 ) -> pd.DataFrame:
-    """
-    Predict the probabilities for all input data using the classifier provided and
-    write it to the output file.
+    """Predict the probabilities for all input data.
 
-    Args
+    Args:
         parcel_df: pandas DataFrame containing the data to classify. Columns:
+
             * global_settings.id_column: the id of the parcel.
             * global_settings.class_column: the class of the parcel. Isn't really used.
             * ... all columns that will be used as classification data.
-        classifier_path: the path where the classifier can be written.
-    """
 
+        classifier_path: the path to the classifier to use.
+        output_parcel_predictions_path: path to the file to write the predictions to.
+    """
     # Some basic checks that input is ok
     column_class = conf.columns["class"]
     column_class_declared = conf.columns["class_declared"]
@@ -396,9 +389,7 @@ def predict_proba(
 
 
 def safe_math_eval(string):
-    """
-    Function to evaluate a mathematical expression safely.
-    """
+    """Function to evaluate a mathematical expression safely."""
     if string is None:
         return None
 
@@ -411,6 +402,8 @@ def safe_math_eval(string):
 
 
 class ModelCheckpointExt(kr.callbacks.Callback):
+    """ModelCheckpoint callback that can use more metrics to choose the best model."""
+
     def __init__(
         self,
         model_save_dir: Path,
@@ -422,19 +415,20 @@ class ModelCheckpointExt(kr.callbacks.Callback):
         verbose: bool = True,
         only_report: bool = False,
     ):
-        """[summary]
+        """ModelCheckpoint callback that can use more metrics to choose the best model.
 
         Args:
-            model_save_dir (Path): [description]
-            model_save_base_filename (str): [description]
+            model_save_dir (Path): dircetory where the model should be saved.
+            model_save_base_filename (str): the base name to use for the model file.
             acc_metric_mode (str): use 'min' if the accuracy metrics should be
                     as low as possible, 'max' if a higher values is better.
-            acc_metric_train (str): [description]
-            acc_metric_validation (str): [description]
+            acc_metric_train (str): train metric to use.
+            acc_metric_validation (str): validation metric to use.
+            save_weights_only (bool, optional): True to only save the model weights.
+                Defaults to False.
             verbose (bool, optional): [description]. Defaults to True.
             only_report (bool, optional): [description]. Defaults to False.
         """
-
         acc_metric_mode_values = ["min", "max"]
         if acc_metric_mode not in acc_metric_mode_values:
             raise Exception(
@@ -451,7 +445,7 @@ class ModelCheckpointExt(kr.callbacks.Callback):
         self.verbose = verbose
         self.only_report = only_report
 
-    def on_epoch_end(self, epoch, logs={}):
+    def on_epoch_end(self, epoch, logs={}):  # noqa: D102
         logger.debug("Start in callback on_epoch_begin")
 
         mh.save_and_clean_models(

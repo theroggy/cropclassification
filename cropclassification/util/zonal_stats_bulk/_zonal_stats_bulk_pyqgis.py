@@ -52,22 +52,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """
-    Calculate zonal statistics.
-
-    Args:
-        features_path (Path): _description_
-        id_column (str): _description_
-        images_bands (List[Tuple[Path, List[str]]]): _description_
-        stats (List[str]): statistics to calculate.
-        output_dir (Path): _description_
-        nb_parallel (int, optional): the number of parallel processes to use.
-            Defaults to -1: use all available processors.
-        force (bool, optional): _description_. Defaults to False.
-
-    Raises:
-        Exception: _description_
-    """
+    """Calculate zonal statistics."""
     # Make sure QGIS is available
     if not HAS_QGIS:
         raise RuntimeError("QGIS is not available on this system.")
