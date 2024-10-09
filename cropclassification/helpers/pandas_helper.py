@@ -9,6 +9,16 @@ import pandas as pd
 
 
 def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
+    """Gte information about a table in a database file.
+
+    Args:
+        path (Path): path to the database file.
+        table_name (str, optional): name of the table to get info from.
+            Defaults to "info".
+
+    Returns:
+        dict[str, Any]: information about the table.
+    """
     ext_lower = path.suffix.lower()
     if ext_lower in (".sqlite", ".gpkg"):
         sql_db = None
@@ -40,8 +50,9 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 def read_file(
     path: Path, table_name: str = "info", columns: Optional[list[str]] = None
 ) -> pd.DataFrame:
-    """Reads a file to a pandas dataframe. The fileformat is detected based on the
-    path extension.
+    """Read a file to a pandas dataframe.
+
+    The fileformat is detected based on the path extension.
 
     # TODO: think about if possible/how to support  adding optional parameter and pass
     # them to next function, example encoding, float_format,...
@@ -114,8 +125,9 @@ def to_file(
     index: bool = True,
     append: bool = False,
 ):
-    """Reads a pandas dataframe to file. The file format is detected based on the path
-    extension.
+    """Writes a pandas dataframe to file.
+
+    The file format is detected based on the path extension.
 
     # TODO: think about if possible/how to support  adding optional parameter and pass
     # them to next function, example encoding, float_format,...

@@ -46,7 +46,7 @@ lint.select = [
     # isort
     "I",
     # pydocstyle
-    #"D",
+    "D",
 ]
 
 lint.ignore = [

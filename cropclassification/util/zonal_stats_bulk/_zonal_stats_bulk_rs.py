@@ -43,22 +43,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """Calculate zonal statistics.
-
-    Args:
-        features_path (Path): _description_
-        id_column (str): _description_
-        images_bands (List[Tuple[Path, List[str]]]): _description_
-        output_dir (Path): _description_
-        log_dir (Path): _description_
-        log_level (Union[str, int]): _description_
-        nb_parallel (int, optional): the number of parallel processes to use.
-            Defaults to -1: use all available processors.
-        force (bool, optional): _description_. Defaults to False.
-
-    Raises:
-        Exception: _description_
-    """
+    """Calculate zonal statistics."""
     # TODO: probably need to apply some object oriented approach here for "image",
     # because there are to many properties,... to be clean/clear this way.
     # TODO: maybe passing the executor pool to a calc_stats_for_image function can have

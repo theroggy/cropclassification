@@ -54,6 +54,17 @@ def _filter_nanmean(image, size):
 def lee_enhanced(
     image, filtersize: int = 5, nlooks: float = 10.0, dfactor: float = 10.0
 ):
+    """Apply the Enhanced Lee Filter to an image.
+
+    Args:
+        image (_type_): the image to apply the filter to.
+        filtersize (int, optional): filter size to use. Defaults to 5.
+        nlooks (float, optional): the number of looks to apply. Defaults to 10.0.
+        dfactor (float, optional): the dfactor to use. Defaults to 10.0.
+
+    Returns:
+        the image with the filter applied.
+    """
     # Implementation based on PCI Geomatimagea's FELEE function documentation
     with warnings.catch_warnings():
         warnings.filterwarnings(
@@ -87,6 +98,20 @@ def lee_enhanced_file(
     dfactor: float = 10.0,
     force: bool = False,
 ):
+    """Apply the Enhanced Lee Filter to an image.
+
+    Args:
+        input_path (Path): the path to th image to apply the filter to.
+        output_path (Path): the path to write the output to.
+        filtersize (int, optional): filter size to use. Defaults to 5.
+        nlooks (float, optional): the number of looks to apply. Defaults to 10.0.
+        dfactor (float, optional): the dfactor to use. Defaults to 10.0.
+        force (bool, optional): True to overwrite existing output files.
+            Defaults to False.
+
+    Returns:
+        the image with the filter applied.
+    """
     if output_path.exists():
         if force:
             output_path.unlink()

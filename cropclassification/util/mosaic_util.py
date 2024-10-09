@@ -1,3 +1,5 @@
+"""Utility functions to generate a periodic mosaic."""
+
 import json
 import logging
 from copy import deepcopy
@@ -277,14 +279,14 @@ def _prepare_periods(
     Args:
         start_date (datetime): start date, included.
         end_date (datetime): end date, excluded.
-        periode_name (str): the name of the periods to use.
-        days_per_period (Optional[int]): number of days per period.
+        period_name (str): the name of the periods to use.
+        period_days (Optional[int]): number of days per period.
 
     Raises:
         ValueError: invalid input parameter values were passed in.
 
     Returns:
-        List[Dict[str, Any]]: list of dicts with info about the images to get
+        list[dict[str, Any]]: list of dicts with info about the images to get
     """
     period_name, period_days = _prepare_period_params(period_name, period_days)
 

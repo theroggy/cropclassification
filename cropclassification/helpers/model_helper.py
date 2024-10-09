@@ -155,8 +155,9 @@ def parse_model_filename(path: Path) -> dict:
 def get_models(
     model_dir: Path, model_base_filename: Optional[str] = None
 ) -> pd.DataFrame:
-    """Return the list of models in the model_dir passed. It is returned as a
-    dataframe with the columns as returned in parse_model_filename()
+    """Return the list of models in the model_dir passed.
+
+    It is returned as a dataframe with the columns as returned in parse_model_filename.
 
     Args:
         model_dir: dir containing the models
@@ -186,7 +187,8 @@ def get_best_model(
 
     Args:
         model_dir: dir containing the models
-        acc_metric_mode:
+        acc_metric_mode: use 'min' if the accuracy metrics should be as low as possible,
+            'max' if a higher values is better.
         model_base_filename: optional, if passed, only the models with this
             base filename will be taken in account
     """
@@ -234,18 +236,20 @@ def save_and_clean_models(
     debug: bool = False,
     only_report: bool = False,
 ):
-    """Save the new model if it is good enough... en cleanup existing models
-    if they are worse than the new or other existing models.
+    """Save the new model if it is good enough.
+
+    Existing models are removed if they are worse than the new or other existing models.
 
     Args:
         model_save_dir: dir containing the models
         model_save_base_filename: base filename that will be used
-        model_acc_metric_mode (str): use 'min' if the accuracy metrics should be
+        acc_metric_mode (str): use 'min' if the accuracy metrics should be
                 as low as possible, 'max' if a higher values is better.
         new_model: optional, the keras model object that will be saved
         new_model_acc_train: optional: the accuracy on the train dataset
         new_model_acc_val: optional: the accuracy on the validation dataset
         new_model_epoch: optional: the epoch in the training
+        save_weights_only: optional: only save the weights of the model
         verbose: report the best model after save and cleanup
         debug: write debug logging
         only_report: optional: only report which models would be cleaned up

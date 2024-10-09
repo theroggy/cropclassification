@@ -33,14 +33,16 @@ def calc_top_classes_and_consolidation(
     corrections already.
 
     Args:
-        input_parcel_path (Path): [description]
-        input_parcel_probabilities_path (Path): [description]
-        output_predictions_path (Path): [description]
-        output_predictions_geopath (Path): [description]
-        output_predictions_output_path (Path, optional): [description].
-            Defaults to None.
+        input_parcel_path (Path): path to the input parcel file
+        input_parcel_probabilities_path (Path): path to the input probabilities file
+        input_parcel_geopath (Path): path to the input parcel geofile
+        output_predictions_path (Path): path to the output predictions file
+        output_predictions_geopath (Path): path to the output predictions geofile
         top_classes (int, optional): Number of top predictions to retain. Defaults to 3.
-        force (bool, optional): [description]. Defaults to False.
+        output_predictions_output_path (Path, optional): path to the output predictions
+            file prepared to load in oracle. Defaults to None.
+        force (bool, optional): True to overwrite existing output files.
+            Defaults to False.
     """
     # If force is false and output exists, already, return
     if force is False and output_predictions_path.exists():
@@ -170,6 +172,16 @@ def calc_top_classes_and_consolidation(
 
 
 def calc_top_classes(proba_df: pd.DataFrame, top_classes: int = 3) -> pd.DataFrame:
+    """Calculate the top x predictions for each row.
+
+    Args:
+        proba_df (pd.DataFrame): dataframe with the probabilities
+        top_classes (int, optional): the number or top predicted classes to retain.
+            Defaults to 3.
+
+    Returns:
+        pd.DataFrame: dataframe with the top x predictions for each row.
+    """
     # Calculate the top x predictions
     logger.info("Calculate top classes")
     proba_tmp_df = proba_df.copy()
@@ -219,6 +231,18 @@ def add_doubt_column(
     apply_doubt_min_nb_pixels: bool,
     apply_doubt_marker_specific: bool,
 ):
+    """Add a doubt column to the prediction dataframe.
+
+    Args:
+        pred_df (pd.DataFrame): the dataframe with the predictions
+        new_pred_column (str): the column name for the new column
+        apply_doubt_pct_proba (bool): True to apply doubt based on percentage
+            probability
+        apply_doubt_min_nb_pixels (bool): True to apply doubt based on minimum number of
+            pixels
+        apply_doubt_marker_specific (bool): True to apply doubt based on marker specific
+            rules
+    """
     # Calculate predictions with doubt column
     classes_to_ignore = conf.marker.getlist("classes_to_ignore")
 

@@ -1,3 +1,5 @@
+"""Module to calculate indexes from raster files."""
+
 import logging
 import shutil
 import tempfile
@@ -24,6 +26,18 @@ def calc_index(
     process_options: dict = {},
     force: bool = False,
 ):
+    """Calculate an index or derived file from a raster file.
+
+    Args:
+        input_path (Path): path to the input raster file.
+        output_path (Path): path to the output file.
+        index (str): index/derived file to calculate.
+        pixel_type (str): output pixel type. One of "BYTE", "FLOAT16" or "FLOAT32".
+        process_options (dict, optional): extra processing options to apply.
+            Defaults to {}.
+        force (bool, optional): True to overwrite an existing output file.
+            Defaults to False.
+    """
     if io_util.output_exists(output_path, remove_if_exists=force):
         return
 
@@ -86,7 +100,7 @@ def calc_index(
 
             ndvi = (nir - red) / (nir + red)
             ndvi.name = index
-            save_index(ndvi, output_path, pixel_type, scale_factor, add_offset)
+            _save_index(ndvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "bsi":
             # A Modified Bare Soil Index to Identify Bare Land Features during
@@ -101,7 +115,7 @@ def calc_index(
 
             bsi = ((swir2 + red) - (nir + blue)) / ((swir2 + red) + (nir + blue))
             bsi.name = index
-            save_index(bsi, output_path, pixel_type, scale_factor, add_offset)
+            _save_index(bsi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "dprvi":
             # "New" dual-pol radar vegetation index for Sentinel-1.
@@ -152,7 +166,7 @@ def calc_index(
             dprvi = (q * (q + 3)) / ((q + 1) * (q + 1))
 
             dprvi.name = index
-            save_index(dprvi, output_path, pixel_type, scale_factor, add_offset)
+            _save_index(dprvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "rvi":
             if pixel_type == "BYTE":
@@ -168,7 +182,7 @@ def calc_index(
             # var rvi = image.expression('sqrt(vv/(vv + vh))*(vv/vh)'
             rvi = (4 * vh) / (vv + vh)
             rvi.name = index
-            save_index(rvi, output_path, pixel_type, scale_factor, add_offset)
+            _save_index(rvi, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "vvdvh":
             if pixel_type not in ("FLOAT16", "FLOAT32"):
@@ -180,13 +194,13 @@ def calc_index(
             # Calculate VV versus VH ratio
             vvdvh = vv / vh
             vvdvh.name = index
-            save_index(vvdvh, output_path, pixel_type, scale_factor, add_offset)
+            _save_index(vvdvh, output_path, pixel_type, scale_factor, add_offset)
 
         elif index == "sarrgb":
             log10 = process_options.get("log10", False)
             despeckled = "lee_enhanced" in process_options
 
-            calc_sar_rgb(
+            _calc_sar_rgb(
                 image=image,
                 output_path=output_path,
                 log10=log10,
@@ -236,7 +250,7 @@ def calc_index(
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-def save_index(
+def _save_index(
     index_data: xr.DataArray,
     output_path: Path,
     pixel_type: str,
@@ -298,7 +312,7 @@ def save_index(
             raise ex
 
 
-def calc_sar_rgb(
+def _calc_sar_rgb(
     image: xr.Dataset,
     output_path: Path,
     log10: bool,
@@ -430,6 +444,13 @@ def calc_sar_rgb(
 
 
 def remove(path: Path, missing_ok: bool = False):
+    """Remove the file and any related files.
+
+    Args:
+        path (Path): path to the file to remove.
+        missing_ok (bool, optional): If True, no error is raised if the file doesn't
+            exist. Defaults to False.
+    """
     path.unlink(missing_ok=missing_ok)
     for file_path in path.parent.glob(f"{path.name}*"):
         file_path.unlink(missing_ok=missing_ok)

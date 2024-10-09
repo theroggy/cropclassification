@@ -96,20 +96,18 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
 
 def predict_proba(
     parcel_df: pd.DataFrame,
-    classifier_basepath: Path,
     classifier_path: Path,
     output_parcel_predictions_path: Path,
 ) -> pd.DataFrame:
-    """Predict the probabilities for all input data using the classifier provided and
-    write it to the output file.
+    """Predict the probabilities for all input data.
 
     Args:
         parcel_df: pandas DataFrame containing the data to classify. Columns:
             * global_settings.id_column: the id of the parcel.
             * global_settings.class_column: the class of the parcel. Isn't really used.
             * ... all columns that will be used as classification data.
-        classifier_path: the path where the classifier can be written.
-        output_parcel_predictions_path: file to write the predictions to.
+        classifier_path: the path to the classifier to use.
+        output_parcel_predictions_path: path to the file to write the predictions to.
     """
     # Some basic checks that input is ok
     column_class = conf.columns["class"]

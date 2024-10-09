@@ -29,8 +29,7 @@ def prepare_input(
     output_parcel_nogeo_path: Optional[Path] = None,
     force: bool = False,
 ) -> bool:
-    """This function creates a file that is preprocessed to be a good input file for
-    timeseries extraction of sentinel images.
+    """Prepare a file so it is ready for timeseries extraction of sentinel images.
 
     Args:
         input_parcel_path (Path): input file
@@ -178,15 +177,16 @@ def calculate_periodic_timeseries(
     TODO: add possibility to choose which values to extract (mean, min, max,...)?
 
     Args:
-        parcel_path (Path): [description]
-        timeseries_per_image_dir (Path): [description]
+        parcel_path (Path): path to the parcel file.
+        timeseries_per_image_dir (Path): directory with timeseries data per satellite
+            image to be used for weekly aggregation.
         start_date (datetime): Start date. Needs to be aligned
             already on the periods wanted + data on this date is included.
         end_date (datetime): End date. Needs to be aligned already on
             the periods wanted + data on this date is excluded.
-        sensordata_to_get ([]):
-        timeseries_periodic_dir (Path): Directory the timeseries will be written to.
-        force (bool, optional): [description]. Defaults to False.
+        sensordata_to_get ([]): list of sensor configurations to get data for.
+        timeseries_periodic_dir (Path): directory the timeseries will be written to.
+        force (bool, optional): True to overwrite existing files. Defaults to False.
     """
     logger.info("calculate_periodic_data")
 

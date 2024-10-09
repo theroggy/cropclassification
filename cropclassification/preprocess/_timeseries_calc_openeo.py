@@ -32,12 +32,24 @@ def calculate_periodic_timeseries(
     """Calculate timeseries data for the input parcels.
 
     Args:
-        imageprofiles_to_get: an array with images you want to be calculated.
-        on_missing_image: what to do when an image is missing. Options are:
+        input_parcel_path (Path): path to the input parcel file.
+        roi_bounds (tuple[float, float, float, float]): bounds of the roi.
+        roi_crs (Optional[pyproj.CRS]): crs of the roi bounds.
+        start_date (datetime): start date of the timeseries.
+        end_date (datetime): end date of the timeseries (non inclusive).
+        imageprofiles_to_get (list[str]): an array with images you want to be
+            calculated.
+        imageprofiles (dict[str, ImageProfile]): imageprofiles to use for the
+            calculation.
+        images_periodic_dir (Path): directory where the images are stored.
+        timeseries_periodic_dir (Path): directory where the timeseries data will be
+            saved.
+        nb_parallel (int): number of parallel processes to use.
+        on_missing_image (str): what to do when an image is missing. Options are:
+
             - ignore: ignore that the image, don't try to download it
             - calculate_raise: calculate the image and raise an error if it fails
             - calculate_ignore: calculate the image and ignore the error if it fails
-
     """
     info = gfo.get_layerinfo(input_parcel_path)
     if info.crs is not None and not info.crs.equals(roi_crs):

@@ -28,10 +28,13 @@ def calc_timeseries_data(
     images_to_use: dict[str, conf.ImageConfig],
     timeseries_periodic_dir: Path,
 ):
-    """Calculate timeseries data for the input parcels
+    """Calculate timeseries data for the input parcels.
 
     Args:
-        input_parcel_path (str): [description]
+        input_parcel_path (str): path to the parcel data.
+        roi_bounds (tuple[float, float, float, float]): bounds of the region to
+            calculate timeseries data for.
+        roi_crs (Optional[pyproj.CRS]): crs of the bounds of the region.
         start_date (datetime): the start date for the timeseries to generate, inclusive.
         end_date (datetime): the end date for the timeseries to generate, exclusive.
         images_to_use (List[str]): an array with data you want to be calculated:

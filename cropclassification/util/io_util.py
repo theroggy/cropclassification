@@ -1,3 +1,5 @@
+"""I/O utility functions."""
+
 import logging
 import os
 import tempfile

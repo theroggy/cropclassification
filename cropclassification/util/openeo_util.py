@@ -1,3 +1,5 @@
+"""Module to get mosaic images from openeo."""
+
 import json
 import logging
 import pprint
@@ -118,7 +120,7 @@ def get_images(
             band_descriptions = None
             if image_path in images_to_get_dict:
                 band_descriptions = images_to_get_dict[image_path]["bands"]
-            postprocess_image(image_path, band_descriptions)
+            _postprocess_image(image_path, band_descriptions)
         if raise_errors and len(job_errors) > 0:
             raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
@@ -149,7 +151,7 @@ def get_images(
             "north": roi_bounds[3],
         }
 
-        create_mosaic_job(
+        _create_mosaic_job(
             conn=conn,
             collection=image_to_get["collection"],
             satellite=image_to_get["satellite"],
@@ -172,14 +174,14 @@ def get_images(
         band_descriptions = None
         if image_path.as_posix() in images_to_get_dict:
             band_descriptions = images_to_get_dict[image_path.as_posix()]["bands"]
-        postprocess_image(image_path, band_descriptions)
+        _postprocess_image(image_path, band_descriptions)
     if raise_errors and len(job_errors) > 0:
         raise RuntimeError(f"Errors occured: {pprint.pformat(job_errors)}")
 
     return
 
 
-def create_mosaic_job(
+def _create_mosaic_job(
     conn: openeo.Connection,
     collection: str,
     satellite: str,
@@ -407,7 +409,7 @@ def get_job_results(
     return output_paths, errors
 
 
-def postprocess_image(path: Path, band_descriptions: Optional[list[str]]):
+def _postprocess_image(path: Path, band_descriptions: Optional[list[str]]):
     raster_util.add_overviews(path)
 
     # if band_descriptions is None, try to read them from the json metadata file.

@@ -32,12 +32,22 @@ image_profiles: dict[str, ImageProfile]
 
 
 class ImageConfig:
+    """Image configuration class."""
+
     def __init__(
         self,
         imageprofile_name: str,
         imageprofile: Optional[ImageProfile] = None,
         bands: Optional[list[str]] = None,
     ):
+        """Constructor for ImageConfig.
+
+        Args:
+            imageprofile_name (str): the name of the image profile.
+            imageprofile (Optional[ImageProfile], optional): ImageProfile to use for
+                this Image. Defaults to None.
+            bands (Optional[list[str]], optional): the bands to read. Defaults to None.
+        """
         self.imageprofile_name = imageprofile_name
         if imageprofile is not None:
             self.imageprofile = imageprofile
@@ -241,6 +251,7 @@ def read_config(
 
 
 def parse_image_config(input) -> dict[str, ImageConfig]:
+    """Parses the json input to a dictionary of ImageConfig objects."""
     result = None
     imageconfig_parsed = None
     try:
@@ -330,6 +341,7 @@ def _validate_image_profiles(profiles: dict[str, ImageProfile]):
 
 
 def pformat_config():
+    """Formats the config as a pretty string."""
     message = (
         f"Config files used: {pprint.pformat(config_paths_used)} \n"
         "Config info listing:\n"

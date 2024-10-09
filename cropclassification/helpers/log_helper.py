@@ -6,7 +6,19 @@ import os
 from pathlib import Path
 
 
-def main_log_init(log_dir: Path, log_basefilename: str, log_level: str = "INFO"):
+def main_log_init(
+    log_dir: Path, log_basefilename: str, log_level: str = "INFO"
+) -> logging.Logger:
+    """Initialize the main log file.
+
+    Args:
+        log_dir (Path): the directory where the log file should be stored.
+        log_basefilename (str): the base name of the log file.
+        log_level (str, optional): the level to log. Defaults to "INFO".
+
+    Returns:
+        logging.Logger: the logger object.
+    """
     # Make sure the log dir exists
     if not log_dir.exists():
         os.makedirs(log_dir, exist_ok=True)

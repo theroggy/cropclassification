@@ -36,12 +36,16 @@ def write_full_report(
     Args:
         parcel_predictions_geopath: File name of geofile with the parcels with their
             predictions.
-        parcel_train_path:
-        parcel_classification_data_path:
         output_report_txt: File name of txt file the report will be written to.
         parcel_ground_truth_path: List of parcels with ground truth to calculate
             eg. alfa and beta errors. If None, the part of the report that is based on
             this data is skipped
+        parcel_train_path: path to the file with the parcels that were used for
+            training.
+        parcel_classification_data_path: path to the file with the classification data.
+        force: If True, the report will be written even if the output file already
+            exists.
+
 
     TODO: refactor function to split logic more...
     """
@@ -1210,7 +1214,7 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
 def _add_prediction_conclusion(
     in_df, new_columnname, prediction_column_to_use, detailed: bool
 ):
-    """Calculate the "conclusions" for the predictions
+    """Calculate the "conclusions" for the predictions.
 
     REMARK: calculating it like this, using native pandas operations, is 300 times
             faster than using DataFrame.apply() with a function!!!
