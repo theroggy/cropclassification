@@ -1,3 +1,5 @@
+"""Setup file for the cropclassification package."""
+
 import setuptools
 
 with open("README.md") as fh:

@@ -18,21 +18,9 @@ def reproject_synced(
     target_epsg: int,
     dst_dir: Optional[Path] = None,
 ) -> Path:
-    """
-    Reproject the input file. It is process locked and if another process is already
-    busy, wait till it is ready.
+    """Reproject the input file.
 
-    Args:
-        features_path (Path): _description_
-        columns_to_retain (List[str]): _description_
-        target_epsg (int): _description_
-
-    Raises:
-        Exception: _description_
-        Exception: _description_
-
-    Returns:
-        Path: _description_
+    It is process locked and if another process is already busy, wait till it is ready.
     """
     vector_info = gfo.get_layerinfo(path)
     assert vector_info.crs is not None
@@ -134,18 +122,11 @@ def _load_features_file(
     bbox=None,
     polygon=None,
 ) -> gpd.GeoDataFrame:
-    """
-    Load the features and reproject to the target crs.
+    """Load the features and reproject to the target crs.
 
     Remarks:
         * Reprojected version is "cached" so on a next call, it can be directly read.
         * Locking and waiting is used to ensure correct results if used in parallel.
-
-    Args
-        features_path:
-        columns_to_retain:
-        target_srs:
-        bbox: bounds of the area to be loaded, in the target_epsg
     """
     # Load parcel file and preprocess it: remove excess columns + reproject if needed.
     features_prepr_path = reproject_synced(

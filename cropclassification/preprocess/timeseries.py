@@ -1,6 +1,4 @@
-"""
-This module contains general functions that apply to timeseries data...
-"""
+"""This module contains general functions that apply to timeseries data..."""
 
 import logging
 import os
@@ -30,11 +28,13 @@ def calc_timeseries_data(
     images_to_use: dict[str, conf.ImageConfig],
     timeseries_periodic_dir: Path,
 ):
-    """
-    Calculate timeseries data for the input parcels
+    """Calculate timeseries data for the input parcels.
 
     Args:
-        input_parcel_path (str): [description]
+        input_parcel_path (str): path to the parcel data.
+        roi_bounds (tuple[float, float, float, float]): bounds of the region to
+            calculate timeseries data for.
+        roi_crs (Optional[pyproj.CRS]): crs of the bounds of the region.
         start_date (datetime): the start date for the timeseries to generate, inclusive.
         end_date (datetime): the end date for the timeseries to generate, exclusive.
         images_to_use (List[str]): an array with data you want to be calculated:
@@ -100,11 +100,7 @@ def collect_and_prepare_timeseries_data(
     parceldata_aggregations_to_use: list[str],
     force: bool = False,
 ):
-    """
-    Collect all timeseries data to use for the classification and prepare it by applying
-    scaling,... as needed.
-    """
-
+    """Collect and preprocess timeseries data needed for the classification."""
     # If force == False Check and the output file exists already, stop.
     if force is False and output_path.exists() is True:
         logger.warning(

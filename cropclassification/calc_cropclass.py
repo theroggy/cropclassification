@@ -25,8 +25,7 @@ def calc_marker_task(
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """
-    Runs a marker using the setting in the config_paths.
+    """Runs a marker using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load

@@ -19,6 +19,7 @@ __version__ = _get_version()
 
 
 def main():
+    """Parse the arguments and run the tasks."""
     # Interprete arguments
     parser = argparse.ArgumentParser(add_help=False)
 
@@ -56,6 +57,13 @@ def main():
 
 
 def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
+    """Run the tasks in the tasks directory.
+
+    Args:
+        tasksdir (Path): path to the directory where the tasks are located.
+        config_overrules (list[str], optional): list of overrules to apply on the
+            configuration. Defaults to [].
+    """
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
     for task_path in task_paths:

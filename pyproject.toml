@@ -12,7 +12,7 @@ ignore_missing_imports = true
 [tool.ruff]
 line-length = 88
 target-version = "py39"
-extend-exclude = ["docs/*", "local_ignore/*"]
+extend-exclude = ["bin_util/*", "docs/*", "local_ignore/*"]
 
 lint.select = [
     # pyflakes
@@ -46,7 +46,7 @@ lint.select = [
     # isort
     "I",
     # pydocstyle
-    #"D",
+    "D",
 ]
 
 lint.ignore = [
