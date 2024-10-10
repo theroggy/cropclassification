@@ -48,9 +48,6 @@ def run_cropclass(
     run_dir = dir_helper.create_run_dir(
         conf.paths.getpath("marker_dir"), reuse_last_run_dir
     )
-    print(run_dir)
-    if not run_dir.exists():
-        os.makedirs(run_dir)
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
@@ -239,7 +236,6 @@ def run_cropclass(
     ts.collect_and_prepare_timeseries_data(
         input_parcel_path=input_parcel_nogeo_path,
         timeseries_dir=timeseries_periodic_dir,
-        base_filename=base_filename,
         output_path=parcel_classification_data_path,
         start_date=start_date,
         end_date=end_date,

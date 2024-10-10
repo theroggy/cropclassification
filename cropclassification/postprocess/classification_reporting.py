@@ -1608,11 +1608,8 @@ def _write_OA_per_pixcount(
 ):
     """Write a report of the overall accuracy that parcels per pixcount get."""
     # If force == False Check and the output file exists already, stop.
-    if force is False and output_report_txt.exists():
-        logger.warning(
-            "collect_and_prepare_timeseries_data: output file already exists and "
-            f"force is False, so stop: {output_report_txt}"
-        )
+    if not force and output_report_txt.exists():
+        logger.warning(f"output file already exists so stop: {output_report_txt}")
         return
 
     # Write output...
