@@ -92,7 +92,6 @@ def calc_timeseries_data(
 def collect_and_prepare_timeseries_data(
     input_parcel_path: Path,
     timeseries_dir: Path,
-    base_filename: str,
     output_path: Path,
     start_date: datetime,
     end_date: datetime,
@@ -102,10 +101,8 @@ def collect_and_prepare_timeseries_data(
 ):
     """Collect and preprocess timeseries data needed for the classification."""
     # If force == False Check and the output file exists already, stop.
-    if force is False and output_path.exists() is True:
-        logger.warning(
-            f"Output file already exists and force == False, so stop: {output_path}"
-        )
+    if not force and output_path.exists():
+        logger.warning(f"Output file already exists, so return: {output_path}")
         return
 
     # Init the result with the id's of the parcels we want to treat
