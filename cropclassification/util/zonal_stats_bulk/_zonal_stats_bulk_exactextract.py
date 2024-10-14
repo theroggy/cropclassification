@@ -6,7 +6,7 @@ import sys
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 
 import geopandas as gpd
 import pandas as pd
@@ -28,7 +28,7 @@ def zonal_stats(
     columns: list[str],
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: dict[str, Any],
+    stats: list[str],
     nb_parallel: int = -1,
     force: bool = False,
 ):
@@ -212,7 +212,7 @@ def zonal_stats_band(
     vector_path,
     raster_path: Path,
     tmp_dir: Path,
-    stats: dict[str, Any],
+    stats: list[str],
     include_cols: list[str],
 ) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
     # Get the image info
@@ -233,7 +233,7 @@ def zonal_stats_band(
         stats_df = exactextract.exact_extract(
             rast=raster_path,
             vec=vector_proj_path,
-            ops=get_ops(stats),
+            ops=stats,
             include_geom=False,
             output="pandas",
             include_cols=include_cols,
@@ -251,7 +251,7 @@ def zonal_stats_band_tofile(
     output_paths: dict[str, Path],
     bands: list[str],
     tmp_dir: Path,
-    stats: dict[str, Any],
+    stats: list[str],
     include_cols: list[str],
     force: bool = False,
 ) -> dict[str, Path]:
@@ -276,12 +276,13 @@ def zonal_stats_band_tofile(
         index = raster_info.bands[band].band_index
         band_columns = include_cols.copy()
         band_columns.extend(
-            [f"band_{index}_{stat}" for stat in stats["spatial_aggregations"]]
+            [f"band_{index}_{stat}" for stat in [stat.split("(")[0] for stat in stats]]
         )
         band_stats_df = stats_df[band_columns].copy()
         band_stats_df.rename(
             columns={
-                f"band_{index}_{stat}": stat for stat in stats["spatial_aggregations"]
+                f"band_{index}_{stat}": stat
+                for stat in [stat.split("(")[0] for stat in stats]
             },
             inplace=True,
         )
@@ -297,11 +298,8 @@ def zonal_stats_band_tofile(
                 pdh.to_file(df=band_stats_df, path=output_paths[band], index=False)
 
                 # Write the parameters table to the output file
-                spatial_aggregation_args = []
-                for key, value in stats["spatial_aggregation_args"].items():
-                    spatial_aggregation_args.append([key, value])
                 spatial_aggregation_args_df = pd.DataFrame(
-                    data=spatial_aggregation_args, columns=["ops", "value"]
+                    data=stats, columns=["stats"]
                 )
                 pdh.to_file(
                     df=spatial_aggregation_args_df,
@@ -312,13 +310,3 @@ def zonal_stats_band_tofile(
                 )
 
     return output_paths
-
-
-def get_ops(stats: dict[str, Any]) -> list[str]:
-    spatial_aggregation_args = stats["spatial_aggregation_args"]
-    ops_params_list = [
-        f"{y}={spatial_aggregation_args[y]}" for y in spatial_aggregation_args
-    ]
-    ops_params_string = ",".join(ops_params_list)
-
-    return [f"{x}({ops_params_string})" for x in stats["spatial_aggregations"]]

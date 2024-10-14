@@ -6,15 +6,25 @@ import pytest
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
-from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_exactextract import (
-    get_ops,
-)
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests.test_helper import SampleData
 
 
-@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
-def test_zonal_stats_bulk(tmp_path, engine):
+@pytest.mark.parametrize(
+    "engine, stats",
+    [
+        ("pyqgis", ["mean", "count"]),
+        ("rasterstats", ["mean", "count"]),
+        (
+            "exactextract",
+            [
+                "mean(min_coverage_frac=0.5,coverage_weight=none)",
+                "count(min_coverage_frac=0.5,coverage_weight=none)",
+            ],
+        ),
+    ],
+)
+def test_zonal_stats_bulk(tmp_path, engine, stats):
     if engine == "pyqgis" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -48,7 +58,7 @@ def test_zonal_stats_bulk(tmp_path, engine):
         id_column="UID",
         rasters_bands=images_bands,
         output_dir=tmp_path,
-        stats=["mean", "count"],
+        stats=stats,
         engine=engine,
     )
 
@@ -62,24 +72,24 @@ def test_zonal_stats_bulk(tmp_path, engine):
         assert not any(result_df["mean"].isna())
 
 
-def test_spatial_aggregations():
-    # Read the configuration
-    config_paths = [
-        SampleData.config_dir / "cropgroup.ini",
-        SampleData.tasks_dir / "local_overrule.ini",
-    ]
-    conf.read_config(
-        config_paths=config_paths,
-        default_basedir=SampleData.marker_basedir,
-    )
-    spatial_aggregations = conf.timeseries.getlist("spatial_aggregations")
-    spatial_aggregation_args = conf.timeseries.getdict("spatial_aggregation_args")
+# def test_spatial_aggregations():
+#     # Read the configuration
+#     config_paths = [
+#         SampleData.config_dir / "cropgroup.ini",
+#         SampleData.tasks_dir / "local_overrule.ini",
+#     ]
+#     conf.read_config(
+#         config_paths=config_paths,
+#         default_basedir=SampleData.marker_basedir,
+#     )
+#     spatial_aggregations = conf.timeseries.getlist("spatial_aggregations")
+#     spatial_aggregation_args = conf.timeseries.getdict("spatial_aggregation_args")
 
-    ops = get_ops(
-        {
-            "spatial_aggregations": spatial_aggregations,
-            "spatial_aggregation_args": spatial_aggregation_args,
-        }
-    )
+#     ops = get_ops(
+#         {
+#             "spatial_aggregations": spatial_aggregations,
+#             "spatial_aggregation_args": spatial_aggregation_args,
+#         }
+#     )
 
-    assert len(ops) == 6
+#     assert len(ops) == 6
