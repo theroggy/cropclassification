@@ -20,7 +20,7 @@ from tests import test_helper
         ("BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
-def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
+def test_task_calc_cropclass(tmp_path, balancing_strategy, cross_pred_models):
     if not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -30,7 +30,7 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
     # Create configparser and read task file!
     tasks_dir = marker_basedir / "_tasks"
     ignore_dir = tasks_dir / "ignore"
-    task_ini = "task_test_calc_marker.ini"
+    task_ini = "task_test_calc_cropclass.ini"
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
