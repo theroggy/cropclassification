@@ -73,10 +73,10 @@ def calc_index(
     # Remarks:
     #   - use chunks=True to reduce memory usage.
     #   - lock=False is not faster, but uses more memory.
+    image_file = rioxarray.open_rasterio(
+        input_path, cache=False, masked=True, chunks=True
+    )
     try:
-        image_file = rioxarray.open_rasterio(
-            input_path, cache=False, masked=True, chunks=True
-        )
         image = image_file.to_dataset("band")
         if "long_name" not in image.attrs:
             raise ValueError(
@@ -283,8 +283,9 @@ def _save_index(
         index_data_scaled = index_data_scaled.astype("B")
 
         try:
+            # With windowed=True, writing is extremely slow
             index_data_scaled.rio.to_raster(
-                output_path, tiled=True, windowed=True, compress="DEFLATE", predictor=2
+                output_path, tiled=True, compress="DEFLATE", predictor=2
             )
         except Exception as ex:
             remove(output_path, missing_ok=True)
