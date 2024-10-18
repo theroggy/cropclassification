@@ -97,16 +97,37 @@ def collect_and_prepare_timeseries_data(
     end_date: datetime,
     images_to_use: dict[str, conf.ImageConfig],
     parceldata_aggregations_to_use: list[str],
+    max_fraction_null: float = 0.6,
     force: bool = False,
 ):
-    """Collect and preprocess timeseries data needed for the classification."""
+    """Collect and preprocess timeseries data needed for the classification.
+
+    Args:
+        input_parcel_path (Path): the path to the parcel file to collect timeseries data
+            for.
+        timeseries_dir (Path): the directory where the timeseries cache is saved.
+        output_path (Path): path to write the final output to.
+        start_date (datetime): start date of timeseries data to include (inclusive).
+        end_date (datetime): end date of timeseries data to include (exclusive).
+        images_to_use (dict[str, conf.ImageConfig]): the image profiles and bands to
+            extract the timeseries data for.
+        parceldata_aggregations_to_use (list[str]): aggregations on parcel level to use
+            in the timeseries data.
+        max_fraction_null (float, optional): the maximum fraction of columns that can
+            have null as value for a row. If more that that is null, the entire row is
+            filtered away. If 1, no row filtering is applied. Defaults to 0.6, so if
+            more than 60% of row values is None, the row is dropped.
+        force (bool, optional): True to overwrite existing outputs. Defaults to False.
+    """
     # If force == False Check and the output file exists already, stop.
     if not force and output_path.exists():
         logger.warning(f"Output file already exists, so return: {output_path}")
         return
 
     # Init the result with the id's of the parcels we want to treat
-    result_df = pdh.read_file(input_parcel_path, columns=[conf.columns["id"]])
+    result_df = gfo.read_file(
+        input_parcel_path, columns=[conf.columns["id"]], ignore_geometry=True
+    )
     if result_df.index.name != conf.columns["id"]:
         result_df.set_index(conf.columns["id"], inplace=True)
     nb_input_parcels = len(result_df.index)
@@ -165,7 +186,7 @@ def collect_and_prepare_timeseries_data(
         columns = []
         columns_to_rename = {}
         for column in info.columns:
-            # The id column shoul be read
+            # The id column should be read
             if column == conf.columns["id"]:
                 columns.append(column)
                 continue
@@ -194,14 +215,16 @@ def collect_and_prepare_timeseries_data(
 
         # Read data, and check if there is enough data in it
         data_read_df = pdh.read_file(curr_path, columns=columns)
-        nb_data_read = len(data_read_df.index)
-        data_available_pct = nb_data_read * 100 / nb_input_parcels
-        if data_available_pct < min_parcels_with_data_pct:
-            logger.info(
-                f"SKIP: only data for {data_available_pct:.2f}% of parcels, should be "
-                f"> {min_parcels_with_data_pct}%: {curr_path}"
-            )
-            continue
+
+        if min_parcels_with_data_pct > 0:
+            nb_data_read = len(data_read_df.index)
+            data_available_pct = nb_data_read * 100 / nb_input_parcels
+            if data_available_pct < min_parcels_with_data_pct:
+                logger.info(
+                    f"SKIP: only data for {data_available_pct:.2f}% of parcels, "
+                    f"should be > {min_parcels_with_data_pct}%: {curr_path}"
+                )
+                continue
 
         # Start processing the file
         logger.info(f"Process file: {curr_path}")
@@ -231,10 +254,10 @@ def collect_and_prepare_timeseries_data(
             data_read_df = data_read_df.rename(columns=columns_to_rename)
 
         # If S2, rescale data
-        if image_profile.startswith("s2"):
+        if image_profile.startswith("s2-agri"):
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column with s2 data: divide by 10.000, clip to upper=1: {column}"
+                    f"Column with s2 raw band data: /10.000, clip to upper=1: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 10000
                 data_read_df[column] = data_read_df[column].clip(upper=1)
@@ -308,7 +331,7 @@ def collect_and_prepare_timeseries_data(
         raise ValueError("data collection resulted in 0 columns")
 
     # Remove rows with many null values from result
-    max_number_null = int(0.6 * len(result_df.columns))
+    max_number_null = int(max_fraction_null * len(result_df.columns))
     parcel_many_null_df = result_df[result_df.isnull().sum(axis=1) > max_number_null]
     if len(parcel_many_null_df.index) > 0:
         # Write the rows with empty data to a file
