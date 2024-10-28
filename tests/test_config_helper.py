@@ -39,7 +39,7 @@ def test_read_config():
     ]
     conf.read_config(
         config_paths=config_paths,
-        default_basedir=SampleData.marker_basedir,
+        default_basedir=SampleData.markers_dir,
         overrules=[
             "paths.images_periodic_dir=_satellite_periodic/BEFL",
         ],
@@ -80,7 +80,7 @@ def test_read_config_overrule():
     config_paths = SampleData.config_dir / "cropgroup.ini"
     conf.read_config(
         config_paths=config_paths,
-        default_basedir=SampleData.marker_basedir,
+        default_basedir=SampleData.markers_dir,
         overrules=[
             "roi.roi_name=ROI_NAME_TEST",
             "paths.images_periodic_dir=_satellite_periodic/BEFL",
