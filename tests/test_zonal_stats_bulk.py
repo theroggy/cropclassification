@@ -15,7 +15,7 @@ def test_zonal_stats_bulk(tmp_path, engine):
         pytest.skip("QGIS is not available on this system.")
 
     # Prepare test data
-    sample_dir = SampleData.marker_basedir
+    sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 

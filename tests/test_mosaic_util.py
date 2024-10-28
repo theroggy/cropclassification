@@ -11,7 +11,7 @@ from tests.test_helper import SampleData
 
 def test_calc_periodic_mosaic_s2(tmp_path):
     # Prepare test data
-    sample_dir = SampleData.marker_basedir
+    sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
@@ -48,7 +48,7 @@ def test_calc_periodic_mosaic_s2(tmp_path):
 
 def test_calc_periodic_mosaic_s1_local_index_dprvi(tmp_path):
     # Prepare test data
-    sample_dir = SampleData.marker_basedir
+    sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
