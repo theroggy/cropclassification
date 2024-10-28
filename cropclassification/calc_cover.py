@@ -46,6 +46,8 @@ def run_cover(
     log_dir = conf.paths.getpath("log_dir")
     global logger
     logger = log_helper.main_log_init(log_dir, __name__, log_level)
+
+    logger.warning("This is a POC for a cover marker, so not for operational use!")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
     # Read the info about the run
