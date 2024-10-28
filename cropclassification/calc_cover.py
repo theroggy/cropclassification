@@ -49,17 +49,11 @@ def run_cover(
 
     # Read the info about the run
     input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
-    # input_parcel_filetype = conf.calc_marker_params["input_parcel_filetype"]
-    classes_refe_filename = conf.calc_marker_params.getpath("classes_refe_filename")
-
     input_dir = conf.paths.getpath("input_dir")
     input_parcel_path = input_dir / input_parcel_filename
 
-    refe_dir = conf.paths.getpath("refe_dir")
-    classes_refe_path = refe_dir / classes_refe_filename
-
     # Check if the necessary input files exist...
-    for path in [classes_refe_path, input_parcel_path]:
+    for path in [input_parcel_path]:
         if path is not None and not path.exists():
             message = f"Input file doesn't exist, so STOP: {path}"
             logger.critical(message)
