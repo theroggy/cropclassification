@@ -1,6 +1,6 @@
 {
-    "imageprofile": "s1-grd-sigma0-asc-weekly",
-    "collection": "S1_GRD_SIGMA0_ASCENDING",
+    "imageprofile": "s1-grd-sigma0-desc-weekly",
+    "collection": "S1_GRD_SIGMA0_DESCENDING",
     "index_type": null,
     "max_cloud_cover": null,
     "image_source": "openeo",
@@ -25,7 +25,7 @@
         "VH"
     ],
     "time_reducer": "last",
-    "path": "C:/Users/local_KRIWAY/Temp/1/pytest-of-KRIWAY/pytest-36/test_end2end0/sample_marker_basedir/_images_periodic/BEFL/s1-grd-sigma0-asc-weekly/s1-grd-sigma0-asc-weekly_2024-03-11_2024-03-17_VV-VH_last.tif",
+    "path": "C:/Users/local_KRIWAY/Temp/1/pytest-of-KRIWAY/pytest-36/test_end2end0/markers/_images_periodic/BEFL/s1-grd-sigma0-desc-weekly/s1-grd-sigma0-desc-weekly_2024-03-11_2024-03-17_VV-VH_last.tif",
     "job_options": null,
     "process_options": null
 }
