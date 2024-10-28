@@ -13,6 +13,7 @@ import pyproj
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import log_helper
+from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.util import mosaic_util
@@ -256,7 +257,7 @@ def _calc_cover(
           ) covers
     """  # noqa: E501
     result_df = gfo.read_file(tmp_path, sql_stmt=sql_stmt)
-    gfo.to_file(result_df, output_path)
+    pdh.to_file(result_df, output_path)
 
     if export_geo:
         geofile_ext = conf.general["geofile_ext"]
