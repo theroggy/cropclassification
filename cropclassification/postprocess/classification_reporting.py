@@ -583,8 +583,8 @@ def write_full_report(
                 .loc[df_parcel_gt[columnname].str.startswith("FARMER-CORRECT")]
                 .unique()
                 .tolist()
-                + beta_numerator_conclusions
             )
+            beta_denominator_conclusions.extent(beta_numerator_conclusions)
             beta_numerator = len(
                 df_parcel_gt.loc[
                     df_parcel_gt[columnname].isin(beta_numerator_conclusions)
