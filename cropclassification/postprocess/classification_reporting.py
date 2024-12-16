@@ -609,7 +609,7 @@ def write_full_report(
             html_data["PREDICTION_QUALITY_BETA_TEXT"] += "<br/>" + message
 
             # Pct THETA errors=theta errors/(theta errors + correct farmer declarations)
-            theta_numerator_conclusions = (
+            theta_numerator_conclusions = list(
                 df_parcel_gt[columnname]
                 .loc[df_parcel_gt[columnname].str.startswith("FARMER-WRONG_PRED-DOUBT")]
                 .unique()
