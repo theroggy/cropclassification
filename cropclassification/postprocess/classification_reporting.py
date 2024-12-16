@@ -578,14 +578,14 @@ def write_full_report(
 
             # Pct BETA errors=beta errors/(beta errors + correct farmer declarations)
             beta_numerator_conclusions = ["FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA"]
-            beta_denominator_conclusions = (
+            beta_denominator_conclusions = list(beta_numerator_conclusions)
+            beta_denominator_conclusions.extend(
                 df_parcel_gt.loc[
                     df_parcel_gt[columnname].str.startswith("FARMER-CORRECT")
                 ][columnname]
                 .unique()
                 .tolist()
             )
-            beta_denominator_conclusions.extent(beta_numerator_conclusions)
             beta_numerator = len(
                 df_parcel_gt.loc[
                     df_parcel_gt[columnname].isin(beta_numerator_conclusions)
