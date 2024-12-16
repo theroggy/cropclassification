@@ -615,14 +615,14 @@ def write_full_report(
                 .unique()
                 .tolist()
             )
-            theta_denominator_conclusions = (
+            theta_denominator_conclusions = list(theta_numerator_conclusions)
+            theta_denominator_conclusions.extend(
                 df_parcel_gt[columnname]
                 .loc[
                     df_parcel_gt[columnname].str.startswith("FARMER-CORRECT_PRED-DOUBT")
                 ]
                 .unique()
                 .tolist()
-                + theta_numerator_conclusions
             )
             theta_numerator = len(
                 df_parcel_gt.loc[
