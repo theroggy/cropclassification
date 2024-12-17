@@ -578,12 +578,13 @@ def write_full_report(
 
             # Pct BETA errors=beta errors/(beta errors + correct farmer declarations)
             beta_numerator_conclusions = ["FARMER-WRONG_PRED-DOESNT_OPPOSE:ERROR_BETA"]
-            beta_denominator_conclusions = (
-                df_parcel_gt[columnname]
-                .loc[df_parcel_gt[columnname].str.startswith("FARMER-CORRECT")]
+            beta_denominator_conclusions = list(beta_numerator_conclusions)
+            beta_denominator_conclusions.extend(
+                df_parcel_gt.loc[
+                    df_parcel_gt[columnname].str.startswith("FARMER-CORRECT")
+                ][columnname]
                 .unique()
                 .tolist()
-                + beta_numerator_conclusions
             )
             beta_numerator = len(
                 df_parcel_gt.loc[
@@ -608,20 +609,20 @@ def write_full_report(
             html_data["PREDICTION_QUALITY_BETA_TEXT"] += "<br/>" + message
 
             # Pct THETA errors=theta errors/(theta errors + correct farmer declarations)
-            theta_numerator_conclusions = (
+            theta_numerator_conclusions = list(
                 df_parcel_gt[columnname]
                 .loc[df_parcel_gt[columnname].str.startswith("FARMER-WRONG_PRED-DOUBT")]
                 .unique()
                 .tolist()
             )
-            theta_denominator_conclusions = (
+            theta_denominator_conclusions = list(theta_numerator_conclusions)
+            theta_denominator_conclusions.extend(
                 df_parcel_gt[columnname]
                 .loc[
                     df_parcel_gt[columnname].str.startswith("FARMER-CORRECT_PRED-DOUBT")
                 ]
                 .unique()
                 .tolist()
-                + theta_numerator_conclusions
             )
             theta_numerator = len(
                 df_parcel_gt.loc[
