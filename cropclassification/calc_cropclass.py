@@ -25,7 +25,7 @@ def run_cropclass(
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """Runs a crop classification marker using the setting in the config_paths.
+    """Runs a crop classification using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load

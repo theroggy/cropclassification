@@ -23,12 +23,12 @@
     - Rename section `dirs` to `paths`.
     - Remove `general.run_id`.
 - Rename some main modules to make naming more logical with non-cropclassification
-  markers being added (#162)
+  detections being added (#162)
 
 ### Improvements
 
-- Add feature "cross-prediction-models" to avoid markers being calculated on parcels
-  using a model that used this parcel in its training (#142, #143)
+- Add feature "cross-prediction-models" to be able to avoid classifications being
+  calculated on parcels using a model that used this parcel in its training (#142, #143)
 - Consolidated some landcover pre-processing ignore codes (#120)
 - Add some extra global accuracies (precision, recall, f1) to report (#119)
 - Add option `images.on_missing_images` to be able to ignore errors in the
@@ -77,8 +77,9 @@
 - Improve configurability + defaults of keras mlp classifier (#115)
 - Make image profiles to be used in a classification configurable in a config file (#56)
 - Add option to overrule configuration parameters at runtime (#92)
-- If image period is e.g. "weekly", align `start_date` of a marker to the next monday
-  instead of the previous one to avoid using data outside the dates provided (#83, #84)
+- If image period is e.g. "weekly", align `start_date` of the timeseries data used in a
+  detection to the next monday instead of the previous one to avoid using data outside
+  the dates provided (#83, #84)
 - Add method "best available pixel" on openeo for S2 (#70)
 - Add utility script to recalculate reports for an existing run + make recalculation
   more robust for old runs (#91, #102, #103, #104, #106)
