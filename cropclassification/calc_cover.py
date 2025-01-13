@@ -9,6 +9,7 @@ from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo
+import pandas as pd
 import pyproj
 
 from cropclassification.helpers import config_helper as conf
@@ -17,8 +18,6 @@ from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import timeseries as ts
 from cropclassification.util import mosaic_util
-
-logger: logging.Logger
 
 
 def run_cover(
@@ -313,3 +312,35 @@ def _calc_cover(
         gfo.to_file(result_gdf, geo_path)
 
     shutil.rmtree(tmp_dir)
+
+
+def report():
+    """Create a report for the cover marker."""
+    # Read parcels selected for the cover marker
+    prc_path = Path(
+        r"X:\__IT_TEAM_ANG_GIS\Taken\2024\2024-10-16_baresoil_selectie\baresoil_selectie_2024-10-16.xlsx"
+    )
+    prc_df = pd.read_excel(prc_path)
+    # CODE_OBJ = first 16 characters of the UID
+    prc_df["CODE_OBJ"] = prc_df["UID"].str[:16]
+    logger.info(f"{len(prc_df)=}")
+
+    # Read groundtruth
+    input_groundtruth_filename = "Prc_BEFL_2024_2024_11_28_groundtruth_scheur.tsv"
+    # input_dir = conf.paths.getpath("input_dir")
+    input_dir = Path(r"X:\Monitoring\Markers\dev\_inputdata")
+    input_groundtruth_path = input_dir / input_groundtruth_filename
+    groundtruth_df = pdh.read_file(input_groundtruth_path)
+    groundtruth_df["CODE_OBJ"] = groundtruth_df["UID"].str[:16]
+    logger.info(f"{len(groundtruth_df)=}")
+
+    prc_gt_df = prc_df.merge(groundtruth_df, on="CODE_OBJ", how="outer")
+    logger.info(prc_gt_df)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    global logger
+    logger = logging.getLogger(__name__)
+
+    report()
