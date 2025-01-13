@@ -54,6 +54,13 @@ columns_BEFL_to_keep = [
 ndvi_latecrop_count = "latecrop_ndvi_count"
 ndvi_latecrop_median = "latecrop_ndvi_median"
 
+# TODO: should be in REFE instead of hardcoded!!!
+late_main_crops = {
+    "MAINCROP_BEETS": ["71", "91", "8532", "9532"],
+    "MAINCROP_MAIZE": ["201", "202"],
+    "IGNORE_LATE_MAINCROP": ["396"],
+}
+
 
 def prepare_input(
     input_parcel_path: Path,
@@ -329,6 +336,17 @@ def prepare_input(
             min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=False,
         )
+    elif classtype_to_prepare == "LATECROP-LATE":
+        parceldata_df = prepare_input_latecrop_late(
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=column_BEFL_latecrop,
+            column_BEFL_latecrop2=column_BEFL_latecrop2,
+            column_BEFL_maincrop=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
+        )
     elif classtype_to_prepare == "LATECROP":
         parceldata_df = prepare_input_latecrop(
             parceldata_df=parceldata_df,
@@ -342,6 +360,17 @@ def prepare_input(
         )
     elif classtype_to_prepare == "LATECROP-EARLY-GROUNDTRUTH":
         parceldata_df = prepare_input_latecrop_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_latecrop=column_BEFL_latecrop_gt_verified,
+            column_BEFL_latecrop2=None,
+            column_BEFL_maincrop=column_BEFL_crop,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
+        )
+    elif classtype_to_prepare == "LATECROP-LATE-GROUNDTRUTH":
+        parceldata_df = prepare_input_latecrop_late(
             parceldata_df=parceldata_df,
             column_BEFL_latecrop=column_BEFL_latecrop_gt_verified,
             column_BEFL_latecrop2=None,
@@ -1385,14 +1414,7 @@ def prepare_input_latecrop_early(
     )
 
     # Set parcels having a main crop that stays late on the field to another class, as
-    # the main crop will still be on the field:
-    # TODO: should be in REFE instead of hardcoded!!!
-    late_main_crops = {
-        "MAINCROP_BEETS": ["71", "91", "8532", "9532"],
-        "MAINCROP_MAIZE": ["201", "202"],
-        "IGNORE_LATE_MAINCROP": ["396"],
-    }
-
+    # the main crop will still be on the field.
     for class_name, cropcodes in late_main_crops.items():
         parceldata_df.loc[
             parceldata_df[column_BEFL_maincrop].isin(cropcodes), column_output_class
@@ -1402,6 +1424,51 @@ def prepare_input_latecrop_early(
                 parceldata_df[column_BEFL_maincrop].isin(cropcodes),
                 conf.columns["class_declared"],
             ] = class_name
+
+    return parceldata_df
+
+
+def prepare_input_latecrop_late(
+    parceldata_df,
+    column_BEFL_latecrop: str,
+    column_BEFL_latecrop2: Optional[str],
+    column_BEFL_maincrop: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
+):
+    """Prepare input file for use in the latecrop-late marker.
+
+    Prepare a classname column to classify the crop groups for the detection of
+    late crops after main crops that stay on the field for a long time.
+    For early main crops, replace the class with an IGNORE_EARLY class.
+    """
+    # First run the standard latecrop prepare
+    parceldata_df = prepare_input_latecrop(
+        parceldata_df=parceldata_df,
+        column_BEFL_latecrop=column_BEFL_latecrop,
+        column_BEFL_latecrop2=column_BEFL_latecrop2,
+        column_BEFL_maincrop=column_BEFL_maincrop,
+        column_output_class=column_output_class,
+        classes_refe_path=classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
+        is_groundtruth=is_groundtruth,
+    )
+
+    # Set parcels having a main crop that does not stay late on the field to another
+    # class to be ignored.
+    early_maincrop_classname = "IGNORE_EARLY_MAINCROP"
+
+    for _, cropcodes in late_main_crops.items():
+        parceldata_df.loc[
+            ~parceldata_df[column_BEFL_maincrop].isin(cropcodes), column_output_class
+        ] = early_maincrop_classname
+        if not is_groundtruth:
+            parceldata_df.loc[
+                ~parceldata_df[column_BEFL_maincrop].isin(cropcodes),
+                conf.columns["class_declared"],
+            ] = early_maincrop_classname
 
     return parceldata_df
 
