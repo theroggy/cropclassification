@@ -40,7 +40,7 @@ def test_zonal_stats_bulk(tmp_path, engine, stats):
     ]
     conf.read_config(
         config_paths=config_paths,
-        default_basedir=SampleData.marker_basedir,
+        default_basedir=sample_dir,
     )
 
     # Make sure the s2-agri input file was copied
