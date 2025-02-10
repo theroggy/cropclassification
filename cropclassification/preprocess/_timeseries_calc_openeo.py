@@ -90,7 +90,7 @@ def calculate_periodic_timeseries(
         id_column=conf.columns["id"],
         rasters_bands=images_bands,
         output_dir=timeseries_periodic_dir,
-        stats=["count", "mean", "median", "std", "min", "max"],  # type: ignore[arg-type]
+        stats=["count", "mean", "median", "std", "min", "max"],
         engine="pyqgis",
         nb_parallel=nb_parallel,
     )
