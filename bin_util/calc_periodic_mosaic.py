@@ -41,7 +41,7 @@ def main():
 
     image_profiles_path = (
         Path(__file__).resolve().parent.parent
-        / "markers/_config/image_profiles.ini"
+        / "monitoring/_config/image_profiles.ini"
     )
     imageprofiles = conf._get_image_profiles(image_profiles_path)
 
