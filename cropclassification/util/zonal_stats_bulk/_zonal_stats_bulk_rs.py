@@ -1,6 +1,4 @@
-"""
-Calculate timeseries data per image.
-"""
+"""Calculate timeseries data per image."""
 
 import logging
 import math
@@ -45,24 +43,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """
-    Calculate zonal statistics.
-
-    Args:
-        features_path (Path): _description_
-        id_column (str): _description_
-        images_bands (List[Tuple[Path, List[str]]]): _description_
-        output_dir (Path): _description_
-        log_dir (Path): _description_
-        log_level (Union[str, int]): _description_
-        nb_parallel (int, optional): the number of parallel processes to use.
-            Defaults to -1: use all available processors.
-        force (bool, optional): _description_. Defaults to False.
-
-    Raises:
-        Exception: _description_
-    """
-
+    """Calculate zonal statistics."""
     # TODO: probably need to apply some object oriented approach here for "image",
     # because there are to many properties,... to be clean/clear this way.
     # TODO: maybe passing the executor pool to a calc_stats_for_image function can have
@@ -441,9 +422,7 @@ def zonal_stats(
 
 
 def _filter_on_status(dict: dict, status_to_check: str) -> list[str]:
-    """
-    Function to check the number of images that are being prepared for processing
-    """
+    """Check the number of images that are being prepared for processing."""
     keys_with_status = []
     for key in dict:
         if dict[key]["status"] == status_to_check:
@@ -460,8 +439,7 @@ def _prepare_calc(
     log_level: int,
     nb_parallel_max: int = 16,
 ) -> dict:
-    """
-    Prepare the inputs for a calculation.
+    """Prepare the inputs for a calculation.
 
     Returns True if succesfully completed.
     Remark: easiest it returns something, when used in a parallel way:
@@ -583,14 +561,12 @@ def _zonal_stats_image_gdf(
     future_start_time=None,
     cloud_filter_band: Optional[str] = None,
 ) -> bool:
-    """
-    Calculate stats for an image.
+    """Calculate stats for an image.
 
     Returns True if succesfully completed.
     Remark: easiest it returns something, when used in a parallel way:
         concurrent.futures likes it better if something is returned
     """
-
     # TODO: the different bands should be possible to process in parallel as well... so
     # this function should process only one band!
     # When running in parallel processes, the logging needs to be write to seperate

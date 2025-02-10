@@ -123,16 +123,25 @@ def test_calc_index_invalid(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "index, pixel_type",
+    "index, pixel_type, process_options, expected_bands",
     [
-        ("dprvi", "BYTE"),
-        ("dprvi", "FLOAT16"),
-        ("dprvi", "FLOAT32"),
-        ("rvi", "BYTE"),
-        ("vvdvh", "FLOAT16"),
+        ("dprvi", "BYTE", {}, ["dprvi"]),
+        ("dprvi", "FLOAT16", None, ["dprvi"]),
+        ("dprvi", "FLOAT32", {}, ["dprvi"]),
+        ("rvi", "BYTE", {}, ["rvi"]),
+        ("vvdvh", "FLOAT16", {}, ["vvdvh"]),
+        ("sarrgb", "FLOAT16", {}, ["vv", "vh", "vvdvh"]),
+        ("sarrgb", "FLOAT32", {"log10": True}, ["vvdb", "vhdb", "vvdvhdb"]),
+        ("sarrgb", "BYTE", {"log10": True}, ["vvdb", "vhdb", "vvdvhdb"]),
+        (
+            "sarrgb",
+            "BYTE",
+            {"lee_enhanced": {"filtersize": 5}, "log10": True},
+            ["vvdb", "vhdb", "vvdvhdb"],
+        ),
     ],
 )
-def test_calc_index_s1(tmp_path, index, pixel_type):
+def test_calc_index_s1(tmp_path, index, pixel_type, process_options, expected_bands):
     # Prepare test data
     input_path = SampleData.image_s1_asc_path
     output_path = tmp_path / f"{input_path.stem}_{index}_{pixel_type}.tif"
@@ -143,11 +152,62 @@ def test_calc_index_s1(tmp_path, index, pixel_type):
         input_path=input_path,
         output_path=output_path,
         index=index,
+        process_options=process_options,
         pixel_type=pixel_type,
     )
     assert output_path.exists()
 
-    assert raster_util.get_band_descriptions(output_path) == {index: 1}
+    assert list(raster_util.get_band_descriptions(output_path)) == expected_bands
+
+
+@pytest.mark.parametrize(
+    "index, pixel_type, process_options, expected_error",
+    [
+        ("vvdvh", "BYTE", {}, "vvdvh index can only be saved as FLOAT16 or FLOAT32"),
+        (
+            "sarrgb",
+            "FLOAT32",
+            {"lee_enhanced": None},
+            "process_option lee_enhanced should be a dict",
+        ),
+        (
+            "sarrgb",
+            "FLOAT32",
+            {"lee_enhanced": "test"},
+            "process_option lee_enhanced should be a dict",
+        ),
+        (
+            "sarrgb",
+            "FLOAT32",
+            {"lee_enhanced": {}},
+            "process_option lee_enhanced should have a filtersize int parameter",
+        ),
+        (
+            "sarrgb",
+            "BYTE",
+            {"lee_enhanced": {"filtersize": 5}, "log10": False},
+            "pixel_type==BYTE is only implemented for log10=True",
+        ),
+    ],
+)
+def test_calc_index_s1_error(
+    tmp_path, index, pixel_type, process_options, expected_error
+):
+    # Prepare test data
+    input_path = SampleData.image_s1_asc_path
+    output_path = tmp_path / f"{input_path.stem}_{index}_{pixel_type}.tif"
+
+    # Prepare parameters
+    assert not output_path.exists()
+
+    with pytest.raises(ValueError, match=expected_error):
+        raster_index_util.calc_index(
+            input_path=input_path,
+            output_path=output_path,
+            index=index,
+            process_options=process_options,
+            pixel_type=pixel_type,
+        )
 
 
 @pytest.mark.parametrize(

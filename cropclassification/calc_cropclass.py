@@ -1,6 +1,4 @@
-"""
-Main script to do a classification.
-"""
+"""Run a crop classification."""
 
 import logging
 import os
@@ -21,31 +19,21 @@ from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 
-
-def calc_marker_task(
+def run_cropclass(
     config_paths: list[Path],
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """
-    Runs a marker using the setting in the config_paths.
+    """Runs a crop classification marker using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load
         default_basedir (Path): the dir to resolve relative paths in the config
             file to.
         config_overrules (List[str], optional): list of config options that will
-            overrule other ways to supply configuration.
-            They should be specified as a list of
-            "<section>.<parameter>=<value>" strings. Defaults to [].
-
-    Raises:
-        Exception: [description]
-        Exception: [description]
+            overrule other ways to supply configuration. They should be specified as a
+            list of "<section>.<parameter>=<value>" strings. Defaults to [].
     """
     # Read the configuration files
     conf.read_config(
@@ -60,9 +48,6 @@ def calc_marker_task(
     run_dir = dir_helper.create_run_dir(
         conf.paths.getpath("marker_dir"), reuse_last_run_dir
     )
-    print(run_dir)
-    if not run_dir.exists():
-        os.makedirs(run_dir)
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
@@ -251,7 +236,6 @@ def calc_marker_task(
     ts.collect_and_prepare_timeseries_data(
         input_parcel_path=input_parcel_nogeo_path,
         timeseries_dir=timeseries_periodic_dir,
-        base_filename=base_filename,
         output_path=parcel_classification_data_path,
         start_date=start_date,
         end_date=end_date,

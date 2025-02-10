@@ -6,13 +6,13 @@ ignore = ["*"]
 exclude = ["local_ignore"]
 
 [[tool.mypy.overrides]]
-module = "affine.*,cloudpickle.*,exactextract.*,fiona.*,geopandas.*,joblib.*,matplotlib.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,qgis.*,rasterio.*,rasterstats.*,rioxarray.*,setuptools.*,shapely.*,sklearn.*,tensorflow.*,topojson.*"
+module = "affine.*,cloudpickle.*,exactextract.*,geopandas.*,joblib.*,matplotlib.*,numexpr.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,qgis.*,rasterio.*,rasterstats.*,rioxarray.*,setuptools.*,shapely.*,sklearn.*,tensorflow.*,topojson.*"
 ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 88
 target-version = "py39"
-extend-exclude = ["docs/*", "local_ignore/*"]
+extend-exclude = ["bin_util/*", "docs/*", "local_ignore/*"]
 
 lint.select = [
     # pyflakes
@@ -46,7 +46,7 @@ lint.select = [
     # isort
     "I",
     # pydocstyle
-    #"D",
+    "D",
 ]
 
 lint.ignore = [

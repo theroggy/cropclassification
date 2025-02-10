@@ -22,6 +22,8 @@
       `dirs.images_periodic_dir` instead.
     - Rename section `dirs` to `paths`.
     - Remove `general.run_id`.
+- Rename some main modules to make naming more logical with non-cropclassification
+  markers being added (#162)
 
 ### Improvements
 
@@ -34,11 +36,13 @@
 - Filter away rasterio logging for extrasamples (#127)
 - Save openeo images with int16 bands as int16 locally as well (again) (#131, #135)
 - Linting improvements: add isort, sync rules with geofileops (#133, #134)
-- Add support for zonalstats calculation with ExactExctract (#139)
+- Add support to calculate zonalstats/spatial aggregations with
+  [ExactExtract](https://github.com/isciences/exactextract) (#139)
 - Make the number of top classes of the classification to retain configurable (#145)
 - Add support to configure pixel type for indices (#150)
-- Add support for rvi index (#146)
-- Add support for vvdvh index (#151)
+- Add support to generate rvi index (#146)
+- Add support to generate vvdvh index (#151)
+- Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed

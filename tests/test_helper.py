@@ -7,13 +7,13 @@ testdata_dir = Path(__file__).resolve().parent / "data"
 
 
 class SampleData:
-    marker_basedir = Path(__file__).resolve().parent.parent / "sample_marker_basedir"
-    tasks_dir = marker_basedir / "_tasks"
-    config_dir = marker_basedir / "_config"
-    inputdata_dir = marker_basedir / "_inputdata"
-    refe_dir = marker_basedir / "_refe"
-    image_dir = marker_basedir / "_images_periodic"
-    input_dir = marker_basedir / "_inputdata"
+    markers_dir = Path(__file__).resolve().parent.parent / "markers"
+    tasks_dir = markers_dir / "_tasks"
+    config_dir = markers_dir / "_config"
+    inputdata_dir = markers_dir / "_inputdata"
+    refe_dir = markers_dir / "_refe"
+    image_dir = markers_dir / "_images_periodic"
+    input_dir = markers_dir / "_inputdata"
     roi_name = "roi_test"
     image_roi_dir = image_dir / roi_name
 

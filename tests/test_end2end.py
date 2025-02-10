@@ -5,7 +5,7 @@ import geofileops as gfo
 import pytest
 from pandas.api.types import is_numeric_dtype
 
-from cropclassification import cropclassification
+from cropclassification import taskrunner
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests import test_helper
 
@@ -22,19 +22,19 @@ from tests import test_helper
 )
 def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
     if not HAS_QGIS:
-        pytest.skip("QGIS is not available on this system.")
+        pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
 
-    marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
-    shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
+    markers_dir = tmp_path / test_helper.SampleData.markers_dir.name
+    shutil.copytree(test_helper.SampleData.markers_dir, markers_dir)
 
     # Create configparser and read task file!
-    tasks_dir = marker_basedir / "_tasks"
+    tasks_dir = markers_dir / "_tasks"
     ignore_dir = tasks_dir / "ignore"
     task_ini = "task_test_calc_marker.ini"
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
-    cropclassification.cropclassification(
+    taskrunner.run_tasks(
         tasksdir=tasks_dir,
         config_overrules=[
             f"marker.balancing_strategy={balancing_strategy}",
@@ -44,7 +44,7 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
     )
 
     today_str = datetime.now().strftime("%Y-%m-%d")
-    run_dir = marker_basedir / f"2024_CROPGROUP/Run_{today_str}_001"
+    run_dir = markers_dir / f"2024_CROPGROUP/Run_{today_str}_001"
     assert run_dir.exists()
     base_stem = "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_all"
     assert (run_dir / f"{base_stem}.gpkg").exists()
@@ -71,18 +71,18 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
 
 
 def test_task_calc_periodic_mosaic(tmp_path):
-    marker_basedir = tmp_path / test_helper.SampleData.marker_basedir.name
-    shutil.copytree(test_helper.SampleData.marker_basedir, marker_basedir)
+    markers_dir = tmp_path / test_helper.SampleData.markers_dir.name
+    shutil.copytree(test_helper.SampleData.markers_dir, markers_dir)
     # Create configparser and read task file!
-    tasks_dir = marker_basedir / "_tasks"
+    tasks_dir = markers_dir / "_tasks"
     ignore_dir = tasks_dir / "ignore"
     task_ini = "task_test_calc_periodic_mosaic.ini"
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
-    cropclassification.cropclassification(tasksdir=tasks_dir)
+    taskrunner.run_tasks(tasksdir=tasks_dir)
 
     # Check if a log file was written
-    log_dir = marker_basedir / "log"
+    log_dir = markers_dir / "log"
     assert log_dir.exists()
     assert len(list(log_dir.glob("*.log"))) == 1
