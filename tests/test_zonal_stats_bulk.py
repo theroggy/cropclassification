@@ -70,26 +70,3 @@ def test_zonal_stats_bulk(tmp_path, engine, stats):
         assert len(result_df) == vector_info.featurecount
         # The calculates stats should not be nan for any row.
         assert not any(result_df["mean"].isna())
-
-
-# def test_spatial_aggregations():
-#     # Read the configuration
-#     config_paths = [
-#         SampleData.config_dir / "cropgroup.ini",
-#         SampleData.tasks_dir / "local_overrule.ini",
-#     ]
-#     conf.read_config(
-#         config_paths=config_paths,
-#         default_basedir=SampleData.marker_basedir,
-#     )
-#     spatial_aggregations = conf.timeseries.getlist("spatial_aggregations")
-#     spatial_aggregation_args = conf.timeseries.getdict("spatial_aggregation_args")
-
-#     ops = get_ops(
-#         {
-#             "spatial_aggregations": spatial_aggregations,
-#             "spatial_aggregation_args": spatial_aggregation_args,
-#         }
-#     )
-
-#     assert len(ops) == 6
