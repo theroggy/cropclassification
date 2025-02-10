@@ -316,26 +316,142 @@ def _calc_cover(
 
 def report():
     """Create a report for the cover marker."""
-    # Read parcels selected for the cover marker
-    prc_path = Path(
+    # Read parcels selected to be controlled for the cover marker
+    prc_selectie_path = Path(
         r"X:\__IT_TEAM_ANG_GIS\Taken\2024\2024-10-16_baresoil_selectie\baresoil_selectie_2024-10-16.xlsx"
     )
-    prc_df = pd.read_excel(prc_path)
-    # CODE_OBJ = first 16 characters of the UID
-    prc_df["CODE_OBJ"] = prc_df["UID"].str[:16]
-    logger.info(f"{len(prc_df)=}")
+    force = False
 
-    # Read groundtruth
-    input_groundtruth_filename = "Prc_BEFL_2024_2024_11_28_groundtruth_scheur.tsv"
-    # input_dir = conf.paths.getpath("input_dir")
-    input_dir = Path(r"X:\Monitoring\Markers\dev\_inputdata")
-    input_groundtruth_path = input_dir / input_groundtruth_filename
-    groundtruth_df = pdh.read_file(input_groundtruth_path)
-    groundtruth_df["CODE_OBJ"] = groundtruth_df["UID"].str[:16]
-    logger.info(f"{len(groundtruth_df)=}")
+    # Create output file with the result of the cover marker + the groundtruth
+    result_geo_path = prc_selectie_path.parent / f"{prc_selectie_path.stem}_gt.gpkg"
+    if force or not result_geo_path.exists():
+        prc_selectie_df = pd.read_excel(prc_selectie_path)
+        prc_selectie_df["selectie_reden"] = "?"
+        prc_selectie_df.loc[
+            prc_selectie_df["ALL_BEST"].str.contains("MEV", regex=False),
+            "selectie_reden",
+        ] = "MEV"
+        prc_selectie_df.loc[
+            prc_selectie_df["ALL_BEST"].str.contains("MEG", regex=False),
+            "selectie_reden",
+        ] = "MEG"
+        prc_selectie_df.loc[
+            prc_selectie_df["ALL_BEST"].str.contains("EEF", regex=False),
+            "selectie_reden",
+        ] = "EEF"
+        prc_selectie_df.loc[
+            prc_selectie_df["ALL_BEST"].str.contains("BMG", regex=False),
+            "selectie_reden",
+        ] = "BMG"
 
-    prc_gt_df = prc_df.merge(groundtruth_df, on="CODE_OBJ", how="outer")
-    logger.info(prc_gt_df)
+        logger.info(f"{len(prc_selectie_df)=}")
+
+        # Read groundtruth and join with parcels
+        input_groundtruth_filename = "Prc_BEFL_2024_2025_02_10_groundtruth_baresoil.tsv"
+        # input_dir = conf.paths.getpath("input_dir")
+        input_dir = Path(r"X:\Monitoring\Markers\dev\_inputdata")
+        input_groundtruth_path = input_dir / input_groundtruth_filename
+        groundtruth_df = pdh.read_file(input_groundtruth_path)
+        prc_gt_df = prc_selectie_df.merge(
+            groundtruth_df, on=["ALV_NUMMER", "PRC_NMR"], how="left"
+        )
+        logger.info(f"{len(prc_gt_df)=}")
+
+        # Read geometries of parcels and join with controled parcels
+        prc_path = input_dir / "Prc_BEFL_2024_2024-10-13.gpkg"
+        prc_gdf = gfo.read_file(prc_path)
+        prc_gdf["ALV_NUMMER"] = prc_gdf["ALV_NUMMER"].astype("int64")
+        prc_gt_gdf = prc_gdf[["geometry", "ALV_NUMMER", "PRC_NMR"]].merge(
+            prc_gt_df, on=["ALV_NUMMER", "PRC_NMR"], how="inner"
+        )
+        logger.info(f"{len(prc_gt_gdf)=}")
+
+        # Read the result of the cover marker and join with controled parcels
+        prc_cover_path = Path(
+            r"X:\Monitoring\Markers\dev\_cover_periodic\Prc_BEFL_2024_2024-10-13\cover_2024-09-30_2024-10-07.gpkg"
+        )
+        prc_cover_df = gfo.read_file(
+            prc_cover_path,
+            table_name=prc_cover_path.stem.replace("-", "_"),
+            ignore_geometry=True,
+        )
+        prc_cover_df.rename(columns={"uid": "UID"}, inplace=True)
+        prc_gt_gdf = prc_gt_gdf.merge(prc_cover_df, on="UID", how="inner")
+
+        # Write the result to a gpkg
+        if "fid" in prc_gt_gdf.columns:
+            prc_gt_gdf.drop(columns=["fid"], inplace=True)
+        gfo.to_file(prc_gt_gdf, result_geo_path)
+
+    s2_ndvi = "s2-ndvi-weekly_20240930_ndvi_median"
+    expression = f"""
+        CASE
+            WHEN "{s2_ndvi}" > 0
+                    AND ((selectie_reden = 'BMG' AND "{s2_ndvi}" < 0.25)
+                        OR (selectie_reden <> 'BMG' AND "{s2_ndvi}" < 0.3)
+                        ) THEN 'bare-soil'
+            ELSE 'other'
+        END
+    """
+    gfo.add_column(
+        result_geo_path, "cover_ndvi", "TEXT", expression=expression, force_update=True
+    )
+
+    expression_template = """
+        CASE WHEN ctl_vastst IS NULL AND hoofdteelt_ctl IS NULL AND nateelt_ctl IS NULL THEN '?'
+                WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 1
+                WHEN selectie_reden = 'BMG' AND {cover_col} <> 'bare-soil' AND ctl_vastst IS NULL THEN 1
+                WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil'
+                    AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl <> '98')
+                            OR (nateelt_ctl IS NOT NULL AND nateelt_ctl <> '98')
+                        ) THEN 1
+                WHEN selectie_reden = 'EEF' AND {cover_col} <> 'bare-soil' AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl = '98') THEN 1
+                WHEN selectie_reden = 'MEV' AND {cover_col} = 'bare-soil'
+                    AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('660', '700', '723', '732'))
+                            OR ctl_vastst IS NOT NULL
+                        ) THEN 1
+                WHEN selectie_reden = 'MEV' AND {cover_col} <> 'bare-soil'
+                    AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl IN ('660', '700', '723', '732')) THEN 1
+                WHEN selectie_reden = 'MEG' AND {cover_col} = 'bare-soil'
+                    AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('63'))
+                            OR ctl_vastst IS NOT NULL
+                        ) THEN 1
+                WHEN selectie_reden = 'MEG' AND {cover_col} <> 'bare-soil'
+                    AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl IN ('63')) THEN 1
+                ELSE 0
+        END
+    """  # noqa: E501
+    gfo.add_column(
+        result_geo_path,
+        "ndvi_correct",
+        "TEXT",
+        expression=expression_template.format(cover_col="cover_ndvi"),
+        force_update=True,
+    )
+
+    gfo.add_column(
+        result_geo_path,
+        "s1_correct",
+        "TEXT",
+        expression=expression_template.format(cover_col="cover"),
+        force_update=True,
+    )
+
+    # Create statistics output
+    sql = """
+        SELECT selectie_reden, count(*) aantal
+              ,SUM(CASE WHEN ndvi_correct = '1' THEN 1 ELSE 0 END) AS nb_ndvi_correct
+              ,SUM(CASE WHEN ndvi_correct = '0' THEN 1 ELSE 0 END) AS nb_ndvi_wrong
+              ,SUM(CASE WHEN ndvi_correct = '?' THEN 1 ELSE 0 END) AS nb_ndvi_unknown
+              ,SUM(CASE WHEN s1_correct = '1' THEN 1 ELSE 0 END) AS nb_s1_correct
+              ,SUM(CASE WHEN s1_correct = '0' THEN 1 ELSE 0 END) AS nb_s1_wrong
+              ,SUM(CASE WHEN s1_correct = '?' THEN 1 ELSE 0 END) AS nb_s1_unknown
+         FROM "{input_layer}"
+         GROUP BY selectie_reden
+    """
+    stats = gfo.read_file(result_geo_path, sql_stmt=sql)
+    stats_path = prc_selectie_path.parent / f"{prc_selectie_path.stem}_stats.xlsx"
+    stats.to_excel(stats_path, index=False)
 
 
 if __name__ == "__main__":
