@@ -31,6 +31,7 @@ setuptools.setup(
         "tensorflow",
         "numpy<2",
         "exactextract",
+        "tqdm",
     ],
     entry_points="""
         [console_scripts]
