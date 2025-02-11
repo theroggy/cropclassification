@@ -113,6 +113,14 @@ def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
                 default_basedir=default_basedir,
                 config_overrules=config_overrules,
             )
+        elif action in ("calc_cover"):
+            from cropclassification import calc_cover
+
+            calc_cover.run_cover(
+                config_paths=config_paths,
+                default_basedir=default_basedir,
+                config_overrules=config_overrules,
+            )
         elif action == "calc_periodic_mosaic":
             from cropclassification import calc_periodic_mosaic
 

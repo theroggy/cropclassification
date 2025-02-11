@@ -212,7 +212,7 @@ def calc_periodic_mosaic(
     if on_missing_image is None or on_missing_image not in on_missing_image_values:
         raise ValueError(
             f"invalid value for {on_missing_image=}: expected one of "
-            "{on_missing_image_values}"
+            f"{on_missing_image_values}"
         )
 
     # Prepare the params that can be used to calculate mosaic images.
@@ -226,44 +226,44 @@ def calc_periodic_mosaic(
         output_base_dir=output_base_dir,
     )
 
-    if on_missing_image != "ignore":
-        # Split images to get by image_source.
-        images_from_openeo = []
-        images_local = []
-        for image_params in periodic_mosaic_params:
-            if image_params["image_source"] == "openeo":
+    # Split images to get by image_source.
+    images_from_openeo = []
+    images_local = []
+    for image_params in periodic_mosaic_params:
+        if image_params["image_source"] == "openeo":
+            if on_missing_image != "ignore":
                 images_from_openeo.append(image_params)
-            elif image_params["image_source"] == "local":
-                images_local.append(image_params)
-            else:
-                raise ValueError(f"unsupported image_source in {image_params=}")
+        elif image_params["image_source"] == "local":
+            images_local.append(image_params)
+        else:
+            raise ValueError(f"unsupported image_source in {image_params=}")
 
-        # Make sure band information is embedded in the image
-        for image in images_from_openeo:
-            if image["path"].exists():
-                raster_util.set_band_descriptions(
-                    image["path"], band_descriptions=image["bands"], overwrite=False
-                )
+    # Make sure band information is embedded in the image
+    for image in images_from_openeo:
+        if image["path"].exists():
+            raster_util.set_band_descriptions(
+                image["path"], band_descriptions=image["bands"], overwrite=False
+            )
 
-        # First get all mosaic images from openeo
-        _ = openeo_util.get_images(
-            images_from_openeo,
-            delete_existing_openeo_jobs=delete_existing_openeo_jobs,
-            raise_errors="raise" in on_missing_image,
+    # First get all mosaic images from openeo
+    _ = openeo_util.get_images(
+        images_from_openeo,
+        delete_existing_openeo_jobs=delete_existing_openeo_jobs,
+        raise_errors="raise" in on_missing_image,
+        force=force,
+    )
+
+    # Process the mosaic images to be generated locally.
+    for image_local in images_local:
+        # Prepare index output file path
+        raster_index_util.calc_index(
+            image_local["base_image_path"],
+            image_local["path"],
+            index=image_local["index_type"],
+            pixel_type=image_local["pixel_type"],
+            process_options=image_local["process_options"],
             force=force,
         )
-
-        # Process the mosaic images to be generated locally.
-        for image_local in images_local:
-            # Prepare index output file path
-            raster_index_util.calc_index(
-                image_local["base_image_path"],
-                image_local["path"],
-                index=image_local["index_type"],
-                pixel_type=image_local["pixel_type"],
-                process_options=image_local["process_options"],
-                force=force,
-            )
 
     return periodic_mosaic_params
 
