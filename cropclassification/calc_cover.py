@@ -400,11 +400,14 @@ def report():
     expression_template = """
         CASE WHEN ctl_vastst IS NULL AND hoofdteelt_ctl IS NULL AND nateelt_ctl IS NULL THEN '?'
                 WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 1
+                WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil'
+                    AND hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('60', '63', '638', '660', '700', '745', '9827', '9828') THEN 1
                 WHEN selectie_reden = 'BMG' AND {cover_col} <> 'bare-soil' AND ctl_vastst IS NULL THEN 1
                 WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil'
                     AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl <> '98')
                             OR (nateelt_ctl IS NOT NULL AND nateelt_ctl <> '98')
                         ) THEN 1
+                WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 1
                 WHEN selectie_reden = 'EEF' AND {cover_col} <> 'bare-soil' AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl = '98') THEN 1
                 WHEN selectie_reden = 'MEV' AND {cover_col} = 'bare-soil'
                     AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('660', '700', '723', '732'))
