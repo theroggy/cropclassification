@@ -1,8 +1,5 @@
-"""
-Module with helper functions to expand on some features of pandas.
-"""
+"""Module with helper functions to expand on some features of pandas."""
 
-import os
 import sqlite3
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -11,6 +8,16 @@ import pandas as pd
 
 
 def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
+    """Gte information about a table in a database file.
+
+    Args:
+        path (Path): path to the database file.
+        table_name (str, optional): name of the table to get info from.
+            Defaults to "info".
+
+    Returns:
+        dict[str, Any]: information about the table.
+    """
     ext_lower = path.suffix.lower()
     if ext_lower in (".sqlite", ".gpkg"):
         sql_db = None
@@ -42,9 +49,9 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 def read_file(
     path: Path, table_name: str = "info", columns: Optional[list[str]] = None
 ) -> pd.DataFrame:
-    """
-    Reads a file to a pandas dataframe. The fileformat is detected based on the
-    path extension.
+    """Read a file to a pandas dataframe.
+
+    The fileformat is detected based on the path extension.
 
     # TODO: think about if possible/how to support  adding optional parameter and pass
     # them to next function, example encoding, float_format,...
@@ -117,37 +124,37 @@ def to_file(
     index: bool = True,
     append: bool = False,
 ):
-    """
-    Reads a pandas dataframe to file. The file format is detected based on the path
-    extension.
+    """Writes a pandas dataframe to file.
+
+    The file format is detected based on the path extension.
 
     # TODO: think about if possible/how to support  adding optional parameter and pass
     # them to next function, example encoding, float_format,...
     """
     if df is None:
         raise ValueError("Dataframe df is None")
+    if not append and path.exists():
+        raise ValueError(f"path already exists and append is False: {path}")
 
     ext_lower = path.suffix.lower()
     if ext_lower == ".csv":
         if append:
-            raise Exception("Append is not supported for csv files")
+            raise ValueError("Append is not supported for csv files")
         df.to_csv(str(path), float_format="%.10f", encoding="utf-8", index=index)
     elif ext_lower == ".tsv":
         if append:
-            raise Exception("Append is not supported for tsv files")
+            raise ValueError("Append is not supported for tsv files")
         df.to_csv(
             str(path), sep="\t", float_format="%.10f", encoding="utf-8", index=index
         )
     elif ext_lower == ".parquet":
         if append:
-            raise Exception("Append is not supported for parquet files")
+            raise ValueError("Append is not supported for parquet files")
         df.to_parquet(str(path), index=index)
     elif ext_lower == ".sqlite":
         if_exists = "fail"
         if append:
             if_exists = "append"
-        elif os.path.exists(path):
-            os.remove(path)
         sql_db = None
         try:
             sql_db = sqlite3.connect(str(path))
@@ -159,9 +166,14 @@ def to_file(
                 chunksize=50000,
             )
         except Exception as ex:
-            raise Exception(f"Error in to_file to file {path!s}") from ex
+            path_length = len(str(path))
+            if path_length > 250:
+                message = f"Error in to_file (note: {path_length=}) with {path=!s}"
+            else:
+                message = f"Error in to_file with {path=!s}"
+            raise RuntimeError(message) from ex
         finally:
             if sql_db is not None:
                 sql_db.close()
     else:
-        raise Exception(f"Not implemented for extension {ext_lower}")
+        raise ValueError(f"Not implemented for extension {ext_lower}")

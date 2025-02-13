@@ -5,21 +5,20 @@ dependencies:
   - python=3.10
   - pip
   # required
-  - fiona
+  - dask-core
   - geofileops
-  - geopandas>=0.11
+  - geopandas-base>=0.11
   - h5py
+  - numexpr
   - numpy<2
-  # Openeo >=0.14 +- doesn't work on windows.
-  # More info here: https://github.com/Open-EO/openeo-python-client/issues/387
   - openeo
   - pandas
   - psutil
   - pyproj
-  - scikit-learn
   - rasterio
   - rasterstats
   - rioxarray
+  - scikit-learn
   # Optional
   - qgis
   # testing
@@ -32,8 +31,11 @@ dependencies:
   - ruff==0.4.4
   - types-python-dateutil
   - types-requests
+  - types-tqdm
   - scipy
   - pip:
+    - exactextract
     # Loading the classification model gives an error with 2.12?
     - tensorflow <2.12
-    - exactextract
+    # linting
+    - scipy-stubs

@@ -1,6 +1,4 @@
-"""
-Module with helper functions regarding (keras) models.
-"""
+"""Module with helper functions regarding (keras) models."""
 
 import glob
 import logging
@@ -23,10 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_max_data_version(model_dir: Path) -> int:
-    """
-    Get the maximum data version a model exists for in the model_dir.
+    """Get the maximum data version a model exists for in the model_dir.
 
-    Args
+    Args:
         model_dir: the dir to search models in
     """
     models_df = get_models(model_dir)
@@ -40,10 +37,9 @@ def get_max_data_version(model_dir: Path) -> int:
 def format_model_base_filename(
     segment_subject: str, train_data_version: int, model_architecture: str
 ) -> str:
-    """
-    Format the parameters into a model_base_filename.
+    """Format the parameters into a model_base_filename.
 
-    Args
+    Args:
         segment_subject: the segment subject
         train_data_version: the version of the data used to train the model
         model_architecture: the architecture of the model
@@ -61,10 +57,9 @@ def format_model_filename(
     acc_combined: float,
     epoch: int,
 ) -> str:
-    """
-    Format the parameters into a model_filename.
+    """Format the parameters into a model_filename.
 
-    Args
+    Args:
         segment_subject: the segment subject
         train_data_version: the version of the data used to train the model
         model_architecture: the architecture of the model
@@ -95,10 +90,9 @@ def format_model_filename2(
     acc_combined: float,
     epoch: int,
 ) -> str:
-    """
-    Format the parameters into a model_filename.
+    """Format the parameters into a model_filename.
 
-    Args
+    Args:
         model_base_filename: the base filename of the model
         acc_train: the accuracy reached for the training dataset
         acc_val: the accuracy reached for the validation dataset
@@ -113,8 +107,9 @@ def format_model_filename2(
 
 
 def parse_model_filename(path: Path) -> dict:
-    """
-    Parse a model_filename to a dict containing the properties of the model:
+    """Parse a model_filename to a dict containing the properties of the model.
+
+    Result:
         * segment_subject: the segment subject
         * train_data_version: the version of the data used to train the model
         * model_architecture: the architecture of the model
@@ -123,7 +118,7 @@ def parse_model_filename(path: Path) -> dict:
         * acc_combined: the average of the train and validation accuracy
         * epoch: the epoch during training that reached these model weights
 
-    Args
+    Args:
         path: the path to the model file
     """
     # Prepare path to extract info
@@ -160,16 +155,15 @@ def parse_model_filename(path: Path) -> dict:
 def get_models(
     model_dir: Path, model_base_filename: Optional[str] = None
 ) -> pd.DataFrame:
-    """
-    Return the list of models in the model_dir passed. It is returned as a
-    dataframe with the columns as returned in parse_model_filename()
+    """Return the list of models in the model_dir passed.
 
-    Args
+    It is returned as a dataframe with the columns as returned in parse_model_filename.
+
+    Args:
         model_dir: dir containing the models
         model_base_filename: optional, if passed, only the models with this
             base filename will be returned
     """
-
     # glob search string
     if model_base_filename is not None:
         model_weight_paths = glob.glob(
@@ -189,13 +183,12 @@ def get_models(
 def get_best_model(
     model_dir: Path, acc_metric_mode: str, model_base_filename: Optional[str] = None
 ) -> Optional[dict]:
-    """
-    Get the properties of the model with the highest combined accuracy for the highest
-    traindata version in the dir.
+    """Get model with the highest accuracy for the highest traindata version in the dir.
 
-    Args
+    Args:
         model_dir: dir containing the models
-        acc_metric_mode:
+        acc_metric_mode: use 'min' if the accuracy metrics should be as low as possible,
+            'max' if a higher values is better.
         model_base_filename: optional, if passed, only the models with this
             base filename will be taken in account
     """
@@ -243,19 +236,20 @@ def save_and_clean_models(
     debug: bool = False,
     only_report: bool = False,
 ):
-    """
-    Save the new model if it is good enough... en cleanup existing models
-    if they are worse than the new or other existing models.
+    """Save the new model if it is good enough.
 
-    Args
+    Existing models are removed if they are worse than the new or other existing models.
+
+    Args:
         model_save_dir: dir containing the models
         model_save_base_filename: base filename that will be used
-        model_acc_metric_mode (str): use 'min' if the accuracy metrics should be
+        acc_metric_mode (str): use 'min' if the accuracy metrics should be
                 as low as possible, 'max' if a higher values is better.
         new_model: optional, the keras model object that will be saved
         new_model_acc_train: optional: the accuracy on the train dataset
         new_model_acc_val: optional: the accuracy on the validation dataset
         new_model_epoch: optional: the epoch in the training
+        save_weights_only: optional: only save the weights of the model
         verbose: report the best model after save and cleanup
         debug: write debug logging
         only_report: optional: only report which models would be cleaned up

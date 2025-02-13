@@ -1,6 +1,4 @@
-"""
-Multicrop marker.
-"""
+"""Multicrop marker."""
 
 import logging
 from pathlib import Path
@@ -10,23 +8,20 @@ import pandas as pd
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 # Get a logger...
 logger = logging.getLogger(__name__)
 
-# -------------------------------------------------------------
-# The real work
-# -------------------------------------------------------------
-
 
 def detect_multicrop(input_parcel_path: Path, input_parcel_timeseries_data_path: Path):
+    """Detect multicrop parcels.
+
+    Args:
+        input_parcel_path (Path): path to the input parcel data
+        input_parcel_timeseries_data_path (Path): path to the input timeseries data
     """
-    logger.info(f"Read input file: {input_parcel_path}")
-    df_input_parcel = pd.read_csv(input_parcel_path, low_memory=False)
-    logger.debug('Read train file ready')
-    """
+    # logger.info(f"Read input file: {input_parcel_path}")
+    # df_input_parcel = pd.read_csv(input_parcel_path, low_memory=False)
+    # logger.debug('Read train file ready')
 
     # If the classification data isn't passed as dataframe, read it from the csv
     logger.info(f"Read classification data file: {input_parcel_timeseries_data_path}")

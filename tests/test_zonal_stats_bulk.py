@@ -3,21 +3,45 @@ import shutil
 import geofileops as gfo
 import pytest
 
+from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests.test_helper import SampleData
 
 
-@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
-def test_zonal_stats_bulk(tmp_path, engine):
+@pytest.mark.parametrize(
+    "engine, stats",
+    [
+        ("pyqgis", ["mean", "count"]),
+        ("rasterstats", ["mean", "count"]),
+        (
+            "exactextract",
+            [
+                "mean(min_coverage_frac=0.5,coverage_weight=none)",
+                "count(min_coverage_frac=0.5,coverage_weight=none)",
+            ],
+        ),
+    ],
+)
+def test_zonal_stats_bulk(tmp_path, engine, stats):
     if engine == "pyqgis" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
     # Prepare test data
-    sample_dir = SampleData.marker_basedir
+    sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
+
+    # Read the configuration
+    config_paths = [
+        SampleData.config_dir / "cropgroup.ini",
+        SampleData.tasks_dir / "local_overrule.ini",
+    ]
+    conf.read_config(
+        config_paths=config_paths,
+        default_basedir=sample_dir,
+    )
 
     # Make sure the s2-agri input file was copied
     test_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
@@ -34,7 +58,7 @@ def test_zonal_stats_bulk(tmp_path, engine):
         id_column="UID",
         rasters_bands=images_bands,
         output_dir=tmp_path,
-        stats=["mean", "count"],
+        stats=stats,
         engine=engine,
     )
 

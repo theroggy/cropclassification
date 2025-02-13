@@ -1,5 +1,4 @@
-"""
-Create the parcel classes that will be used for the classification.
+"""Create the parcel classes that will be used for the classification.
 
 This implementation will create +- 40 classes.
 parcel that don't have a clear classification in the input file get class 'UNKNOWN'.
@@ -55,9 +54,6 @@ columns_BEFL_to_keep = [
 ndvi_latecrop_count = "latecrop_ndvi_count"
 ndvi_latecrop_median = "latecrop_ndvi_median"
 
-# The real work
-# -------------------------------------------------------------
-
 
 def prepare_input(
     input_parcel_path: Path,
@@ -66,9 +62,7 @@ def prepare_input(
     min_parcels_in_class: int,
     output_dir: Path,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Creates a file for use in the marker_cropclass functionality.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -412,9 +406,7 @@ def prepare_input_cropgroup(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the cropgroup marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -614,9 +606,7 @@ def prepare_input_croprotation(
     column_output_class: str,
     classes_refe_path: Path,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the croprotation marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -753,9 +743,7 @@ def prepare_input_carbonsupply(
     column_output_class: str,
     classes_refe_path: Path,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the carbonsupply marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -894,9 +882,7 @@ def prepare_input_fabaceae(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the fabaceae marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -1106,9 +1092,7 @@ def prepare_input_latecrop(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the latecrop marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -1381,8 +1365,7 @@ def prepare_input_latecrop_early(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    Prepare a dataframe based on the BEFL input file for early latecrop detection.
+    """Prepare input file for use in the latecrop_early marker.
 
     Prepare a classname column to classify the crop groups for early detection of
     late crops. During this early detection, some main crops will still be on the field
@@ -1431,10 +1414,7 @@ def prepare_input_cropgroup_early(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    Prepare a dataframe based on the BEFL input file so it onclused a classname
-    column ready to classify the cropgroups for early crops.
-    """
+    """Prepare input file for use in the cropgroup_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_cropgroup(
         parceldata_df,
@@ -1475,10 +1455,7 @@ def prepare_input_croprotation_early(
     column_output_class: str,
     classes_refe_path: Path,
 ):
-    """
-    Prepare a dataframe based on the BEFL input file so it onclused a classname
-    column ready to classify the cropgroups for early crops.
-    """
+    """Prepare input file for use in the croprotation_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_croprotation(
         parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_path
@@ -1514,10 +1491,7 @@ def prepare_input_carbonsupply_early(
     column_output_class: str,
     classes_refe_path: Path,
 ):
-    """
-    Prepare a dataframe based on the BEFL input file so it onclused a classname
-    column ready to classify the cropgroups for early crops.
-    """
+    """Prepare input file for use in the carbonsupply_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_carbonsupply(
         parceldata_df, column_BEFL_cropcode, column_output_class, classes_refe_path
@@ -1555,9 +1529,7 @@ def prepare_input_landcover(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the landcover marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -1708,10 +1680,7 @@ def prepare_input_landcover_early(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    Prepare a dataframe based on the BEFL input file so it onclused a classname
-    column ready to classify the landcover for early crops.
-    """
+    """Prepare input file for use in the landcover_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_landcover(
         parceldata_df,
@@ -1755,9 +1724,7 @@ def prepare_input_most_popular_crop(
     min_parcels_in_class: int,
     is_groundtruth: bool,
 ):
-    """
-    This function creates a file that is compliant with the assumptions used by the rest
-    of the classification functionality.
+    """Prepare input file for use in the most_popular_crop marker.
 
     It should be a csv file with the following columns:
         - object_id: column with a unique identifier
@@ -1767,7 +1734,6 @@ def prepare_input_most_popular_crop(
     This specific implementation converts the typical export format used in BE-Flanders
     to this format.
     """
-
     # Add columns for the class to use...
     parceldata_df.insert(0, column_output_class, None)
 

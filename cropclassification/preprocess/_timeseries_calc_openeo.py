@@ -29,16 +29,27 @@ def calculate_periodic_timeseries(
     nb_parallel: int,
     on_missing_image: str,
 ):
-    """
-    Calculate timeseries data for the input parcels.
+    """Calculate timeseries data for the input parcels.
 
-    args
-        imageprofiles_to_get: an array with images you want to be calculated.
-        on_missing_image: what to do when an image is missing. Options are:
+    Args:
+        input_parcel_path (Path): path to the input parcel file.
+        roi_bounds (tuple[float, float, float, float]): bounds of the roi.
+        roi_crs (Optional[pyproj.CRS]): crs of the roi bounds.
+        start_date (datetime): start date of the timeseries.
+        end_date (datetime): end date of the timeseries (non inclusive).
+        imageprofiles_to_get (list[str]): an array with images you want to be
+            calculated.
+        imageprofiles (dict[str, ImageProfile]): imageprofiles to use for the
+            calculation.
+        images_periodic_dir (Path): directory where the images are stored.
+        timeseries_periodic_dir (Path): directory where the timeseries data will be
+            saved.
+        nb_parallel (int): number of parallel processes to use.
+        on_missing_image (str): what to do when an image is missing. Options are:
+
             - ignore: ignore that the image, don't try to download it
             - calculate_raise: calculate the image and raise an error if it fails
             - calculate_ignore: calculate the image and ignore the error if it fails
-
     """
     info = gfo.get_layerinfo(input_parcel_path)
     if info.crs is not None and not info.crs.equals(roi_crs):
@@ -79,7 +90,7 @@ def calculate_periodic_timeseries(
         id_column=conf.columns["id"],
         rasters_bands=images_bands,
         output_dir=timeseries_periodic_dir,
-        stats=["count", "mean", "median", "std", "min", "max"],  # type: ignore[arg-type]
+        stats=["count", "mean", "median", "std", "min", "max"],
         engine="pyqgis",
         nb_parallel=nb_parallel,
     )
