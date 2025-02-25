@@ -29,7 +29,7 @@
         "B12"
     ],
     "time_reducer": "mean",
-    "path": "C:/Users/local_KRIWAY/Temp/1/pytest-of-KRIWAY/pytest-36/test_end2end0/markers/_images_periodic/BEFL/s2-agri-weekly/s2-agri-weekly_2024-03-11_2024-03-17_B02-B03-B04-B08-B11-B12_mean.tif",
+    "path": "C:/Users/local_KRIWAY/Temp/1/pytest-of-KRIWAY/pytest-36/test_end2end0/monitoring/_images_periodic/BEFL/s2-agri-weekly/s2-agri-weekly_2024-03-11_2024-03-17_B02-B03-B04-B08-B11-B12_mean.tif",
     "job_options": {
         "driver-memoryOverhead": "5G"
     },

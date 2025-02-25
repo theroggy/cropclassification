@@ -45,4 +45,4 @@ Mind: the sentinel CARD image structure as expected for timeseries calculation d
 
 5. Start a crop classification
 
-Run `cropclassification -t <tasks_dir>`, with a 'calc_marker' type of task in the tasks dir.
+Run `cropclassification -t <tasks_dir>`, with a 'calc_cropclass' type of task in the tasks dir.
