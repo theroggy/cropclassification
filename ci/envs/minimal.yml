@@ -19,6 +19,7 @@ dependencies:
   - rasterstats
   - rioxarray
   - scikit-learn
+  - tqdm
   # Optional
   # - qgis
   # testing
