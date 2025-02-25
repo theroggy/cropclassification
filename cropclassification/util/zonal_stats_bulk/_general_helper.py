@@ -73,7 +73,7 @@ def format_progress_message(
 
     # Format message
     message = (
-        f"{hours_to_go}:{min_to_go} left for {nb_todo-nb_done_total} todo at "
+        f"{hours_to_go}:{min_to_go} left for {nb_todo - nb_done_total} todo at "
         f"{nb_per_hour:0.0f}/h"
     )
     # Add speed of the latest batch to message if appropriate

@@ -591,8 +591,7 @@ def _prepare_mosaic_image_path(
     else:
         bands_str = imageprofile.split("-")[1]
     name = (
-        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_"
-        f"{time_reducer}.tif"
+        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_{time_reducer}.tif"
     )
 
     image_dir = output_base_dir / imageprofile
