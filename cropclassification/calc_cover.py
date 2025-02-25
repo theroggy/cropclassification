@@ -13,7 +13,7 @@ import pandas as pd
 import pyproj
 
 from cropclassification.helpers import config_helper as conf
-from cropclassification.helpers import log_helper
+from cropclassification.helpers import dir_helper, log_helper
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.preprocess import _timeseries_helper as ts_helper
 from cropclassification.preprocess import timeseries as ts
@@ -48,6 +48,15 @@ def run_cover(
 
     logger.warning("This is a POC for a cover marker, so not for operational use!")
     logger.info(f"Config used: \n{conf.pformat_config()}")
+
+    # Create run dir to be used for the results
+    reuse_last_run_dir = conf.calc_marker_params.getboolean("reuse_last_run_dir")
+    reuse_last_run_dir_config = conf.calc_marker_params.getboolean(
+        "reuse_last_run_dir_config"
+    )
+    run_dir = dir_helper.create_run_dir(
+        conf.paths.getpath("marker_dir"), reuse_last_run_dir
+    )
 
     # Read the info about the run
     input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
@@ -142,6 +151,11 @@ def run_cover(
                 export_geo=export_geo,
                 force=force,
             )
+
+            geo_path = output_path.with_suffix(geofile_ext)
+            parcels_selected_path = run_dir / geo_path.name
+            _select_parcels(geo_path, parcels_selected_path)
+
         except Exception as ex:
             message = f"Error calculating {output_path.stem}"
             if on_error == "warn":
@@ -199,7 +213,7 @@ def _calc_cover(
         else:
             continue
 
-        key = f"{orbit}_{'_'.join(column_lower.split('-')[-1].split('_')[-2:])}"
+        key = f"s1{orbit}_{'_'.join(column_lower.split('-')[-1].split('_')[-2:])}"
         columns[key] = column
 
     id_column = conf.columns["id"]
@@ -208,52 +222,52 @@ def _calc_cover(
     sql_stmt = f"""
         SELECT "{id_column}"
               ,CASE
-                WHEN cover_asc IN ('NODATA', 'multi') THEN cover_desc
-                WHEN cover_desc IN ('NODATA', 'multi') THEN cover_asc
-                WHEN cover_asc = 'water' AND cover_desc = 'water' THEN 'water'
-                --WHEN (cover_asc = 'bare-soil' OR cover_desc = 'bare-soil') THEN 'bare-soil'
-                WHEN (cover_asc IN ('bare-soil', 'water')
-                      AND cover_desc IN ('bare-soil', 'water')
+                WHEN cover_s1_asc IN ('NODATA', 'multi') THEN cover_desc
+                WHEN cover_s1_desc IN ('NODATA', 'multi') THEN cover_asc
+                WHEN cover_s1_asc = 'water' AND cover_desc = 'water' THEN 'water'
+                --WHEN (cover_s1_asc = 'bare-soil' OR cover_s1_desc = 'bare-soil') THEN 'bare-soil'
+                WHEN (cover_s1_asc IN ('bare-soil', 'water')
+                      AND cover_s1_desc IN ('bare-soil', 'water')
                      ) THEN 'bare-soil'
-                WHEN cover_asc = 'urban' or cover_desc = 'urban' THEN 'urban'
+                WHEN cover_s1_asc = 'urban' or cover_s1_desc = 'urban' THEN 'urban'
                 ELSE 'other'
-               END cover
-              ,cover_asc
-              ,cover_desc
+               END cover_s1
+              ,cover_s1_asc
+              ,cover_s1_desc
           FROM (
             SELECT "{id_column}"
                   ,CASE
-                     WHEN "{columns["asc_vv_mean"]}" IS NULL OR "{columns["asc_vv_mean"]}" = 0
+                     WHEN "{columns["s1asc_vv_mean"]}" IS NULL OR "{columns["s1asc_vv_mean"]}" = 0
                           THEN 'NODATA'
-                     WHEN ( "{columns["asc_vh_stdev"]}" > 0.5
-                            OR "{columns["asc_vv_stdev"]}" > 0.5
+                     WHEN ( "{columns["s1asc_vh_stdev"]}" > 0.5
+                            OR "{columns["s1asc_vv_stdev"]}" > 0.5
                           ) THEN 'multi'
-                     WHEN ( "{columns["asc_vh_median"]}" < 0.07
-                            AND ("{columns["asc_vv_median"]}" < 0.027
-                                 OR "{columns["asc_vh_stdev"]}" < 0.0027)
+                     WHEN ( "{columns["s1asc_vh_median"]}" < 0.07
+                            AND ("{columns["s1asc_vv_median"]}" < 0.027
+                                 OR "{columns["s1asc_vh_stdev"]}" < 0.0027)
                           ) THEN 'water'
-                     WHEN "{columns["asc_vv_median"]}"/"{columns["asc_vh_median"]}" >= 5.9
-                          AND "{columns["asc_vh_median"]}" < 0.013
+                     WHEN "{columns["s1asc_vv_median"]}"/"{columns["s1asc_vh_median"]}" >= 5.9
+                          AND "{columns["s1asc_vh_median"]}" < 0.013
                           THEN 'bare-soil'
-                     WHEN "{columns["asc_vv_mean"]}" > 0.25 THEN 'urban'
+                     WHEN "{columns["s1asc_vv_mean"]}" > 0.25 THEN 'urban'
                      ELSE 'other'
-                   END AS cover_asc
+                   END AS cover_s1_asc
                   ,CASE
-                     WHEN "{columns["desc_vv_mean"]}" IS NULL OR "{columns["desc_vv_mean"]}" = 0
+                     WHEN "{columns["s1desc_vv_mean"]}" IS NULL OR "{columns["s1desc_vv_mean"]}" = 0
                           THEN 'NODATA'
-                     WHEN ( "{columns["desc_vh_stdev"]}" > 0.5
-                            OR "{columns["desc_vv_stdev"]}" > 0.5
+                     WHEN ( "{columns["s1desc_vh_stdev"]}" > 0.5
+                            OR "{columns["s1desc_vv_stdev"]}" > 0.5
                           ) THEN 'multi'
-                     WHEN ( "{columns["desc_vh_median"]}" < 0.07
-                            AND ("{columns["desc_vv_median"]}" < 0.027
-                                 OR "{columns["desc_vh_stdev"]}" < 0.0027)
+                     WHEN ( "{columns["s1desc_vh_median"]}" < 0.07
+                            AND ("{columns["s1desc_vv_median"]}" < 0.027
+                                 OR "{columns["s1desc_vh_stdev"]}" < 0.0027)
                           ) THEN 'water'
-                     WHEN "{columns["desc_vv_median"]}"/"{columns["desc_vh_median"]}" >= 5.9
-                          AND "{columns["desc_vh_median"]}" < 0.015
+                     WHEN "{columns["s1desc_vv_median"]}"/"{columns["s1desc_vh_median"]}" >= 5.9
+                          AND "{columns["s1desc_vh_median"]}" < 0.015
                           THEN 'bare-soil'
-                     WHEN "{columns["desc_vv_mean"]}" > 0.25 THEN 'urban'
+                     WHEN "{columns["s1desc_vv_mean"]}" > 0.25 THEN 'urban'
                      ELSE 'other'
-                   END AS cover_desc
+                   END AS cover_s1_desc
               FROM "info" info
           ) covers
     """  # noqa: E501
@@ -314,6 +328,46 @@ def _calc_cover(
     shutil.rmtree(tmp_dir)
 
 
+def _select_parcels(input_geo_path, output_geo_path):
+    """Select parcels based on the cover marker."""
+    # Select the relevant parcels based on the cover marker
+
+    # Zone used in the selection of 10/2024 to reduce number parcels
+    zone_filter = """
+        AND ( PRC_NIS IN (
+                12014, 23025, 23096, 24028, 24054, 24107, 24133, 24135, 32010, 32011
+              )
+              OR (PRC_NIS > 70000 AND PRC_NIS <> 73109)
+            )
+    """
+    zone_filter = ""
+
+    where = f"""
+            AND ( ("ALL_BEST" like '%MEV%'
+                OR "ALL_BEST" like '%MEG%'
+                OR "ALL_BEST" like '%EEF%'
+                )
+                AND ( ( "s2-ndvi-weekly_20240930_ndvi_median" <> 0
+                        and "s2-ndvi-weekly_20240930_ndvi_median" < 0.3
+                        )
+                        OR "cover_s1" = 'bare-soil'
+                    )
+            )
+            OR ("ALL_BEST" like '%BMG%'
+                AND (  ( "s2-ndvi-weekly_20240930_ndvi_median"<> 0
+                        and "s2-ndvi-weekly_20240930_ndvi_median"< 0.3
+                        )
+                        OR ("cover_s1" = 'bare-soil'
+                            AND "s1-grd-sigma0-desc-weekly_20240930_VH_count"<> 0
+                            AND "s1-grd-sigma0-asc-weekly_20240930_VH_count"<> 0
+                            {zone_filter}
+                        )
+                    )
+            )
+    """
+    gfo.copy_layer(input_geo_path, output_geo_path, where=where)
+
+
 def report():
     """Create a report for the cover marker."""
     # Read parcels selected to be controlled for the cover marker
@@ -321,9 +375,12 @@ def report():
         r"X:\__IT_TEAM_ANG_GIS\Taken\2024\2024-10-16_baresoil_selectie\baresoil_selectie_2024-10-16.xlsx"
     )
     force = False
+    force_update = True
+
+    report_dir = prc_selectie_path.parent / "evaluatie"
 
     # Create output file with the result of the cover marker + the groundtruth
-    result_geo_path = prc_selectie_path.parent / f"{prc_selectie_path.stem}_gt.gpkg"
+    result_geo_path = report_dir / f"{prc_selectie_path.stem}_gt.gpkg"
     if force or not result_geo_path.exists():
         prc_selectie_df = pd.read_excel(prc_selectie_path)
         prc_selectie_df["selectie_reden"] = "?"
@@ -347,7 +404,7 @@ def report():
         logger.info(f"{len(prc_selectie_df)=}")
 
         # Read groundtruth and join with parcels
-        input_groundtruth_filename = "Prc_BEFL_2024_2025_02_10_groundtruth_baresoil.tsv"
+        input_groundtruth_filename = "Prc_BEFL_2024_2025_02_21_groundtruth_baresoil.tsv"
         # input_dir = conf.paths.getpath("input_dir")
         input_dir = Path(r"X:\Monitoring\Markers\dev\_inputdata")
         input_groundtruth_path = input_dir / input_groundtruth_filename
@@ -386,42 +443,48 @@ def report():
     s2_ndvi = "s2-ndvi-weekly_20240930_ndvi_median"
     expression = f"""
         CASE
-            WHEN "{s2_ndvi}" > 0
-                    AND ((selectie_reden = 'BMG' AND "{s2_ndvi}" < 0.25)
-                        OR (selectie_reden <> 'BMG' AND "{s2_ndvi}" < 0.3)
-                        ) THEN 'bare-soil'
+            WHEN "{s2_ndvi}" = 0 THEN 'NODATA'
+            WHEN ( (selectie_reden = 'BMG' AND "{s2_ndvi}" < 0.25) OR
+                   (selectie_reden <> 'BMG' AND "{s2_ndvi}" < 0.3)
+                 ) THEN 'bare-soil'
             ELSE 'other'
         END
     """
     gfo.add_column(
-        result_geo_path, "cover_ndvi", "TEXT", expression=expression, force_update=True
+        result_geo_path,
+        "cover_ndvi",
+        "TEXT",
+        expression=expression,
+        force_update=force_update,
     )
 
     expression_template = """
-        CASE WHEN ctl_vastst IS NULL AND hoofdteelt_ctl IS NULL AND nateelt_ctl IS NULL THEN '?'
-                WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 1
-                WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil'
-                    AND hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('60', '63', '638', '660', '700', '745', '9827', '9828') THEN 1
-                WHEN selectie_reden = 'BMG' AND {cover_col} <> 'bare-soil' AND ctl_vastst IS NULL THEN 1
-                WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil'
-                    AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl <> '98')
-                            OR (nateelt_ctl IS NOT NULL AND nateelt_ctl <> '98')
-                        ) THEN 1
-                WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 1
-                WHEN selectie_reden = 'EEF' AND {cover_col} <> 'bare-soil' AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl = '98') THEN 1
-                WHEN selectie_reden = 'MEV' AND {cover_col} = 'bare-soil'
-                    AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('660', '700', '723', '732'))
-                            OR ctl_vastst IS NOT NULL
-                        ) THEN 1
-                WHEN selectie_reden = 'MEV' AND {cover_col} <> 'bare-soil'
-                    AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl IN ('660', '700', '723', '732')) THEN 1
-                WHEN selectie_reden = 'MEG' AND {cover_col} = 'bare-soil'
-                    AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('63'))
-                            OR ctl_vastst IS NOT NULL
-                        ) THEN 1
-                WHEN selectie_reden = 'MEG' AND {cover_col} <> 'bare-soil'
-                    AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl IN ('63')) THEN 1
-                ELSE 0
+        CASE
+            WHEN ctl_vastst IS NULL AND hoofdteelt_ctl IS NULL AND nateelt_ctl IS NULL THEN 'no_groundtruth'
+            WHEN {cover_col} = 'NODATA' THEN 'NODATA'
+            WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 'yes'
+            WHEN selectie_reden = 'BMG' AND {cover_col} = 'bare-soil'
+                AND hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('60', '63', '638', '660', '700', '745', '9827', '9828') THEN 'yes'
+            WHEN selectie_reden = 'BMG' AND {cover_col} <> 'bare-soil' AND ctl_vastst IS NULL THEN 'yes'
+            WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil'
+                AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl <> '98')
+                        OR (nateelt_ctl IS NOT NULL AND nateelt_ctl <> '98')
+                    ) THEN 'yes'
+            WHEN selectie_reden = 'EEF' AND {cover_col} = 'bare-soil' AND ctl_vastst IS NOT NULL THEN 'yes'
+            WHEN selectie_reden = 'EEF' AND {cover_col} <> 'bare-soil' AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl = '98') THEN 'yes'
+            WHEN selectie_reden = 'MEV' AND {cover_col} = 'bare-soil'
+                AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('660', '700', '723', '732'))
+                        OR ctl_vastst IS NOT NULL
+                    ) THEN 'yes'
+            WHEN selectie_reden = 'MEV' AND {cover_col} <> 'bare-soil'
+                AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl IN ('660', '700', '723', '732')) THEN 'yes'
+            WHEN selectie_reden = 'MEG' AND {cover_col} = 'bare-soil'
+                AND ((hoofdteelt_ctl IS NOT NULL AND hoofdteelt_ctl NOT IN ('63'))
+                        OR ctl_vastst IS NOT NULL
+                    ) THEN 'yes'
+            WHEN selectie_reden = 'MEG' AND {cover_col} <> 'bare-soil'
+                AND (hoofdteelt_ctl IS NULL OR hoofdteelt_ctl IN ('63')) THEN 'yes'
+            ELSE 'no'
         END
     """  # noqa: E501
     gfo.add_column(
@@ -429,32 +492,33 @@ def report():
         "ndvi_correct",
         "TEXT",
         expression=expression_template.format(cover_col="cover_ndvi"),
-        force_update=True,
+        force_update=force_update,
     )
 
     gfo.add_column(
         result_geo_path,
         "s1_correct",
         "TEXT",
-        expression=expression_template.format(cover_col="cover"),
-        force_update=True,
+        expression=expression_template.format(cover_col="cover_s1"),
+        force_update=force_update,
     )
 
     # Create statistics output
     sql = """
         SELECT selectie_reden, count(*) aantal
-              ,SUM(CASE WHEN ndvi_correct = '1' THEN 1 ELSE 0 END) AS nb_ndvi_correct
-              ,SUM(CASE WHEN ndvi_correct = '0' THEN 1 ELSE 0 END) AS nb_ndvi_wrong
-              ,SUM(CASE WHEN ndvi_correct = '?' THEN 1 ELSE 0 END) AS nb_ndvi_unknown
-              ,SUM(CASE WHEN s1_correct = '1' THEN 1 ELSE 0 END) AS nb_s1_correct
-              ,SUM(CASE WHEN s1_correct = '0' THEN 1 ELSE 0 END) AS nb_s1_wrong
-              ,SUM(CASE WHEN s1_correct = '?' THEN 1 ELSE 0 END) AS nb_s1_unknown
+              ,SUM(CASE WHEN ndvi_correct = 'no_groundtruth' THEN 1 ELSE 0 END) AS nb_no_groundtruth
+              ,SUM(CASE WHEN ndvi_correct = 'yes' THEN 1 ELSE 0 END) AS nb_ndvi_correct
+              ,SUM(CASE WHEN ndvi_correct = 'no' THEN 1 ELSE 0 END) AS nb_ndvi_wrong
+              ,SUM(CASE WHEN ndvi_correct = 'NODATA' THEN 1 ELSE 0 END) AS nb_ndvi_nodata
+              ,SUM(CASE WHEN s1_correct = 'yes' THEN 1 ELSE 0 END) AS nb_s1_correct
+              ,SUM(CASE WHEN s1_correct = 'no' THEN 1 ELSE 0 END) AS nb_s1_wrong
+              ,SUM(CASE WHEN s1_correct = 'NODATA' THEN 1 ELSE 0 END) AS nb_s1_nodata
          FROM "{input_layer}"
          GROUP BY selectie_reden
-    """
-    stats = gfo.read_file(result_geo_path, sql_stmt=sql)
-    stats_path = prc_selectie_path.parent / f"{prc_selectie_path.stem}_stats.xlsx"
-    stats.to_excel(stats_path, index=False)
+    """  # noqa: E501
+    stats_df = gfo.read_file(result_geo_path, sql_stmt=sql)
+    stats_path = report_dir / f"{prc_selectie_path.stem}_stats.xlsx"
+    pdh.to_excel(stats_df, stats_path, index=False)
 
 
 if __name__ == "__main__":
