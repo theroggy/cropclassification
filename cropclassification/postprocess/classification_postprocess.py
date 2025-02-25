@@ -216,9 +216,9 @@ def calc_top_classes(proba_df: pd.DataFrame, top_classes: int = 3) -> pd.DataFra
     # Also apply infer_objects: otherwise the float columns are of object dtype.
     columns = [conf.columns["id"], conf.columns["class_declared"]]
     for i in range(top_classes):
-        columns.append(f"pred{i+1}")
+        columns.append(f"pred{i + 1}")
     for i in range(top_classes):
-        columns.append(f"pred{i+1}_prob")
+        columns.append(f"pred{i + 1}_prob")
     top_df = pd.DataFrame(id_class_top, columns=columns).infer_objects()
 
     return top_df
