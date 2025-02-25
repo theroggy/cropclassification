@@ -375,7 +375,7 @@ def calculate_periodic_timeseries(
                     )
 
                     # Rename columns so column names stay unique
-                    for statistic_column in statistic_columns_dict:
+                    for statistic_column in list(statistic_columns_dict):
                         new_column_name = statistic_column + str(j + 1)
                         image_data_df.rename(
                             columns={statistic_column: new_column_name}, inplace=True

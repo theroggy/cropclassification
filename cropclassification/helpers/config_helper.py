@@ -332,7 +332,7 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
 
 def _validate_image_profiles(profiles: dict[str, ImageProfile]):
     # Check that all base_image_profile s are actually existing image profiles.
-    for profile in profiles:
+    for profile in list(profiles):
         base_image_profile = profiles[profile].base_imageprofile
         if base_image_profile is not None and base_image_profile not in profiles:
             raise ValueError(
