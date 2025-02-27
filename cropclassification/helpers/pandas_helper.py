@@ -1,10 +1,14 @@
 """Module with helper functions to expand on some features of pandas."""
 
+import shutil
 import sqlite3
+import tempfile
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Optional, Union
 
 import pandas as pd
+import pyogrio
 
 
 def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
@@ -47,7 +51,11 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 
 
 def read_file(
-    path: Path, table_name: str = "info", columns: Optional[list[str]] = None
+    path: Path,
+    table_name: str = "info",
+    columns: Optional[list[str]] = None,
+    sql: Optional[str] = None,
+    ignore_geometry: bool = True,
 ) -> pd.DataFrame:
     """Read a file to a pandas dataframe.
 
@@ -60,6 +68,9 @@ def read_file(
         raise Exception(f"Parameter columns should be list, but is {type(columns)}")
 
     ext_lower = path.suffix.lower()
+    if sql is not None and ext_lower not in (".sqlite", ".gpkg"):
+        raise ValueError("sql parameter is only supported for sqlite and gpkg files")
+
     if ext_lower == ".csv":
         try:
             data_read_df = pd.read_csv(
@@ -97,21 +108,20 @@ def read_file(
     elif ext_lower == ".parquet":
         return pd.read_parquet(str(path), columns=columns)
     elif ext_lower in (".sqlite", ".gpkg"):
-        sql_db = None
+        tmp_dir = Path(tempfile.mkdtemp(prefix="pdh_read_file_"))
         try:
-            sql_db = sqlite3.connect(str(path))
-            if columns is None:
-                cols_to_select = "*"
-            else:
-                cols_to_select = ", ".join(columns)
-            data_read_df = pd.read_sql_query(
-                f'select {cols_to_select} from "{table_name}"', sql_db
+            tmp_path = tmp_dir / path.name
+            shutil.copy(path, tmp_path)
+            data_read_df = pyogrio.read_dataframe(
+                tmp_path,
+                columns=columns,
+                use_arrow=True,
+                read_geometry=not ignore_geometry,
+                sql=sql,
             )
-        except Exception as ex:
-            raise Exception(f"Error reading data from {path!s}") from ex
         finally:
-            if sql_db is not None:
-                sql_db.close()
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
         return data_read_df
     else:
         raise ValueError(f"Not implemented for extension {ext_lower}")
