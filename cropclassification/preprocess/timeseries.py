@@ -125,9 +125,7 @@ def collect_and_prepare_timeseries_data(
         return
 
     # Init the result with the id's of the parcels we want to treat
-    result_df = gfo.read_file(
-        input_parcel_path, columns=[conf.columns["id"]], ignore_geometry=True
-    )
+    result_df = pdh.read_file(input_parcel_path, columns=[conf.columns["id"]])
     if result_df.index.name != conf.columns["id"]:
         result_df.set_index(conf.columns["id"], inplace=True)
     nb_input_parcels = len(result_df.index)
@@ -182,7 +180,7 @@ def collect_and_prepare_timeseries_data(
             continue
 
         # Determine the columns to be read from the file and which to rename.
-        info = gfo.get_layerinfo(curr_path, raise_on_nogeom=False)
+        info = gfo.get_layerinfo(curr_path, layer="info", raise_on_nogeom=False)
         columns = []
         columns_to_rename = {}
         for column in info.columns:
@@ -215,6 +213,11 @@ def collect_and_prepare_timeseries_data(
 
         # Read data, and check if there is enough data in it
         data_read_df = pdh.read_file(curr_path, columns=columns)
+        if data_read_df.index.name != conf.columns["id"]:
+            data_read_df.set_index(conf.columns["id"], inplace=True)
+
+        # Only retain data read that is in the result_df
+        data_read_df = data_read_df[data_read_df.index.isin(result_df.index)]
 
         if min_parcels_with_data_pct > 0:
             nb_data_read = len(data_read_df.index)
@@ -228,9 +231,6 @@ def collect_and_prepare_timeseries_data(
 
         # Start processing the file
         logger.info(f"Process file: {curr_path}")
-        if data_read_df.index.name != conf.columns["id"]:
-            data_read_df.set_index(conf.columns["id"], inplace=True)
-
         for column in data_read_df.columns:
             # If it is the id column, continue
             if column == conf.columns["id"]:
@@ -238,7 +238,7 @@ def collect_and_prepare_timeseries_data(
 
             # Check if the column contains data for enough parcels
             valid_input_data_pct = (
-                1 - (data_read_df[column].isnull().sum() / nb_input_parcels)
+                1 - (data_read_df[column].isnull().count() / nb_input_parcels)
             ) * 100
             if valid_input_data_pct < min_parcels_with_data_pct:
                 # If the number of nan values for the column > x %, drop column
