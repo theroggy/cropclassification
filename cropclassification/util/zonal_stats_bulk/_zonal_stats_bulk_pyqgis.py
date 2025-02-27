@@ -277,7 +277,7 @@ def zonal_stats_band(
     status = zoneStats.calculateStatistics(None)
     if zoneStats.calculateStatistics(None) != qgis.analysis.QgsZonalStatistics.Success:
         raise RuntimeError(
-            f"Error: calculateStatistics returned {status} for zonal stats between "
+            f"Error: calculateStatistics returned {status=} for zonal stats between "
             f"{vector_proj_path.name} and {raster_path.name}"
         )
 
