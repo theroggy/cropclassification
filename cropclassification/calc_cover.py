@@ -6,6 +6,7 @@ import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo
@@ -73,6 +74,20 @@ def run_cover(
     # Get some general config
     data_ext = conf.general["data_ext"]
     geofile_ext = conf.general["geofile_ext"]
+    id_column = conf.columns["id"]
+    parcel_columns = [
+        id_column,
+        "ALL_BEST",
+        "GWSCOD_H",
+        "GWSNAM_H",
+        "GWSCOD_N",
+        "GWSNAM_N",
+        "GWSCOD_N2",
+        "GWSNAM_N2",
+        "PRC_NIS",
+        "ALV_NUMMER",
+        "PRC_NMR",
+    ]
 
     # -------------------------------------------------------------
     # The real work
@@ -130,9 +145,9 @@ def run_cover(
     cover_periodic_dir = conf.paths.getpath("cover_periodic_dir")
     cover_dir = cover_periodic_dir / input_parcel_nogeo_path.stem
     cover_dir.mkdir(parents=True, exist_ok=True)
-    export_geo = True
-    force = True
+    force = False
     on_error = "warn"
+    parcels_selected_paths = []
 
     for period in periods:
         period_start_date = period["start_date"].strftime("%Y-%m-%d")
@@ -141,20 +156,22 @@ def run_cover(
         output_path = cover_dir / output_name
 
         try:
+            geo_path = output_path.with_suffix(geofile_ext)
             _calc_cover(
                 input_parcel_path=input_parcel_path,
                 timeseries_periodic_dir=timeseries_periodic_dir,
                 images_to_use=images_to_use,
                 start_date=period["start_date"],
                 end_date=period["end_date"],
+                parcel_columns=parcel_columns,
                 output_path=output_path,
-                export_geo=export_geo,
+                output_geo_path=geo_path,
                 force=force,
             )
 
-            geo_path = output_path.with_suffix(geofile_ext)
-            parcels_selected_path = run_dir / geo_path.name
-            _select_parcels(geo_path, parcels_selected_path)
+            parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
+            _select_parcels_EEF(geo_path, parcels_selected_path)
+            parcels_selected_paths.append(parcels_selected_path)
 
         except Exception as ex:
             message = f"Error calculating {output_path.stem}"
@@ -167,6 +184,26 @@ def run_cover(
                 logger.error(f"invalid value for on_error: {on_error}, 'raise' assumed")
                 raise RuntimeError(message) from ex
 
+    # STEP 4: Create the final list of parcels
+    # ----------------------------------------
+    # Consolidate the list of parcels that need to be controlled
+    parcels_selected_path = (
+        run_dir / f"selectie_EEF_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    )
+    parcels_selected = None
+    for path in parcels_selected_paths:
+        columns = [*parcel_columns, "provincie"]
+        parcels = gfo.read_file(path, columns=columns, ignore_geometry=True)
+
+        if parcels_selected is None:
+            parcels_selected = parcels
+        else:
+            parcels_selected = pd.concat([parcels_selected, parcels])
+
+    # Create list with unique parcels
+    parcels_selected = parcels_selected.drop_duplicates()
+    pdh.to_excel(parcels_selected, parcels_selected_path, index=False)
+
     logging.shutdown()
 
 
@@ -176,8 +213,9 @@ def _calc_cover(
     images_to_use,
     start_date: datetime,
     end_date: datetime,
-    output_path,
-    export_geo: bool = False,
+    parcel_columns: list[str],
+    output_path: Path,
+    output_geo_path: Optional[Path] = None,
     force: bool = False,
 ):
     logger.info(f"start processing {output_path}")
@@ -185,9 +223,15 @@ def _calc_cover(
     if output_path.exists():
         if force:
             gfo.remove(output_path)
+        elif output_geo_path is not None and not output_geo_path.exists():
+            # Geo file is asked bu missing: we need to recalculate the output file as
+            # well because we need temporary files to create the geo file.
+            gfo.remove(output_path)
         else:
             return
 
+    id_column = conf.columns["id"]
+    result_df = None
     # Collect all data needed to do the classification in one input file
     tmp_dir = Path(tempfile.mkdtemp(prefix="calc_index_"))
     tmp_path = tmp_dir / f"{input_parcel_path.stem}.sqlite"
@@ -200,6 +244,7 @@ def _calc_cover(
         images_to_use=images_to_use,
         parceldata_aggregations_to_use=["count", "mean", "median", "stdev"],
         max_fraction_null=1,
+        force=force,
     )
 
     info = gfo.get_layerinfo(tmp_path, layer="info", raise_on_nogeom=False)
@@ -216,84 +261,71 @@ def _calc_cover(
         key = f"s1{orbit}_{'_'.join(column_lower.split('-')[-1].split('_')[-2:])}"
         columns[key] = column
 
-    id_column = conf.columns["id"]
     # Remarks:
     #   - for asc, asc_vh_median seems typically lower -> different thresshold
-    sql_stmt = f"""
+    sql = f"""
         SELECT "{id_column}"
-              ,CASE
-                WHEN cover_s1_asc IN ('NODATA', 'multi') THEN cover_desc
-                WHEN cover_s1_desc IN ('NODATA', 'multi') THEN cover_asc
-                WHEN cover_s1_asc = 'water' AND cover_desc = 'water' THEN 'water'
+            ,CASE
+                WHEN cover_s1_asc IN ('NODATA', 'multi') THEN cover_s1_desc
+                WHEN cover_s1_desc IN ('NODATA', 'multi') THEN cover_s1_asc
+                WHEN cover_s1_asc = 'water' AND cover_s1_desc = 'water' THEN 'water'
                 --WHEN (cover_s1_asc = 'bare-soil' OR cover_s1_desc = 'bare-soil') THEN 'bare-soil'
                 WHEN (cover_s1_asc IN ('bare-soil', 'water')
-                      AND cover_s1_desc IN ('bare-soil', 'water')
-                     ) THEN 'bare-soil'
+                    AND cover_s1_desc IN ('bare-soil', 'water')
+                    ) THEN 'bare-soil'
                 WHEN cover_s1_asc = 'urban' or cover_s1_desc = 'urban' THEN 'urban'
                 ELSE 'other'
-               END cover_s1
-              ,cover_s1_asc
-              ,cover_s1_desc
-          FROM (
+            END cover_s1
+            ,cover_s1_asc
+            ,cover_s1_desc
+        FROM (
             SELECT "{id_column}"
-                  ,CASE
-                     WHEN "{columns["s1asc_vv_mean"]}" IS NULL OR "{columns["s1asc_vv_mean"]}" = 0
-                          THEN 'NODATA'
-                     WHEN ( "{columns["s1asc_vh_stdev"]}" > 0.5
+                ,CASE
+                    WHEN "{columns["s1asc_vv_mean"]}" IS NULL OR "{columns["s1asc_vv_mean"]}" = 0
+                        THEN 'NODATA'
+                    WHEN ( "{columns["s1asc_vh_stdev"]}" > 0.5
                             OR "{columns["s1asc_vv_stdev"]}" > 0.5
-                          ) THEN 'multi'
-                     WHEN ( "{columns["s1asc_vh_median"]}" < 0.07
+                        ) THEN 'multi'
+                    WHEN ( "{columns["s1asc_vh_median"]}" < 0.07
                             AND ("{columns["s1asc_vv_median"]}" < 0.027
-                                 OR "{columns["s1asc_vh_stdev"]}" < 0.0027)
-                          ) THEN 'water'
-                     WHEN "{columns["s1asc_vv_median"]}"/"{columns["s1asc_vh_median"]}" >= 5.9
-                          AND "{columns["s1asc_vh_median"]}" < 0.013
-                          THEN 'bare-soil'
-                     WHEN "{columns["s1asc_vv_mean"]}" > 0.25 THEN 'urban'
-                     ELSE 'other'
-                   END AS cover_s1_asc
-                  ,CASE
-                     WHEN "{columns["s1desc_vv_mean"]}" IS NULL OR "{columns["s1desc_vv_mean"]}" = 0
-                          THEN 'NODATA'
-                     WHEN ( "{columns["s1desc_vh_stdev"]}" > 0.5
+                                OR "{columns["s1asc_vh_stdev"]}" < 0.0027)
+                        ) THEN 'water'
+                    WHEN "{columns["s1asc_vv_median"]}"/"{columns["s1asc_vh_median"]}" >= 5.9
+                        AND "{columns["s1asc_vh_median"]}" < 0.013
+                        THEN 'bare-soil'
+                    WHEN "{columns["s1asc_vv_mean"]}" > 0.25 THEN 'urban'
+                    ELSE 'other'
+                END AS cover_s1_asc
+                ,CASE
+                    WHEN "{columns["s1desc_vv_mean"]}" IS NULL OR "{columns["s1desc_vv_mean"]}" = 0
+                        THEN 'NODATA'
+                    WHEN ( "{columns["s1desc_vh_stdev"]}" > 0.5
                             OR "{columns["s1desc_vv_stdev"]}" > 0.5
-                          ) THEN 'multi'
-                     WHEN ( "{columns["s1desc_vh_median"]}" < 0.07
+                        ) THEN 'multi'
+                    WHEN ( "{columns["s1desc_vh_median"]}" < 0.07
                             AND ("{columns["s1desc_vv_median"]}" < 0.027
-                                 OR "{columns["s1desc_vh_stdev"]}" < 0.0027)
-                          ) THEN 'water'
-                     WHEN "{columns["s1desc_vv_median"]}"/"{columns["s1desc_vh_median"]}" >= 5.9
-                          AND "{columns["s1desc_vh_median"]}" < 0.015
-                          THEN 'bare-soil'
-                     WHEN "{columns["s1desc_vv_mean"]}" > 0.25 THEN 'urban'
-                     ELSE 'other'
-                   END AS cover_s1_desc
-              FROM "info" info
-          ) covers
+                                OR "{columns["s1desc_vh_stdev"]}" < 0.0027)
+                        ) THEN 'water'
+                    WHEN "{columns["s1desc_vv_median"]}"/"{columns["s1desc_vh_median"]}" >= 5.9
+                        AND "{columns["s1desc_vh_median"]}" < 0.015
+                        THEN 'bare-soil'
+                    WHEN "{columns["s1desc_vv_mean"]}" > 0.25 THEN 'urban'
+                    ELSE 'other'
+                END AS cover_s1_desc
+            FROM "info" info
+        ) covers
     """  # noqa: E501
-    result_df = gfo.read_file(tmp_path, sql_stmt=sql_stmt)
+    result_df = pdh.read_file(tmp_path, sql=sql)
     pdh.to_file(result_df, output_path)
 
-    if export_geo:
-        geofile_ext = conf.general["geofile_ext"]
-        geo_path = output_path.parent / f"{output_path.stem}{geofile_ext}"
-        gfo.remove(geo_path, missing_ok=True)
-
-        parcels_gdf = gfo.read_file(
+    if output_geo_path is not None:
+        # If a geo file is asked, always recreated it so it is in sync with the output
+        # file
+        gfo.remove(output_geo_path, missing_ok=True)
+        parcels_gdf = pdh.read_file(
             input_parcel_path,
-            columns=[
-                id_column,
-                "ALL_BEST",
-                "GWSCOD_H",
-                "GWSNAM_H",
-                "GWSCOD_N",
-                "GWSNAM_N",
-                "GWSCOD_N2",
-                "GWSNAM_N2",
-                "PRC_NIS",
-                "ALV_NUMMER",
-                "PRC_NMR",
-            ],
+            ignore_geometry=False,
+            columns=parcel_columns,
         )
 
         # Determine province
@@ -311,10 +343,15 @@ def _calc_cover(
         ) * 10000
         parcels_gdf["provincie"] = parcels_gdf["provincie"].map(prov)
 
+        # Merge satellite data
+        if result_df is None:
+            result_df = pdh.read_file(output_path)
         result_gdf = parcels_gdf.merge(result_df, on=id_column)
 
-        # Merge satellite data
-        satdata_df = gfo.read_file(tmp_path)
+        satdata_df = pdh.read_file(tmp_path)
+
+        """
+        # Add the ratio of the median of the VV and VH bands
         satdata_df["vvdvh_median_asc"] = (
             satdata_df[columns["asc_vv_median"]] / satdata_df[columns["asc_vh_median"]]
         )
@@ -322,15 +359,25 @@ def _calc_cover(
             satdata_df[columns["desc_vv_median"]]
             / satdata_df[columns["desc_vh_median"]]
         )
+        """
+
         result_gdf = result_gdf.merge(satdata_df, on=id_column)
-        gfo.to_file(result_gdf, geo_path)
+        gfo.to_file(result_gdf, output_geo_path)
 
     shutil.rmtree(tmp_dir)
 
 
-def _select_parcels(input_geo_path, output_geo_path):
+def _select_parcels_BMG_MEG_MEV_EEF(input_geo_path, output_geo_path):
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
+    info = gfo.get_layerinfo(input_geo_path)
+    columns = {}
+    for column in info.columns:
+        column_lower = column.lower()
+        if not column_lower.startswith("s2-ndvi-weekly"):
+            continue
+        if column_lower.endswith("_ndvi_median"):
+            columns["ndvi_median"] = column
 
     # Zone used in the selection of 10/2024 to reduce number parcels
     zone_filter = """
@@ -342,27 +389,65 @@ def _select_parcels(input_geo_path, output_geo_path):
     """
     zone_filter = ""
 
+    # Filter used in the selection of 10/2024
     where = f"""
-            AND ( ("ALL_BEST" like '%MEV%'
+            ( ("ALL_BEST" like '%MEV%'
                 OR "ALL_BEST" like '%MEG%'
                 OR "ALL_BEST" like '%EEF%'
-                )
-                AND ( ( "s2-ndvi-weekly_20240930_ndvi_median" <> 0
-                        and "s2-ndvi-weekly_20240930_ndvi_median" < 0.3
-                        )
-                        OR "cover_s1" = 'bare-soil'
+              )
+              AND ( ( "{columns["ndvi_median"]}" <> 0
+                      AND "{columns["ndvi_median"]}" < 0.3
                     )
+                    OR "cover_s1" = 'bare-soil'
+                  )
             )
             OR ("ALL_BEST" like '%BMG%'
-                AND (  ( "s2-ndvi-weekly_20240930_ndvi_median"<> 0
-                        and "s2-ndvi-weekly_20240930_ndvi_median"< 0.3
+                AND (  ( "{columns["ndvi_median"]}"<> 0
+                        and "{columns["ndvi_median"]}"< 0.3
                         )
                         OR ("cover_s1" = 'bare-soil'
-                            AND "s1-grd-sigma0-desc-weekly_20240930_VH_count"<> 0
-                            AND "s1-grd-sigma0-asc-weekly_20240930_VH_count"<> 0
+                            --AND "s1-grd-sigma0-desc-weekly_20240930_VH_count"<> 0
+                            --AND "s1-grd-sigma0-asc-weekly_20240930_VH_count"<> 0
                             {zone_filter}
                         )
                     )
+            )
+    """
+    gfo.copy_layer(input_geo_path, output_geo_path, where=where)
+
+
+def _select_parcels_EEF(input_geo_path, output_geo_path):
+    """Select parcels based on the cover marker."""
+    # Select the relevant parcels based on the cover marker
+    info = gfo.get_layerinfo(input_geo_path)
+    columns = {}
+    for column in info.columns:
+        column_lower = column.lower()
+        if not column_lower.startswith("s2-ndvi-weekly"):
+            continue
+        if column_lower.endswith("_ndvi_median"):
+            columns["ndvi_median"] = column
+
+    # Zone used in the selection of 10/2024 to reduce number parcels
+    zone_filter = """
+        AND ( PRC_NIS IN (
+                12014, 23025, 23096, 24028, 24054, 24107, 24133, 24135, 32010, 32011
+              )
+              OR (PRC_NIS > 70000 AND PRC_NIS <> 73109)
+            )
+    """
+    zone_filter = ""
+
+    # Filter used in the selection of 10/2024
+    where = f"""
+            ( ALL_BEST like '%EEF%'
+              AND ( ( "{columns["ndvi_median"]}" <> 0
+                      AND "{columns["ndvi_median"]}" < 0.35
+                    )
+                    OR ( cover_s1 = 'bare-soil'
+                         AND "{columns["ndvi_median"]}" = 0  -- no NDVI available
+                    )
+                  )
             )
     """
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
