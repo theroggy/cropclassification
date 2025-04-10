@@ -44,6 +44,7 @@
 - Add support to generate vvdvh index (#151)
 - Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
+- Use Exactextract for zonalstats calculation (#181)
 
 ### Bugs fixed
 
