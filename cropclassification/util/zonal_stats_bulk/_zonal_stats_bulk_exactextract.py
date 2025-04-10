@@ -261,6 +261,17 @@ def zonal_stats_band_tofile(
                 output_path.unlink(missing_ok=True)
         return output_paths
 
+    # In stats replace 'std' with 'stdev' for exactextract
+    stats = [stat.replace("std", "stdev") for stat in stats]
+
+    # Add the operational arguments to the stats
+    min_coverage_frac = 0.8
+    coverage_weight = "none"
+    operation_arguments = (
+        f"(min_coverage_frac={min_coverage_frac},coverage_weight={coverage_weight})"
+    )
+    stats = [stat + operation_arguments for stat in stats]
+
     stats_df = zonal_stats_band(
         vector_path=vector_path,
         raster_path=raster_path,
@@ -274,17 +285,24 @@ def zonal_stats_band_tofile(
     for band in bands:
         index = raster_info.bands[band].band_index
         band_columns = include_cols.copy()
-        band_columns.extend(
-            [f"band_{index}_{stat}" for stat in [stat.split("(")[0] for stat in stats]]
-        )
-        band_stats_df = stats_df[band_columns].copy()
-        band_stats_df.rename(
-            columns={
-                f"band_{index}_{stat}": stat
-                for stat in [stat.split("(")[0] for stat in stats]
-            },
-            inplace=True,
-        )
+        if len(bands) == 1:
+            band_columns.extend(stats)
+            band_stats_df = stats_df[band_columns].copy()
+        else:
+            band_columns.extend(
+                [
+                    f"band_{index}_{stat}"
+                    for stat in [stat.split("(")[0] for stat in stats]
+                ]
+            )
+            band_stats_df = stats_df[band_columns].copy()
+            band_stats_df.rename(
+                columns={
+                    f"band_{index}_{stat}": stat
+                    for stat in [stat.split("(")[0] for stat in stats]
+                },
+                inplace=True,
+            )
         # Add fid column to the beginning of the dataframe
         band_stats_df.insert(0, "fid", range(len(band_stats_df)))
 

@@ -11,18 +11,8 @@ from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize(
-    "engine, stats",
-    [
-        ("pyqgis", ["mean", "count"]),
-        ("rasterstats", ["mean", "count"]),
-        (
-            "exactextract",
-            [
-                "mean(min_coverage_frac=0.5,coverage_weight=none)",
-                "count(min_coverage_frac=0.5,coverage_weight=none)",
-            ],
-        ),
-    ],
+    "engine",
+    ["pyqgis", "rasterstats", "exactextract"],
 )
 def test_zonal_stats_bulk(tmp_path, engine, stats):
     if engine == "pyqgis" and not HAS_QGIS:
@@ -58,7 +48,7 @@ def test_zonal_stats_bulk(tmp_path, engine, stats):
         id_column="UID",
         rasters_bands=images_bands,
         output_dir=tmp_path,
-        stats=stats,
+        stats=["mean", "count", "std"],
         engine=engine,
     )
 

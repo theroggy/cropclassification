@@ -161,7 +161,7 @@ def collect_and_prepare_timeseries_data(
             continue
 
         # Determine the columns to be read from the file and which to rename.
-        info = gfo.get_layerinfo(curr_path, raise_on_nogeom=False)
+        info = gfo.get_layerinfo(curr_path, raise_on_nogeom=False, layer="info")
         columns = []
         columns_to_rename = {}
         for column in info.columns:

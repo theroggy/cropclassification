@@ -91,6 +91,6 @@ def calculate_periodic_timeseries(
         rasters_bands=images_bands,
         output_dir=timeseries_periodic_dir,
         stats=["count", "mean", "median", "std", "min", "max"],
-        engine="exactextract",  # "pyqgis"
+        engine="exactextract",
         nb_parallel=nb_parallel,
     )
