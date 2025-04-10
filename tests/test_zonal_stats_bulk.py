@@ -14,7 +14,7 @@ from tests.test_helper import SampleData
     "engine",
     ["pyqgis", "rasterstats", "exactextract"],
 )
-def test_zonal_stats_bulk(tmp_path, engine, stats):
+def test_zonal_stats_bulk(tmp_path, engine):
     if engine == "pyqgis" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
