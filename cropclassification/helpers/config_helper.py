@@ -309,8 +309,8 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
     for profile in profiles_config.sections():
         profiles[profile] = ImageProfile(
             name=profile,
-            satellite=profiles_config[profile].get("satellite"),
-            image_source=profiles_config[profile].get("image_source"),
+            satellite=profiles_config[profile]["satellite"],
+            image_source=profiles_config[profile]["image_source"],
             bands=profiles_config[profile].getlist("bands"),
             collection=profiles_config[profile].get("collection"),
             time_reducer=profiles_config[profile].get("time_reducer"),
