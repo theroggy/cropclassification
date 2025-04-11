@@ -307,18 +307,17 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
     # Prepare data
     profiles = {}
     for profile in profiles_config.sections():
-        satellite = profiles_config[profile].get("satellite")
         profiles[profile] = ImageProfile(
             name=profile,
-            satellite=satellite,
-            index_type=profiles_config[profile].get("index_type"),
+            satellite=profiles_config[profile].get("satellite"),
             image_source=profiles_config[profile].get("image_source"),
-            collection=profiles_config[profile].get("collection"),
             bands=profiles_config[profile].getlist("bands"),
+            collection=profiles_config[profile].get("collection"),
             time_reducer=profiles_config[profile].get("time_reducer"),
             period_name=profiles_config[profile].get("period_name"),
             period_days=profiles_config[profile].getint("period_days"),
             base_image_profile=profiles_config[profile].get("base_image_profile"),
+            index_type=profiles_config[profile].get("index_type"),
             pixel_type=profiles_config[profile].get("pixel_type"),
             max_cloud_cover=profiles_config[profile].getfloat("max_cloud_cover"),
             process_options=profiles_config[profile].getdict("process_options"),
