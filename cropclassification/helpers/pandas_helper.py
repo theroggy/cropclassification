@@ -108,21 +108,9 @@ def read_file(
     elif ext_lower == ".parquet":
         return pd.read_parquet(str(path), columns=columns)
     elif ext_lower in (".sqlite", ".gpkg"):
-        tmp_dir = Path(tempfile.mkdtemp(prefix="pdh_read_file_"))
-        try:
-            tmp_path = tmp_dir / path.name
-            shutil.copy(path, tmp_path)
-            data_read_df = pyogrio.read_dataframe(
-                tmp_path,
-                columns=columns,
-                use_arrow=True,
-                read_geometry=not ignore_geometry,
-                sql=sql,
-            )
-        finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-
-        return data_read_df
+        return pyogrio.read_dataframe(
+            path, columns=columns, read_geometry=not ignore_geometry, sql=sql
+        )
     else:
         raise ValueError(f"Not implemented for extension {ext_lower}")
 
