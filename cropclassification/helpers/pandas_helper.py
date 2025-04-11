@@ -1,10 +1,7 @@
 """Module with helper functions to expand on some features of pandas."""
 
-import shutil
 import sqlite3
-import tempfile
 from pathlib import Path
-from time import perf_counter
 from typing import Any, Optional, Union
 
 import pandas as pd

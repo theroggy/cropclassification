@@ -307,9 +307,10 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
     # Prepare data
     profiles = {}
     for profile in profiles_config.sections():
+        satellite = profiles_config[profile].get("satellite")
         profiles[profile] = ImageProfile(
             name=profile,
-            satellite=profiles_config[profile].get("satellite"),
+            satellite=satellite,
             index_type=profiles_config[profile].get("index_type"),
             image_source=profiles_config[profile].get("image_source"),
             collection=profiles_config[profile].get("collection"),

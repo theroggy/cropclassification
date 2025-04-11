@@ -52,9 +52,6 @@ def run_cover(
 
     # Create run dir to be used for the results
     reuse_last_run_dir = conf.calc_marker_params.getboolean("reuse_last_run_dir")
-    reuse_last_run_dir_config = conf.calc_marker_params.getboolean(
-        "reuse_last_run_dir_config"
-    )
     run_dir = dir_helper.create_run_dir(
         conf.paths.getpath("marker_dir"), reuse_last_run_dir
     )
@@ -201,6 +198,7 @@ def run_cover(
             parcels_selected = pd.concat([parcels_selected, parcels])
 
     # Create list with unique parcels
+    assert parcels_selected is not None
     parcels_selected = parcels_selected.drop_duplicates()
     pdh.to_excel(parcels_selected, parcels_selected_path, index=False)
 
@@ -436,7 +434,7 @@ def _select_parcels_EEF(input_geo_path, output_geo_path):
               OR (PRC_NIS > 70000 AND PRC_NIS <> 73109)
             )
     """
-    zone_filter = ""
+    zone_filter = ""  # noqa: F841
 
     # Filter used in the selection of 10/2024
     where = f"""
@@ -608,7 +606,6 @@ def report():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    global logger
     logger = logging.getLogger(__name__)
 
     report()

@@ -80,7 +80,9 @@ def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
         action = task_config["task"].get("action")
         default_basedir = None
         if "paths" in task_config:
-            default_basedir = Path(task_config["paths"].get("marker_basedir"))
+            default_basedir = task_config["paths"].get("marker_basedir")
+            if default_basedir is not None:
+                default_basedir = Path(default_basedir).resolve()
         if default_basedir is None:
             default_basedir = task_path.parent.parent
 
