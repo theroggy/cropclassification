@@ -50,6 +50,10 @@ def run_cover(
     logger.warning("This is a POC for a cover marker, so not for operational use!")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
+    markertype = conf.marker["markertype"]
+    if not markertype.startswith("COVER"):
+        raise ValueError(f"Invalid markertype {markertype}, expected COVER_XXX")
+
     # Create run dir to be used for the results
     reuse_last_run_dir = conf.calc_marker_params.getboolean("reuse_last_run_dir")
     run_dir = dir_helper.create_run_dir(
@@ -67,6 +71,35 @@ def run_cover(
             message = f"Input file doesn't exist, so STOP: {path}"
             logger.critical(message)
             raise ValueError(message)
+
+    # Depending on the specific markertype, export only the relevant parcels
+    input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
+    if markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
+        # Grassland parcels with a premium having a requirement that they cannot be
+        # resown -> should never be ploughed.
+        input_parcel_filename = f"{input_parcel_path.stem}_TBG_BMG.gpkg"
+        input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
+
+        where = "ALL_BEST like '%TBG%' OR ALL_BEST like '%BMG%'"
+        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        input_parcel_path = input_parcel_filtered_path
+
+    elif markertype == "COVER_EEB_VOORJAAR":
+        # Fallow parcels with a premium having as requirement that there is no activity
+        # on them from 15/01 till 10/04 + that they have maize as main crop.
+        input_parcel_filename = f"{input_parcel_path.stem}_EEB.gpkg"
+        input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
+
+        where = (
+            "ALL_BEST like '%EEB%' AND GWSCOD_V = '83' AND GWSCOD_H IN ('201', '202')"
+        )
+        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        input_parcel_path = input_parcel_filtered_path
+
+    elif markertype == "COVER":
+        pass
+    else:
+        raise ValueError(f"Invalid {markertype=}")
 
     # Get some general config
     data_ext = conf.general["data_ext"]
@@ -95,13 +128,13 @@ def run_cover(
     # Prepare the input data for optimal image data extraction:
     #    1) apply a negative buffer on the parcel to evade mixels
     #    2) remove features that became null because of buffer
-    input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
     buffer = conf.timeseries.getfloat("buffer")
     input_parcel_nogeo_path = (
-        input_preprocessed_dir / f"{input_parcel_filename.stem}{data_ext}"
+        input_preprocessed_dir / f"{input_parcel_path.stem}{data_ext}"
     )
+
     imagedata_input_parcel_filename = (
-        f"{input_parcel_filename.stem}_bufm{buffer:g}{geofile_ext}"
+        f"{input_parcel_path.stem}_bufm{buffer:g}{geofile_ext}"
     )
     imagedata_input_parcel_path = (
         input_preprocessed_dir / imagedata_input_parcel_filename
@@ -166,9 +199,18 @@ def run_cover(
                 force=force,
             )
 
-            parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
-            _select_parcels_EEF(geo_path, parcels_selected_path)
-            parcels_selected_paths.append(parcels_selected_path)
+            if markertype == "COVER_EEF_VOORJAAR":
+                parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
+                _select_parcels_EEF(geo_path, parcels_selected_path)
+                parcels_selected_paths.append(parcels_selected_path)
+            elif markertype == "COVER_BMG_MEG_MEV_NAJAAR":
+                parcels_selected_path = run_dir / f"{geo_path.stem}_BMG{geofile_ext}"
+                _select_parcels_BMG_MEG_MEV_EEF(geo_path, parcels_selected_path)
+                parcels_selected_paths.append(parcels_selected_path)
+            else:
+                parcels_selected_path = run_dir / f"{geo_path.stem}_filter{geofile_ext}"
+                _select_parcels(geo_path, parcels_selected_path)
+                parcels_selected_paths.append(parcels_selected_path)
 
         except Exception as ex:
             message = f"Error calculating {output_path.stem}"
@@ -185,7 +227,7 @@ def run_cover(
     # ----------------------------------------
     # Consolidate the list of parcels that need to be controlled
     parcels_selected_path = (
-        run_dir / f"selectie_EEF_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+        run_dir / f"selectie_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     )
     parcels_selected = None
     for path in parcels_selected_paths:
@@ -426,19 +468,36 @@ def _select_parcels_EEF(input_geo_path, output_geo_path):
         if column_lower.endswith("_ndvi_median"):
             columns["ndvi_median"] = column
 
-    # Zone used in the selection of 10/2024 to reduce number parcels
-    zone_filter = """
-        AND ( PRC_NIS IN (
-                12014, 23025, 23096, 24028, 24054, 24107, 24133, 24135, 32010, 32011
-              )
-              OR (PRC_NIS > 70000 AND PRC_NIS <> 73109)
-            )
-    """
-    zone_filter = ""  # noqa: F841
-
-    # Filter used in the selection of 10/2024
+    # Filter used in the selection of 03/2025
     where = f"""
             ( ALL_BEST like '%EEF%'
+              AND ( ( "{columns["ndvi_median"]}" <> 0
+                      AND "{columns["ndvi_median"]}" < 0.35
+                    )
+                    OR ( cover_s1 = 'bare-soil'
+                         AND "{columns["ndvi_median"]}" = 0  -- no NDVI available
+                    )
+                  )
+            )
+    """
+    gfo.copy_layer(input_geo_path, output_geo_path, where=where)
+
+
+def _select_parcels(input_geo_path, output_geo_path):
+    """Select parcels based on the cover marker."""
+    # Select the relevant parcels based on the cover marker
+    info = gfo.get_layerinfo(input_geo_path)
+    columns = {}
+    for column in info.columns:
+        column_lower = column.lower()
+        if not column_lower.startswith("s2-ndvi-weekly"):
+            continue
+        if column_lower.endswith("_ndvi_median"):
+            columns["ndvi_median"] = column
+
+    # Filter used in the selection of 05/2025
+    where = f"""
+            ( 1=1
               AND ( ( "{columns["ndvi_median"]}" <> 0
                       AND "{columns["ndvi_median"]}" < 0.35
                     )
