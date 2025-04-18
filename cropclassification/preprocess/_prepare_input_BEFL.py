@@ -18,16 +18,16 @@ import cropclassification.helpers.pandas_helper as pdh
 logger = logging.getLogger(__name__)
 
 # define some specific BEFL column names
-column_BEFL_earlylate = "MON_EARLY_LATE"  # Is it an early or a late crop?
+column_BEFL_earlylate = conf.columns["is_early_late"]  # Is it an early or a late crop?
 column_BEFL_gesp_pm = "GESP_PM"  # Gespecialiseerde productiemethode
 column_BEFL_gis_area = "GRAF_OPP"  # GIS Area
 column_BEFL_status_perm_grass = "STAT_BGV"  # Status permanent grassland
-column_BEFL_crop = "GWSCOD_H"
-column_BEFL_crop_declared = "GWSCOD_H_A"
-column_BEFL_crop_gt_verified = "HOOFDTEELT_CTRL_COD"
-column_BEFL_crop_gt_unverified = "HOOFDTEELT_CTRL_COD_ORIG"
-column_BEFL_latecrop = "GWSCOD_N"
-column_BEFL_latecrop2 = "GWSCOD_N2"
+column_BEFL_crop = conf.columns["main_crop"]
+column_BEFL_crop_declared = conf.columns["main_crop_declared"]
+column_BEFL_crop_gt_verified = conf.columns["crop_gt_verified"]
+column_BEFL_crop_gt_unverified =  conf.columns["crop_gt_unverified"]
+column_BEFL_latecrop = conf.columns["late_crop"]
+column_BEFL_latecrop2 = conf.columns["late_crop2"]
 column_BEFL_latecrop_gt_verified = "NATEELT_CTRL_COD"
 column_BEFL_latecrop_gt_unverified = "NATEELT_CTRL_COD_ORIG"
 column_BEFL_latecrop2_gt_verified = "NATEELT2_CTRL_COD"
