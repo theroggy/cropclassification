@@ -208,18 +208,18 @@ def write_full_report(
         # Get the number of 'unimportant' ignore parcels and report them here
         df_predict_unimportant = df_predict[
             df_predict[conf.columns["prediction_conclusion_cons"]]
-            == "IGNORE_UNIMPORTANT"
+            == "IGNORE:UNIMPORTANT"
         ]
         # Now they can be removed for the rest of the reportings...
         df_predict = df_predict[
             df_predict[conf.columns["prediction_conclusion_cons"]]
-            != "IGNORE_UNIMPORTANT"
+            != "IGNORE:UNIMPORTANT"
         ]
 
         message = (
             f"Prediction conclusions cons general overview, for {len(df_predict.index)}"
             f" predicted cases. The {len(df_predict_unimportant.index)} "
-            "IGNORE_UNIMPORTANT parcels are excluded from the reporting!"
+            "IGNORE:UNIMPORTANT parcels are excluded from the reporting!"
         )
         outputfile.write(f"\n{message}\n")
         html_data["GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT"] = message
@@ -1240,7 +1240,7 @@ def _add_prediction_conclusion(
                 )
             ),
             new_columnname,
-        ] = "IGNORE_UNIMPORTANT:INPUTCLASSNAME=" + in_df[conf.columns["class"]]
+        ] = "IGNORE:UNIMPORTANT_INPUTCLASSNAME=" + in_df[conf.columns["class"]]
 
         # Parcels that were ignored for trainig and/or prediction, get an ignore
         # conclusion
