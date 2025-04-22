@@ -32,10 +32,11 @@ dependencies:
   - types-python-dateutil
   - types-requests
   - types-tqdm
+  - typing_extensions
   - scipy
   - pip:
-    - exactextract
-    # Loading the classification model gives an error with 2.12?
-    - tensorflow <2.12
-    # linting
-    - scipy-stubs
+      - exactextract
+      # Loading the classification model gives an error with 2.12?
+      - tensorflow <2.12
+      # linting
+      - scipy-stubs
