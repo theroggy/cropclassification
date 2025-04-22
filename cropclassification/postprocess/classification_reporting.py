@@ -1270,7 +1270,7 @@ def _add_prediction_conclusion(
                 )
             ),
             new_columnname,
-        ] = "IGNORE_UNIMPORTANT"
+        ] = "IGNORE:UNIMPORTANT"
         # Parcels that were ignored for trainig and/or prediction, get an ignore
         # conclusion
         in_df.loc[
