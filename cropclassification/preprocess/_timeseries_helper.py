@@ -27,6 +27,8 @@ def prepare_input(
     input_parcel_path: Path,
     output_imagedata_parcel_input_path: Path,
     output_parcel_nogeo_path: Optional[Path] = None,
+    erase_layer_path: Optional[Path] = None,
+    classes_refe_path: Optional[Path] = None,
     force: bool = False,
 ) -> bool:
     """Prepare a file so it is ready for timeseries extraction of sentinel images.
@@ -35,6 +37,8 @@ def prepare_input(
         input_parcel_path (Path): input file
         output_imagedata_parcel_input_path (Path): prepared output file
         output_parcel_nogeo_path (Path): output file with a copy of the non-geo data
+        erase_layer_path (Optional[Path]): erase layer path
+        classes_refe_path: (Optional[Path]): classes reference path
         force: force creation, even if output file(s) exist already
     """
     # Check if parameters are OK and init some extra params
@@ -101,6 +105,17 @@ def prepare_input(
             f"{output_imagedata_parcel_input_path}"
         )
         return False
+
+    # Exclude erase_layer from agricultural parcels
+    if erase_layer_path is not None and classes_refe_path is not None:
+        output_imagedata_parcel_input_path = exclude_erase_layer(
+            input_parcel_path=input_parcel_path,
+            output_imagedata_parcel_input_path=output_imagedata_parcel_input_path,
+            erase_layer_path=erase_layer_path,
+            classes_refe_path=classes_refe_path,
+        )
+    else:
+        logger.info("No erase layer file found, erase_layer will not be excluded")
 
     # Apply buffer
     parceldata_buf_gdf = parceldata_gdf.copy()
@@ -629,3 +644,56 @@ def get_fileinfo_timeseries_periods(path: Path) -> dict:
         }
 
     return get_fileinfo_timeseries(path)
+
+
+def exclude_erase_layer(
+    input_parcel_path: Path,
+    output_imagedata_parcel_input_path: Path,
+    classes_refe_path: Path,
+    erase_layer_path: Path,
+) -> Path:
+    """This function excludes the erase layer from the agricultural parcels."""
+    # Read reference data
+    # Select all parcels where ignore_erase_layer is True
+    classes_refe_df = pdh.read_file(classes_refe_path)
+
+    # Check if ignore_erase_layer_df has columns IGNORE_ERASE_LAYER
+    if "IGNORE_ERASE_LAYER" not in classes_refe_df.columns:
+        raise Exception("IGNORE_ERASE_LAYER column not found in classes reference file")
+
+    ignore_erase_layer_df = classes_refe_df[classes_refe_df["IGNORE_ERASE_LAYER"] == 1][
+        "CROPCODE"
+    ]
+    gewascodes = tuple(map(str, (ignore_erase_layer_df)))
+
+    logger.info("Erase layer will be excluded")
+
+    # Create temp dir to store temporary data for tracebility
+    temp_output_dir = output_imagedata_parcel_input_path.parent / "temp"
+    temp_output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Select all parcels where gwscod_h is in gewascodes
+    sql_stmt = f"""
+        SELECT *
+        FROM "{{input_layer}}"
+        WHERE gwscod_h IN {gewascodes}
+    """
+    gfo.select(
+        input_path=input_parcel_path,
+        output_path=temp_output_dir / "ignore_erase_layer.gpkg",
+        sql_stmt=sql_stmt,
+    )
+    # Create erase_layer_prc file by erasing all
+    # agricultural parcels with "ignore_erase_layer" True from the erase_layer" file
+    gfo.erase(
+        input_path=erase_layer_path,
+        erase_path=temp_output_dir / "ignore_erase_layer.gpkg",
+        output_path=temp_output_dir / "erase_layer_prc.gpkg",
+    )
+    # Erase the erase_layer_prc from the input agricultural parcels
+    gfo.erase(
+        input_path=input_parcel_path,
+        erase_path=temp_output_dir / "erase_layer_prc.gpkg",
+        output_path=output_imagedata_parcel_input_path,
+    )
+    return output_imagedata_parcel_input_path
