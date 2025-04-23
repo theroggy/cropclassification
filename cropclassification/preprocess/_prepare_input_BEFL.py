@@ -875,6 +875,7 @@ def prepare_input_carbonsupply(
 
     return parceldata_df
 
+
 @deprecated("fabacae is deprecated, add refe before using")
 def prepare_input_fabaceae(
     parceldata_df,
@@ -1716,6 +1717,7 @@ def prepare_input_landcover_early(
         )
 
     return parceldata_df
+
 
 @deprecated("most populair crop is deprecated, add refe before using")
 def prepare_input_most_popular_crop(
