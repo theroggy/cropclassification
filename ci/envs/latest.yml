@@ -19,10 +19,11 @@ dependencies:
   - rasterstats
   - rioxarray
   - scikit-learn
+  - typing_extensions
   # Optional
   - qgis
   # testing
   - pytest
   - pytest-cov
   - pip:
-    - exactextract
+      - exactextract
