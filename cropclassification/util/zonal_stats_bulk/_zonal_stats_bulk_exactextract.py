@@ -257,10 +257,10 @@ def zonal_stats_band_tofile(
 ) -> dict[str, Path]:
     # Init
     if all(output_path.exists() for output_path in output_paths.values()):
-        if force:
-            for output_path in output_paths.values():
-                output_path.unlink(missing_ok=True)
         return output_paths
+    if force:
+        for output_path in output_paths.values():
+            output_path.unlink(missing_ok=True)
 
     # In stats replace 'std' with 'stdev' for exactextract
     stats = [stat.replace("std", "stdev") for stat in stats]
