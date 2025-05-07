@@ -11,8 +11,7 @@ from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
-@pytest.mark.parametrize("force", [True, False])
-def test_zonal_stats_bulk(tmp_path, engine, force):
+def test_zonal_stats_bulk(tmp_path, engine):
     if engine == "pyqgis" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -48,7 +47,6 @@ def test_zonal_stats_bulk(tmp_path, engine, force):
         output_dir=tmp_path,
         stats=["mean", "count", "std"],
         engine=engine,
-        force=force,
     )
 
     result_paths = list(tmp_path.glob("*.sqlite"))
