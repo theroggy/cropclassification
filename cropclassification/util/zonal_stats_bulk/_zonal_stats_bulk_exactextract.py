@@ -136,6 +136,7 @@ def zonal_stats(
                 tmp_dir=tmp_dir,
                 include_cols=columns,
                 output_paths=output_paths,
+                force=force,
             )
             calc_queue[future] = {
                 "vector_path": vector_path,
