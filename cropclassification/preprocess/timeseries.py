@@ -237,9 +237,8 @@ def collect_and_prepare_timeseries_data(
                 continue
 
             # Check if the column contains data for enough parcels
-            valid_input_data_pct = (
-                1 - (data_read_df[column].isnull().count() / nb_input_parcels)
-            ) * 100
+            nb_rows_null = len(data_read_df[data_read_df[column].isnull()])
+            valid_input_data_pct = (1 - (nb_rows_null / nb_input_parcels)) * 100
             if valid_input_data_pct < min_parcels_with_data_pct:
                 # If the number of nan values for the column > x %, drop column
                 logger.warning(
