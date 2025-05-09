@@ -6,11 +6,12 @@ dependencies:
   - pip
   # required
   - dask-core
+  - exactextract
   - geofileops
   - geopandas-base>=0.11
   - h5py
   - numexpr
-  - numpy<2
+  - numpy
   - openeo
   - pandas
   - psutil
@@ -19,10 +20,9 @@ dependencies:
   - rasterstats
   - rioxarray
   - scikit-learn
+  - xlsxwriter
   # Optional
   - qgis
   # testing
   - pytest
   - pytest-cov
-  - pip:
-    - exactextract
