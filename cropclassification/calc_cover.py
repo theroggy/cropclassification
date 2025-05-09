@@ -26,7 +26,7 @@ def run_cover(
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """Runs a the cover marker using the setting in the config_paths.
+    """Run a the cover marker using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load
