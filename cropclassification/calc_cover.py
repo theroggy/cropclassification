@@ -75,16 +75,8 @@ def run_cover(
     # Depending on the specific markertype, export only the relevant parcels
     input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
     input_preprocessed_dir.mkdir(parents=True, exist_ok=True)
-    if markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
-        # Grassland parcels with a premium having a requirement that they cannot be
-        # resown -> should never be ploughed.
-        input_parcel_filename = f"{input_parcel_path.stem}_TBG_BMG.gpkg"
-        input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
-
-        where = "ALL_BEST like '%TBG%' OR ALL_BEST like '%BMG%'"
-        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
-        input_parcel_path = input_parcel_filtered_path
-
+    if markertype in ("COVER", "COVER_EEF_VOORJAAR", "COVER_BMG_MEG_MEV_EEF_NAJAAR"):
+        pass
     elif markertype == "COVER_EEB_VOORJAAR":
         # Fallow parcels with a premium having as requirement that there is no activity
         # on them from 15/01 till 10/04 + that they have maize as main crop.
@@ -97,8 +89,16 @@ def run_cover(
         gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
         input_parcel_path = input_parcel_filtered_path
 
-    elif markertype == "COVER":
-        pass
+    elif markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
+        # Grassland parcels with a premium having a requirement that they cannot be
+        # resown -> should never be ploughed.
+        input_parcel_filename = f"{input_parcel_path.stem}_TBG_BMG.gpkg"
+        input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
+
+        where = "ALL_BEST like '%TBG%' OR ALL_BEST like '%BMG%'"
+        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        input_parcel_path = input_parcel_filtered_path
+
     else:
         raise ValueError(f"Invalid {markertype=}")
 
@@ -204,7 +204,7 @@ def run_cover(
                 parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
                 _select_parcels_EEF(geo_path, parcels_selected_path)
                 parcels_selected_paths.append(parcels_selected_path)
-            elif markertype == "COVER_BMG_MEG_MEV_NAJAAR":
+            elif markertype == "COVER_BMG_MEG_MEV_EEF_NAJAAR":
                 parcels_selected_path = run_dir / f"{geo_path.stem}_BMG{geofile_ext}"
                 _select_parcels_BMG_MEG_MEV_EEF(geo_path, parcels_selected_path)
                 parcels_selected_paths.append(parcels_selected_path)

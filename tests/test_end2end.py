@@ -12,17 +12,19 @@ from tests import test_helper
 
 
 @pytest.mark.parametrize(
-    "markertype, cover_periodic_dir_suffix, exp_nb_parcels",
+    "markertype, cover_periodic_dir_suffix, exp_nb_periodic_parcels",
     [
         ("COVER", "", 10),
         ("COVER_TBG_BMG_VOORJAAR", "_TBG_BMG", 3),
         ("COVER_TBG_BMG_NAJAAR", "_TBG_BMG", 3),
         ("COVER_EEB_VOORJAAR", "_EEB", 1),
-        ("COVER_EEF_VOORJAAR", "_EEF", 0),
-        ("COVER_BMG_MEG_MEV_NAJAAR", "_BMG_MEG_MEV", 2),
+        ("COVER_EEF_VOORJAAR", "", 10),
+        ("COVER_BMG_MEG_MEV_EEF_NAJAAR", "", 10),
     ],
 )
-def test_cover(tmp_path, markertype, cover_periodic_dir_suffix, exp_nb_parcels):
+def test_cover(
+    tmp_path, markertype, cover_periodic_dir_suffix, exp_nb_periodic_parcels
+):
     """Test running the cover task with all COVER marker types."""
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
@@ -53,7 +55,7 @@ def test_cover(tmp_path, markertype, cover_periodic_dir_suffix, exp_nb_parcels):
         assert output_path.exists()
 
         df = pdh.read_file(output_path)
-        assert len(df) == exp_nb_parcels
+        assert len(df) == exp_nb_periodic_parcels
 
 
 @pytest.mark.parametrize(
