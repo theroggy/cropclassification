@@ -12,17 +12,17 @@ from tests import test_helper
 
 
 @pytest.mark.parametrize(
-    "markertype",
+    "markertype, cover_periodic_dir_suffix, exp_nb_parcels",
     [
-        "COVER",
-        "COVER_TBG_BMG_VOORJAAR",
-        "COVER_TBG_BMG_NAJAAR",
-        "COVER_EEB_VOORJAAR",
-        "COVER_EEF_VOORJAAR",
-        "COVER_BMG_MEG_MEV_NAJAAR",
+        ("COVER", "", 10),
+        ("COVER_TBG_BMG_VOORJAAR", "_TBG_BMG", 3),
+        ("COVER_TBG_BMG_NAJAAR", "_TBG_BMG", 3),
+        ("COVER_EEB_VOORJAAR", "_EEB", 1),
+        ("COVER_EEF_VOORJAAR", "_EEF", 0),
+        ("COVER_BMG_MEG_MEV_NAJAAR", "_BMG_MEG_MEV", 2),
     ],
 )
-def test_cover(tmp_path, markertype):
+def test_cover(tmp_path, markertype, cover_periodic_dir_suffix, exp_nb_parcels):
     """Test running the cover task with all COVER marker types."""
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
@@ -42,7 +42,8 @@ def test_cover(tmp_path, markertype):
     )
 
     cover_periodic_dir = markers_dir / "_cover_periodic"
-    cover_periodic_parcels_dir = cover_periodic_dir / "Prc_BEFL_2023_2023-07-24"
+    parcels_dir = f"Prc_BEFL_2023_2023-07-24{cover_periodic_dir_suffix}"
+    cover_periodic_parcels_dir = cover_periodic_dir / parcels_dir
     assert cover_periodic_parcels_dir.exists()
 
     # Check the result
@@ -52,7 +53,7 @@ def test_cover(tmp_path, markertype):
         assert output_path.exists()
 
         df = pdh.read_file(output_path)
-        assert len(df) == 10
+        assert len(df) == exp_nb_parcels
 
 
 @pytest.mark.parametrize(
