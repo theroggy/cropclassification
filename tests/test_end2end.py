@@ -22,7 +22,8 @@ from tests import test_helper
         "COVER_BMG_MEG_MEV_NAJAAR",
     ],
 )
-def test_task_calc_cover(tmp_path, markertype):
+def test_cover(tmp_path, markertype):
+    """Test running the cover task with all COVER marker types."""
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
 
@@ -64,7 +65,11 @@ def test_task_calc_cover(tmp_path, markertype):
         ("BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
-def test_task_calc_cropclass(tmp_path, balancing_strategy, cross_pred_models):
+def test_cropclass(tmp_path, balancing_strategy, cross_pred_models):
+    """Test running the calc_cropclass task for marker CROPGROUP.
+
+    The different balancing strategies are tested as well.
+    """
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
 

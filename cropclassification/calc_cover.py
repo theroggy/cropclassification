@@ -74,6 +74,7 @@ def run_cover(
 
     # Depending on the specific markertype, export only the relevant parcels
     input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
+    input_preprocessed_dir.mkdir(parents=True, exist_ok=True)
     if markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
         # Grassland parcels with a premium having a requirement that they cannot be
         # resown -> should never be ploughed.
