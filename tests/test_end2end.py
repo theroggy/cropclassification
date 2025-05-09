@@ -11,7 +11,18 @@ from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HA
 from tests import test_helper
 
 
-def test_task_calc_cover(tmp_path):
+@pytest.mark.parametrize(
+    "markertype",
+    [
+        "COVER",
+        "COVER_TBG_BMG_VOORJAAR",
+        "COVER_TBG_BMG_NAJAAR",
+        "COVER_EEB_VOORJAAR",
+        "COVER_EEF_VOORJAAR",
+        "COVER_BMG_MEG_MEV_NAJAAR",
+    ],
+)
+def test_task_calc_cover(tmp_path, markertype):
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
 
@@ -25,7 +36,9 @@ def test_task_calc_cover(tmp_path):
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
-    taskrunner.run_tasks(tasksdir=tasks_dir)
+    taskrunner.run_tasks(
+        tasksdir=tasks_dir, config_overrules=[f"marker.markertype={markertype}"]
+    )
 
     cover_periodic_dir = markers_dir / "_cover_periodic"
     cover_periodic_parcels_dir = cover_periodic_dir / "Prc_BEFL_2023_2023-07-24"
