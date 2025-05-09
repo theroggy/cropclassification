@@ -208,18 +208,18 @@ def write_full_report(
         # Get the number of 'unimportant' ignore parcels and report them here
         df_predict_unimportant = df_predict[
             df_predict[conf.columns["prediction_conclusion_cons"]]
-            == "IGNORE_UNIMPORTANT"
+            == "IGNORE:UNIMPORTANT"
         ]
         # Now they can be removed for the rest of the reportings...
         df_predict = df_predict[
             df_predict[conf.columns["prediction_conclusion_cons"]]
-            != "IGNORE_UNIMPORTANT"
+            != "IGNORE:UNIMPORTANT"
         ]
 
         message = (
             f"Prediction conclusions cons general overview, for {len(df_predict.index)}"
             f" predicted cases. The {len(df_predict_unimportant.index)} "
-            "IGNORE_UNIMPORTANT parcels are excluded from the reporting!"
+            "IGNORE:UNIMPORTANT parcels are excluded from the reporting!"
         )
         outputfile.write(f"\n{message}\n")
         html_data["GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT"] = message
@@ -511,7 +511,7 @@ def write_full_report(
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error for cons: {alpha_numerator}/{alpha_denominator} = "
-                    f"{(alpha_numerator/alpha_denominator):.04f}"
+                    f"{(alpha_numerator / alpha_denominator):.04f}"
                 )
             else:
                 message = (
@@ -537,7 +537,7 @@ def write_full_report(
             if beta_denominator > 0:
                 message += (
                     f"{beta_numerator}/{beta_denominator} = "
-                    f"{(beta_numerator/beta_denominator):.04f}"
+                    f"{(beta_numerator / beta_denominator):.04f}"
                 )
             else:
                 message += f"{beta_numerator}/{beta_denominator} = ?"
@@ -568,7 +568,7 @@ def write_full_report(
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error full: {alpha_numerator}/{alpha_denominator} = "
-                    f"{(alpha_numerator/alpha_denominator):.04f}"
+                    f"{(alpha_numerator / alpha_denominator):.04f}"
                 )
             else:
                 message = f"Alpha error full: {alpha_numerator}/{alpha_denominator} = ?"
@@ -600,7 +600,7 @@ def write_full_report(
             if beta_denominator > 0:
                 message += (
                     f"{beta_numerator}/{beta_denominator} = "
-                    f"{(beta_numerator/beta_denominator):.04f}"
+                    f"{(beta_numerator / beta_denominator):.04f}"
                 )
             else:
                 message += f"{beta_numerator}/{beta_denominator} = ?"
@@ -638,7 +638,7 @@ def write_full_report(
             if theta_denominator > 0:
                 message += (
                     f"{theta_numerator}/{theta_denominator} = "
-                    f"{(theta_numerator/theta_denominator):.04f}"
+                    f"{(theta_numerator / theta_denominator):.04f}"
                 )
             else:
                 message += f"{theta_numerator}/{theta_denominator} = ?"
@@ -1240,7 +1240,7 @@ def _add_prediction_conclusion(
                 )
             ),
             new_columnname,
-        ] = "IGNORE_UNIMPORTANT:INPUTCLASSNAME=" + in_df[conf.columns["class"]]
+        ] = "IGNORE:UNIMPORTANT_INPUTCLASSNAME=" + in_df[conf.columns["class"]]
 
         # Parcels that were ignored for trainig and/or prediction, get an ignore
         # conclusion
@@ -1270,7 +1270,7 @@ def _add_prediction_conclusion(
                 )
             ),
             new_columnname,
-        ] = "IGNORE_UNIMPORTANT"
+        ] = "IGNORE:UNIMPORTANT"
         # Parcels that were ignored for trainig and/or prediction, get an ignore
         # conclusion
         in_df.loc[
@@ -1633,7 +1633,7 @@ def _write_OA_per_pixcount(
             message = (
                 f"OA for pixcount {i:2}: {overall_accuracy:3.2f} %, with "
                 f"{nb_predictions_pixcount} elements "
-                f"({100*(nb_predictions_pixcount/nb_predictions_total):.4f} % "
+                f"({100 * (nb_predictions_pixcount / nb_predictions_total):.4f} % "
                 f"of {nb_predictions_total})"
             )
             logger.info(message)

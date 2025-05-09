@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 import pandas as pd
+import pyogrio
 
 
 def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
@@ -47,7 +48,11 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 
 
 def read_file(
-    path: Path, table_name: str = "info", columns: Optional[list[str]] = None
+    path: Path,
+    table_name: str = "info",
+    columns: Optional[list[str]] = None,
+    sql: Optional[str] = None,
+    ignore_geometry: bool = True,
 ) -> pd.DataFrame:
     """Read a file to a pandas dataframe.
 
@@ -60,6 +65,9 @@ def read_file(
         raise Exception(f"Parameter columns should be list, but is {type(columns)}")
 
     ext_lower = path.suffix.lower()
+    if sql is not None and ext_lower not in (".sqlite", ".gpkg"):
+        raise ValueError("sql parameter is only supported for sqlite and gpkg files")
+
     if ext_lower == ".csv":
         try:
             data_read_df = pd.read_csv(
@@ -97,22 +105,9 @@ def read_file(
     elif ext_lower == ".parquet":
         return pd.read_parquet(str(path), columns=columns)
     elif ext_lower in (".sqlite", ".gpkg"):
-        sql_db = None
-        try:
-            sql_db = sqlite3.connect(str(path))
-            if columns is None:
-                cols_to_select = "*"
-            else:
-                cols_to_select = ", ".join(columns)
-            data_read_df = pd.read_sql_query(
-                f'select {cols_to_select} from "{table_name}"', sql_db
-            )
-        except Exception as ex:
-            raise Exception(f"Error reading data from {path!s}") from ex
-        finally:
-            if sql_db is not None:
-                sql_db.close()
-        return data_read_df
+        return pyogrio.read_dataframe(
+            path, columns=columns, read_geometry=not ignore_geometry, sql=sql
+        )
     else:
         raise ValueError(f"Not implemented for extension {ext_lower}")
 
@@ -177,3 +172,73 @@ def to_file(
                 sql_db.close()
     else:
         raise ValueError(f"Not implemented for extension {ext_lower}")
+
+
+def to_excel(
+    stats_df: pd.DataFrame, path: Path, sheet_name: str = "data", index: bool = True
+) -> None:
+    """Write dataframe to excel.
+
+    Args:
+        stats_df (pd.DataFrame): _description_
+        path (Path): _description_
+        sheet_name (str, optional): _description_. Defaults to "data".
+        index (bool, optional): _description_. Defaults to True.
+    """
+    # Write to Excel
+    with pd.ExcelWriter(path, engine="xlsxwriter") as writer:
+        stats_df.to_excel(writer, sheet_name=sheet_name, index=index)
+        columns_format = _get_columns_for_formatting(stats_df, index=index)
+        _apply_formatting(writer, sheet_name, columns_format)
+
+
+def _get_columns_for_formatting(df, index: bool) -> dict:
+    def get_format(col: str, dtype) -> Optional[dict]:
+        if pd.api.types.is_integer_dtype(dtype):
+            return {"num_format": "0"}
+        elif pd.api.types.is_numeric_dtype(dtype):
+            if col.startswith(("pct_", "percentage")) or col.endswith("_pct"):
+                return {"num_format": "0.00%"}
+            return {"num_format": "0.00"}
+        else:
+            return None
+
+    # First we find the maximum length of the index column if needed
+    result: dict = {}
+    column_idx_offset = 0
+    if index:
+        column_idx_offset = 1
+        index_name = str(df.index.name)
+        result[index_name] = {}
+        result[index_name]["index"] = 0
+        # Count the column title as one character extra as it is bold
+        result[index_name]["width"] = max(
+            [len(str(s)) for s in df.index.values] + [len(index_name) + 1]
+        )
+        result[index_name]["format"] = get_format(index_name, df.index.dtype)
+
+    # Now all other columns
+    for column_idx, col in enumerate(df.columns):
+        result[col] = {}
+        result[col]["index"] = column_idx + column_idx_offset
+        # Count the column title as one character extra as it is bold
+        result[col]["width"] = max(
+            [len(str(s)) for s in df[col].values] + [len(col) + 1]
+        )
+        result[col]["format"] = get_format(col, df[col].dtype)
+
+    return result
+
+
+def _apply_formatting(writer, sheet_name: str, format_info: dict):
+    # Apply format info
+    for column in format_info:
+        format = None
+        if format_info[column]["format"] is not None:
+            format = writer.book.add_format(format_info[column]["format"])
+        writer.sheets[sheet_name].set_column(
+            first_col=format_info[column]["index"],
+            last_col=format_info[column]["index"],
+            width=format_info[column]["width"],
+            cell_format=format,
+        )

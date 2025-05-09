@@ -417,7 +417,7 @@ def zonal_stats(
 
     logger.info(
         f"Time taken to calculate data for {nb_todo} images: "
-        f"{(datetime.now()-start_time).total_seconds()} sec"
+        f"{(datetime.now() - start_time).total_seconds()} sec"
     )
 
 
@@ -591,8 +591,8 @@ def _zonal_stats_image_gdf(
     # Log the time between scheduling the future and acually run...
     if future_start_time is not None:
         logger.info(
-            f"Start, {(datetime.now()-future_start_time).total_seconds()} after future "
-            "was scheduled"
+            f"Start, {(datetime.now() - future_start_time).total_seconds()} after "
+            "future was scheduled"
         )
 
     # If the features_gdf is a string, use it as file path to unpickle geodataframe...

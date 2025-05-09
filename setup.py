@@ -20,8 +20,11 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
+        "dask-core",
+        "exactextract",
         "geofileops",
         "geopandas",
+        "numpy",
         "openeo",
         "psutil",
         "rasterio",
@@ -29,8 +32,7 @@ setuptools.setup(
         "rioxarray",
         "scikit-learn",
         "tensorflow",
-        "numpy<2",
-        "exactextract",
+        "xlsxwriter",
     ],
     entry_points="""
         [console_scripts]
