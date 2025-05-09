@@ -10,9 +10,23 @@ from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HA
 from tests.test_helper import SampleData
 
 
-@pytest.mark.parametrize("engine", ["pyqgis", "rasterstats", "exactextract"])
+@pytest.mark.parametrize(
+    "engine, stats",
+    [
+        ("pyqgis", ["mean", "count", "std"]),
+        ("rasterstats", ["mean", "count", "std"]),
+        (
+            "exactextract",
+            [
+                "mean(min_coverage_frac=0.8,coverage_weight=none)",
+                "count(min_coverage_frac=0.8,coverage_weight=none)",
+                "stdev(min_coverage_frac=0.8,coverage_weight=none)",
+            ],
+        ),
+    ],
+)
 @pytest.mark.parametrize("bands, exp_results_path", [(["vvdvh"], 2), (["VV", "VH"], 8)])
-def test_zonal_stats_bulk(tmp_path, engine, bands, exp_results_path):
+def test_zonal_stats_bulk(tmp_path, engine, stats, bands, exp_results_path):
     if engine == "pyqgis" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
 
@@ -58,7 +72,7 @@ def test_zonal_stats_bulk(tmp_path, engine, bands, exp_results_path):
         id_column="UID",
         rasters_bands=images_bands,
         output_dir=tmp_path,
-        stats=["mean", "count", "std"],
+        stats=stats,
         engine=engine,
     )
 

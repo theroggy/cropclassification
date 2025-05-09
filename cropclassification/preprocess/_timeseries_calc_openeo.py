@@ -26,6 +26,8 @@ def calculate_periodic_timeseries(
     imageprofiles: dict[str, ImageProfile],
     images_periodic_dir: Path,
     timeseries_periodic_dir: Path,
+    engine: str,
+    stats: list[str],
     nb_parallel: int,
     on_missing_image: str,
 ):
@@ -44,6 +46,10 @@ def calculate_periodic_timeseries(
         images_periodic_dir (Path): directory where the images are stored.
         timeseries_periodic_dir (Path): directory where the timeseries data will be
             saved.
+        engine (str): the engine to use for the calculation. Options are
+            "exactextract", "rasterstats" and "pyqgis".
+        stats (list[str]): statistics to calculate. Available statistics and
+            special options are dependent on the `engine` specified:
         nb_parallel (int): number of parallel processes to use.
         on_missing_image (str): what to do when an image is missing. Options are:
 
@@ -90,7 +96,7 @@ def calculate_periodic_timeseries(
         id_column=conf.columns["id"],
         rasters_bands=images_bands,
         output_dir=timeseries_periodic_dir,
-        stats=["count", "mean", "median", "std", "min", "max"],
-        engine="exactextract",
+        stats=stats,
+        engine=engine,
         nb_parallel=nb_parallel,
     )

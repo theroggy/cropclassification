@@ -255,17 +255,6 @@ def zonal_stats_band_tofile(
     include_cols: list[str],
     force: bool = False,
 ) -> dict[str, Path]:
-    # In stats replace 'std' with 'stdev' for exactextract
-    stats = [stat.replace("std", "stdev") for stat in stats]
-
-    # Add the operational arguments to the stats
-    min_coverage_frac = 0.8
-    coverage_weight = "none"
-    operation_arguments = (
-        f"(min_coverage_frac={min_coverage_frac},coverage_weight={coverage_weight})"
-    )
-    stats = [stat + operation_arguments for stat in stats]
-
     stats_df = zonal_stats_band(
         vector_path=vector_path,
         raster_path=raster_path,
