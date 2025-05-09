@@ -21,6 +21,7 @@ dependencies:
   - rioxarray
   - scikit-learn
   - xlsxwriter
+  - typing_extensions
   # Optional
   - qgis
   # testing
@@ -34,6 +35,7 @@ dependencies:
   - types-python-dateutil
   - types-requests
   - types-tqdm
+  - typing_extensions
   - scipy
   - pip:
     - pystac_client

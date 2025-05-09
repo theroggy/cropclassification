@@ -3,7 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python
-  - pip
   # required
   - dask-core
   - exactextract
@@ -20,6 +19,7 @@ dependencies:
   - rasterstats
   - rioxarray
   - scikit-learn
+  - typing_extensions
   - xlsxwriter
   # Optional
   # - qgis
