@@ -6,8 +6,56 @@ import pytest
 from pandas.api.types import is_numeric_dtype
 
 from cropclassification import taskrunner
+from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests import test_helper
+
+
+@pytest.mark.parametrize(
+    "markertype, cover_periodic_dir_suffix, exp_nb_periodic_parcels",
+    [
+        ("COVER", "", 10),
+        ("COVER_TBG_BMG_VOORJAAR", "_TBG_BMG", 3),
+        ("COVER_TBG_BMG_NAJAAR", "_TBG_BMG", 3),
+        ("COVER_EEB_VOORJAAR", "_EEB", 1),
+        ("COVER_EEF_VOORJAAR", "", 10),
+        ("COVER_BMG_MEG_MEV_EEF_NAJAAR", "", 10),
+    ],
+)
+def test_cover(
+    tmp_path, markertype, cover_periodic_dir_suffix, exp_nb_periodic_parcels
+):
+    """Test running the cover task with all COVER marker types."""
+    if not HAS_QGIS:
+        pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
+
+    markers_dir = tmp_path / test_helper.SampleData.markers_dir.name
+    shutil.copytree(test_helper.SampleData.markers_dir, markers_dir)
+
+    # Create configparser and read task file!
+    tasks_dir = markers_dir / "_tasks"
+    ignore_dir = tasks_dir / "ignore"
+    task_ini = "task_test_calc_cover.ini"
+
+    shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
+
+    taskrunner.run_tasks(
+        tasksdir=tasks_dir, config_overrules=[f"marker.markertype={markertype}"]
+    )
+
+    cover_periodic_dir = markers_dir / "_cover_periodic"
+    parcels_dir = f"Prc_BEFL_2023_2023-07-24{cover_periodic_dir_suffix}"
+    cover_periodic_parcels_dir = cover_periodic_dir / parcels_dir
+    assert cover_periodic_parcels_dir.exists()
+
+    # Check the result
+    output_stems = ["cover_2024-03-04_2024-03-11", "cover_2024-03-11_2024-03-18"]
+    for output_stem in output_stems:
+        output_path = cover_periodic_parcels_dir / f"{output_stem}.sqlite"
+        assert output_path.exists()
+
+        df = pdh.read_file(output_path)
+        assert len(df) == exp_nb_periodic_parcels
 
 
 @pytest.mark.parametrize(
@@ -20,7 +68,11 @@ from tests import test_helper
         ("BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
-def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
+def test_cropclass(tmp_path, balancing_strategy, cross_pred_models):
+    """Test running the calc_cropclass task for marker CROPGROUP.
+
+    The different balancing strategies are tested as well.
+    """
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
 
@@ -30,7 +82,7 @@ def test_task_calc_marker(tmp_path, balancing_strategy, cross_pred_models):
     # Create configparser and read task file!
     tasks_dir = markers_dir / "_tasks"
     ignore_dir = tasks_dir / "ignore"
-    task_ini = "task_test_calc_marker.ini"
+    task_ini = "task_test_calc_cropclass.ini"
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
