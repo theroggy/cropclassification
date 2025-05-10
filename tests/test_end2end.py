@@ -98,7 +98,7 @@ def test_cropclass(tmp_path, balancing_strategy, cross_pred_models):
     today_str = datetime.now().strftime("%Y-%m-%d")
     run_dir = markers_dir / f"2024_CROPGROUP/Run_{today_str}_001"
     assert run_dir.exists()
-    base_stem = "Prc_BEFL_2023_2023-07-24_bufm5_weekly_predict_all"
+    base_stem = "Prc_BEFL_2023_2023-07-24_bufm0_weekly_predict_all"
     assert (run_dir / f"{base_stem}.gpkg").exists()
     assert (run_dir / f"{base_stem}.sqlite_accuracy_report.html").exists()
     details_gpgk_path = (
