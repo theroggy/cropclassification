@@ -41,6 +41,10 @@ def calc_index(
     if io_util.output_exists(output_path, remove_if_exists=force):
         return
 
+    if not input_path.exists():
+        logger.error(f"calc_index input file not found: {input_path}")
+        return
+
     # Some processing options can be applied for multiple indexes
     tmp_dir = None
     if process_options is None:
