@@ -25,7 +25,14 @@ from tests.test_helper import SampleData
         ),
     ],
 )
-@pytest.mark.parametrize("bands, exp_results_path", [(["vvdvh"], 2), (["VV", "VH"], 8)])
+@pytest.mark.parametrize(
+    "bands, exp_results_path",
+    [
+        (["vvdvh"], 2),
+        (["VV", "VH"], 8),
+        (["B02", "B03", "B04", "B08", "B11", "B12"], 18),
+    ],
+)
 def test_zonal_stats_bulk(tmp_path, engine, stats, bands, exp_results_path):
     if engine == "pyqgis" and not HAS_QGIS:
         pytest.skip("QGIS is not available on this system.")
@@ -48,21 +55,23 @@ def test_zonal_stats_bulk(tmp_path, engine, stats, bands, exp_results_path):
     # Make sure the s2-agri input file was copied
     test_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
     if bands == ["VV", "VH"]:
-        test_s1_asc_dir = test_image_roi_dir / SampleData.image_s1_asc_path.parent.name
-        test_s1_desc_dir = (
-            test_image_roi_dir / SampleData.image_s1_desc_path.parent.name
-        )
-    else:
-        test_s1_asc_dir = (
+        image1_dir = test_image_roi_dir / SampleData.image_s1_asc_path.parent.name
+        image2_dir = test_image_roi_dir / SampleData.image_s1_desc_path.parent.name
+    elif bands == ["vvdvh"]:
+        image1_dir = (
             test_image_roi_dir
             / SampleData.image_s1_grd_vvdvh_asc_weekly_path.parent.name
         )
-        test_s1_desc_dir = (
+        image2_dir = (
             test_image_roi_dir
             / SampleData.image_s1_grd_vvdvh_desc_weekly_path.parent.name
         )
-    test_image_paths = list(test_s1_asc_dir.glob("*.tif"))
-    test_image_paths.extend(test_s1_desc_dir.glob("*.tif"))
+    elif bands == ["B02", "B03", "B04", "B08", "B11", "B12"]:
+        image1_dir = test_image_roi_dir / SampleData.image_s2_mean_path.parent.name
+        image2_dir = None
+    test_image_paths = list(image1_dir.glob("*.tif"))
+    if image2_dir:
+        test_image_paths.extend(image2_dir.glob("*.tif"))
     images_bands = [(path, bands) for path in test_image_paths]
     vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
     vector_info = gfo.get_layerinfo(vector_path)

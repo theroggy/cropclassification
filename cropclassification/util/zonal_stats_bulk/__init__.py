@@ -29,12 +29,6 @@ def zonal_stats(
         output_dir (Path): directory to write the results to.
         stats (List[str]): statistics to calculate. Available statistics and
             special options are dependent on the `engine` specified:
-
-                - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
-                - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
-                        "range", "minority", "majority" and "variance".
-                - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
-
         cloud_filter_band (str, optional): the band to use as a cloud filter. Only
             supported for engine "rasterstats". Defaults to None.
         calc_bands_parallel (bool, optional): True to calculate the bands in parallel.

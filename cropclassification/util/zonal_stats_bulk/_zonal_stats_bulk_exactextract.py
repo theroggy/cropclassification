@@ -238,9 +238,10 @@ def zonal_stats_band(
             output="pandas",
             include_cols=include_cols,
         )
-
-    except Exception:
-        raise
+    except Exception as ex:
+        message = f"Error calculating zonal stats {stats}: {ex}"
+        logger.error(message)
+        raise Exception(message) from ex
 
     return stats_df
 
