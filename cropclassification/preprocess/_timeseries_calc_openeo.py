@@ -85,6 +85,8 @@ def calculate_periodic_timeseries(
     temp_dir = conf.paths.getpath("temp_dir")
     if temp_dir == "None":
         temp_dir = Path(tempfile.gettempdir())
+
+    logger.info(f"Calculating timeseries for {len(images_bands)} images")
     zonal_stats_bulk.zonal_stats(
         vector_path=input_parcel_path,
         id_column=conf.columns["id"],

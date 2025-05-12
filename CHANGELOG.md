@@ -43,6 +43,8 @@
 - Add support to generate rvi index (#146)
 - Add support to generate vvdvh index (#151)
 - Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
+- Add LATECROP-LATE detection (#177)
+- Add POC (not for operational use) of a cover/bare soil marker (#168)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
