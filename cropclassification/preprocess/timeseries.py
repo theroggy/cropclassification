@@ -85,7 +85,7 @@ def calc_timeseries_data(
             images_periodic_dir=conf.paths.getpath("images_periodic_dir"),
             timeseries_periodic_dir=timeseries_periodic_dir,
             engine=conf.timeseries.get("engine"),
-            stats=conf.timeseries.get("stats"),
+            stats=conf.timeseries.getjsonlist("stats"),
             nb_parallel=conf.general.getint("nb_parallel", -1),
             on_missing_image=conf.images.get("on_missing_image", "calculate_raise"),
         )
