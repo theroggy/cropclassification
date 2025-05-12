@@ -55,11 +55,13 @@ columns_BEFL_to_keep = [
 ndvi_latecrop_count = "latecrop_ndvi_count"
 ndvi_latecrop_median = "latecrop_ndvi_median"
 
+# Set parcels having a main crop that stays late on the field to another class, as
+# the main crop will still be on the field:
 # TODO: should be in REFE instead of hardcoded!!!
 late_main_crops = {
-    "MAINCROP_BEETS": ["71", "91", "8532", "9532"],
-    "MAINCROP_MAIZE": ["201", "202"],
-    "IGNORE_LATE_MAINCROP": ["396"],
+    "MON_CG_BIETEN": ["71", "91", "8532", "9532"],
+    "MON_CG_MAIS": ["201", "202"],
+    "IGNORE:LATE_MAINCROP": ["396"],
 }
 
 
@@ -1215,7 +1217,7 @@ def prepare_input_latecrop(
     elif scope == "LATE_MAINCROP":
         # Only process parcels with a late main crop.
         # Hence, set parcels with a main crop that is remove early to an IGNORE class.
-        early_maincrop_classname = "IGNORE_EARLY_MAINCROP"
+        early_maincrop_classname = "IGNORE:EARLY_MAINCROP"
 
         early_maincrops = []
         for _, cropcodes in late_main_crops.items():
