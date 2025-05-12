@@ -45,7 +45,7 @@
 - Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
 - Add POC (not for operational use) of a cover/bare soil marker (#168)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
-- Use Exactextract for zonalstats calculation (#181)
+- Use Exactextract as default engine for zonalstats calculation (#181)
 
 ### Bugs fixed
 

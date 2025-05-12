@@ -37,6 +37,11 @@ def zonal_stats(
             "exactextract", "rasterstats" and "pyqgis".
         stats (list[str]): statistics to calculate. Available statistics and
             special options are dependent on the `engine` specified:
+                - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
+                - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
+                        "range", "minority", "majority" and "variance".
+                - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
+
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
         force (bool, optional): False to skip calculating existing output files. True to

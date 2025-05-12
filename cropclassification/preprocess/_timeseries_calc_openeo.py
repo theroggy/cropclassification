@@ -50,6 +50,12 @@ def calculate_periodic_timeseries(
             "exactextract", "rasterstats" and "pyqgis".
         stats (list[str]): statistics to calculate. Available statistics and
             special options are dependent on the `engine` specified:
+
+                - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
+                - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
+                        "range", "minority", "majority" and "variance".
+                - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
+
         nb_parallel (int): number of parallel processes to use.
         on_missing_image (str): what to do when an image is missing. Options are:
 
