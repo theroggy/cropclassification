@@ -367,7 +367,7 @@ def calculate_periodic_timeseries(
                     image_data_recalculate_df = (
                         image_data_df.loc[image_data_df.index.duplicated()]
                         .groupby(id_column)
-                        .agg({column: "mean" for column in statistic_columns_dict})
+                        .agg(dict.fromkeys(statistic_columns_dict, "mean"))
                     )
                     image_data_df = image_data_df.loc[~image_data_df.index.duplicated()]
                     image_data_df = pd.concat(
