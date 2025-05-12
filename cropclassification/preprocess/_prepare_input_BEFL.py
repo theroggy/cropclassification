@@ -1142,7 +1142,7 @@ def prepare_input_latecrop(
                 conf.columns["class"],
                 ndvi_latecrop_count,
                 ndvi_latecrop_median,
-                "MON_CROPGROUP",
+                "MON_CG",
                 "IS_PERM_BEDEKKING",
             ]
             and column not in columns_BEFL_to_keep
@@ -1242,7 +1242,7 @@ def prepare_input_latecrop(
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
         & (parceldata_df[column_BEFL_status_perm_grass] is not None)
-        & (parceldata_df["MON_CROPGROUP_MAINCROP"] == "MON_CG_GRASSEN"),
+        & (parceldata_df["MON_CG_MAINCROP"] == "MON_CG_GRASSEN"),
         column_output_class,
     ] = "MON_CG_GRASSEN"
     """
@@ -1252,7 +1252,7 @@ def prepare_input_latecrop(
     parceldata_df.loc[
         (parceldata_df[column_output_class] == "UNKNOWN")
         # & (parceldata_df[column_BEFL_status_perm_grass] is None)
-        & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_CG_GRASSEN")
+        & (parceldata_df["MON_CG_MAINCROP"] != "MON_CG_GRASSEN")
         & (parceldata_df["IS_PERM_BEDEKKING_MAINCROP"] == 1),
         column_output_class,
     ] = "IGNORE:PERMANENT_BEDEKKING"
@@ -1339,7 +1339,7 @@ def prepare_input_latecrop(
         parceldata_df.loc[
             (parceldata_df[ndvi_latecrop_median] <= 0.3)
             # & (parceldata_df[column_output_class] == "UNKNOWN")
-            & (parceldata_df["MON_CROPGROUP_MAINCROP"] != "MON_CG_GRASSEN"),
+            & (parceldata_df["MON_CG_MAINCROP"] != "MON_CG_GRASSEN"),
             column_output_class,
         ] = "MON_CG_BRAAK"
 
