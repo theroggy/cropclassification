@@ -241,7 +241,7 @@ def zonal_stats_band(
     except Exception as ex:
         message = f"Error calculating zonal stats {stats}: {ex}"
         logger.error(message)
-        raise Exception(message) from ex
+        raise ValueError(message) from ex
 
     return stats_df
 

@@ -6,6 +6,7 @@ import pytest
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util import zonal_stats_bulk
+from cropclassification.util.zonal_stats_bulk import _zonal_stats_bulk_exactextract
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests.test_helper import SampleData
 
@@ -103,12 +104,11 @@ def test_zonal_stats_bulk_invalid(tmp_path):
 
     vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
 
-    with pytest.raises(ValueError):
-        zonal_stats_bulk.zonal_stats(
+    with pytest.raises(ValueError, match="Error calculating zonal stats"):
+        _zonal_stats_bulk_exactextract.zonal_stats_band(
             vector_path=vector_path,
-            id_column="UID",
-            rasters_bands=["vvdvh"],
-            output_dir=tmp_path,
+            raster_path=test_dir / SampleData.image_s1_asc_path,
+            tmp_dir=tmp_path,
             stats=["means"],
-            engine="exactextract",
+            include_cols=["index", "UID", "x_ref"],
         )
