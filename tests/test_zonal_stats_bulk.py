@@ -93,3 +93,22 @@ def test_zonal_stats_bulk(tmp_path, engine, stats, bands, exp_results_path):
         assert len(result_df) == vector_info.featurecount
         # The calculates stats should not be nan for any row.
         assert not any(result_df["mean"].isna())
+
+
+def test_zonal_stats_bulk_invalid(tmp_path):
+    # Prepare test data
+    sample_dir = SampleData.markers_dir
+    test_dir = tmp_path / sample_dir.name
+    shutil.copytree(sample_dir, test_dir)
+
+    vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
+
+    with pytest.raises(ValueError):
+        zonal_stats_bulk.zonal_stats(
+            vector_path=vector_path,
+            id_column="UID",
+            rasters_bands=["vvdvh"],
+            output_dir=tmp_path,
+            stats=["means"],
+            engine="exactextract",
+        )
