@@ -319,15 +319,6 @@ def add_doubt_column(
         if conf.marker["markertype"] in ("LANDCOVER", "LANDCOVER-EARLY"):
             logger.info("Apply some marker-specific doubt algorythms")
 
-            # Remarks:
-            #   - To be sure apply RISKY_DOUBT first, so if there would be
-            #     overlapping criteria, RISKY_DOUBT "wins".
-            #   - Don't overwrite existing DOUBT on parcels, because the
-            #     general doubt reasons should win compared to the marker
-            #     specific doubt/risky_doubt reasons.
-            #   - RISKY DOUBT is used when ground truth resulted in partly alpha
-            #     errors, partly correct, classifications.
-
             # If parcel was declared as some arable crops (9534 = knolvenkel), and is
             # classified as fabaceae, set to doubt
             # Remark: those gave 100% false positives for marker LANDCOVER
