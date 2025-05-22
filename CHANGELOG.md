@@ -51,6 +51,7 @@
 
 - Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
   config (#130)
+- Replace single quotes in jsonstring to be able to parse it (#185)
 
 ## 0.2.0 (2024-06-17)
 
