@@ -401,6 +401,32 @@ def prepare_input(
             min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=True,
         )
+    elif classtype_to_prepare == "RUGGENTEELT-EARLY":
+        parceldata_df = prepare_input_ruggenteelt_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
+        )
+        parceldata_df = prepare_input_ruggenteelt_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
+        )
+    elif classtype_to_prepare == "RUGGENTEELT-EARLY-GROUNDTRUTH":
+        parceldata_df = prepare_input_ruggenteelt_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
+        )
     else:
         message = (
             f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
@@ -1840,6 +1866,12 @@ def prepare_input_ruggenteelt(
                     column_output_class,
                 ] = "IGNORE:NOT_ENOUGH_SAMPLES"
 
+        # Add copy of class as class_declared
+        if conf.columns["class_declared"] not in parceldata_df.columns:
+            parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+                column_output_class
+            ]
+
     # Drop the columns that aren't useful at all
     for column in parceldata_df.columns:
         if (
@@ -1858,6 +1890,50 @@ def prepare_input_ruggenteelt(
             parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
                 column_BEFL_gesp_pm
             ].str.replace(",", ";")
+
+    return parceldata_df
+
+
+def prepare_input_ruggenteelt_early(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
+):
+    """Prepare input file for use in the ruggenteelt_early marker."""
+    # First run the standard ruggenteelt prepare
+    parceldata_df = prepare_input_ruggenteelt(
+        parceldata_df,
+        column_BEFL_cropcode,
+        column_output_class,
+        classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
+        is_groundtruth=is_groundtruth,
+    )
+
+    # Set crops not in early crops to ignore
+    parceldata_df.loc[
+        parceldata_df[column_BEFL_earlylate] != "MON_TEELTEN_VROEGE",
+        column_output_class,
+    ] = "IGNORE:LATE_CROP"
+
+    # Set new grass to ignore
+    if column_BEFL_status_perm_grass in parceldata_df.columns:
+        parceldata_df.loc[
+            (parceldata_df[column_BEFL_cropcode] == "60")
+            & (
+                (parceldata_df[column_BEFL_status_perm_grass] == "BG1")
+                | (parceldata_df[column_BEFL_status_perm_grass].isnull())
+            ),
+            column_output_class,
+        ] = "IGNORE:NEW_GRASSLAND"
+    else:
+        logger.warning(
+            f"Source file doesn't contain column {column_BEFL_status_perm_grass}, so "
+            "new grassland cannot be ignored!"
+        )
 
     return parceldata_df
 
