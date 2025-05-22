@@ -139,11 +139,16 @@ def read_config(
     global config
     config = configparser.ConfigParser(
         interpolation=configparser.ExtendedInterpolation(),
+        # The json parser doesn't accept single quotes in the json string,
+        # so replace them with double quotes.
         converters={
             "list": lambda x: [i.strip() for i in x.split(",")],
             "listint": lambda x: [int(i.strip()) for i in x.split(",")],
             "listfloat": lambda x: [float(i.strip()) for i in x.split(",")],
-            "dict": lambda x: None if x is None else json.loads(x),
+            "jsonlist": lambda x: None
+            if x is None
+            else json.loads(x.replace("'", '"')),
+            "dict": lambda x: None if x is None else json.loads(x.replace("'", '"')),
             "path": lambda x: None if x is None else Path(x),
         },
         allow_no_value=True,
