@@ -1299,12 +1299,6 @@ def _add_prediction_conclusion(
             & (in_df[prediction_column_to_use].str.startswith("DOUBT")),
             new_columnname,
         ] = "DOUBT"
-        # If conclusion still UNDEFINED, check if doubt
-        in_df.loc[
-            (in_df[new_columnname] == "UNDEFINED")
-            & (in_df[prediction_column_to_use].str.startswith("RISKY_DOUBT")),
-            new_columnname,
-        ] = "RISKY_DOUBT"
         in_df.loc[
             (in_df[new_columnname] == "UNDEFINED")
             & (in_df[prediction_column_to_use] == "NODATA"),
@@ -1445,18 +1439,6 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
         & (in_df[prediction_column_to_use] == "NODATA"),
         gt_vs_prediction_column,
     ] = "PRED-DOUBT:REASON=" + in_df[prediction_column_to_use]
-
-    # If conclusion still UNDEFINED, check if RISKY_DOUBT
-    in_df.loc[
-        (in_df[gt_vs_prediction_column] == "UNDEFINED")
-        & (in_df[prediction_column_to_use].str.startswith("RISKY_DOUBT")),
-        gt_vs_prediction_column,
-    ] = "PRED-RISKY_DOUBT:REASON=" + in_df[prediction_column_to_use]
-    in_df.loc[
-        (in_df[gt_vs_prediction_column] == "UNDEFINED")
-        & (in_df[prediction_column_to_use] == "NODATA"),
-        gt_vs_prediction_column,
-    ] = "PRED-RISKY_DOUBT:REASON=" + in_df[prediction_column_to_use]
 
     # If groundtruth class in ignored for trainig and/or prediction: an ignore
     # conclusion
