@@ -375,6 +375,58 @@ def prepare_input(
             min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=True,
         )
+    elif classtype_to_prepare == "RUGGENTEELT":
+        parceldata_df = prepare_input_ruggenteelt(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
+        )
+        parceldata_df = prepare_input_ruggenteelt(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
+        )
+    elif classtype_to_prepare == "RUGGENTEELT-GROUNDTRUTH":
+        parceldata_df = prepare_input_ruggenteelt(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
+        )
+    elif classtype_to_prepare == "RUGGENTEELT-EARLY":
+        parceldata_df = prepare_input_ruggenteelt_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_declared,
+            column_output_class=conf.columns["class_declared"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=1,
+            is_groundtruth=False,
+        )
+        parceldata_df = prepare_input_ruggenteelt_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop,
+            column_output_class=conf.columns["class"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=False,
+        )
+    elif classtype_to_prepare == "RUGGENTEELT-EARLY-GROUNDTRUTH":
+        parceldata_df = prepare_input_ruggenteelt_early(
+            parceldata_df=parceldata_df,
+            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
+            column_output_class=conf.columns["class_groundtruth"],
+            classes_refe_path=classes_refe_path,
+            min_parcels_in_class=min_parcels_in_class,
+            is_groundtruth=True,
+        )
     else:
         message = (
             f"Unknown value for parameter classtype_to_prepare: {classtype_to_prepare}"
@@ -1658,6 +1710,201 @@ def prepare_input_landcover_early(
     """Prepare input file for use in the landcover_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_landcover(
+        parceldata_df,
+        column_BEFL_cropcode,
+        column_output_class,
+        classes_refe_path,
+        min_parcels_in_class=min_parcels_in_class,
+        is_groundtruth=is_groundtruth,
+    )
+
+    # Set crops not in early crops to ignore
+    parceldata_df.loc[
+        parceldata_df[column_BEFL_earlylate] != "MON_TEELTEN_VROEGE",
+        column_output_class,
+    ] = "IGNORE:LATE_CROP"
+
+    # Set new grass to ignore
+    if column_BEFL_status_perm_grass in parceldata_df.columns:
+        parceldata_df.loc[
+            (parceldata_df[column_BEFL_cropcode] == "60")
+            & (
+                (parceldata_df[column_BEFL_status_perm_grass] == "BG1")
+                | (parceldata_df[column_BEFL_status_perm_grass].isnull())
+            ),
+            column_output_class,
+        ] = "IGNORE:NEW_GRASSLAND"
+    else:
+        logger.warning(
+            f"Source file doesn't contain column {column_BEFL_status_perm_grass}, so "
+            "new grassland cannot be ignored!"
+        )
+
+    return parceldata_df
+
+
+def prepare_input_ruggenteelt(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
+):
+    """Prepare input file for use in the ruggenteelt marker.
+
+    It should be a csv file with the following columns:
+        - object_id: column with a unique identifier
+        - classname: a string column with a readable name of the classes that will be
+          classified to
+
+    This specific implementation converts the typical export format used in BE-Flanders
+    to this format.
+    """
+    # Check if parameters are OK and init some extra params
+    # -----------------------------------------------------
+    if not classes_refe_path.exists():
+        raise Exception(f"Input classes file doesn't exist: {classes_refe_path}")
+
+    # Convert the crop to unicode, in case the input is int...
+    if column_BEFL_cropcode in parceldata_df.columns:
+        parceldata_df[column_BEFL_cropcode] = parceldata_df[
+            column_BEFL_cropcode
+        ].astype("string")
+
+    # Read and cleanup the mapping table from crop codes to classes
+    # -------------------------------------------------------------
+    logger.info(f"Read classes conversion table from {classes_refe_path}")
+    classes_df = pdh.read_file(classes_refe_path)
+
+    # Because the file was read as ansi, and gewas is int, so the data needs to be
+    # converted to unicode to be able to do comparisons with the other data
+    classes_df[column_BEFL_cropcode] = classes_df["CROPCODE"].astype("string")
+
+    # Map column MON_group to orig classname
+    column_output_class_orig = column_output_class + "_orig"
+    classes_df[column_output_class_orig] = classes_df[conf.columns["class_refe"]]
+
+    # Remove unneeded columns
+    for column in classes_df.columns:
+        if (
+            column not in [column_output_class_orig, column_BEFL_cropcode]
+            and column not in columns_BEFL_to_keep
+        ):
+            classes_df.drop(column, axis=1, inplace=True)
+
+    # Set the index
+    classes_df.set_index(column_BEFL_cropcode, inplace=True, verify_integrity=True)
+
+    # Get only the columns in the classes_df that don't exist yet in parceldata_df
+    cols_to_join = classes_df.columns.difference(parceldata_df.columns)
+
+    # Join/merge the classname
+    logger.info("Add the classes to the parceldata")
+    parceldata_df = parceldata_df.merge(
+        classes_df[cols_to_join],
+        how="left",
+        left_on=column_BEFL_cropcode,
+        right_index=True,
+        validate="many_to_one",
+    )
+
+    # Copy orig classname to classification classname
+    parceldata_df.insert(
+        loc=0, column=column_output_class, value=parceldata_df[column_output_class_orig]
+    )
+
+    # If a column with extra info exists, use it as well to fine-tune the classification
+    # classes.
+    if column_BEFL_gesp_pm in parceldata_df.columns:
+        # Serres, tijdelijke overkappingen en loodsen
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm].isin(
+                ["SER", "PLA", "PLO", "SGM", "NPO", "LOO"]
+            ),
+            column_output_class,
+        ] = "MON_RUG_OVERK_LOO"
+        # Containers
+        parceldata_df.loc[
+            parceldata_df[column_BEFL_gesp_pm].isin(["CON"]), column_output_class
+        ] = "MON_RUG_CONTAINERS"
+        # TODO: CIV, containers in volle grond, lijkt niet zo specifiek te zijn...
+        # parceldata_df.loc[
+        #     parceldata_df[column_BEFL_gesp_pm] == "CIV", class_columnname
+        # ] = "MON_CONTAINERS"  # Containers, niet op volle grond...
+    else:
+        logger.warning(
+            f"The column {column_BEFL_gesp_pm} doesn't exist, so this part of the code "
+            "was skipped!"
+        )
+
+    # Some extra cleanup: classes starting with 'nvt' or empty ones
+    logger.info(
+        "Set classes that are still empty, not specific enough or that contain to "
+        "little values to 'UNKNOWN'"
+    )
+    parceldata_df.loc[
+        parceldata_df[column_output_class].str.startswith("nvt", na=True),
+        column_output_class,
+    ] = "MON_RUG_ONBEKEND_MET_KLASSIFICATIE"
+
+    # Set classes with very few elements to IGNORE:NOT_ENOUGH_SAMPLES!
+    if not is_groundtruth and min_parcels_in_class > 1:
+        for _, row in (
+            parceldata_df.groupby(column_output_class)
+            .size()
+            .reset_index(name="count")
+            .iterrows()
+        ):
+            if row["count"] < min_parcels_in_class:
+                logger.info(
+                    f"Class <{row[column_output_class]}> only contains {row['count']} "
+                    "elements, so put them to IGNORE:NOT_ENOUGH_SAMPLES"
+                )
+                parceldata_df.loc[
+                    parceldata_df[column_output_class] == row[column_output_class],
+                    column_output_class,
+                ] = "IGNORE:NOT_ENOUGH_SAMPLES"
+
+        # Add copy of class as class_declared
+        if conf.columns["class_declared"] not in parceldata_df.columns:
+            parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+                column_output_class
+            ]
+
+    # Drop the columns that aren't useful at all
+    for column in parceldata_df.columns:
+        if (
+            column
+            not in [
+                column_output_class,
+                conf.columns["id"],
+                conf.columns["class_groundtruth"],
+                conf.columns["class_declared"],
+            ]
+            and column not in conf.preprocess.getlist("extra_export_columns")
+            and column not in columns_BEFL_to_keep
+        ):
+            parceldata_df.drop(column, axis=1, inplace=True)
+        elif column == column_BEFL_gesp_pm:
+            parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
+                column_BEFL_gesp_pm
+            ].str.replace(",", ";")
+
+    return parceldata_df
+
+
+def prepare_input_ruggenteelt_early(
+    parceldata_df,
+    column_BEFL_cropcode: str,
+    column_output_class: str,
+    classes_refe_path: Path,
+    min_parcels_in_class: int,
+    is_groundtruth: bool,
+):
+    """Prepare input file for use in the ruggenteelt_early marker."""
+    # First run the standard ruggenteelt prepare
+    parceldata_df = prepare_input_ruggenteelt(
         parceldata_df,
         column_BEFL_cropcode,
         column_output_class,

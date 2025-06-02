@@ -24,6 +24,7 @@
     - Remove `general.run_id`.
 - Rename some main modules to make naming more logical with non-cropclassification
   markers being added (#162)
+- Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
 
 ### Improvements
 
