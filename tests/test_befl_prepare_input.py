@@ -21,6 +21,7 @@ from tests.test_helper import SampleData
         "LATECROP-EARLY",
         "LATECROP-LATE",
         "RUGGENTEELT",
+        "RUGGENTEELT-EARLY",
     ],
 )
 @pytest.mark.parametrize("groundtruth", [False])
