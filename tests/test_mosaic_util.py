@@ -1,5 +1,5 @@
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -233,3 +233,32 @@ def test_prepare_mosaic_image_path():
         "/tmp/s2-agri-weekly/s2-agri-weekly_2024-01-01_2024-01-02_B01-B02_mean.tif"
     )
     assert result_path == expected_path
+
+
+@pytest.mark.parametrize(
+    "end_date, is_outdated",
+    [
+        (
+            datetime(2024, 3, 11, 0, 0),
+            False,
+        ),
+        (
+            datetime.now() - timedelta(days=1),
+            True,
+        ),
+    ],
+)
+def test_is_image_outdated(tmp_path, end_date, is_outdated):
+    # Prepare test data
+    image_path = SampleData.image_s2_mean_path
+    test_dir = tmp_path / image_path.name
+    shutil.copyfile(image_path, test_dir)
+
+    image = {
+        "end_date": end_date,
+        "path": test_dir,
+    }
+
+    result = mosaic_util._is_image_outdated(image=image, images_available_delay=3)
+    assert result == is_outdated
+    assert image["path"].exists() if not is_outdated else not image["path"].exists()
