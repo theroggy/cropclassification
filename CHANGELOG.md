@@ -47,6 +47,7 @@
 - Add LATECROP-LATE detection (#177)
 - Add POC (not for operational use) of a cover/bare soil marker (#168)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
+- Use Exactextract as default engine for zonalstats calculation (#181)
 
 ### Bugs fixed
 
