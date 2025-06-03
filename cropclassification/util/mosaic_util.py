@@ -161,6 +161,7 @@ def calc_periodic_mosaic(
     output_base_dir: Path,
     delete_existing_openeo_jobs: bool = False,
     on_missing_image: str = "calculate_raise",
+    images_available_delay: Optional[int] = None,
     force: bool = False,
 ) -> list[dict[str, Any]]:
     """Generate a periodic mosaic.
@@ -201,6 +202,8 @@ def calc_periodic_mosaic(
               - ignore: ignore that the image, don't try to download it
               - calculate_raise: calculate the image and raise an error if it fails
               - calculate_ignore: calculate the image and ignore the error if it fails
+        images_available_delay (int): number of days to wait before the images are
+            available.
 
         force (bool, optional): True to force recreation of existing output files.
             Defaults to False.
@@ -241,9 +244,12 @@ def calc_periodic_mosaic(
     # Make sure band information is embedded in the image
     for image in images_from_openeo:
         if image["path"].exists():
-            raster_util.set_band_descriptions(
-                image["path"], band_descriptions=image["bands"], overwrite=False
-            )
+            if not _is_image_outdated(
+                image=image, images_available_delay=images_available_delay
+            ):
+                raster_util.set_band_descriptions(
+                    image["path"], band_descriptions=image["bands"], overwrite=False
+                )
 
     # First get all mosaic images from openeo
     _ = openeo_util.get_images(
@@ -266,6 +272,27 @@ def calc_periodic_mosaic(
         )
 
     return periodic_mosaic_params
+
+
+def _is_image_outdated(image, images_available_delay: Optional[int] = None) -> bool:
+    creation_date = datetime.fromtimestamp(image["path"].stat().st_ctime)
+    # Check if the creation date is different from the current date
+    if creation_date != datetime.now():
+        # Check if the creation date is greater then or equal to the end date
+        if images_available_delay is not None:
+            day = datetime(creation_date.year, creation_date.month, creation_date.day)
+            new_date = day - timedelta(int(images_available_delay))
+        else:
+            new_date = creation_date
+        if not new_date >= image["end_date"]:
+            # Delete the image
+            logger.info(
+                f"Image {image['path']} is older than the end date "
+                f"{image['end_date']}: deleting it."
+            )
+            image["path"].unlink(missing_ok=True)
+            return True
+    return False
 
 
 def _prepare_periods(

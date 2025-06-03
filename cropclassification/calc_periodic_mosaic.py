@@ -1,6 +1,6 @@
 """Generate periodic mosaics."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
@@ -32,11 +32,6 @@ def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
         end_date = datetime(now.year, now.month, now.day)
     else:
         end_date = datetime.fromisoformat(conf.period["end_date"])
-    images_available_delay = conf.period["images_available_delay"]
-    if images_available_delay is not None:
-        now = datetime.now()
-        today = datetime(now.year, now.month, now.day)
-        end_date = today - timedelta(int(images_available_delay))
 
     imageprofiles_to_get = list(conf.parse_image_config(conf.images["images"]))
     imageprofiles = conf._get_image_profiles(
@@ -52,5 +47,6 @@ def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
             output_base_dir=conf.paths.getpath("images_periodic_dir"),
             imageprofiles_to_get=imageprofiles_to_get,
             imageprofiles=imageprofiles,
+            images_available_delay=conf.period["images_available_delay"],
             force=False,
         )
