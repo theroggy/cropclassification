@@ -22,8 +22,3 @@ local/
 # Built Visual Studio Code Extensions
 *.vsix
 
-# GEE (google earth engine)
-# -------------------------
-client_secret.json
-client_secret_download-gee-data.json
-credentials.json
