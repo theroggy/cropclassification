@@ -1,6 +1,7 @@
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
+from time import sleep
 
 import pytest
 
@@ -253,6 +254,7 @@ def test_is_image_outdated(tmp_path, end_date, is_outdated):
     image_path = SampleData.image_s2_mean_path
     test_dir = tmp_path / image_path.name
     shutil.copyfile(image_path, test_dir)
+    sleep(1)  # Ensure the file has a different timestamp
 
     image = {
         "end_date": end_date,
