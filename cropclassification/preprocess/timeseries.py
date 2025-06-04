@@ -67,6 +67,7 @@ def calc_timeseries_data(
             timeseries_periodic_dir=timeseries_periodic_dir,
             nb_parallel=conf.general.getint("nb_parallel", -1),
             on_missing_image=conf.images.get("on_missing_image", "calculate_raise"),
+            images_available_delay=conf.period["images_available_delay"],
         )
 
 
