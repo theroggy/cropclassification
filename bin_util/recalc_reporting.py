@@ -3,8 +3,8 @@ from pathlib import Path
 
 import cropclassification.helpers.config_helper as conf
 from cropclassification.postprocess import classification_postprocess as class_post
-from cropclassification.postprocess import classification_reporting as class_report
-from cropclassification.preprocess import classification_preprocess as class_pre
+from cropclassification.postprocess import classification_reporting as report
+from cropclassification.preprocess import prepare_input as class_pre
 
 
 def main():
@@ -107,9 +107,10 @@ def main():
 
     min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     classtype_to_prepare = conf.preprocess["classtype_to_prepare"]
+    top_classes = conf.postprocess.getint("top_classes")
 
     # Prepare parcel input file
-    class_pre.prepare_input(
+    class_pre.prepare(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
         timeseries_periodic_dir=timeseries_periodic_dir,
@@ -133,12 +134,13 @@ def main():
         parcel_predictions_test_geopath = (
             run_dir / f"{base_filename}_predict_test{geofile_ext}"
         )
-        class_post.calc_top3_and_consolidation(
+        class_post.calc_top_classes_and_consolidation(
             input_parcel_path=parcel_test_path,
             input_parcel_probabilities_path=parcel_predictions_proba_test_path,
             input_parcel_geopath=input_parcel_path,
             output_predictions_path=parcel_predictions_test_path,
             output_predictions_geopath=parcel_predictions_test_geopath,
+            top_classes=top_classes,
         )
 
     # Postprocess predictions
@@ -149,23 +151,25 @@ def main():
     parcel_predictions_all_output_path = (
         run_dir / f"{base_filename}_predict_all_output{output_ext}"
     )
-    class_post.calc_top3_and_consolidation(
+    class_post.calc_top_classes_and_consolidation(
         input_parcel_path=parcel_path,
         input_parcel_probabilities_path=parcel_predictions_proba_all_path,
         input_parcel_geopath=input_parcel_path,
         output_predictions_path=parcel_predictions_all_path,
         output_predictions_geopath=parcel_predictions_all_geopath,
+        top_classes=top_classes,
         output_predictions_output_path=parcel_predictions_all_output_path,
     )
 
     # Recalculate reports
     # -------------------
+    groundtruth_path = None
     if input_groundtruth_path is not None:
         groundtruth_path = (
             run_dir
             / f"{input_groundtruth_path.stem}_classes{input_groundtruth_path.suffix}"
         )
-        class_pre.prepare_input(
+        class_pre.prepare(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
             timeseries_periodic_dir=timeseries_periodic_dir,
@@ -179,18 +183,19 @@ def main():
         )
 
     # Print full reporting on the accuracy of the test dataset
-    report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
-    class_report.write_full_report(
-        parcel_predictions_geopath=parcel_predictions_test_geopath,
-        parcel_train_path=parcel_train_path,
-        output_report_txt=report_txt,
-        parcel_ground_truth_path=groundtruth_path,
-        force=True,
-    )
+    if parcel_predictions_test_geopath is not None:
+        report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
+        report.write_full_report(
+            parcel_predictions_geopath=parcel_predictions_test_geopath,
+            parcel_train_path=parcel_train_path,
+            output_report_txt=report_txt,
+            parcel_ground_truth_path=groundtruth_path,
+            force=True,
+        )
 
     # Print full reporting on the accuracy of the full dataset
     report_txt = Path(f"{parcel_predictions_all_path!s}_accuracy_report.txt")
-    class_report.write_full_report(
+    report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
         parcel_train_path=parcel_train_path,
         output_report_txt=report_txt,

@@ -1,6 +1,4 @@
-"""
-Read first lines of a file.
-"""
+"""Read first lines of a file."""
 
 base_dir = "X:\\PerPersoon\\PIEROG\\Taken\\2018\\2018-05-04_Monitoring_Classificatie"
 path = (

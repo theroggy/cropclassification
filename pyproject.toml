@@ -1,18 +1,18 @@
 [tool.pyright]
 exclude = ["local_ignore"]
-reportGeneralTypeIssues = false
+ignore = ["*"]
 
 [tool.mypy]
 exclude = ["local_ignore"]
 
 [[tool.mypy.overrides]]
-module = "affine.*,cloudpickle.*,exactextract.*,fiona.*,geopandas.*,joblib.*,matplotlib.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,qgis.*,rasterio.*,rasterstats.*,setuptools.*,shapely.*,sklearn.*,tensorflow.*,topojson.*"
+module = "affine.*,cloudpickle.*,exactextract.*,geopandas.*,joblib.*,matplotlib.*,numexpr.*,openeo.*,osgeo.*,osgeo_utils.*,pygeos.*,pyogrio.*,psutil.*,qgis.*,rasterio.*,rasterstats.*,rioxarray.*,setuptools.*,shapely.*,sklearn.*,tensorflow.*,topojson.*"
 ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 88
 target-version = "py39"
-extend-exclude = ["docs/*", "local_ignore/*"]
+extend-exclude = ["bin_util/*", "docs/*", "local_ignore/*"]
 
 lint.select = [
     # pyflakes
@@ -46,7 +46,7 @@ lint.select = [
     # isort
     "I",
     # pydocstyle
-    #"D",
+    "D",
 ]
 
 lint.ignore = [
@@ -81,18 +81,8 @@ lint.ignore = [
     "PLW0603",
     # compare-to-empty-string
     "PLC1901",
-
-    ### Additional checks that don't pass yet
-    # Useless statement
-    "B018",
-    # Within an except clause, raise exceptions with ...
-    "B904",
     # Consider `elif` instead of `else` then `if` to remove indentation level
     "PLR5501",
-    # collection-literal-concatenation
-    "RUF005",
-    # Mutable class attributes should be annotated with `typing.ClassVar`,
-    "RUF012"
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -13,9 +13,7 @@ def _format_output_path(
     orbit_properties_pass: Optional[str],
     band: Optional[Union[str, int]],
 ) -> Path:
-    """
-    Prepare the output path.
-    """
+    """Prepare the output path."""
     # Interprete the orbit...
     if orbit_properties_pass is not None:
         if orbit_properties_pass == "ASCENDING":
@@ -44,10 +42,9 @@ def format_progress_message(
     nb_done_latestbatch: Optional[int] = None,
     start_time_latestbatch: Optional[datetime] = None,
 ) -> str:
-    """
-    Returns a progress message based on the input.
+    """Returns a progress message based on the input.
 
-    Args
+    Args:
         nb_todo: total number of items that need(ed) to be processed
         nb_done_total: total number of items that have been processed already
         nb_done_latestbatch: number of items that were processed in the latest batch
@@ -76,7 +73,7 @@ def format_progress_message(
 
     # Format message
     message = (
-        f"{hours_to_go}:{min_to_go} left for {nb_todo-nb_done_total} todo at "
+        f"{hours_to_go}:{min_to_go} left for {nb_todo - nb_done_total} todo at "
         f"{nb_per_hour:0.0f}/h"
     )
     # Add speed of the latest batch to message if appropriate
@@ -94,9 +91,7 @@ def format_progress_message(
 
 
 def formatbytes(bytes: float):
-    """
-    Return the given bytes as a human friendly KB, MB, GB, or TB string.
-    """
+    """Return the given bytes as a human friendly KB, MB, GB, or TB string."""
     bytes_float = float(bytes)
     KB = float(1024)
     MB = float(KB**2)  # 1,048,576

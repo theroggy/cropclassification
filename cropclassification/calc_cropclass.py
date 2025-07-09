@@ -1,6 +1,4 @@
-"""
-Main script to do a classification.
-"""
+"""Run a crop classification."""
 
 import logging
 import os
@@ -14,39 +12,28 @@ import pyproj
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper, log_helper
-from cropclassification.helpers import model_helper as mh
 from cropclassification.postprocess import classification_postprocess as class_post
-from cropclassification.postprocess import classification_reporting as class_report
+from cropclassification.postprocess import classification_reporting as report
 from cropclassification.predict import classification
 from cropclassification.preprocess import _timeseries_helper as ts_helper
-from cropclassification.preprocess import classification_preprocess as class_pre
+from cropclassification.preprocess import prepare_input
 from cropclassification.preprocess import timeseries as ts
 
-# -------------------------------------------------------------
-# First define/init some general variables/constants
-# -------------------------------------------------------------
 
-
-def calc_marker_task(
+def run_cropclass(
     config_paths: list[Path],
     default_basedir: Path,
     config_overrules: list[str] = [],
 ):
-    """
-    Runs a marker using the setting in the config_paths.
+    """Runs a crop classification marker using the setting in the config_paths.
 
     Args:
         config_paths (List[Path]): the config files to load
         default_basedir (Path): the dir to resolve relative paths in the config
             file to.
         config_overrules (List[str], optional): list of config options that will
-            overrule other ways to supply configuration.
-            They should be specified as a list of
-            "<section>.<parameter>=<value>" strings. Defaults to [].
-
-    Raises:
-        Exception: [description]
-        Exception: [description]
+            overrule other ways to supply configuration. They should be specified as a
+            list of "<section>.<parameter>=<value>" strings. Defaults to [].
     """
     # Read the configuration files
     conf.read_config(
@@ -61,9 +48,6 @@ def calc_marker_task(
     run_dir = dir_helper.create_run_dir(
         conf.paths.getpath("marker_dir"), reuse_last_run_dir
     )
-    print(run_dir)
-    if not run_dir.exists():
-        os.makedirs(run_dir)
 
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
@@ -233,7 +217,7 @@ def calc_marker_task(
     min_parcels_in_class = conf.preprocess.getint("min_parcels_in_class")
     parcel_path = run_dir / f"{input_parcel_filename.stem}_parcel{data_ext}"
     base_filename = f"{input_parcel_filename.stem}_bufm{buffer:g}_weekly"
-    class_pre.prepare_input(
+    prepare_input.prepare(
         input_parcel_path=input_parcel_nogeo_path,
         input_parcel_filetype=input_parcel_filetype,
         timeseries_periodic_dir=timeseries_periodic_dir,
@@ -252,7 +236,6 @@ def calc_marker_task(
     ts.collect_and_prepare_timeseries_data(
         input_parcel_path=input_parcel_nogeo_path,
         timeseries_dir=timeseries_periodic_dir,
-        base_filename=base_filename,
         output_path=parcel_classification_data_path,
         start_date=start_date,
         end_date=end_date,
@@ -260,59 +243,27 @@ def calc_marker_task(
         parceldata_aggregations_to_use=parceldata_aggregations_to_use,
     )
 
-    # STEP 4: Train and test if necessary... and predict
-    # -------------------------------------------------------------
-    markertype = conf.marker.get("markertype")
-    parcel_predictions_proba_all_path = (
-        run_dir / f"{base_filename}_predict_proba_all{data_ext}"
+    # STEP 4: Train a model and predict
+    # ---------------------------------
+    cross_pred_models = conf.classifier.getint("cross_pred_models", 1)
+    test_size = conf.classifier.getfloat("test_size")
+
+    (
+        parcel_predictions_proba_all_path,
+        parcel_predictions_proba_test_path,
+        parcel_train_path,
+        parcel_test_path,
+    ) = classification.classify(
+        classifier_type=conf.classifier["classifier_type"],
+        parcel_path=parcel_path,
+        parcel_classification_data_path=parcel_classification_data_path,
+        output_dir=run_dir,
+        output_base_filename=base_filename,
+        test_size=test_size,
+        cross_pred_models=cross_pred_models,
+        input_model_to_use_path=input_model_to_use_path,
+        force=False,
     )
-    classifier_ext = conf.classifier["classifier_ext"]
-    classifier_basepath = run_dir / f"{markertype}_01_mlp{classifier_ext}"
-
-    # Check if a model exists already
-    if input_model_to_use_path is None:
-        best_model = mh.get_best_model(run_dir, acc_metric_mode="min")
-        if best_model is not None:
-            input_model_to_use_path = best_model["path"]
-
-    # if there is no model to use specified, train one!
-    parcel_train_path = run_dir / f"{base_filename}_parcel_train{data_ext}"
-    parcel_test_path = run_dir / f"{base_filename}_parcel_test{data_ext}"
-    parcel_predictions_proba_test_path = None
-    if input_model_to_use_path is None:
-        # Create the training sample...
-        # Remark: this creates a list of representative test parcel + a list of
-        # (candidate) training parcel
-        balancing_strategy = conf.marker["balancing_strategy"]
-        class_pre.create_train_test_sample(
-            input_parcel_path=parcel_path,
-            output_parcel_train_path=parcel_train_path,
-            output_parcel_test_path=parcel_test_path,
-            balancing_strategy=balancing_strategy,
-        )
-
-        # Train the classifier and output predictions
-        parcel_predictions_proba_test_path = (
-            run_dir / f"{base_filename}_predict_proba_test{data_ext}"
-        )
-        classification.train_test_predict(
-            input_parcel_train_path=parcel_train_path,
-            input_parcel_test_path=parcel_test_path,
-            input_parcel_all_path=parcel_path,
-            input_parcel_classification_data_path=parcel_classification_data_path,
-            output_classifier_basepath=classifier_basepath,
-            output_predictions_test_path=parcel_predictions_proba_test_path,
-            output_predictions_all_path=parcel_predictions_proba_all_path,
-        )
-    else:
-        # there is a classifier specified, so just use it!
-        classification.predict(
-            input_parcel_path=parcel_path,
-            input_parcel_classification_data_path=parcel_classification_data_path,
-            input_classifier_basepath=classifier_basepath,
-            input_classifier_path=input_model_to_use_path,
-            output_predictions_path=parcel_predictions_proba_all_path,
-        )
 
     # STEP 5: if necessary, do extra postprocessing
     # -------------------------------------------------------------
@@ -322,26 +273,24 @@ def calc_marker_task(
 
     # STEP 6: do the default, mandatory postprocessing
     # -------------------------------------------------------------
-    # If it was necessary to train, there will be a test prediction... so postprocess it
+    # If there is a test dataset, so postprocess it
     parcel_predictions_test_path = None
     parcel_predictions_test_geopath = None
-    if (
-        input_model_to_use_path is None
-        and parcel_test_path is not None
-        and parcel_predictions_proba_test_path is not None
-    ):
+    top_classes = conf.postprocess.getint("top_classes")
+    if input_model_to_use_path is None and parcel_test_path is not None:
         parcel_predictions_test_path = (
             run_dir / f"{base_filename}_predict_test{data_ext}"
         )
         parcel_predictions_test_geopath = (
             run_dir / f"{base_filename}_predict_test{geofile_ext}"
         )
-        class_post.calc_top3_and_consolidation(
+        class_post.calc_top_classes_and_consolidation(
             input_parcel_path=parcel_test_path,
             input_parcel_probabilities_path=parcel_predictions_proba_test_path,
             input_parcel_geopath=input_parcel_path,
             output_predictions_path=parcel_predictions_test_path,
             output_predictions_geopath=parcel_predictions_test_geopath,
+            top_classes=top_classes,
         )
 
     # Postprocess predictions
@@ -352,12 +301,13 @@ def calc_marker_task(
     parcel_predictions_all_output_path = (
         run_dir / f"{base_filename}_predict_all_output{output_ext}"
     )
-    class_post.calc_top3_and_consolidation(
+    class_post.calc_top_classes_and_consolidation(
         input_parcel_path=parcel_path,
         input_parcel_probabilities_path=parcel_predictions_proba_all_path,
         input_parcel_geopath=input_parcel_path,
         output_predictions_path=parcel_predictions_all_path,
         output_predictions_geopath=parcel_predictions_all_geopath,
+        top_classes=top_classes,
         output_predictions_output_path=parcel_predictions_all_output_path,
     )
 
@@ -370,7 +320,7 @@ def calc_marker_task(
             run_dir
             / f"{input_groundtruth_path.stem}_classes{input_groundtruth_path.suffix}"
         )
-        class_pre.prepare_input(
+        prepare_input.prepare(
             input_parcel_path=input_groundtruth_path,
             input_parcel_filetype=input_parcel_filetype,
             timeseries_periodic_dir=timeseries_periodic_dir,
@@ -386,7 +336,7 @@ def calc_marker_task(
     if input_model_to_use_path is None and parcel_predictions_test_geopath is not None:
         # Print full reporting on the accuracy of the test dataset
         report_txt = Path(f"{parcel_predictions_test_path!s}_accuracy_report.txt")
-        class_report.write_full_report(
+        report.write_full_report(
             parcel_predictions_geopath=parcel_predictions_test_geopath,
             output_report_txt=report_txt,
             parcel_ground_truth_path=groundtruth_path,
@@ -396,7 +346,7 @@ def calc_marker_task(
 
     # Print full reporting on the accuracy of the full dataset
     report_txt = Path(f"{parcel_predictions_all_path!s}_accuracy_report.txt")
-    class_report.write_full_report(
+    report.write_full_report(
         parcel_predictions_geopath=parcel_predictions_all_geopath,
         output_report_txt=report_txt,
         parcel_ground_truth_path=groundtruth_path,

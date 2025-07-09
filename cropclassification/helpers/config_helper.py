@@ -1,6 +1,4 @@
-"""
-Module that manages configuration data.
-"""
+"""Module that manages configuration data."""
 
 import configparser
 import json
@@ -34,12 +32,22 @@ image_profiles: dict[str, ImageProfile]
 
 
 class ImageConfig:
+    """Image configuration class."""
+
     def __init__(
         self,
         imageprofile_name: str,
         imageprofile: Optional[ImageProfile] = None,
         bands: Optional[list[str]] = None,
     ):
+        """Constructor for ImageConfig.
+
+        Args:
+            imageprofile_name (str): the name of the image profile.
+            imageprofile (Optional[ImageProfile], optional): ImageProfile to use for
+                this Image. Defaults to None.
+            bands (Optional[list[str]], optional): the bands to read. Defaults to None.
+        """
         self.imageprofile_name = imageprofile_name
         if imageprofile is not None:
             self.imageprofile = imageprofile
@@ -57,8 +65,7 @@ def read_config(
     overrules: list[str] = [],
     preload_defaults: bool = True,
 ):
-    """
-    Read cropclassification configuration file(s).
+    """Read cropclassification configuration file(s).
 
     Args:
         config_paths (Path): path(s) to the configuration file(s) to read. If None, and
@@ -85,7 +92,7 @@ def read_config(
         if config_paths is None:
             config_paths = [general_ini]
         else:
-            config_paths = [general_ini] + config_paths
+            config_paths = [general_ini, *config_paths]
 
     if config_paths is None:
         raise ValueError("config_paths is None and preload_defaults is False")
@@ -244,6 +251,7 @@ def read_config(
 
 
 def parse_image_config(input) -> dict[str, ImageConfig]:
+    """Parses the json input to a dictionary of ImageConfig objects."""
     result = None
     imageconfig_parsed = None
     try:
@@ -301,15 +309,16 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
     for profile in profiles_config.sections():
         profiles[profile] = ImageProfile(
             name=profile,
-            satellite=profiles_config[profile].get("satellite"),
-            index_type=profiles_config[profile].get("index_type"),
-            image_source=profiles_config[profile].get("image_source"),
-            collection=profiles_config[profile].get("collection"),
+            satellite=profiles_config[profile]["satellite"],
+            image_source=profiles_config[profile]["image_source"],
             bands=profiles_config[profile].getlist("bands"),
+            collection=profiles_config[profile].get("collection"),
             time_reducer=profiles_config[profile].get("time_reducer"),
             period_name=profiles_config[profile].get("period_name"),
             period_days=profiles_config[profile].getint("period_days"),
             base_image_profile=profiles_config[profile].get("base_image_profile"),
+            index_type=profiles_config[profile].get("index_type"),
+            pixel_type=profiles_config[profile].get("pixel_type"),
             max_cloud_cover=profiles_config[profile].getfloat("max_cloud_cover"),
             process_options=profiles_config[profile].getdict("process_options"),
             job_options=profiles_config[profile].getdict("job_options"),
@@ -323,7 +332,7 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
 
 def _validate_image_profiles(profiles: dict[str, ImageProfile]):
     # Check that all base_image_profile s are actually existing image profiles.
-    for profile in profiles:
+    for profile in list(profiles):
         base_image_profile = profiles[profile].base_imageprofile
         if base_image_profile is not None and base_image_profile not in profiles:
             raise ValueError(
@@ -332,6 +341,7 @@ def _validate_image_profiles(profiles: dict[str, ImageProfile]):
 
 
 def pformat_config():
+    """Formats the config as a pretty string."""
     message = (
         f"Config files used: {pprint.pformat(config_paths_used)} \n"
         "Config info listing:\n"
@@ -342,8 +352,7 @@ def pformat_config():
 
 
 def as_dict():
-    """
-    Converts the config objects into a dictionary.
+    """Converts the config objects into a dictionary.
 
     The resulting dictionary has sections as keys which point to a dict of the
     sections options as key => value pairs.

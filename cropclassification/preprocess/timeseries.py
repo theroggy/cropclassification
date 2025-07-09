@@ -1,13 +1,14 @@
-"""
-This module contains general functions that apply to timeseries data...
-"""
+"""This module contains general functions that apply to timeseries data..."""
 
 import logging
 import os
+import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import geofileops as gfo
+import numpy as np
 import pyproj
 
 import cropclassification.helpers.config_helper as conf
@@ -27,11 +28,13 @@ def calc_timeseries_data(
     images_to_use: dict[str, conf.ImageConfig],
     timeseries_periodic_dir: Path,
 ):
-    """
-    Calculate timeseries data for the input parcels
+    """Calculate timeseries data for the input parcels.
 
     Args:
-        input_parcel_path (str): [description]
+        input_parcel_path (str): path to the parcel data.
+        roi_bounds (tuple[float, float, float, float]): bounds of the region to
+            calculate timeseries data for.
+        roi_crs (Optional[pyproj.CRS]): crs of the bounds of the region.
         start_date (datetime): the start date for the timeseries to generate, inclusive.
         end_date (datetime): the end date for the timeseries to generate, exclusive.
         images_to_use (List[str]): an array with data you want to be calculated:
@@ -44,28 +47,9 @@ def calc_timeseries_data(
     if not timeseries_periodic_dir.exists():
         timeseries_periodic_dir.mkdir(parents=True, exist_ok=True)
 
-    sensordata_to_get_onda = [
-        sensor for sensor in images_to_use if sensor not in conf.image_profiles
-    ]
     sensordata_to_get_openeo = [
         sensor for sensor in images_to_use if sensor in conf.image_profiles
     ]
-
-    if len(sensordata_to_get_onda) > 0:
-        # Start!
-        # TODO: start calculation of per image data on DIAS
-        # import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as
-        # ts_calc
-
-        # Now all image data is available per image, calculate periodic data
-        ts_helper.calculate_periodic_timeseries(
-            parcel_path=input_parcel_path,
-            timeseries_per_image_dir=conf.paths.getpath("timeseries_per_image_dir"),
-            start_date=start_date,
-            end_date=end_date,
-            sensordata_to_get=sensordata_to_get_onda,
-            timeseries_periodic_dir=timeseries_periodic_dir,
-        )
 
     if len(sensordata_to_get_openeo) > 0:
         # Prepare periodic images + calculate base timeseries on them
@@ -89,24 +73,36 @@ def calc_timeseries_data(
 def collect_and_prepare_timeseries_data(
     input_parcel_path: Path,
     timeseries_dir: Path,
-    base_filename: str,
     output_path: Path,
     start_date: datetime,
     end_date: datetime,
     images_to_use: dict[str, conf.ImageConfig],
     parceldata_aggregations_to_use: list[str],
+    max_fraction_null: float = 0.6,
     force: bool = False,
 ):
-    """
-    Collect all timeseries data to use for the classification and prepare it by applying
-    scaling,... as needed.
-    """
+    """Collect and preprocess timeseries data needed for the classification.
 
+    Args:
+        input_parcel_path (Path): the path to the parcel file to collect timeseries data
+            for.
+        timeseries_dir (Path): the directory where the timeseries cache is saved.
+        output_path (Path): path to write the final output to.
+        start_date (datetime): start date of timeseries data to include (inclusive).
+        end_date (datetime): end date of timeseries data to include (exclusive).
+        images_to_use (dict[str, conf.ImageConfig]): the image profiles and bands to
+            extract the timeseries data for.
+        parceldata_aggregations_to_use (list[str]): aggregations on parcel level to use
+            in the timeseries data.
+        max_fraction_null (float, optional): the maximum fraction of columns that can
+            have null as value for a row. If more that that is null, the entire row is
+            filtered away. If 1, no row filtering is applied. Defaults to 0.6, so if
+            more than 60% of row values is None, the row is dropped.
+        force (bool, optional): True to overwrite existing outputs. Defaults to False.
+    """
     # If force == False Check and the output file exists already, stop.
-    if force is False and output_path.exists() is True:
-        logger.warning(
-            f"Output file already exists and force == False, so stop: {output_path}"
-        )
+    if not force and output_path.exists():
+        logger.warning(f"Output file already exists, so return: {output_path}")
         return
 
     # Init the result with the id's of the parcels we want to treat
@@ -123,6 +119,7 @@ def collect_and_prepare_timeseries_data(
     if len(ts_data_paths) == 0:
         raise ValueError(f"No timeseries data found for pattern {glob_pattern}")
 
+    min_parcels_with_data_pct = conf.timeseries.getfloat("min_parcels_with_data_pct")
     for curr_path in sorted(ts_data_paths):
         # Skip the pixcount file
         if curr_path.stem.endswith("_pixcount"):
@@ -163,30 +160,14 @@ def collect_and_prepare_timeseries_data(
             logger.info(f"SKIP: file is empty: {curr_path}")
             continue
 
-        # Read data, and check if there is enough data in it
-        data_read_df = pdh.read_file(curr_path)
-        nb_data_read = len(data_read_df.index)
-        data_available_pct = nb_data_read * 100 / nb_input_parcels
-        min_parcels_with_data_pct = conf.timeseries.getfloat(
-            "min_parcels_with_data_pct"
-        )
-        if data_available_pct < min_parcels_with_data_pct:
-            logger.info(
-                f"SKIP: only data for {data_available_pct:.2f}% of parcels, should be "
-                f"> {min_parcels_with_data_pct}%: {curr_path}"
-            )
-            continue
-
-        # Start processing the file
-        logger.info(f"Process file: {curr_path}")
-        if data_read_df.index.name != conf.columns["id"]:
-            data_read_df.set_index(conf.columns["id"], inplace=True)
-
-        # Loop over columns to check if there are columns that need to be dropped.
+        # Determine the columns to be read from the file and which to rename.
+        info = gfo.get_layerinfo(curr_path, layer="info", raise_on_nogeom=False)
+        columns = []
         columns_to_rename = {}
-        for column in data_read_df.columns:
-            # If it is the id column, continue
+        for column in info.columns:
+            # The id column should be read
             if column == conf.columns["id"]:
+                columns.append(column)
                 continue
 
             # Check if the column is "asked"
@@ -207,13 +188,38 @@ def collect_and_prepare_timeseries_data(
                     "Drop column as it's column aggregation isn't to be used: "
                     f"{curr_path.stem}.{column}"
                 )
-                data_read_df.drop(column, axis=1, inplace=True)
+                continue
+
+            columns.append(column)
+
+        # Read data, and check if there is enough data in it
+        data_read_df = pdh.read_file(curr_path, columns=columns)
+        if data_read_df.index.name != conf.columns["id"]:
+            data_read_df.set_index(conf.columns["id"], inplace=True)
+
+        # Only retain data read that is in the result_df
+        data_read_df = data_read_df[data_read_df.index.isin(result_df.index)]
+
+        if min_parcels_with_data_pct > 0:
+            nb_data_read = len(data_read_df.index)
+            data_available_pct = nb_data_read * 100 / nb_input_parcels
+            if data_available_pct < min_parcels_with_data_pct:
+                logger.info(
+                    f"SKIP: only data for {data_available_pct:.2f}% of parcels, "
+                    f"should be > {min_parcels_with_data_pct}%: {curr_path}"
+                )
+                continue
+
+        # Start processing the file
+        logger.info(f"Process file: {curr_path}")
+        for column in data_read_df.columns:
+            # If it is the id column, continue
+            if column == conf.columns["id"]:
                 continue
 
             # Check if the column contains data for enough parcels
-            valid_input_data_pct = (
-                1 - (data_read_df[column].isnull().sum() / nb_input_parcels)
-            ) * 100
+            nb_rows_null = len(data_read_df[data_read_df[column].isnull()])
+            valid_input_data_pct = (1 - (nb_rows_null / nb_input_parcels)) * 100
             if valid_input_data_pct < min_parcels_with_data_pct:
                 # If the number of nan values for the column > x %, drop column
                 logger.warning(
@@ -228,10 +234,10 @@ def collect_and_prepare_timeseries_data(
             data_read_df = data_read_df.rename(columns=columns_to_rename)
 
         # If S2, rescale data
-        if image_profile.startswith("s2"):
+        if image_profile.startswith("s2-agri"):
             for column in data_read_df.columns:
                 logger.info(
-                    f"Column with s2 data: divide by 10.000, clip to upper=1: {column}"
+                    f"Column with s2 raw band data: /10.000, clip to upper=1: {column}"
                 )
                 data_read_df[column] = data_read_df[column] / 10000
                 data_read_df[column] = data_read_df[column].clip(upper=1)
@@ -239,25 +245,62 @@ def collect_and_prepare_timeseries_data(
         # If s1 grd, rescale data
         if image_profile.startswith("s1-grd"):
             for column in data_read_df.columns:
-                logger.info(f"Column with s1-grd data: clip to upper=1: {column}")
-                data_read_df[column] = data_read_df[column].clip(upper=1)
+                # Just clipping gives the best results (tested with random forest)
+                normalization_steps = ["clip"]
+                for step in normalization_steps:
+                    if step == "log":
+                        logger.info(f"Convert to db, but in range ~0-~1: {column}")
+                        data_read_df[column] = (
+                            np.log(data_read_df[column]) * 0.21714724095 + 1
+                        )
+                    if step == "clip":
+                        logger.info(f"Column with s1-grd: clip to upper=1: {column}")
+                        data_read_df[column] = data_read_df[column].clip(upper=1)
+                    if step == "normalize":
+                        # normalize all values to be between 0 and 1
+                        min = np.min(data_read_df[column])
+                        max = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min) / (
+                            max - min
+                        )
+                    if step == "abs":
+                        data_read_df[column] = np.abs(data_read_df[column])
 
         # If s1 coherence, rescale data
         if image_profile.startswith(("s1coh", "s1-coh")):
             for column in data_read_df.columns:
-                logger.info(
-                    f"Column with s1 coherence: scale it by dividing by 300: {column}"
-                )
-                data_read_df[column] = data_read_df[column] / 300
+                # Just scale gives same results as log (tested with random forest)
+                normalization_steps = ["scale"]
+                for step in normalization_steps:
+                    if step == "log":
+                        logger.info(f"Convert to db, but in range ~0-~1: {column}")
+                        data_read_df[column] = (
+                            np.log(data_read_df[column]) * 0.21714724095 + 1
+                        )
+                    if step == "clip":
+                        logger.info(f"Column with s1-grd: clip to upper=1: {column}")
+                        data_read_df[column] = data_read_df[column].clip(upper=1)
+                    if step == "normalize":
+                        # normalize all values to be between 0 and 1
+                        min = np.min(data_read_df[column])
+                        max = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min) / (
+                            max - min
+                        )
+                    if step == "abs":
+                        data_read_df[column] = np.abs(data_read_df[column])
+                    if step == "scale":
+                        logger.info(f"Column with s1-coh: divide by 300: {column}")
+                        data_read_df[column] = data_read_df[column] / 300
 
         # Write warning if the data isn't scaled between 0 and 1
         for column in data_read_df.columns:
-            value_max = data_read_df[column].max()
-            value_min = data_read_df[column].min()
-            if value_max > 1 or value_min < 0:
-                logger.warning(
-                    f"column {column} in {curr_path} is not fully normalized "
-                    f"({value_min=}, {value_max=})"
+            max = data_read_df[column].max()
+            min = data_read_df[column].min()
+            if max > 1 or min < 0:
+                warnings.warn(
+                    f"{column=} in {curr_path} isn't fully normalized ({min=}, {max=})",
+                    stacklevel=1,
                 )
 
         # Join the data to the result...
@@ -268,7 +311,7 @@ def collect_and_prepare_timeseries_data(
         raise ValueError("data collection resulted in 0 columns")
 
     # Remove rows with many null values from result
-    max_number_null = int(0.6 * len(result_df.columns))
+    max_number_null = int(max_fraction_null * len(result_df.columns))
     parcel_many_null_df = result_df[result_df.isnull().sum(axis=1) > max_number_null]
     if len(parcel_many_null_df.index) > 0:
         # Write the rows with empty data to a file

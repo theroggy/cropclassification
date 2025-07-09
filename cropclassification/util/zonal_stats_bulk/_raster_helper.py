@@ -33,8 +33,7 @@ class BandInfo:
         crs: Optional[str] = None,
         epsg: Optional[int] = None,
     ):
-        """
-        Constructor of BandInfo.
+        """Constructor of BandInfo.
 
         Args:
             path (str): _description_
@@ -91,8 +90,7 @@ def get_image_data(
     bands: list[str],
     pixel_buffer: int = 0,
 ) -> dict:
-    """
-    Reads the data from the image.
+    """Reads the data from the image.
 
     Adds a small buffer around the bounds asked to evade possible rounding issues.
 
@@ -100,7 +98,7 @@ def get_image_data(
     imagedata[band]['data']: the data read as numpy array
                    ['transform']: the Affine transform of the band read
 
-    Args
+    Args:
         image_path: the path the image
         bounds: the bounds to be read, in coordinates in the projection of the image
         bands: list of bands to be read, eg. "VV", "VH",...
@@ -149,8 +147,7 @@ def get_image_data(
 
 
 def get_image_info(image_path: Path) -> ImageInfo:
-    """
-    Returns basic information about an image.
+    """Returns basic information about an image.
 
     Args:
         image_path (Path): the path to the image.
@@ -185,11 +182,9 @@ def projected_bounds_to_window(
     image_pixel_height: int,
     pixel_buffer: int = 0,
 ):
-    """
-    Returns a rasterio.windows.Window to be used in rasterio to read the part of the
-    image specified.
+    """Convert projectd bounds to a rasterio.windows.Window object.
 
-    Args
+    Args:
         projected_bounds: bounds to created the window from, in projected coordinates
         image_transform: Affine transform of the image you want to create the pixel
             window for
@@ -251,14 +246,12 @@ def projected_bounds_to_window(
 
 
 def prepare_image(image_path: Path, temp_dir: Path) -> Path:
-    """
-    Prepares the input image for usages.
+    """Prepares the input image for usages.
 
     In case of a zip file, the file is unzipped to the temp dir specified.
 
     Returns the path to the prepared file/directory.
     """
-
     # If the input path is not a zip file, don't make local copy + just return path
     if image_path.suffix.lower() != ".zip":
         return image_path
@@ -757,6 +750,9 @@ def _get_image_info_tif(image_path: Path) -> ImageInfo:
         for band_idx in src.indexes:
             band_tags = src.tags(band_idx)
             band_name = band_tags.get("DESCRIPTION", None)
+            if band_name is None:
+                if src.descriptions is not None and len(src.descriptions) >= band_idx:
+                    band_name = src.descriptions[band_idx - 1]
             band_name = band_name if band_name is not None else str(band_idx)
             bands[band_name] = BandInfo(
                 path=str(image_path),

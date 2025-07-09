@@ -4,7 +4,6 @@
 
 ### Deprecations and compatibility notes
 
-- Consolidated some landcover pre-processing ignore codes (#120)
 - Restructure + cleanup of configuration file, mainly to avoid duplicate keys and to
   improve parameter names:
     - Consolidate and rename `start_date_str`, `end_date_str` and
@@ -23,16 +22,31 @@
       `dirs.images_periodic_dir` instead.
     - Rename section `dirs` to `paths`.
     - Remove `general.run_id`.
+- Rename some main modules to make naming more logical with non-cropclassification
+  markers being added (#162)
+- Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
 
 ### Improvements
 
+- Add feature "cross-prediction-models" to avoid markers being calculated on parcels
+  using a model that used this parcel in its training (#142, #143)
+- Consolidated some landcover pre-processing ignore codes (#120)
 - Add some extra global accuracies (precision, recall, f1) to report (#119)
 - Add option `images.on_missing_images` to be able to ignore errors in the
   calculation of images if needed (#125, #126, #138)
 - Filter away rasterio logging for extrasamples (#127)
 - Save openeo images with int16 bands as int16 locally as well (again) (#131, #135)
 - Linting improvements: add isort, sync rules with geofileops (#133, #134)
-- Add support for zonalstats calculation with ExactExctract (#139)
+- Add support to calculate zonalstats/spatial aggregations with
+  [ExactExtract](https://github.com/isciences/exactextract) (#139)
+- Make the number of top classes of the classification to retain configurable (#145)
+- Add support to configure pixel type for indices (#150)
+- Add support to generate rvi index (#146)
+- Add support to generate vvdvh index (#151)
+- Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
+- Add LATECROP-LATE detection (#177)
+- Add POC (not for operational use) of a cover/bare soil marker (#168)
+- General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
 

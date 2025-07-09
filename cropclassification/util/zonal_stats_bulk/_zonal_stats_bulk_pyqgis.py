@@ -52,22 +52,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """
-    Calculate zonal statistics.
-
-    Args:
-        features_path (Path): _description_
-        id_column (str): _description_
-        images_bands (List[Tuple[Path, List[str]]]): _description_
-        stats (List[str]): statistics to calculate.
-        output_dir (Path): _description_
-        nb_parallel (int, optional): the number of parallel processes to use.
-            Defaults to -1: use all available processors.
-        force (bool, optional): _description_. Defaults to False.
-
-    Raises:
-        Exception: _description_
-    """
+    """Calculate zonal statistics."""
     # Make sure QGIS is available
     if not HAS_QGIS:
         raise RuntimeError("QGIS is not available on this system.")
@@ -246,23 +231,28 @@ def zonal_stats_band(
         else:
             stats_mask |= stat_to_qgisstat(stat)
 
-    # Get the image info
+    # Init QGIS
+    qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
+    qgs = qgis.core.QgsApplication([], False)
+    qgs.initQgis()
+
+    # The rasterBand parameter in QgsZonalStatistics is the 1 based index in the raster
+    # file. Verify if it exists, as there is no error if this is wrong.
     image_info = raster_helper.get_image_info(raster_path)
+    raster = qgis.core.QgsRasterLayer(image_info.bands[band].path)
+    band_index = image_info.bands[band].band_index
+    if band_index < 1 or band_index > raster.bandCount():
+        raise ValueError(f"invalid {band_index=} in {image_info.bands[band]}")
 
     # Reproject the vector data
     tmp_dir.mkdir(exist_ok=True, parents=True)
     vector_proj_path = vector_helper.reproject_synced(
         path=vector_path,
-        columns=columns + ["geometry"],
+        columns=[*columns, "geometry"],
         target_epsg=image_info.image_epsg,
         dst_dir=tmp_dir,
     )
     layer = gfo.get_only_layer(vector_proj_path)
-
-    # Init QGIS
-    qgis.core.QgsApplication.setPrefixPath(str(qgis_path), True)
-    qgs = qgis.core.QgsApplication([], False)
-    qgs.initQgis()
 
     # Read the vector file + copy to memory layer for:
     #   - improved performance
@@ -272,15 +262,6 @@ def zonal_stats_band(
         qgis.core.QgsFeatureRequest().setFilterFids(vector.allFeatureIds())
     )
     del vector
-
-    # Calculates zonal stats with raster
-    raster = qgis.core.QgsRasterLayer(image_info.bands[band].path)
-
-    # rasterband is the 1 based index in the raster file. Verify, as QgsZonalStatistics
-    # doesn't give an error if this is wrong.
-    band_index = image_info.bands[band].band_index
-    if band_index < 1 or band_index > raster.bandCount():
-        raise ValueError(f"invalid {band_index=} in {image_info.bands[band]}")
 
     try:
         zoneStats = qgis.analysis.QgsZonalStatistics(
@@ -296,7 +277,7 @@ def zonal_stats_band(
     status = zoneStats.calculateStatistics(None)
     if zoneStats.calculateStatistics(None) != qgis.analysis.QgsZonalStatistics.Success:
         raise RuntimeError(
-            f"Error: calculateStatistics returned {status} for zonal stats between "
+            f"Error: calculateStatistics returned {status=} for zonal stats between "
             f"{vector_proj_path.name} and {raster_path.name}"
         )
 
@@ -304,7 +285,7 @@ def zonal_stats_band(
     if "geometry" in columns:
         columns = [f.name() for f in vector_mem.fields()] + ["geometry"]
         data = [
-            dict(zip(columns, f.attributes() + [f.geometry().asWkt()]))
+            dict(zip(columns, [*f.attributes(), f.geometry().asWkt()]))
             for f in vector_mem.getFeatures()
         ]
     else:

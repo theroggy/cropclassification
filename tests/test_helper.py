@@ -7,16 +7,18 @@ testdata_dir = Path(__file__).resolve().parent / "data"
 
 
 class SampleData:
-    marker_basedir = Path(__file__).resolve().parent.parent / "sample_marker_basedir"
-    tasks_dir = marker_basedir / "_tasks"
-    config_dir = marker_basedir / "_config"
-    inputdata_dir = marker_basedir / "_inputdata"
-    refe_dir = marker_basedir / "_refe"
-    image_dir = marker_basedir / "_images_periodic"
-    input_dir = marker_basedir / "_inputdata"
+    markers_dir = Path(__file__).resolve().parent.parent / "markers"
+    tasks_dir = markers_dir / "_tasks"
+    config_dir = markers_dir / "_config"
+    inputdata_dir = markers_dir / "_inputdata"
+    refe_dir = markers_dir / "_refe"
+    image_dir = markers_dir / "_images_periodic"
+    input_dir = markers_dir / "_inputdata"
     roi_name = "roi_test"
     image_roi_dir = image_dir / roi_name
 
+    input_parcel_path = inputdata_dir / "Prc_BEFL_2023_2023-07-24.gpkg"
+    classes_refe_path = refe_dir / "BEFL_2023_mon_refe_2023-07-24.tsv"
     image_s1_asc_path = (
         image_roi_dir
         / "s1-grd-sigma0-asc-weekly"
@@ -59,8 +61,9 @@ IMAGEPROFILES: dict[str, ImageProfile] = {
         name="s2-ndvi",
         satellite="s2",
         image_source="local",
-        index_type="ndvi",
         bands=["ndvi"],
         base_image_profile="s2-agri",
+        index_type="ndvi",
+        pixel_type="BYTE",
     ),
 }

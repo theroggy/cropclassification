@@ -1,3 +1,5 @@
+"""Setup file for the cropclassification package."""
+
 import setuptools
 
 with open("README.md") as fh:
@@ -18,8 +20,11 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
+        "dask-core",
+        "exactextract",
         "geofileops",
         "geopandas",
+        "numpy",
         "openeo",
         "psutil",
         "rasterio",
@@ -27,12 +32,11 @@ setuptools.setup(
         "rioxarray",
         "scikit-learn",
         "tensorflow",
-        "numpy<2",
-        "exactextract",
+        "xlsxwriter",
     ],
     entry_points="""
         [console_scripts]
-        cropclassification=cropclassification.cropclassification:main
+        cropclassification=cropclassification.taskrunner:main
         """,
     classifiers=[
         "Programming Language :: Python :: 3",

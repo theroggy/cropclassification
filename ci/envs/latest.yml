@@ -3,26 +3,26 @@ channels:
   - conda-forge
 dependencies:
   - python
-  - pip
   # required
-  - fiona
+  - dask-core
+  - exactextract
   - geofileops
-  - geopandas>=0.11
+  - geopandas-base>=0.11
   - h5py
+  - numexpr
   - numpy
   - openeo
   - pandas
   - psutil
   - pyproj
-  - scikit-learn
   - rasterio
   - rasterstats
   - rioxarray
-  - numpy<2
+  - scikit-learn
+  - typing_extensions
+  - xlsxwriter
   # Optional
   - qgis
   # testing
   - pytest
   - pytest-cov
-  - pip:
-    - exactextract

@@ -1,3 +1,5 @@
+"""Utility functions to generate a periodic mosaic."""
+
 import json
 import logging
 from copy import deepcopy
@@ -16,9 +18,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ImageProfile:
-    """
-    Profile of the image to be calculated.
-    """
+    """Profile of the image to be calculated."""
 
     name: str
     satellite: str
@@ -30,6 +30,7 @@ class ImageProfile:
     period_days: Optional[int] = None
     base_imageprofile: Optional[str] = None
     index_type: Optional[str] = None
+    pixel_type: Optional[str] = None
     max_cloud_cover: Optional[float] = None
     process_options: Optional[dict] = None
     job_options: Optional[dict] = None
@@ -46,12 +47,12 @@ class ImageProfile:
         period_days: Optional[int] = None,
         base_image_profile: Optional[str] = None,
         index_type: Optional[str] = None,
+        pixel_type: Optional[str] = None,
         max_cloud_cover: Optional[float] = None,
         process_options: Optional[dict] = None,
         job_options: Optional[dict] = None,
     ):
-        """
-        Profile of the image to be calculated.
+        """Profile of the image to be calculated.
 
         The `period_name` and `period_days` are used to determine the periods of the
         images to be generated. For some pre-defined values of `period_name`, the
@@ -82,6 +83,8 @@ class ImageProfile:
             base_image_profile (Optional[str], optional): only supported if
                 `image_source="local"`. The image profile of the image an index image
                 should be based on. Defaults to None.
+            pixel_type (Optional[str], optional): pixel type to use when saving. E.g.
+                BYTE, FLOAT16, FLOAT32. Defaults to None.
             max_cloud_cover (Optional[float], optional): the maximum cloud cover an
                 input image can have to be used. Defaults to None.
             process_options (Optional[dict], optional): extra process options.
@@ -102,6 +105,7 @@ class ImageProfile:
         self.period_days = period_days
         self.base_imageprofile = base_image_profile
         self.index_type = index_type
+        self.pixel_type = pixel_type
         self.max_cloud_cover = max_cloud_cover
         self.process_options = process_options
         self.job_options = job_options
@@ -119,6 +123,8 @@ class ImageProfile:
                 errors.append(f"index_type can't be None if {image_source=}")
             if base_image_profile is None:
                 errors.append(f"base_image_profile can't be None if {image_source=}")
+            if pixel_type is None:
+                errors.append(f"pixel_type can't be None if {image_source=}")
 
             if len(errors) > 0:
                 raise ValueError(f"Invalid input in init of {self}: {errors}")
@@ -128,6 +134,8 @@ class ImageProfile:
                 errors.append(f"collection can't be None if {image_source=}")
             if base_image_profile is not None:
                 errors.append(f"base_image_profile must be None if {image_source=}")
+            if pixel_type is not None:
+                errors.append(f"pixel_type must be None if {image_source=}")
 
             # The period name and days need some extra validation/preprocessing
             try:
@@ -145,7 +153,7 @@ class ImageProfile:
 
 def calc_periodic_mosaic(
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: Optional[Any],
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: list[str],
@@ -155,8 +163,7 @@ def calc_periodic_mosaic(
     on_missing_image: str = "calculate_raise",
     force: bool = False,
 ) -> list[dict[str, Any]]:
-    """
-    Generate a periodic mosaic.
+    """Generate a periodic mosaic.
 
     Depending on the period_name specified in the ImageProfiles, the `start_date` and
     `end_date` will  be adjusted:
@@ -171,7 +178,7 @@ def calc_periodic_mosaic(
     Args:
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
             of the region of interest to download the mosaic for.
-        roi_crs (Optional[pyproj.CRS]): the CRS of the roi.
+        roi_crs (Optional[Any]): the CRS of the roi.
         start_date (datetime): start date, included. Depending on the period used in the
             imageprofiles, the start_date might be adjusted to e.g. the next monday for
             "weekly",...
@@ -205,7 +212,7 @@ def calc_periodic_mosaic(
     if on_missing_image is None or on_missing_image not in on_missing_image_values:
         raise ValueError(
             f"invalid value for {on_missing_image=}: expected one of "
-            "{on_missing_image_values}"
+            f"{on_missing_image_values}"
         )
 
     # Prepare the params that can be used to calculate mosaic images.
@@ -219,43 +226,44 @@ def calc_periodic_mosaic(
         output_base_dir=output_base_dir,
     )
 
-    if on_missing_image != "ignore":
-        # Split images to get by image_source.
-        images_from_openeo = []
-        images_local = []
-        for image_params in periodic_mosaic_params:
-            if image_params["image_source"] == "openeo":
+    # Split images to get by image_source.
+    images_from_openeo = []
+    images_local = []
+    for image_params in periodic_mosaic_params:
+        if image_params["image_source"] == "openeo":
+            if on_missing_image != "ignore":
                 images_from_openeo.append(image_params)
-            elif image_params["image_source"] == "local":
-                images_local.append(image_params)
-            else:
-                raise ValueError(f"unsupported image_source in {image_params=}")
+        elif image_params["image_source"] == "local":
+            images_local.append(image_params)
+        else:
+            raise ValueError(f"unsupported image_source in {image_params=}")
 
-        # Make sure band information is embedded in the image
-        for image in images_from_openeo:
-            if image["path"].exists():
-                raster_util.set_band_descriptions(
-                    image["path"], band_descriptions=image["bands"], overwrite=False
-                )
+    # Make sure band information is embedded in the image
+    for image in images_from_openeo:
+        if image["path"].exists():
+            raster_util.set_band_descriptions(
+                image["path"], band_descriptions=image["bands"], overwrite=False
+            )
 
-        # First get all mosaic images from openeo
-        _ = openeo_util.get_images(
-            images_from_openeo,
-            delete_existing_openeo_jobs=delete_existing_openeo_jobs,
-            raise_errors="raise" in on_missing_image,
+    # First get all mosaic images from openeo
+    _ = openeo_util.get_images(
+        images_from_openeo,
+        delete_existing_openeo_jobs=delete_existing_openeo_jobs,
+        raise_errors="raise" in on_missing_image,
+        force=force,
+    )
+
+    # Process the mosaic images to be generated locally.
+    for image_local in images_local:
+        # Prepare index output file path
+        raster_index_util.calc_index(
+            image_local["base_image_path"],
+            image_local["path"],
+            index=image_local["index_type"],
+            pixel_type=image_local["pixel_type"],
+            process_options=image_local["process_options"],
             force=force,
         )
-
-        # Process the mosaic images to be generated locally.
-        for image_local in images_local:
-            # Prepare index output file path
-            raster_index_util.calc_index(
-                image_local["base_image_path"],
-                image_local["path"],
-                index=image_local["index_type"],
-                save_as_byte=True,
-                force=force,
-            )
 
     return periodic_mosaic_params
 
@@ -266,20 +274,19 @@ def _prepare_periods(
     period_name: Optional[str],
     period_days: Optional[int],
 ) -> list[dict[str, Any]]:
-    """
-    Prepare the periods to download a periodic mosaic.
+    """Prepare the periods to download a periodic mosaic.
 
     Args:
         start_date (datetime): start date, included.
         end_date (datetime): end date, excluded.
-        periode_name (str): the name of the periods to use.
-        days_per_period (Optional[int]): number of days per period.
+        period_name (str): the name of the periods to use.
+        period_days (Optional[int]): number of days per period.
 
     Raises:
         ValueError: invalid input parameter values were passed in.
 
     Returns:
-        List[Dict[str, Any]]: list of dicts with info about the images to get
+        list[dict[str, Any]]: list of dicts with info about the images to get
     """
     period_name, period_days = _prepare_period_params(period_name, period_days)
 
@@ -333,8 +340,7 @@ def _prepare_periods(
 def _prepare_period_params(
     period_name: Optional[str], period_days: Optional[int]
 ) -> tuple[str, int]:
-    """
-    Interprete period_name and period_days and return cleaned version.
+    """Interprete period_name and period_days and return cleaned version.
 
     Args:
         period_name (str): _description_
@@ -378,8 +384,7 @@ def _prepare_periodic_mosaic_params(
     imageprofiles: dict[str, ImageProfile],
     output_base_dir: Path,
 ) -> list[dict[str, Any]]:
-    """
-    Prepare the parameters needed to generate a list of periodic mosaics.
+    """Prepare the parameters needed to generate a list of periodic mosaics.
 
     Args:
         roi_bounds (Tuple[float, float, float, float]): bounds (xmin, ymin, xmax, ymax)
@@ -479,8 +484,7 @@ def _prepare_mosaic_image_params(
     output_base_dir: Path,
     base_imageprofile: Optional[ImageProfile] = None,
 ) -> dict[str, Any]:
-    """
-    Prepares the relevant parameters + saves them as json file.
+    """Prepares the relevant parameters + saves them as json file.
 
     Args:
         roi_bounds (Tuple[float, float, float, float]): _description_
@@ -526,6 +530,7 @@ def _prepare_mosaic_image_params(
         "max_cloud_cover": imageprofile.max_cloud_cover,
         "image_source": imageprofile.image_source,
         "base_imageprofile": imageprofile.base_imageprofile,
+        "pixel_type": imageprofile.pixel_type,
         "satellite": satellite,
         "roi_bounds": roi_bounds,
         "roi_crs": roi_crs,
@@ -560,8 +565,7 @@ def _prepare_mosaic_image_path(
     time_reducer: str,
     output_base_dir: Path,
 ) -> Path:
-    """
-    Returns an image_path.
+    """Returns an image_path.
 
     Args:
         imageprofile (str): name of the image profile.
@@ -587,8 +591,7 @@ def _prepare_mosaic_image_path(
     else:
         bands_str = imageprofile.split("-")[1]
     name = (
-        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_"
-        f"{time_reducer}.tif"
+        f"{imageprofile}_{start_date_str}_{end_date_str}_{bands_str}_{time_reducer}.tif"
     )
 
     image_dir = output_base_dir / imageprofile

@@ -32,8 +32,7 @@ def zonal_stats(
     nb_parallel: int = -1,
     force: bool = False,
 ):
-    """
-    Calculate zonal statistics.
+    """Calculate zonal statistics.
 
     Args:
         vector_path (Path): _description_
@@ -222,7 +221,7 @@ def zonal_stats_band(
     tmp_dir.mkdir(exist_ok=True, parents=True)
     vector_proj_path = vector_helper.reproject_synced(
         path=vector_path,
-        columns=include_cols + ["geometry"],
+        columns=[*include_cols, "geometry"],
         target_epsg=image_info.image_epsg,
         dst_dir=tmp_dir,
     )
@@ -275,10 +274,15 @@ def zonal_stats_band_tofile(
     for band in bands:
         index = raster_info.bands[band].band_index
         band_columns = include_cols.copy()
-        band_columns.extend([f"band_{index}_{stat}" for stat in stats])
+        band_columns.extend(
+            [f"band_{index}_{stat}" for stat in [stat.split("(")[0] for stat in stats]]
+        )
         band_stats_df = stats_df[band_columns].copy()
         band_stats_df.rename(
-            columns={f"band_{index}_{stat}": stat for stat in stats},
+            columns={
+                f"band_{index}_{stat}": stat
+                for stat in [stat.split("(")[0] for stat in stats]
+            },
             inplace=True,
         )
         # Add fid column to the beginning of the dataframe
@@ -289,6 +293,19 @@ def zonal_stats_band_tofile(
                 f"Write data for {len(band_stats_df.index)} parcels found to {output_paths[band]}"  # noqa: E501
             )
             if not output_paths[band].exists():
-                pdh.to_file(band_stats_df, output_paths[band], index=False)
+                # Write the info table to the output file
+                pdh.to_file(df=band_stats_df, path=output_paths[band], index=False)
+
+                # Write the parameters table to the output file
+                spatial_aggregation_args_df = pd.DataFrame(
+                    data=stats, columns=["stats"]
+                )
+                pdh.to_file(
+                    df=spatial_aggregation_args_df,
+                    path=output_paths[band],
+                    table_name="params",
+                    index=False,
+                    append=True,
+                )
 
     return output_paths

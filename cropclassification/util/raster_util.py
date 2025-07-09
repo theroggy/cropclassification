@@ -1,3 +1,5 @@
+"""Raster utility functions."""
+
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Union
@@ -10,8 +12,7 @@ gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 
 def add_overviews(path: Path, min_pixels=512, resampling="average"):
-    """
-    Add overviews to the file.
+    """Add overviews to the file.
 
     Args:
         path (Path): path to the file.
@@ -31,13 +32,25 @@ def add_overviews(path: Path, min_pixels=512, resampling="average"):
             dst.update_tags(ns="rio_overview", resampling=resampling)
 
 
+def get_band_descriptions(path: Path) -> dict[str, int]:
+    """Get the band descriptions of a raster file.
+
+    Args:
+        path (Path): the file to get the band descriptions from
+
+    Returns:
+        dict: the band descriptions
+    """
+    with rasterio.open(path, "r") as file:
+        return {name: index for index, name in enumerate(file.descriptions, start=1)}
+
+
 def set_band_descriptions(
     path: Path,
     band_descriptions: Union[Iterable[str], dict[int, str], str],
     overwrite: bool = True,
 ):
-    """
-    Add band descriptions to a raster file.
+    """Add band descriptions to a raster file.
 
     Args:
         path (Path): the file to add band descriptions to
@@ -70,4 +83,12 @@ def set_band_descriptions(
             band_descriptions = dict(enumerate(band_descriptions, start=1))
 
         for index, band_description in band_descriptions.items():
+            index = int(index)
+
+            # Compare the current band description if it exists.
+            if len(file.descriptions) >= index:
+                curr_description = file.descriptions[index - 1]
+                if curr_description == band_description:
+                    continue
+
             file.set_band_description(index, band_description)

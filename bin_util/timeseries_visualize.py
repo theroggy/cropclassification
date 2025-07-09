@@ -1,6 +1,5 @@
 # %%
-"""
-Show the timeseries for a parcel.
+"""Show the timeseries for a parcel.
 
 TODO: Recently hasn't been tested anymore!!!
 """

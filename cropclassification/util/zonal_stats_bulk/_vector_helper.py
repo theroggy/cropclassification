@@ -18,21 +18,9 @@ def reproject_synced(
     target_epsg: int,
     dst_dir: Optional[Path] = None,
 ) -> Path:
-    """
-    Reproject the input file. It is process locked and if another process is already
-    busy, wait till it is ready.
+    """Reproject the input file.
 
-    Args:
-        features_path (Path): _description_
-        columns_to_retain (List[str]): _description_
-        target_epsg (int): _description_
-
-    Raises:
-        Exception: _description_
-        Exception: _description_
-
-    Returns:
-        Path: _description_
+    It is process locked and if another process is already busy, wait till it is ready.
     """
     vector_info = gfo.get_layerinfo(path)
     assert vector_info.crs is not None
@@ -69,7 +57,7 @@ def reproject_synced(
             logger.info(
                 f"Read ready, found {len(vector_gdf.index)} features, "
                 f"crs: {vector_gdf.crs}, took "
-                f"{(datetime.now()-start_time).total_seconds()} s"
+                f"{(datetime.now() - start_time).total_seconds()} s"
             )
             for column in vector_gdf.columns:
                 if column not in columns and column not in [
@@ -134,18 +122,11 @@ def _load_features_file(
     bbox=None,
     polygon=None,
 ) -> gpd.GeoDataFrame:
-    """
-    Load the features and reproject to the target crs.
+    """Load the features and reproject to the target crs.
 
     Remarks:
         * Reprojected version is "cached" so on a next call, it can be directly read.
         * Locking and waiting is used to ensure correct results if used in parallel.
-
-    Args
-        features_path:
-        columns_to_retain:
-        target_srs:
-        bbox: bounds of the area to be loaded, in the target_epsg
     """
     # Load parcel file and preprocess it: remove excess columns + reproject if needed.
     features_prepr_path = reproject_synced(
@@ -159,7 +140,7 @@ def _load_features_file(
     features_gdf = gfo.read_file(features_prepr_path, bbox=bbox)
     logger.info(
         f"Read ready, found {len(features_gdf.index)} features, crs: "
-        f"{features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s"
+        f"{features_gdf.crs}, took {(datetime.now() - start_time).total_seconds()} s"
     )
 
     # Order features on x_ref to (probably) have more clustering of features in
@@ -208,7 +189,7 @@ def _load_features_file(
 
     # Ready, so return result...
     logger.debug(
-        f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}"
+        f"Loaded {len(features_gdf)} to calculate on in {datetime.now() - start_time}"
     )
     assert isinstance(features_gdf, gpd.GeoDataFrame)
     return features_gdf
