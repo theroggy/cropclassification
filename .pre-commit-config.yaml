@@ -10,7 +10,7 @@ repos:
       - id: ruff
         # args: [ --fix ]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.15.0"
+    rev: "v1.17.1"
     hooks:
       - id: mypy
-        additional_dependencies: [pandas-stubs, types-python-dateutil, types-requests]
+        additional_dependencies: [pandas-stubs<2.3, types-python-dateutil, types-requests]
