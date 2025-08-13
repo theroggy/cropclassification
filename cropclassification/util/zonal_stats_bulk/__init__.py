@@ -3,6 +3,11 @@
 from pathlib import Path
 from typing import Optional, Union
 
+from . import (
+    _zonal_stats_bulk_exactextract,
+    _zonal_stats_bulk_pyqgis,
+    _zonal_stats_bulk_rs,
+)
 from ._raster_helper import *  # noqa: F403
 
 
@@ -54,7 +59,6 @@ def zonal_stats(
             raise ValueError(
                 'cloud_filter_band parameter not supported for engine "pyqgis"'
             )
-        from . import _zonal_stats_bulk_pyqgis
 
         return _zonal_stats_bulk_pyqgis.zonal_stats(
             vector_path=vector_path,
@@ -66,8 +70,6 @@ def zonal_stats(
             force=force,
         )
     elif engine == "rasterstats":
-        from . import _zonal_stats_bulk_rs
-
         return _zonal_stats_bulk_rs.zonal_stats(
             vector_path=vector_path,
             id_column=id_column,
@@ -80,8 +82,6 @@ def zonal_stats(
             force=force,
         )
     elif engine == "exactextract":
-        from . import _zonal_stats_bulk_exactextract
-
         return _zonal_stats_bulk_exactextract.zonal_stats(
             vector_path=vector_path,
             rasters_bands=rasters_bands,
