@@ -29,7 +29,7 @@ dependencies:
   - pytest-cov
   # linting
   - mypy ==1.15.0
-  - pandas-stubs
+  - pandas-stubs <=2.3
   - pre-commit
   - ruff ==0.9.7
   - types-python-dateutil
