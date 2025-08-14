@@ -337,7 +337,7 @@ def zonal_stats_band_tofile(
 
 
 def stat_to_qgisstat(stat: str):
-    import qgis.analysis
+    import qgis.analysis  # noqa: PLC0415
 
     if stat == "count":
         return qgis.analysis.QgsZonalStatistics.Count

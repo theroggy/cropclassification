@@ -4,13 +4,13 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.9.7"
+    rev: "v0.12.8"
     hooks:
       - id: ruff-format
       - id: ruff
         # args: [ --fix ]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.15.0"
+    rev: "v1.17.1"
     hooks:
       - id: mypy
-        additional_dependencies: [pandas-stubs, types-python-dateutil, types-requests]
+        additional_dependencies: [pandas-stubs<2.3, types-python-dateutil, types-requests]

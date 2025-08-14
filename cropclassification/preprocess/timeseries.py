@@ -13,6 +13,7 @@ import pyproj
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
+import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 import cropclassification.preprocess._timeseries_helper as ts_helper
 
 # Get a logger...
@@ -47,33 +48,12 @@ def calc_timeseries_data(
     if not timeseries_periodic_dir.exists():
         timeseries_periodic_dir.mkdir(parents=True, exist_ok=True)
 
-    sensordata_to_get_onda = [
-        sensor for sensor in images_to_use if sensor not in conf.image_profiles
-    ]
     sensordata_to_get_openeo = [
         sensor for sensor in images_to_use if sensor in conf.image_profiles
     ]
 
-    if len(sensordata_to_get_onda) > 0:
-        # Start!
-        # TODO: start calculation of per image data on DIAS
-        # import cropclassification.preprocess.timeseries_calc_dias_onda_per_image as
-        # ts_calc
-
-        # Now all image data is available per image, calculate periodic data
-        ts_helper.calculate_periodic_timeseries(
-            parcel_path=input_parcel_path,
-            timeseries_per_image_dir=conf.paths.getpath("timeseries_per_image_dir"),
-            start_date=start_date,
-            end_date=end_date,
-            sensordata_to_get=sensordata_to_get_onda,
-            timeseries_periodic_dir=timeseries_periodic_dir,
-        )
-
     if len(sensordata_to_get_openeo) > 0:
         # Prepare periodic images + calculate base timeseries on them
-        import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
-
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
             roi_bounds=roi_bounds,

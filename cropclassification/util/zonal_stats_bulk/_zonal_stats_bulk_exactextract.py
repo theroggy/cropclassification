@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
+import exactextract
 import geopandas as gpd
 import pandas as pd
 import psutil
@@ -228,8 +229,6 @@ def zonal_stats_band(
     )
 
     try:
-        import exactextract
-
         stats_df = exactextract.exact_extract(
             rast=raster_path,
             vec=vector_proj_path,
