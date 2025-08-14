@@ -415,7 +415,7 @@ def train(
         if test_df is None:
             raise ValueError("test_df is mandatory when using a keras classifier")
 
-        import cropclassification.predict.classification_keras as class_core_keras
+        import cropclassification.predict.classification_keras as class_core_keras  # noqa: PLC0415
 
         return class_core_keras.train(
             train_df=train_df,
@@ -423,7 +423,7 @@ def train(
             output_classifier_basepath=output_classifier_basepath,
         )
     else:
-        import cropclassification.predict.classification_sklearn as class_core_sklearn
+        import cropclassification.predict.classification_sklearn as class_core_sklearn  # noqa: PLC0415
 
         return class_core_sklearn.train(
             train_df=train_df,
@@ -514,7 +514,7 @@ def predict(
     # Predict!
     logger.info(f"Predict using this model: {input_classifier_path}")
     if conf.classifier["classifier_type"].lower() == "keras_multilayer_perceptron":
-        import cropclassification.predict.classification_keras as class_core_keras
+        import cropclassification.predict.classification_keras as class_core_keras  # noqa: PLC0415
 
         class_core_keras.predict_proba(
             parcel_df=input_parcel_for_predict_df,
@@ -522,7 +522,7 @@ def predict(
             output_parcel_predictions_path=output_predictions_path,
         )
     else:
-        import cropclassification.predict.classification_sklearn as class_core_sklearn
+        import cropclassification.predict.classification_sklearn as class_core_sklearn  # noqa: PLC0415
 
         class_core_sklearn.predict_proba(
             parcel_df=input_parcel_for_predict_df,

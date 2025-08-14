@@ -18,6 +18,7 @@ dependencies:
   - pyproj
   - rasterio
   - rasterstats
+  - requests
   - rioxarray
   - scikit-learn
   - xlsxwriter
@@ -28,10 +29,10 @@ dependencies:
   - pytest
   - pytest-cov
   # linting
-  - mypy ==1.15.0
-  - pandas-stubs <=2.3
+  - mypy ==1.17.1
+  - pandas-stubs <=2.3  # Pin version to the pandas version being installed now.
   - pre-commit
-  - ruff ==0.9.7
+  - ruff ==0.12.8
   - types-python-dateutil
   - types-requests
   - types-tqdm

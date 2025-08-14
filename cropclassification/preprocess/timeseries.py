@@ -13,6 +13,7 @@ import pyproj
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
+import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 import cropclassification.preprocess._timeseries_helper as ts_helper
 
 # Get a logger...
@@ -53,8 +54,6 @@ def calc_timeseries_data(
 
     if len(sensordata_to_get_openeo) > 0:
         # Prepare periodic images + calculate base timeseries on them
-        import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
-
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
             roi_bounds=roi_bounds,

@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 from typing import Any, Optional
 
@@ -281,8 +282,6 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
 
                     # Create the dest dir where the file will be unzipped to + unzip!
                     if not image_unzipped_path.exists():
-                        import zipfile
-
                         with zipfile.ZipFile(image_path, "r") as zippedfile:
                             zippedfile.extractall(temp_dir)
                 finally:

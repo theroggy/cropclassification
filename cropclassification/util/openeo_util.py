@@ -3,6 +3,7 @@
 import json
 import logging
 import pprint
+import shutil
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -14,6 +15,7 @@ import openeo
 import openeo.rest.datacube
 import openeo.rest.job
 import pyproj
+import requests
 from openeo.api.process import Parameter
 from openeo.processes import if_, is_nan
 from scipy.signal.windows import gaussian  # type: ignore
@@ -351,9 +353,6 @@ def get_job_results(
                         output_tmp_path.unlink()
 
                     asset = batch_job.get_results().get_asset()
-                    import shutil
-
-                    import requests
 
                     def download_file(url, target):
                         with requests.get(url, stream=True) as r:
