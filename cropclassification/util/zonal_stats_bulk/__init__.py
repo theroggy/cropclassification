@@ -1,5 +1,6 @@
 """Calculate zonal statistics for a vector file with many raster files."""
 
+import logging
 from pathlib import Path
 from typing import Optional, Union
 
@@ -9,6 +10,8 @@ from . import (
     _zonal_stats_bulk_rs,
 )
 from ._raster_helper import *  # noqa: F403
+
+logger = logging.getLogger(__name__)
 
 
 def zonal_stats(
@@ -52,6 +55,10 @@ def zonal_stats(
         force (bool, optional): False to skip calculating existing output files. True to
             recalculate and overwrite existing output files. Defaults to False.
     """
+    logger.info(
+        f"Calculate zonal statistics for {len(rasters_bands)} rasters ({nb_parallel=})"
+    )
+
     if isinstance(stats, str):
         stats = [stats]
 
