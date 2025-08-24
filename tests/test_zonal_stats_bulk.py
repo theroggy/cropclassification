@@ -162,20 +162,7 @@ def test_exactextract_min_coverage_frac(tmp_path, min_coverage_frac, exp_count):
     # write the geofile to a file
     vector_path = tmp_path / "vector.gpkg"
     gfo.to_file(gdf=gdf_geoms, path=vector_path)
-    expression = """
-        CASE
-            WHEN fid = 1
-                THEN -0.2
-            WHEN fid = 2
-                THEN 0.5
-            WHEN fid = 3
-                THEN 0.8
-            WHEN fid = 4
-                THEN 0.2
-            ELSE NULL
-        END
-    """
-    gfo.add_column(path=vector_path, name="UID", type="TEXT", expression=expression)
+    gfo.add_column(path=vector_path, name="UID", type="TEXT", expression="fid")
 
     test_image_roi_dir = test_dir / SampleData.image_dir.name / SampleData.roi_name
     image1_dir = test_image_roi_dir / SampleData.image_s1_asc_path.parent.name
