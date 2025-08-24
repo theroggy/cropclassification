@@ -98,7 +98,7 @@ def test_zonal_stats_bulk(tmp_path, engine, stats, bands, exp_results_path):
         assert not any(result_df["mean"].isna())
 
 
-def test_zonal_stats_bulk_invalid(tmp_path):
+def test_exactextract_invalid_stats(tmp_path):
     # Prepare test data
     sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
@@ -106,7 +106,7 @@ def test_zonal_stats_bulk_invalid(tmp_path):
 
     vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
 
-    with pytest.raises(ValueError, match="Error calculating zonal stats"):
+    with pytest.raises(ValueError, match="Unsupported stat: means"):
         _zonal_stats_bulk_exactextract.zonal_stats_band(
             vector_path=vector_path,
             raster_path=test_dir / SampleData.image_s1_asc_path,
@@ -126,7 +126,7 @@ def test_zonal_stats_bulk_invalid(tmp_path):
         (1.0, [25, 20, 20, 20]),
     ],
 )
-def test_zonal_stats_bulk_exactextract(tmp_path, min_coverage_frac, exp_count):
+def test_exactextract_min_coverage_frac(tmp_path, min_coverage_frac, exp_count):
     # Prepare test data
     sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
