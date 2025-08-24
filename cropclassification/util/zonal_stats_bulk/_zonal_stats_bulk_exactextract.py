@@ -137,6 +137,7 @@ def zonal_stats(
                 tmp_dir=tmp_dir,
                 include_cols=columns,
                 output_paths=output_paths,
+                force=force,
             )
             calc_queue[future] = {
                 "vector_path": vector_path,
@@ -236,9 +237,10 @@ def zonal_stats_band(
             output="pandas",
             include_cols=include_cols,
         )
-
-    except Exception:
-        raise
+    except Exception as ex:
+        message = f"Error calculating zonal stats {stats}: {ex}"
+        logger.error(message)
+        raise ValueError(message) from ex
 
     return stats_df
 
@@ -253,13 +255,6 @@ def zonal_stats_band_tofile(
     include_cols: list[str],
     force: bool = False,
 ) -> dict[str, Path]:
-    # Init
-    if all(output_path.exists() for output_path in output_paths.values()):
-        if force:
-            for output_path in output_paths.values():
-                output_path.unlink(missing_ok=True)
-        return output_paths
-
     stats_df = zonal_stats_band(
         vector_path=vector_path,
         raster_path=raster_path,
@@ -273,17 +268,26 @@ def zonal_stats_band_tofile(
     for band in bands:
         index = raster_info.bands[band].band_index
         band_columns = include_cols.copy()
-        band_columns.extend(
-            [f"band_{index}_{stat}" for stat in [stat.split("(")[0] for stat in stats]]
-        )
-        band_stats_df = stats_df[band_columns].copy()
-        band_stats_df.rename(
-            columns={
-                f"band_{index}_{stat}": stat
-                for stat in [stat.split("(")[0] for stat in stats]
-            },
-            inplace=True,
-        )
+        if len(bands) == 1:
+            band_columns.extend(
+                [f"{stat}" for stat in [stat.split("(")[0] for stat in stats]]
+            )
+            band_stats_df = stats_df[band_columns].copy()
+        else:
+            band_columns.extend(
+                [
+                    f"band_{index}_{stat}"
+                    for stat in [stat.split("(")[0] for stat in stats]
+                ]
+            )
+            band_stats_df = stats_df[band_columns].copy()
+            band_stats_df.rename(
+                columns={
+                    f"band_{index}_{stat}": stat
+                    for stat in [stat.split("(")[0] for stat in stats]
+                },
+                inplace=True,
+            )
         # Add fid column to the beginning of the dataframe
         band_stats_df.insert(0, "fid", range(len(band_stats_df)))
 
