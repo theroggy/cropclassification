@@ -8,7 +8,6 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-import geofileops as gfo
 from typing_extensions import deprecated
 
 import cropclassification.helpers.config_helper as conf
@@ -86,9 +85,8 @@ def prepare_input(
 
     # Read input file
     logger.info(f"Read parceldata from {input_parcel_path}")
-    # parceldata_df = gfo.read_file(input_parcel_path)
     parceldata_df = pdh.read_file(input_parcel_path)
-    logger.info(f"Read Parceldata ready, info(): {parceldata_df.info()}")
+    logger.info(f"Read Parceldata ready, {len(parceldata_df)=}")
 
     # Check if the id column is present...
     if conf.columns["id"] not in parceldata_df.columns:
