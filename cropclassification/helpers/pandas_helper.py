@@ -106,7 +106,11 @@ def read_file(
         return pd.read_parquet(str(path), columns=columns)
     elif ext_lower in (".sqlite", ".gpkg"):
         return pyogrio.read_dataframe(
-            path, columns=columns, read_geometry=not ignore_geometry, sql=sql
+            path,
+            columns=columns,
+            read_geometry=not ignore_geometry,
+            sql=sql,
+            encoding="utf-8",
         )
     else:
         raise ValueError(f"Not implemented for extension {ext_lower}")
