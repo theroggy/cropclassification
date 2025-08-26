@@ -47,6 +47,7 @@
 - Add LATECROP-LATE detection (#177)
 - Add support for groundtruth data processing for latecrop marker (#193)
 - Add POC (not for operational use) of a cover/bare soil marker (#168)
+- Avoid high committed memory for zonal stats calculation (#197)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
