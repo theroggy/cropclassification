@@ -44,6 +44,14 @@ class PooledExecutorFactory:
 
 
 def initialize_worker():
+    """Some default inits for workers."""
+    # Reduce OpenMP threads to avoid the committed memory usage becoming huge when using
+    # multiprocessing.
+    # Should work for any numeric library used (openblas, mkl,...).
+    # Ref: https://stackoverflow.com/questions/77764228/pandas-scipy-high-commit-memory-usage-windows
+    if os.environ.get("OMP_NUM_THREADS") is None:
+        os.environ["OMP_NUM_THREADS"] = "1"
+
     # We don't want the workers to block the entire system, so make them nice
     # if they aren't quite nice already.
     # Remark: on linux, depending on system settings it is not possible to
