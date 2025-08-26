@@ -118,6 +118,8 @@ def prepare_input(
         temp_empty_path = (
             temp_output_dir / f"{output_imagedata_parcel_input_path.stem}_empty.sqlite"
         )
+        if temp_empty_path.exists():
+            gfo.remove(temp_empty_path)
         pdh.to_file(parceldata_buf_empty_df, temp_empty_path)
 
     # Export parcels that don't result in an empty geometry

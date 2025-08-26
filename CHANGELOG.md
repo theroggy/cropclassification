@@ -47,6 +47,7 @@
 - Add LATECROP-LATE detection (#177)
 - Add support for groundtruth data processing for latecrop marker (#193)
 - Add POC (not for operational use) of a cover/bare soil marker (#168)
+- Avoid high committed memory for zonal stats calculation (#197)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 - Use Exactextract as default engine for zonalstats calculation (#181)
 
@@ -54,6 +55,7 @@
 
 - Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
   config (#130)
+- Fix encoding error when reading sqlite files (#196)
 
 ## 0.2.0 (2024-06-17)
 

@@ -44,7 +44,7 @@ class PooledExecutorFactory:
 
 
 def initialize_worker():
-    """Some default inits."""
+    """Some default inits for workers."""
     # Reduce OpenMP threads to avoid the committed memory usage becoming huge when using
     # multiprocessing.
     # Should work for any numeric library used (openblas, mkl,...).
