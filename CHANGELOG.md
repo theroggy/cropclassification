@@ -53,6 +53,7 @@
 
 - Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
   config (#130)
+- Fix encoding error when reading sqlite files (#196)
 
 ## 0.2.0 (2024-06-17)
 
