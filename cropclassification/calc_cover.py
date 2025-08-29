@@ -108,6 +108,22 @@ def run_cover(
     id_column = conf.columns["id"]
     parcel_columns = [
         id_column,
+        "LAYER_ID",
+        "PRC_ID",
+        "VERSIENR",
+        "ALL_BEST",
+        "GWSCOD_H",
+        "GWSNAM_H",
+        "GWSCOD_N",
+        "GWSNAM_N",
+        "GWSCOD_N2",
+        "GWSNAM_N2",
+        "PRC_NIS",
+        "ALV_NUMMER",
+        "PRC_NMR",
+    ]
+    parcel_columns_excel = [
+        id_column,
         "ALL_BEST",
         "GWSCOD_H",
         "GWSNAM_H",
@@ -243,7 +259,12 @@ def run_cover(
     # Create list with unique parcels
     assert parcels_selected is not None
     parcels_selected = parcels_selected.drop_duplicates()
-    pdh.to_excel(parcels_selected, parcels_selected_path, index=False)
+
+    # Export to excel
+    parcels_selected_excel = [*parcel_columns_excel, "provincie"]
+    pdh.to_excel(
+        parcels_selected[parcels_selected_excel], parcels_selected_path, index=False
+    )
 
     logging.shutdown()
 
@@ -360,7 +381,7 @@ def _calc_cover(
     pdh.to_file(result_df, output_path)
 
     if output_geo_path is not None:
-        # If a geo file is asked, always recreated it so it is in sync with the output
+        # If a geo file is asked, always recreate it so it is in sync with the output
         # file
         gfo.remove(output_geo_path, missing_ok=True)
         parcels_gdf = pdh.read_file(
