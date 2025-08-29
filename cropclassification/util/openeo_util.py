@@ -352,7 +352,15 @@ def get_job_results(
                     if output_tmp_path.exists():
                         output_tmp_path.unlink()
 
-                    asset = batch_job.get_results().get_asset()
+                    try:
+                        asset = batch_job.get_results().get_asset()
+                    except Exception as ex:
+                        if str(ex) == "No assets in result.":
+                            logger.warning(
+                                f"Job {job} finished but has no assets, so delete it."
+                            )
+                            batch_job.delete()
+                            continue
 
                     def download_file(url, target):
                         with requests.get(url, stream=True) as r:
