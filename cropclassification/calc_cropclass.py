@@ -189,6 +189,7 @@ def run_cropclass(
     parceldata_aggregations_to_use = conf.marker.getlist(
         "parceldata_aggregations_to_use"
     )
+
     ts.calc_timeseries_data(
         input_parcel_path=imagedata_input_parcel_path,
         roi_bounds=tuple(conf.roi.getlistfloat("roi_bounds")),

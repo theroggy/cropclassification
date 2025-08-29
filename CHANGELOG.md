@@ -49,6 +49,7 @@
 - Add POC (not for operational use) of a cover/bare soil marker (#168)
 - Avoid high committed memory for zonal stats calculation (#197)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
+- Use Exactextract as default engine for zonalstats calculation (#181)
 
 ### Bugs fixed
 

@@ -39,6 +39,16 @@ class SampleData:
         / "s2-agri-weekly"
         / "s2-agri-weekly_2024-03-04_2024-03-10_B02-B03-B04-B08-B11-B12_best.tif"
     )
+    image_s1_grd_vvdvh_asc_weekly_path = (
+        image_roi_dir
+        / "s1-grd-sigma0-vvdvh-asc-weekly"
+        / "s1-grd-sigma0-vvdvh-asc-weekly_2024-03-04_2024-03-10_vvdvh_last.tif.tif"
+    )
+    image_s1_grd_vvdvh_desc_weekly_path = (
+        image_roi_dir
+        / "s1-grd-sigma0-vvdvh-desc-weekly"
+        / "s1-grd-sigma0-vvdvh-desc-weekly_2024-03-04_2024-03-10_vvdvh_last.tif.tif"
+    )
 
     start_date = datetime(2024, 3, 4)
     end_date = datetime(2024, 3, 11)
