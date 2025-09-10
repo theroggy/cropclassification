@@ -82,9 +82,12 @@ def run_cover(
         input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
         where = """
-            "ALL_BEST" like '%MEV%'
+               "ALL_BEST" like '%BMG%'
+            OR "ALL_BEST" like '%MEV%'
             OR "ALL_BEST" like '%MEG%'
             OR "ALL_BEST" like '%EEF%'
+            OR "ALL_BEST" like '%TBG%'
+            OR "ALL_BEST" like '%EBG%'
         """
         gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
         input_parcel_path = input_parcel_filtered_path
@@ -261,13 +264,7 @@ def run_cover(
 
     # Add pred_consolidated based on max pred1_proba
     parcels_selected["pred_consolidated"] = parcels_selected["pred1_prob"].apply(
-        lambda x: "NODATA"
-        if pd.isna(x)
-        else "ONBEDEKT"
-        if x >= 0.5
-        else "DOUBT"
-        if x > 0.4
-        else "BEDEKT"
+        _categorize_pred
     )
 
     # Add pred_cons_status based on pred_consolidated
@@ -285,6 +282,21 @@ def run_cover(
     )
 
     logging.shutdown()
+
+
+def _categorize_pred(x):
+    if pd.isna(x):
+        return "NODATA"
+    try:
+        x_num = float(x)
+        if x_num >= 0.5:
+            return "ONBEDEKT"
+        elif x_num > 0.4:
+            return "DOUBT"
+        else:
+            return "BEDEKT"
+    except (ValueError, TypeError):
+        return "NODATA"
 
 
 def _calc_cover(
