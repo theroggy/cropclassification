@@ -428,11 +428,11 @@ def _calc_cover(
     sql = f"""
         SELECT sub.*
                 ,CASE
-                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median >= {ndvi_vegetation_min} THEN 0
+                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median >= {ndvi_vegetation_min} THEN 0.0
                     WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median <> 0 AND s2_ndvi_median < {ndvi_vegetation_min} THEN 1 - s2_ndvi_median
                     WHEN cover_s1 = 'NODATA' THEN NULL
                     WHEN cover_s1_asc = 'bare-soil' THEN 0.5
-                    ELSE 0
+                    ELSE 0.0
                 END AS pred1_prob
           FROM ({sql}) sub
     """  # noqa: E501
