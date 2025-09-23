@@ -4,7 +4,6 @@ import logging
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import rioxarray
@@ -258,8 +257,8 @@ def _save_index(
     index_data: xr.DataArray,
     output_path: Path,
     pixel_type: str,
-    scale_factor: Optional[float],
-    add_offset: Optional[float],
+    scale_factor: float | None,
+    add_offset: float | None,
 ):
     if pixel_type == "BYTE":
         # Scale factor specified, so rescale and save as Byte.

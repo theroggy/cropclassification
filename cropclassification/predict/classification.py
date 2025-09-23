@@ -5,7 +5,6 @@ import glob
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import pandas as pd
@@ -27,9 +26,9 @@ def classify(
     output_base_filename: str,
     test_size: float,
     cross_pred_models: int,
-    input_model_to_use_path: Optional[Path],
+    input_model_to_use_path: Path | None,
     force: bool = False,
-) -> tuple[Path, Path, Optional[Path], Optional[Path]]:
+) -> tuple[Path, Path, Path | None, Path | None]:
     """Classify the parcels.
 
     Args:
@@ -205,8 +204,8 @@ def classify(
 def add_cross_pred_model_id(
     parcel_path: Path,
     cross_pred_models: int,
-    columnname: Optional[str] = None,
-    class_balancing_column: Optional[str] = None,
+    columnname: str | None = None,
+    class_balancing_column: str | None = None,
 ):
     """Add a column to the parcel file that assigns each parcel to a model.
 
@@ -258,7 +257,7 @@ def train_test_predict(
     output_classifier_basepath: Path,
     output_predictions_test_path: Path,
     output_predictions_all_path: Path,
-    predict_query: Optional[str] = None,
+    predict_query: str | None = None,
     force: bool = False,
 ):
     """Train a classifier, test it and do full predictions.
@@ -356,7 +355,7 @@ def train(
     input_parcel_classification_data_path: Path,
     output_classifier_basepath: Path,
     force: bool = False,
-    input_parcel_classification_data_df: Optional[pd.DataFrame] = None,
+    input_parcel_classification_data_df: pd.DataFrame | None = None,
 ) -> Path:
     """Train a classifier and test it by predicting the test cases."""
     logger.info("train_and_test: Start")
@@ -438,8 +437,8 @@ def predict(
     input_classifier_path: Path,
     output_predictions_path: Path,
     force: bool = False,
-    input_parcel_classification_data_df: Optional[pd.DataFrame] = None,
-    predict_query: Optional[str] = None,
+    input_parcel_classification_data_df: pd.DataFrame | None = None,
+    predict_query: str | None = None,
 ):
     """Predict the classes for the input data."""
     # If force is False, and the output file exist already, return

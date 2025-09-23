@@ -4,7 +4,6 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 
@@ -23,7 +22,7 @@ IMAGETYPE_S2_L2A = "S2_L2A"
 def prepare_input(
     input_parcel_path: Path,
     output_imagedata_parcel_input_path: Path,
-    output_parcel_nogeo_path: Optional[Path] = None,
+    output_parcel_nogeo_path: Path | None = None,
     force: bool = False,
 ) -> bool:
     """Prepare a file so it is ready for timeseries extraction of sentinel images.

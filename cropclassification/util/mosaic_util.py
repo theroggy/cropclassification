@@ -6,7 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pyproj
 
@@ -23,17 +23,17 @@ class ImageProfile:
     name: str
     satellite: str
     image_source: str
-    bands: Optional[list[str]] = None
-    collection: Optional[str] = None
-    time_reducer: Optional[str] = None
-    period_name: Optional[str] = None
-    period_days: Optional[int] = None
-    base_imageprofile: Optional[str] = None
-    index_type: Optional[str] = None
-    pixel_type: Optional[str] = None
-    max_cloud_cover: Optional[float] = None
-    process_options: Optional[dict] = None
-    job_options: Optional[dict] = None
+    bands: list[str] | None = None
+    collection: str | None = None
+    time_reducer: str | None = None
+    period_name: str | None = None
+    period_days: int | None = None
+    base_imageprofile: str | None = None
+    index_type: str | None = None
+    pixel_type: str | None = None
+    max_cloud_cover: float | None = None
+    process_options: dict | None = None
+    job_options: dict | None = None
 
     def __init__(
         self,
@@ -41,16 +41,16 @@ class ImageProfile:
         satellite: str,
         image_source: str,
         bands: list[str],
-        collection: Optional[str] = None,
-        time_reducer: Optional[str] = None,
-        period_name: Optional[str] = None,
-        period_days: Optional[int] = None,
-        base_image_profile: Optional[str] = None,
-        index_type: Optional[str] = None,
-        pixel_type: Optional[str] = None,
-        max_cloud_cover: Optional[float] = None,
-        process_options: Optional[dict] = None,
-        job_options: Optional[dict] = None,
+        collection: str | None = None,
+        time_reducer: str | None = None,
+        period_name: str | None = None,
+        period_days: int | None = None,
+        base_image_profile: str | None = None,
+        index_type: str | None = None,
+        pixel_type: str | None = None,
+        max_cloud_cover: float | None = None,
+        process_options: dict | None = None,
+        job_options: dict | None = None,
     ):
         """Profile of the image to be calculated.
 
@@ -153,7 +153,7 @@ class ImageProfile:
 
 def calc_periodic_mosaic(
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[Any],
+    roi_crs: Any | None,
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: list[str],
@@ -271,8 +271,8 @@ def calc_periodic_mosaic(
 def _prepare_periods(
     start_date: datetime,
     end_date: datetime,
-    period_name: Optional[str],
-    period_days: Optional[int],
+    period_name: str | None,
+    period_days: int | None,
 ) -> list[dict[str, Any]]:
     """Prepare the periods to download a periodic mosaic.
 
@@ -338,7 +338,7 @@ def _prepare_periods(
 
 
 def _prepare_period_params(
-    period_name: Optional[str], period_days: Optional[int]
+    period_name: str | None, period_days: int | None
 ) -> tuple[str, int]:
     """Interprete period_name and period_days and return cleaned version.
 
@@ -377,7 +377,7 @@ def _prepare_period_params(
 
 def _prepare_periodic_mosaic_params(
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: pyproj.CRS | None,
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: list[str],
@@ -478,11 +478,11 @@ def _prepare_periodic_mosaic_params(
 
 def _prepare_mosaic_image_params(
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: pyproj.CRS | None,
     imageprofile: ImageProfile,
     period: dict[str, Any],
     output_base_dir: Path,
-    base_imageprofile: Optional[ImageProfile] = None,
+    base_imageprofile: ImageProfile | None = None,
 ) -> dict[str, Any]:
     """Prepares the relevant parameters + saves them as json file.
 

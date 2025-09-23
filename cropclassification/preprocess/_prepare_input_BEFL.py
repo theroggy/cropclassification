@@ -6,7 +6,6 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from typing_extensions import deprecated
 
@@ -1134,7 +1133,7 @@ def prepare_input_fabaceae(
 def prepare_input_latecrop(
     parceldata_df,
     column_BEFL_latecrop: str,
-    column_BEFL_latecrop2: Optional[str],
+    column_BEFL_latecrop2: str | None,
     column_BEFL_maincrop: str,
     column_output_class: str,
     classes_refe_path: Path,

@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +9,8 @@ def _format_output_path(
     features_path: Path,
     image_path: Path,
     output_dir: Path,
-    orbit_properties_pass: Optional[str],
-    band: Optional[Union[str, int]],
+    orbit_properties_pass: str | None,
+    band: str | int | None,
 ) -> Path:
     """Prepare the output path."""
     # Interprete the orbit...
@@ -39,8 +38,8 @@ def format_progress_message(
     nb_todo: int,
     nb_done_total: int,
     start_time: datetime,
-    nb_done_latestbatch: Optional[int] = None,
-    start_time_latestbatch: Optional[datetime] = None,
+    nb_done_latestbatch: int | None = None,
+    start_time_latestbatch: datetime | None = None,
 ) -> str:
     """Returns a progress message based on the input.
 

@@ -6,7 +6,7 @@ import time
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from osgeo import gdal
 
@@ -26,13 +26,13 @@ class BandInfo:
     def __init__(
         self,
         path: str,
-        relative_path: Optional[str],
+        relative_path: str | None,
         filename: str,
         bandindex: int,
-        bounds: Optional[tuple[float, float, float]] = None,
+        bounds: tuple[float, float, float] | None = None,
         affine=None,
-        crs: Optional[str] = None,
-        epsg: Optional[int] = None,
+        crs: str | None = None,
+        epsg: int | None = None,
     ):
         """Constructor of BandInfo.
 
@@ -64,7 +64,7 @@ class ImageInfo:
         filetype: str,
         image_id: str,
         filename: str,
-        footprint: Optional[dict],
+        footprint: dict | None,
         image_epsg: int,
         image_crs: str,
         image_bounds: tuple[float, float, float],

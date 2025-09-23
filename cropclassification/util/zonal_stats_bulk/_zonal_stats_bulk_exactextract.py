@@ -6,7 +6,6 @@ import sys
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 import exactextract
 import geopandas as gpd
@@ -214,7 +213,7 @@ def zonal_stats_band(
     tmp_dir: Path,
     stats: list[str],
     include_cols: list[str],
-) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
+) -> pd.DataFrame | gpd.GeoDataFrame:
     # Get the image info
     image_info = raster_helper.get_image_info(raster_path)
 
