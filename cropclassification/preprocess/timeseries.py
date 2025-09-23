@@ -5,7 +5,6 @@ import os
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import numpy as np
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 def calc_timeseries_data(
     input_parcel_path: Path,
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: pyproj.CRS | None,
     start_date: datetime,
     end_date: datetime,
     images_to_use: dict[str, conf.ImageConfig],

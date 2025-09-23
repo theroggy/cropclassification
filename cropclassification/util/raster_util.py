@@ -2,7 +2,6 @@
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Union
 
 import rasterio
 from osgeo import gdal
@@ -47,7 +46,7 @@ def get_band_descriptions(path: Path) -> dict[str, int]:
 
 def set_band_descriptions(
     path: Path,
-    band_descriptions: Union[Iterable[str], dict[int, str], str],
+    band_descriptions: Iterable[str] | dict[int, str] | str,
     overwrite: bool = True,
 ):
     """Add band descriptions to a raster file.

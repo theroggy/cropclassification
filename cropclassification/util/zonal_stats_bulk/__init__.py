@@ -1,7 +1,6 @@
 """Calculate zonal statistics for a vector file with many raster files."""
 
 from pathlib import Path
-from typing import Optional, Union
 
 from . import (
     _zonal_stats_bulk_exactextract,
@@ -16,8 +15,8 @@ def zonal_stats(
     id_column: str,
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: Union[list[str], str] = ["count", "median"],
-    cloud_filter_band: Optional[str] = None,
+    stats: list[str] | str = ["count", "median"],
+    cloud_filter_band: str | None = None,
     calc_bands_parallel: bool = True,
     engine: str = "rasterstats",
     nb_parallel: int = -1,
