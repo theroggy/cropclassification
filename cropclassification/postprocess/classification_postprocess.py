@@ -3,7 +3,6 @@
 import datetime
 import logging
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import numpy as np
@@ -23,7 +22,7 @@ def calc_top_classes_and_consolidation(
     output_predictions_path: Path,
     output_predictions_geopath: Path,
     top_classes: int,
-    output_predictions_output_path: Optional[Path] = None,
+    output_predictions_output_path: Path | None = None,
     force: bool = False,
 ):
     """Calculate the top3 prediction and a consolidation prediction.

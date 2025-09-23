@@ -11,7 +11,7 @@ import time
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
@@ -38,7 +38,7 @@ def zonal_stats(
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
     stats: list[str],
-    cloud_filter_band: Optional[str] = None,
+    cloud_filter_band: str | None = None,
     calc_bands_parallel: bool = True,
     nb_parallel: int = -1,
     force: bool = False,
@@ -553,13 +553,13 @@ def _zonal_stats_image_gdf(
     features,
     id_column: str,
     image_path: Path,
-    bands: Union[list[str], str],
+    bands: list[str] | str,
     output_base_path: Path,
     stats: list[str],
     log_dir: Path,
-    log_level: Union[str, int],
+    log_level: str | int,
     future_start_time=None,
-    cloud_filter_band: Optional[str] = None,
+    cloud_filter_band: str | None = None,
 ) -> bool:
     """Calculate stats for an image.
 
@@ -596,7 +596,7 @@ def _zonal_stats_image_gdf(
         )
 
     # If the features_gdf is a string, use it as file path to unpickle geodataframe...
-    if isinstance(features, (str, Path)):
+    if isinstance(features, (str | Path)):
         features_gdf_pkl_path = features
         logger.info(f"Read pickle: {features_gdf_pkl_path}")
         features = pd.read_pickle(features_gdf_pkl_path)

@@ -2,7 +2,6 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import geopandas as gpd
@@ -16,7 +15,7 @@ def reproject_synced(
     path: Path,
     columns: list[str],
     target_epsg: int,
-    dst_dir: Optional[Path] = None,
+    dst_dir: Path | None = None,
 ) -> Path:
     """Reproject the input file.
 

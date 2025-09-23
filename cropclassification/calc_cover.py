@@ -6,7 +6,6 @@ import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo
@@ -277,7 +276,7 @@ def _calc_cover(
     end_date: datetime,
     parcel_columns: list[str],
     output_path: Path,
-    output_geo_path: Optional[Path] = None,
+    output_geo_path: Path | None = None,
     force: bool = False,
 ):
     logger.info(f"start processing {output_path}")

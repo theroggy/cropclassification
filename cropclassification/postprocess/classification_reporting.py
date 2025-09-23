@@ -3,7 +3,6 @@
 import logging
 from pathlib import Path
 from string import Template
-from typing import Optional
 
 import geofileops as gfo
 import numpy as np
@@ -26,9 +25,9 @@ logger = logging.getLogger(__name__)
 def write_full_report(
     parcel_predictions_geopath: Path,
     output_report_txt: Path,
-    parcel_ground_truth_path: Optional[Path] = None,
-    parcel_train_path: Optional[Path] = None,
-    parcel_classification_data_path: Optional[Path] = None,
+    parcel_ground_truth_path: Path | None = None,
+    parcel_train_path: Path | None = None,
+    parcel_classification_data_path: Path | None = None,
     force: bool = False,
 ):
     """Writes a report about the accuracy of the predictions to a file.

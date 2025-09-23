@@ -2,7 +2,7 @@
 
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 import pyogrio
@@ -50,8 +50,8 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 def read_file(
     path: Path,
     table_name: str = "info",
-    columns: Optional[list[str]] = None,
-    sql: Optional[str] = None,
+    columns: list[str] | None = None,
+    sql: str | None = None,
     ignore_geometry: bool = True,
 ) -> pd.DataFrame:
     """Read a file to a pandas dataframe.
@@ -117,7 +117,7 @@ def read_file(
 
 
 def to_file(
-    df: Optional[Union[pd.DataFrame, pd.Series]],
+    df: pd.DataFrame | pd.Series | None,
     path: Path,
     table_name: str = "info",
     index: bool = True,
@@ -197,7 +197,7 @@ def to_excel(
 
 
 def _get_columns_for_formatting(df, index: bool) -> dict:
-    def get_format(col: str, dtype) -> Optional[dict]:
+    def get_format(col: str, dtype) -> dict | None:
         if pd.api.types.is_integer_dtype(dtype):
             return {"num_format": "0"}
         elif pd.api.types.is_numeric_dtype(dtype):

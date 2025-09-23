@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import openeo
@@ -193,7 +193,7 @@ def _create_mosaic_job(
     bands: list[str],
     output_path: Path,
     time_reducer: str,
-    max_cloud_cover: Optional[float],
+    max_cloud_cover: float | None,
     job_options: dict,
     process_options: dict,
 ) -> openeo.BatchJob:
@@ -416,7 +416,7 @@ def get_job_results(
     return output_paths, errors
 
 
-def _postprocess_image(path: Path, band_descriptions: Optional[list[str]]):
+def _postprocess_image(path: Path, band_descriptions: list[str] | None):
     raster_util.add_overviews(path)
 
     # if band_descriptions is None, try to read them from the json metadata file.
@@ -440,7 +440,7 @@ def best_available_pixel(
     spatial_extent,
     temporal_extent: list[str],
     bands: list[str],
-    max_cloud_cover: Optional[float],
+    max_cloud_cover: float | None,
 ):
     """Create image mosaic using the Best Available Pixel (BAP) method.
 

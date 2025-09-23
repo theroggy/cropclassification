@@ -8,7 +8,6 @@ import tempfile
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
 import geofileops as gfo
 import geopandas as gpd
@@ -222,7 +221,7 @@ def zonal_stats_band(
     tmp_dir: Path,
     stats: list[str],
     columns: list[str],
-) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
+) -> pd.DataFrame | gpd.GeoDataFrame:
     # Init
     stats_mask = None
     for stat in stats:

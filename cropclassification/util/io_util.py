@@ -4,7 +4,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 # Get a logger...
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ def create_file_atomic(path: Path):
             os.close(fd)
 
 
-def create_tempdir(base_dirname: str, parent_dir: Optional[Path] = None) -> Path:
+def create_tempdir(base_dirname: str, parent_dir: Path | None = None) -> Path:
     """Creates a new tempdir in the default temp location.
 
     Remark: the temp dir won't be cleaned up automatically!
@@ -68,7 +67,7 @@ def create_tempdir(base_dirname: str, parent_dir: Optional[Path] = None) -> Path
 
 
 def output_exists(
-    path: Path, remove_if_exists: bool, log_prefix: Optional[str] = None
+    path: Path, remove_if_exists: bool, log_prefix: str | None = None
 ) -> bool:
     """Check if the output file exists.
 

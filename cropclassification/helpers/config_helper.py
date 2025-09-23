@@ -6,14 +6,14 @@ import pprint
 import tempfile
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from cropclassification.util.mosaic_util import ImageProfile
 
 config: configparser.ConfigParser
 config_paths_used: list[Path]
 config_overrules: list[str] = []
-config_overrules_path: Optional[Path] = None
+config_overrules_path: Path | None = None
 general: Any
 calc_timeseries_params: Any
 calc_marker_params: Any
@@ -37,8 +37,8 @@ class ImageConfig:
     def __init__(
         self,
         imageprofile_name: str,
-        imageprofile: Optional[ImageProfile] = None,
-        bands: Optional[list[str]] = None,
+        imageprofile: ImageProfile | None = None,
+        bands: list[str] | None = None,
     ):
         """Constructor for ImageConfig.
 
@@ -60,8 +60,8 @@ class ImageConfig:
 
 
 def read_config(
-    config_paths: Union[list[Path], Path, None],
-    default_basedir: Optional[Path] = None,
+    config_paths: list[Path] | Path | None,
+    default_basedir: Path | None = None,
     overrules: list[str] = [],
     preload_defaults: bool = True,
 ):
