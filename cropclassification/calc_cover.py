@@ -120,23 +120,6 @@ def run_cover(
     # Get some general config
     data_ext = conf.general["data_ext"]
     geofile_ext = conf.general["geofile_ext"]
-    id_column = conf.columns["id"]
-    parcel_columns = [
-        id_column,
-        "LAYER_ID",
-        "PRC_ID",
-        "VERSIENR",
-        "ALL_BEST",
-        "GWSCOD_H",
-        "GWSNAM_H",
-        "GWSCOD_N",
-        "GWSNAM_N",
-        "GWSCOD_N2",
-        "GWSNAM_N2",
-        "PRC_NIS",
-        "ALV_NUMMER",
-        "PRC_NMR",
-    ]
 
     # -------------------------------------------------------------
     # The real work
@@ -191,7 +174,6 @@ def run_cover(
     periods = mosaic_util._prepare_periods(
         start_date, end_date, period_name="weekly", period_days=None
     )
-    # cover_periodic_dir = conf.paths.getpath("cover_periodic_dir")
     cover_dir = run_dir / input_parcel_nogeo_path.stem
     cover_dir.mkdir(parents=True, exist_ok=True)
     force = False
@@ -212,7 +194,7 @@ def run_cover(
                 images_to_use=images_to_use,
                 start_date=period["start_date"],
                 end_date=period["end_date"],
-                parcel_columns=parcel_columns,
+                parcel_columns=None,
                 output_path=output_path,
                 output_geo_path=geo_path,
                 force=force,
@@ -237,7 +219,6 @@ def run_cover(
         run_dir / f"{markertype}_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     )
     parcels_selected = None
-    parcels_cols = [*parcel_columns, "provincie"]
     for path in parcels_cover_paths:
         if markertype == "COVER_EEF_VOORJAAR":
             parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
@@ -245,11 +226,7 @@ def run_cover(
         else:
             parcels_selected_path = path
 
-        parcels = gfo.read_file(
-            parcels_selected_path,
-            columns=[*parcels_cols, "pred1_prob"],
-            ignore_geometry=True,
-        )
+        parcels = gfo.read_file(parcels_selected_path, ignore_geometry=True)
 
         if parcels_selected is None:
             parcels_selected = parcels
@@ -258,9 +235,15 @@ def run_cover(
 
     # Determine max probability for every parcel
     assert parcels_selected is not None
-    parcels_selected = parcels_selected.groupby(
-        parcels_cols, dropna=False, as_index=False
-    ).max()
+    input_info = gfo.get_layerinfo(input_parcel_path)
+    cols_to_keep = [*list(input_info.columns), "pred1"]
+    if "provincie" in parcels_selected.columns:
+        cols_to_keep.append("provincie")
+    parcels_selected = (
+        parcels_selected[[*cols_to_keep, "pred1_prob"]]
+        .groupby(cols_to_keep, dropna=False, as_index=False)
+        .max()
+    )
 
     # Add pred_consolidated based on max pred1_proba
     parcels_selected["pred_consolidated"] = parcels_selected["pred1_prob"].apply(
@@ -273,10 +256,7 @@ def run_cover(
     )
 
     # Export to excel
-    parcels_selected_excel = [*parcel_columns, "provincie"]
-    pdh.to_excel(
-        parcels_selected[parcels_selected_excel], parcels_marker_path, index=False
-    )
+    pdh.to_excel(parcels_selected, parcels_marker_path, index=False)
     pdh.to_file(
         parcels_selected, parcels_marker_path.with_suffix(".sqlite"), index=False
     )
@@ -305,7 +285,7 @@ def _calc_cover(
     images_to_use,
     start_date: datetime,
     end_date: datetime,
-    parcel_columns: list[str],
+    parcel_columns: list[str] | None,
     output_path: Path,
     output_geo_path: Optional[Path] = None,
     force: bool = False,
