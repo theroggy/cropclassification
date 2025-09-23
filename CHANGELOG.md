@@ -24,7 +24,7 @@
     - Remove `general.run_id`.
 - Rename some main modules to make naming more logical with non-cropclassification
   markers being added (#162)
-- Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
+- Update minimal python version to >= 3.10 (#203)
 
 ### Improvements
 
@@ -45,6 +45,7 @@
 - Add support to generate vvdvh index (#151)
 - Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
 - Add LATECROP-LATE detection (#177)
+- Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
 - Add support for groundtruth data processing for latecrop marker (#193)
 - Add POC (not for operational use) of a cover/bare soil marker (#168)
 - Avoid high committed memory for zonal stats calculation (#197)
