@@ -47,7 +47,7 @@
 - Add LATECROP-LATE detection (#177)
 - Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
 - Add support for groundtruth data processing for latecrop marker (#193)
-- Add POC (not for operational use) of a cover/bare soil marker (#168)
+- Add first version of a cover/bare soil marker (#168, #200)
 - Avoid high committed memory for zonal stats calculation (#197)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
