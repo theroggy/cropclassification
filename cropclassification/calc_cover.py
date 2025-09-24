@@ -421,7 +421,7 @@ def _calc_cover(
         SELECT sub2.*
                 ,CASE
                     WHEN pred1_prob IS NULL THEN 'NODATA'
-                    WHEN pred1_prob >= 0.5 THEN 'bare-soil'
+                    WHEN pred1_prob > 0.5 THEN 'bare-soil'
                     WHEN pred1_prob > 0.4 THEN 'DOUBT'
                     ELSE 'other'
                 END AS pred1
