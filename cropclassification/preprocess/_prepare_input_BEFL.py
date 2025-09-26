@@ -1372,6 +1372,31 @@ def prepare_input_latecrop(
             column_output_class
         ]
 
+    # Add a column with a correction factor to use when applying doubt thresholds.
+    # Determine the correction factor based on the EOC score at the end of
+    # class_declared.
+    def get_eoc_score(class_declared: str) -> float:
+        """Get the EOC score based on the declared class."""
+        # If there is an EOC score, it is the last value in a "_" separated string
+        class_declared_parts = class_declared.split("_")
+        eoc_score_str = class_declared_parts[-1]
+        try:
+            eoc_score = float(eoc_score_str)
+        except ValueError:
+            eoc_score = 0.0
+
+        return eoc_score
+
+    parceldata_df["eoc_score"] = parceldata_df[conf.columns["class_declared"]].apply(
+        lambda x: get_eoc_score(x)
+    )
+    eoc_score_max = parceldata_df["eoc_score"].max()
+    if eoc_score_max == 0:
+        raise ValueError("Maximum EOC score is 0, cannot calculate correction factor")
+    parceldata_df["proba_correction_factor"] = (
+        parceldata_df["eoc_score"] / eoc_score_max
+    )
+
     """
     # Add IGNORE:FOR_TRAINING column: if 1, ignore for training
     parceldata_df["IGNORE:FOR_TRAINING"] = 0
@@ -1427,6 +1452,7 @@ def prepare_input_latecrop(
                 ndvi_latecrop_count,
                 ndvi_latecrop_median,
                 "IGNORE:FOR_TRAINING",
+                "proba_correction_factor",
             ]
             and column not in conf.preprocess.getlist("extra_export_columns")
             and column not in columns_BEFL_to_keep

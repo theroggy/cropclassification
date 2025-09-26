@@ -282,18 +282,38 @@ def add_doubt_column(
         doubt_pred_ne_input_proba1_st_pct = conf.postprocess.getfloat(
             "doubt_pred_ne_input_proba1_st_pct"
         )
+        proba_correction_eval = conf.postprocess.get("proba_correction_eval")
         if doubt_pred_ne_input_proba1_st_pct > 0:
             if doubt_pred_ne_input_proba1_st_pct > 100:
                 raise Exception(
                     "doubt_pred_ne_input_proba1_st_pct should be float from 0 till 100,"
                     f" not {doubt_pred_ne_input_proba1_st_pct}"
                 )
+
+            # First apply already without correction
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df["pred1"] != pred_df[conf.columns["class_declared"]])
                 & (pred_df["pred1_prob"] < (doubt_pred_ne_input_proba1_st_pct / 100)),
                 new_pred_column,
             ] = "DOUBT:PRED<>INPUT-PROBA1<X"
+
+            # If a correction is specified, apply it now and re-apply the doubt
+            if proba_correction_eval is not None and proba_correction_eval != "":
+                logger.info(
+                    f"Apply probability correction eval: {proba_correction_eval} "
+                    "before applying doubt_pred_ne_input_proba1_st_pct"
+                )
+                pred_df["pred_prob"] = pred_df.eval(proba_correction_eval)
+
+                pred_df.loc[
+                    (pred_df[new_pred_column] == "UNDEFINED")
+                    & (pred_df["pred1"] != pred_df[conf.columns["class_declared"]])
+                    & (
+                        pred_df["pred_prob"] < (doubt_pred_ne_input_proba1_st_pct / 100)
+                    ),
+                    new_pred_column,
+                ] = "DOUBT:PRED<>INPUT-PROBA1_CORRECTED<X"
 
         # Apply doubt for parcels with prediction == unverified input
         doubt_pred_eq_input_proba1_st_pct = conf.postprocess.getfloat(
