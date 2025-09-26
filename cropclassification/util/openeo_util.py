@@ -288,7 +288,17 @@ def _create_mosaic_job(
 
         # If the source data is in int16, set range so it is exported as int16 as well.
         collection_info = conn.describe_collection(collection)
-        for band_info in collection_info["summaries"]["eo:bands"]:
+        summaries = collection_info["summaries"]
+        if "eo:bands" in summaries:
+            band_key = "eo:bands"
+        elif "raster:bands" in summaries:
+            band_key = "raster:bands"
+        else:
+            raise ValueError(
+                f"No recognized band summary found for collection {collection}"
+            )
+
+        for band_info in summaries[band_key]:
             if band_info["name"] == bands[0]:
                 if "type" in band_info and band_info["type"] == "int16":
                     # Set the range of the values so the image will be saved as int16.
