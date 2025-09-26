@@ -45,6 +45,7 @@
 - Add support to generate vvdvh index (#151)
 - Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
 - Add LATECROP-LATE detection (#177)
+- Add option to apply a correction factor to the probablity for latecrop marker (#205)
 - Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
 - Add support for groundtruth data processing for latecrop marker (#193)
 - Add first version of a cover/bare soil marker (#168, #200)
