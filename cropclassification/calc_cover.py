@@ -175,7 +175,7 @@ def run_cover(
     )
     cover_dir = run_dir / input_parcel_nogeo_path.stem
     cover_dir.mkdir(parents=True, exist_ok=True)
-    force = False
+    force = True
     on_error = "warn"
     parcels_cover_paths = []
 
@@ -268,7 +268,7 @@ def _categorize_pred(x):
         return "NODATA"
     try:
         x_num = float(x)
-        if x_num >= 0.5:
+        if x_num > 0.5:
             return "ONBEDEKT"
         elif x_num > 0.4:
             return "DOUBT"
