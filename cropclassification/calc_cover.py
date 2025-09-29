@@ -49,6 +49,7 @@ def run_cover(
     logger.warning("This is a POC for a cover marker, so not for operational use!")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
+    force = True
     markertype = conf.marker["markertype"]
     if not markertype.startswith(("COVER", "ONBEDEKT")):
         raise ValueError(f"Invalid markertype {markertype}, expected COVER_XXX")
@@ -88,7 +89,9 @@ def run_cover(
             OR "ALL_BEST" like '%TBG%'
             OR "ALL_BEST" like '%EBG%'
         """
-        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
         input_parcel_path = input_parcel_filtered_path
 
     elif markertype == "COVER_EEB_VOORJAAR":
@@ -100,7 +103,9 @@ def run_cover(
         where = (
             "ALL_BEST like '%EEB%' AND GWSCOD_V = '83' AND GWSCOD_H IN ('201', '202')"
         )
-        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
         input_parcel_path = input_parcel_filtered_path
 
     elif markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
@@ -110,7 +115,9 @@ def run_cover(
         input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
         where = "ALL_BEST like '%TBG%' OR ALL_BEST like '%BMG%'"
-        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
         input_parcel_path = input_parcel_filtered_path
 
     else:
@@ -144,6 +151,7 @@ def run_cover(
         input_parcel_path=input_parcel_path,
         output_imagedata_parcel_input_path=imagedata_input_parcel_path,
         output_parcel_nogeo_path=input_parcel_nogeo_path,
+        force=force,
     )
 
     # STEP 2: Calculate the timeseries data needed
@@ -165,6 +173,7 @@ def run_cover(
         end_date=end_date,
         images_to_use=images_to_use,
         timeseries_periodic_dir=timeseries_periodic_dir,
+        force=force,
     )
 
     # STEP 3: Determine the cover for the parcels for all periods
@@ -175,7 +184,7 @@ def run_cover(
     )
     cover_dir = run_dir / input_parcel_nogeo_path.stem
     cover_dir.mkdir(parents=True, exist_ok=True)
-    force = True
+
     on_error = "warn"
     parcels_cover_paths = []
 
