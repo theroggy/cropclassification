@@ -247,10 +247,12 @@ def run_cover(
     cols_to_keep = [*list(input_info.columns), "pred1"]
     if "provincie" in parcels_selected.columns:
         cols_to_keep.append("provincie")
+
     parcels_selected = (
         parcels_selected[[*cols_to_keep, "pred1_prob"]]
-        .groupby(cols_to_keep, dropna=False, as_index=False)
-        .max()
+        .sort_values("pred1_prob", ascending=False)
+        .groupby(conf.columns["id"], dropna=False, as_index=False)
+        .first()  # Take the highest pred1_prob per id
     )
 
     # Add pred_consolidated based on max pred1_proba
@@ -304,7 +306,7 @@ def _calc_cover(
         if force:
             gfo.remove(output_path)
         elif output_geo_path is not None and not output_geo_path.exists():
-            # Geo file is asked bu missing: we need to recalculate the output file as
+            # Geo file is asked but missing: we need to recalculate the output file as
             # well because we need temporary files to create the geo file.
             gfo.remove(output_path)
         else:
