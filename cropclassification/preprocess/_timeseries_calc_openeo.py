@@ -27,6 +27,7 @@ def calculate_periodic_timeseries(
     timeseries_periodic_dir: Path,
     nb_parallel: int,
     on_missing_image: str,
+    force: bool = False,
 ):
     """Calculate timeseries data for the input parcels.
 
@@ -49,6 +50,8 @@ def calculate_periodic_timeseries(
             - ignore: ignore that the image, don't try to download it
             - calculate_raise: calculate the image and raise an error if it fails
             - calculate_ignore: calculate the image and ignore the error if it fails
+        force (bool = False): whether to force recalculation of existing data.
+            (will not redownload images)
     """
     info = gfo.get_layerinfo(input_parcel_path)
     if info.crs is not None and not info.crs.equals(roi_crs):
@@ -67,7 +70,7 @@ def calculate_periodic_timeseries(
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
         on_missing_image=on_missing_image,
-        force=False,
+        force=False,  # dont redownload on force
     )
 
     # Now calculate the timeseries
@@ -94,4 +97,5 @@ def calculate_periodic_timeseries(
         stats=["count", "mean", "median", "std", "min", "max"],
         engine="pyqgis",
         nb_parallel=nb_parallel,
+        force=force,
     )

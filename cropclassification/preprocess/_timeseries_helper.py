@@ -84,6 +84,9 @@ def prepare_input(
     if output_parcel_nogeo_path is not None and (
         force is True or not output_parcel_nogeo_path.exists()
     ):
+        if output_parcel_nogeo_path.exists():
+            os.remove(output_parcel_nogeo_path)
+
         logger.info(f"Save non-geo data to {output_parcel_nogeo_path}")
         parceldata_nogeo_df = parceldata_gdf.drop(["geometry"], axis=1)
         pdh.to_file(parceldata_nogeo_df, output_parcel_nogeo_path)
