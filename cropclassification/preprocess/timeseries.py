@@ -27,6 +27,7 @@ def calc_timeseries_data(
     end_date: datetime,
     images_to_use: dict[str, conf.ImageConfig],
     timeseries_periodic_dir: Path,
+    force: bool = False,
 ):
     """Calculate timeseries data for the input parcels.
 
@@ -40,6 +41,7 @@ def calc_timeseries_data(
         images_to_use (List[str]): an array with data you want to be calculated:
             check out the constants starting with DATA_TO_GET... for the options.
         timeseries_periodic_dir (Path): Directory the timeseries will be written to.
+        force (bool = False): whether to force recalculation of existing data.
     """
     # Check some variables...
     if images_to_use is None:
@@ -65,6 +67,7 @@ def calc_timeseries_data(
             timeseries_periodic_dir=timeseries_periodic_dir,
             nb_parallel=conf.general.getint("nb_parallel", -1),
             on_missing_image=conf.images.get("on_missing_image", "calculate_raise"),
+            force=force,
         )
 
 
