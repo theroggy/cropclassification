@@ -1367,10 +1367,10 @@ def prepare_input_latecrop(
                     column_output_class,
                 ] = "IGNORE:NOT_ENOUGH_SAMPLES"
 
-        # Add copy of class as class_declared
-        parceldata_df[conf.columns["class_declared"]] = parceldata_df[
-            column_output_class
-        ]
+    # Add copy of class as class_declared
+    parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+        column_output_class
+    ]
 
     # Add a column with a correction factor to use when applying doubt thresholds.
     # Determine the correction factor based on the EOC score at the end of
