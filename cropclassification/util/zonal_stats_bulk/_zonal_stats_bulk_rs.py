@@ -607,7 +607,6 @@ def _zonal_stats_image_gdf(
 
     # Init some variables
     features_total_bounds = features.total_bounds
-    output_base_path_noext, output_ext = os.path.splitext(output_base_path)
 
     # If the image has a quality band, check that one first so parcels with
     # bad pixels can be removed as the data can't be trusted anyway
