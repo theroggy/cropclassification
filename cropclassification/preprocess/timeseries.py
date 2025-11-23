@@ -1,7 +1,6 @@
 """This module contains general functions that apply to timeseries data..."""
 
 import logging
-import os
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -28,7 +27,7 @@ def calc_timeseries_data(
     images_to_use: dict[str, conf.ImageConfig],
     timeseries_periodic_dir: Path,
     force: bool = False,
-):
+) -> None:
     """Calculate timeseries data for the input parcels.
 
     Args:
@@ -81,7 +80,7 @@ def collect_and_prepare_timeseries_data(
     parceldata_aggregations_to_use: list[str],
     max_fraction_null: float = 0.6,
     force: bool = False,
-):
+) -> None:
     """Collect and preprocess timeseries data needed for the classification.
 
     Args:
@@ -157,7 +156,7 @@ def collect_and_prepare_timeseries_data(
 
         # An empty file signifies that there wasn't any valable data for that
         # period/sensor/...
-        if os.path.getsize(curr_path) == 0:
+        if curr_path.stat().st_size == 0:
             logger.info(f"SKIP: file is empty: {curr_path}")
             continue
 
@@ -259,10 +258,10 @@ def collect_and_prepare_timeseries_data(
                         data_read_df[column] = data_read_df[column].clip(upper=1)
                     if step == "normalize":
                         # normalize all values to be between 0 and 1
-                        min = np.min(data_read_df[column])
-                        max = np.max(data_read_df[column])
-                        data_read_df[column] = (data_read_df[column] - min) / (
-                            max - min
+                        min_val = np.min(data_read_df[column])
+                        max_val = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min_val) / (
+                            max_val - min_val
                         )
                     if step == "abs":
                         data_read_df[column] = np.abs(data_read_df[column])
@@ -283,10 +282,10 @@ def collect_and_prepare_timeseries_data(
                         data_read_df[column] = data_read_df[column].clip(upper=1)
                     if step == "normalize":
                         # normalize all values to be between 0 and 1
-                        min = np.min(data_read_df[column])
-                        max = np.max(data_read_df[column])
-                        data_read_df[column] = (data_read_df[column] - min) / (
-                            max - min
+                        min_val = np.min(data_read_df[column])
+                        max_val = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min_val) / (
+                            max_val - min_val
                         )
                     if step == "abs":
                         data_read_df[column] = np.abs(data_read_df[column])
@@ -296,11 +295,12 @@ def collect_and_prepare_timeseries_data(
 
         # Write warning if the data isn't scaled between 0 and 1
         for column in data_read_df.columns:
-            max = data_read_df[column].max()
-            min = data_read_df[column].min()
-            if max > 1 or min < 0:
+            max_val = data_read_df[column].max()
+            min_val = data_read_df[column].min()
+            if max_val > 1 or min_val < 0:
                 warnings.warn(
-                    f"{column=} in {curr_path} isn't fully normalized ({min=}, {max=})",
+                    f"{column=} in {curr_path} isn't fully normalized "
+                    f"({min_val=}, {max_val=})",
                     stacklevel=1,
                 )
 

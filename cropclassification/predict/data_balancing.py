@@ -20,7 +20,7 @@ def create_train_test_sample(
     test_size: float,
     training_query: str | None = None,
     force: bool = False,
-):
+) -> None:
     """Create a seperate train and test sample from the general input file."""
     # If force False and the output files exist already, stop.
     if (

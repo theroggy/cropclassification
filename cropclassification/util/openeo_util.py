@@ -33,8 +33,8 @@ def get_images(
     delete_existing_openeo_jobs: bool = False,
     raise_errors: bool = True,
     force: bool = False,
-):
-    """Get a list of images from openeo.
+) -> None:
+    """Get a list of images from openeo and save them to disk.
 
     ``images_to_get`` is a list with a dict for each image to get with the following
     properties:
@@ -60,8 +60,6 @@ def get_images(
     Args:
         images_to_get (List[Dict[str, Any]]): list of dicts with information about the
             images to get.
-        output_base_dir (Path): base directory to save the images to. The images will be
-            saved in a subdirectory based on the image profile name.
         delete_existing_openeo_jobs (bool, optional): True to delete existing openeo
             jobs. If False, they are just left running and the results are downloaded if
             they are ready like other jobs. Defaults to False.
@@ -187,7 +185,7 @@ def _create_mosaic_job(
     conn: openeo.Connection,
     collection: str,
     satellite: str,
-    spatial_extent,
+    spatial_extent: dict[str, float],
     start_date: datetime,
     end_date: datetime,
     bands: list[str],
@@ -372,10 +370,10 @@ def get_job_results(
                             batch_job.delete()
                             continue
 
-                    def download_file(url, target):
+                    def download_file(url: str, target: Path) -> None:
                         with requests.get(url, stream=True) as r:
                             r.raw.decode_content = True
-                            with open(target, "wb") as f:
+                            with target.open("wb") as f:
                                 shutil.copyfileobj(r.raw, f, length=1014 * 1024)
 
                     # Download result. If it fails, delete the job anyway
@@ -426,14 +424,14 @@ def get_job_results(
     return output_paths, errors
 
 
-def _postprocess_image(path: Path, band_descriptions: list[str] | None):
+def _postprocess_image(path: Path, band_descriptions: list[str] | None) -> None:
     raster_util.add_overviews(path)
 
     # if band_descriptions is None, try to read them from the json metadata file.
     if band_descriptions is None:
         json_path = Path(f"{path}.json")
         if json_path.exists():
-            with open(json_path) as file:
+            with json_path.open() as file:
                 json_str = file.read()
                 data = json.loads(json_str)
                 band_descriptions = data["bands"]
@@ -447,11 +445,11 @@ def _postprocess_image(path: Path, band_descriptions: list[str] | None):
 def best_available_pixel(
     conn: openeo.Connection,
     collection: str,
-    spatial_extent,
+    spatial_extent: dict[str, float],
     temporal_extent: list[str],
     bands: list[str],
     max_cloud_cover: float | None,
-):
+) -> openeo.DataCube:
     """Create image mosaic using the Best Available Pixel (BAP) method.
 
     Link to the article:
@@ -528,8 +526,10 @@ def best_available_pixel(
     # Both the date and distance-to-cloud score are calculated via a UDF.
     label = Parameter("label")
 
-    def day_of_month_calc(input):
-        day = lambda x: 15 + x.process(
+    def day_of_month_calc(
+        input_cube: openeo.rest.datacube.DataCube,
+    ) -> openeo.rest.datacube.DataCube:
+        day = lambda x: 15 + x.process(  # noqa: E731
             "date_difference",
             date1=x.process(
                 "date_replace_component", date=label, value=15, component="day"
@@ -537,7 +537,7 @@ def best_available_pixel(
             date2=label,
             unit="day",
         )
-        return input.array_apply(day)
+        return input_cube.array_apply(day)
 
     day_of_month = scl.apply_neighborhood(
         day_of_month_calc,
@@ -549,7 +549,9 @@ def best_available_pixel(
         overlap=[],
     )
 
-    def get_date_score(day) -> openeo.rest.datacube.DataCube:
+    def get_date_score(
+        day: openeo.rest.datacube.DataCube,
+    ) -> openeo.rest.datacube.DataCube:
         return (
             day.subtract(15)
             .multiply(0.2)
@@ -591,7 +593,9 @@ def best_available_pixel(
     # Masking and Compositing
     # Next, a mask is created. This serves to mask every pixel,
     # except the one with the highest score, for each month.
-    def max_score_selection(score):
+    def max_score_selection(
+        score: openeo.rest.datacube.DataCube,
+    ) -> openeo.rest.datacube.DataCube:
         max_score = score.max()
         return score.array_apply(lambda x: x != max_score)
 

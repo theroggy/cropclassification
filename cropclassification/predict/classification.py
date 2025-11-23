@@ -1,9 +1,7 @@
 """Module that implements the classification logic."""
 
 import ast
-import glob
 import logging
-import os
 from pathlib import Path
 
 import geofileops as gfo
@@ -173,7 +171,6 @@ def classify(
             predict(
                 input_parcel_path=parcel_path,
                 input_parcel_classification_data_path=parcel_classification_data_path,
-                input_classifier_basepath=classifier_basepath,
                 input_classifier_path=input_model_to_use_path,
                 output_predictions_path=parcel_preds_proba_all_model_path,
                 predict_query=predict_query,
@@ -206,7 +203,7 @@ def add_cross_pred_model_id(
     cross_pred_models: int,
     columnname: str | None = None,
     class_balancing_column: str | None = None,
-):
+) -> None:
     """Add a column to the parcel file that assigns each parcel to a model.
 
     Args:
@@ -259,7 +256,7 @@ def train_test_predict(
     output_predictions_all_path: Path,
     predict_query: str | None = None,
     force: bool = False,
-):
+) -> None:
     """Train a classifier, test it and do full predictions.
 
     Args:
@@ -328,7 +325,6 @@ def train_test_predict(
         predict(
             input_parcel_path=input_parcel_test_path,
             input_parcel_classification_data_path=input_parcel_classification_data_path,
-            input_classifier_basepath=output_classifier_basepath,
             input_classifier_path=output_classifier_path,
             output_predictions_path=output_predictions_test_path,
             force=force,
@@ -339,7 +335,6 @@ def train_test_predict(
     predict(
         input_parcel_path=input_parcel_all_path,
         input_parcel_classification_data_path=input_parcel_classification_data_path,
-        input_classifier_basepath=output_classifier_basepath,
         input_classifier_path=output_classifier_path,
         output_predictions_path=output_predictions_all_path,
         force=force,
@@ -433,13 +428,12 @@ def train(
 def predict(
     input_parcel_path: Path,
     input_parcel_classification_data_path: Path,
-    input_classifier_basepath: Path,
     input_classifier_path: Path,
     output_predictions_path: Path,
     force: bool = False,
     input_parcel_classification_data_df: pd.DataFrame | None = None,
     predict_query: str | None = None,
-):
+) -> None:
     """Predict the classes for the input data."""
     # If force is False, and the output file exist already, return
     if force is False and output_predictions_path.exists():
@@ -478,10 +472,8 @@ def predict(
     ]
 
     # get the expected columns from the classifier
-    datacolumns_path = glob.glob(
-        os.path.join(os.path.dirname(input_classifier_path), "*datacolumns.txt")
-    )[0]
-    with open(datacolumns_path) as f:
+    datacolumns_path = next(input_classifier_path.parent.glob("*datacolumns.txt"))
+    with datacolumns_path.open() as f:
         input_classifier_datacolumns = ast.literal_eval(f.readline())
 
     # If the classification data isn't passed as dataframe, read it from the csv

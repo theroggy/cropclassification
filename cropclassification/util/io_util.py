@@ -9,7 +9,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def create_file_atomic(path: Path):
+def create_file_atomic(path: Path) -> bool:
     """Create a lock file in an atomic way, so it is threadsafe.
 
     Returns True if the file was created by this thread, False if the file existed

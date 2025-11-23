@@ -23,8 +23,8 @@ from cropclassification.util import mosaic_util
 def run_cover(
     config_paths: list[Path],
     default_basedir: Path,
-    config_overrules: list[str] = [],
-):
+    config_overrules: list[str] | None = None,
+) -> None:
     """Run a the cover marker using the setting in the config_paths.
 
     Args:
@@ -43,7 +43,7 @@ def run_cover(
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
     log_dir = conf.paths.getpath("log_dir")
-    global logger
+    global logger  # noqa: PLW0603
     logger = log_helper.main_log_init(log_dir, __name__, log_level)
 
     logger.warning("This is a POC for a cover marker, so not for operational use!")
@@ -274,7 +274,7 @@ def run_cover(
     logging.shutdown()
 
 
-def _categorize_pred(x):
+def _categorize_pred(x: float | str) -> str:
     if pd.isna(x):
         return "NODATA"
     try:
@@ -290,16 +290,16 @@ def _categorize_pred(x):
 
 
 def _calc_cover(
-    input_parcel_path,
-    timeseries_periodic_dir,
-    images_to_use,
+    input_parcel_path: Path,
+    timeseries_periodic_dir: Path,
+    images_to_use: dict[str, conf.ImageConfig],
     start_date: datetime,
     end_date: datetime,
     parcel_columns: list[str] | None,
     output_path: Path,
     output_geo_path: Path | None = None,
     force: bool = False,
-):
+) -> None:
     logger.info(f"start processing {output_path}")
 
     if output_path.exists():
@@ -490,7 +490,9 @@ def _calc_cover(
     shutil.rmtree(tmp_dir)
 
 
-def _select_parcels_BMG_MEG_MEV_EEF(input_geo_path, output_geo_path):
+def _select_parcels_BMG_MEG_MEV_EEF(
+    input_geo_path: Path, output_geo_path: Path
+) -> None:
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
@@ -539,7 +541,7 @@ def _select_parcels_BMG_MEG_MEV_EEF(input_geo_path, output_geo_path):
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def _select_parcels_EEF(input_geo_path, output_geo_path):
+def _select_parcels_EEF(input_geo_path: Path, output_geo_path: Path) -> None:
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
@@ -566,7 +568,7 @@ def _select_parcels_EEF(input_geo_path, output_geo_path):
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def _select_parcels(input_geo_path, output_geo_path):
+def _select_parcels(input_geo_path: Path, output_geo_path: Path) -> None:
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
@@ -593,7 +595,7 @@ def _select_parcels(input_geo_path, output_geo_path):
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def report():
+def report() -> None:
     """Create a report for the cover marker."""
     # Read parcels selected to be controlled for the cover marker
     prc_selectie_path = Path(

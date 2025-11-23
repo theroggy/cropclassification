@@ -7,6 +7,7 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 import logging
 from pathlib import Path
 
+import pandas as pd
 from typing_extensions import deprecated
 
 import cropclassification.helpers.config_helper as conf
@@ -67,8 +68,7 @@ def prepare_input(
     classtype_to_prepare: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
-    output_dir: Path,
-):
+) -> pd.DataFrame:
     """Creates a file for use in the marker_cropclass functionality.
 
     It should be a csv file with the following columns:
@@ -299,32 +299,6 @@ def prepare_input(
             min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=True,
         )
-    elif classtype_to_prepare == "POPULAR-CROP":
-        parceldata_df = prepare_input_most_popular_crop(
-            parceldata_df=parceldata_df,
-            column_BEFL_cropcode=column_BEFL_crop_declared,
-            column_output_class=conf.columns["class_declared"],
-            classes_refe_path=classes_refe_path,
-            min_parcels_in_class=1,
-            is_groundtruth=False,
-        )
-        parceldata_df = prepare_input_most_popular_crop(
-            parceldata_df=parceldata_df,
-            column_BEFL_cropcode=column_BEFL_crop,
-            column_output_class=conf.columns["class"],
-            classes_refe_path=classes_refe_path,
-            min_parcels_in_class=min_parcels_in_class,
-            is_groundtruth=False,
-        )
-    elif classtype_to_prepare == "POPULAR-CROP-GROUNDTRUTH":
-        parceldata_df = prepare_input_most_popular_crop(
-            parceldata_df=parceldata_df,
-            column_BEFL_cropcode=column_BEFL_crop_gt_verified,
-            column_output_class=conf.columns["class_groundtruth"],
-            classes_refe_path=classes_refe_path,
-            min_parcels_in_class=min_parcels_in_class,
-            is_groundtruth=True,
-        )
     elif classtype_to_prepare.startswith("LATECROP"):
         if classtype_to_prepare.startswith("LATECROP-EARLY"):
             scope = "EARLY_MAINCROP"
@@ -445,13 +419,13 @@ def prepare_input(
 
 
 def prepare_input_cropgroup(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the cropgroup marker.
 
     It should be a csv file with the following columns:
@@ -648,11 +622,11 @@ def prepare_input_cropgroup(
 
 
 def prepare_input_croprotation(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the croprotation marker.
 
     It should be a csv file with the following columns:
@@ -785,11 +759,11 @@ def prepare_input_croprotation(
 
 
 def prepare_input_carbonsupply(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the carbonsupply marker.
 
     It should be a csv file with the following columns:
@@ -923,13 +897,13 @@ def prepare_input_carbonsupply(
 
 @deprecated("fabacae is deprecated, add refe before using")
 def prepare_input_fabaceae(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the fabaceae marker.
 
     It should be a csv file with the following columns:
@@ -1131,7 +1105,7 @@ def prepare_input_fabaceae(
 
 
 def prepare_input_latecrop(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_latecrop: str,
     column_BEFL_latecrop2: str | None,
     column_BEFL_maincrop: str,
@@ -1140,7 +1114,7 @@ def prepare_input_latecrop(
     min_parcels_in_class: int,
     is_groundtruth: bool,
     scope: str,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the latecrop marker.
 
     It should be a csv file with the following columns:
@@ -1465,13 +1439,13 @@ def prepare_input_latecrop(
 
 
 def prepare_input_cropgroup_early(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the cropgroup_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_cropgroup(
@@ -1508,11 +1482,11 @@ def prepare_input_cropgroup_early(
 
 
 def prepare_input_croprotation_early(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the croprotation_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_croprotation(
@@ -1544,11 +1518,11 @@ def prepare_input_croprotation_early(
 
 
 def prepare_input_carbonsupply_early(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the carbonsupply_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_carbonsupply(
@@ -1580,13 +1554,13 @@ def prepare_input_carbonsupply_early(
 
 
 def prepare_input_landcover(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the landcover marker.
 
     It should be a csv file with the following columns:
@@ -1731,13 +1705,13 @@ def prepare_input_landcover(
 
 
 def prepare_input_landcover_early(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the landcover_early marker."""
     # First run the standard landcover prepare
     parceldata_df = prepare_input_landcover(
@@ -1775,13 +1749,13 @@ def prepare_input_landcover_early(
 
 
 def prepare_input_ruggenteelt(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the ruggenteelt marker.
 
     It should be a csv file with the following columns:
@@ -1926,13 +1900,13 @@ def prepare_input_ruggenteelt(
 
 
 def prepare_input_ruggenteelt_early(
-    parceldata_df,
+    parceldata_df: pd.DataFrame,
     column_BEFL_cropcode: str,
     column_output_class: str,
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-):
+) -> pd.DataFrame:
     """Prepare input file for use in the ruggenteelt_early marker."""
     # First run the standard ruggenteelt prepare
     parceldata_df = prepare_input_ruggenteelt(
@@ -1966,75 +1940,4 @@ def prepare_input_ruggenteelt_early(
             "new grassland cannot be ignored!"
         )
 
-    return parceldata_df
-
-
-@deprecated("most populair crop is deprecated, add refe before using")
-def prepare_input_most_popular_crop(
-    parceldata_df,
-    column_BEFL_cropcode: str,
-    column_output_class: str,
-    classes_refe_path: Path,
-    min_parcels_in_class: int,
-    is_groundtruth: bool,
-):
-    """Prepare input file for use in the most_popular_crop marker.
-
-    It should be a csv file with the following columns:
-        - object_id: column with a unique identifier
-        - classname: a string column with a readable name of the classes that will be
-          classified to
-
-    This specific implementation converts the typical export format used in BE-Flanders
-    to this format.
-    """
-    # Add columns for the class to use...
-    parceldata_df.insert(0, column_output_class, None)
-
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["60", "700", "3432"]),
-        column_output_class,
-    ] = "Grassland"  # Grassland
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["201", "202"]), column_output_class
-    ] = "Maize"  # Maize
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["901", "904"]), column_output_class
-    ] = "Potatoes"  # Potatoes
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["311", "36"]), column_output_class
-    ] = "WinterWheat"  # Winter wheat of spelt
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["91"]), column_output_class
-    ] = "SugarBeat"  # Sugar beat
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["321"]), column_output_class
-    ] = "WinterBarley"  # Winter barley
-    parceldata_df.loc[
-        parceldata_df[column_BEFL_cropcode].isin(["71"]), column_output_class
-    ] = "FodderBeat"  # Fodder beat
-
-    # Some extra cleanup: classes starting with 'nvt' or empty ones
-    logger.info(
-        "Set classes that are empty to 'IGNORE:UNIMPORTANT_CLASS' so they are ignored "
-        "further on..."
-    )
-    parceldata_df.loc[
-        parceldata_df[column_output_class].isnull(), column_output_class
-    ] = "IGNORE:UNIMPORTANT_CLASS"
-
-    # Drop the columns that aren't useful at all
-    for column in parceldata_df.columns:
-        if (
-            column not in [conf.columns["id"], column_output_class]
-            and column not in conf.preprocess.getlist("extra_export_columns")
-            and not column == column_BEFL_cropcode
-        ):
-            parceldata_df.drop(column, axis=1, inplace=True)
-        elif column == column_BEFL_gesp_pm:
-            parceldata_df[column_BEFL_gesp_pm] = parceldata_df[
-                column_BEFL_gesp_pm
-            ].str.replace(",", ";")
-
-    # Return result
     return parceldata_df

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import pyproj
+from pyproj import CRS
 
 from . import date_util, openeo_util, raster_index_util, raster_util
 
@@ -51,7 +52,7 @@ class ImageProfile:
         max_cloud_cover: float | None = None,
         process_options: dict | None = None,
         job_options: dict | None = None,
-    ):
+    ) -> None:
         """Profile of the image to be calculated.
 
         The `period_name` and `period_days` are used to determine the periods of the
@@ -153,7 +154,7 @@ class ImageProfile:
 
 def calc_periodic_mosaic(
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Any | None,
+    roi_crs: CRS | None,
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: list[str],
@@ -246,7 +247,7 @@ def calc_periodic_mosaic(
             )
 
     # First get all mosaic images from openeo
-    _ = openeo_util.get_images(
+    openeo_util.get_images(
         images_from_openeo,
         delete_existing_openeo_jobs=delete_existing_openeo_jobs,
         raise_errors="raise" in on_missing_image,
@@ -365,12 +366,11 @@ def _prepare_period_params(
         period_days = 7
     elif period_name == "biweekly":
         period_days = 14
-    else:
-        if period_days is None:
-            raise ValueError(
-                "If period_name is not one of the basic names, period_days must be "
-                "specified."
-            )
+    elif period_days is None:
+        raise ValueError(
+            "If period_name is not one of the basic names, period_days must be "
+            "specified."
+        )
 
     return (period_name, period_days)
 
@@ -600,10 +600,10 @@ def _prepare_mosaic_image_path(
     return image_path
 
 
-def _imagemeta_to_file(path: Path, imagemeta: dict[str, Any]):
+def _imagemeta_to_file(path: Path, imagemeta: dict[str, Any]) -> None:
     # Write to file
     path.parent.mkdir(exist_ok=True, parents=True)
-    with open(path, "w") as outfile:
+    with path.open("w") as outfile:
         # Prepare some properties that don't serialize automatically
         imagemeta_prepared = deepcopy(imagemeta)
         imagemeta_prepared["start_date"] = imagemeta["start_date"].strftime("%Y-%m-%d")

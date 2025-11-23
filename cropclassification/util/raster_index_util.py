@@ -22,9 +22,9 @@ def calc_index(
     output_path: Path,
     index: str,
     pixel_type: str,
-    process_options: dict = {},
+    process_options: dict | None = None,
     force: bool = False,
-):
+) -> None:
     """Calculate an index or derived file from a raster file.
 
     Args:
@@ -54,11 +54,11 @@ def calc_index(
         # applied later on.
         if process_option == "lee_enhanced":
             # Despeckle filter for sentinel 1 images
-            filter = process_options[process_option]
-            if filter is None or not isinstance(filter, dict):
+            lee_filter = process_options[process_option]
+            if lee_filter is None or not isinstance(lee_filter, dict):
                 raise ValueError("process_option lee_enhanced should be a dict")
 
-            filtersize = filter.get("filtersize")
+            filtersize = lee_filter.get("filtersize")
             if filtersize is None or not isinstance(filtersize, int):
                 raise ValueError(
                     "process_option lee_enhanced should have a filtersize int parameter"
@@ -259,7 +259,7 @@ def _save_index(
     pixel_type: str,
     scale_factor: float | None,
     add_offset: float | None,
-):
+) -> None:
     if pixel_type == "BYTE":
         # Scale factor specified, so rescale and save as Byte.
         if scale_factor is None or add_offset is None:
@@ -322,7 +322,7 @@ def _calc_sar_rgb(
     log10: bool,
     despeckled: bool,
     pixel_type: str,
-):
+) -> None:
     """Calculates and saves a SAR RGB image.
 
     Args:
@@ -447,7 +447,7 @@ def _calc_sar_rgb(
         raise ValueError(f"unsupported pixel type: {pixel_type}")
 
 
-def remove(path: Path, missing_ok: bool = False):
+def remove(path: Path, missing_ok: bool = False) -> None:
     """Remove the file and any related files.
 
     Args:

@@ -24,7 +24,7 @@ def calc_top_classes_and_consolidation(
     top_classes: int,
     output_predictions_output_path: Path | None = None,
     force: bool = False,
-):
+) -> None:
     """Calculate the top3 prediction and a consolidation prediction.
 
     Remark: in this logic the declared crop/class (class_declared) is used, as we want
@@ -150,7 +150,7 @@ def calc_top_classes_and_consolidation(
             )
 
         if table_name is not None and table_columns is not None:
-            with open(str(output_predictions_output_path) + ".ctl", "w") as ctlfile:
+            with (Path(f"{output_predictions_output_path}.ctl")).open("w") as ctlfile:
                 # SKIP=1 to skip the columns names line, the other ones to evade
                 # more commits than needed
                 ctlfile.write(
@@ -229,7 +229,7 @@ def add_doubt_column(
     apply_doubt_pct_proba: bool,
     apply_doubt_min_nb_pixels: bool,
     apply_doubt_marker_specific: bool,
-):
+) -> None:
     """Add a doubt column to the prediction dataframe.
 
     Args:

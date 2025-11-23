@@ -8,7 +8,7 @@ from cropclassification.helpers import log_helper
 from cropclassification.util import mosaic_util
 
 
-def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path):
+def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path) -> None:
     """Runs a periodic mosaic using the setting in the config_paths.
 
     Args:

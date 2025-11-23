@@ -15,14 +15,14 @@ def zonal_stats(
     id_column: str,
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
-    stats: list[str] | str = ["count", "median"],
+    stats: list[str] | str | None = None,
     cloud_filter_band: str | None = None,
     calc_bands_parallel: bool = True,
     engine: str = "rasterstats",
     nb_parallel: int = -1,
     force: bool = False,
-):
-    """Calculate zonal statistics.
+) -> None:
+    """Calculate zonal statistics and save the results in the output directory.
 
     Args:
         vector_path (Path): input file with vector data.
@@ -31,8 +31,9 @@ def zonal_stats(
         rasters_bands (List[Tuple[Path, List[str]]]): List of tuples with the path to
             the raster files and the bands to calculate the zonal statistics on.
         output_dir (Path): directory to write the results to.
-        stats (List[str]): statistics to calculate. Available statistics and
-            special options are dependent on the `engine` specified:
+        stats (List[str]): statistics to calculate. Default to ["count", "median"].
+            Available statistics and special options are dependent on the `engine`
+            specified:
 
                 - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
                 - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
@@ -50,7 +51,9 @@ def zonal_stats(
         force (bool, optional): False to skip calculating existing output files. True to
             recalculate and overwrite existing output files. Defaults to False.
     """
-    if isinstance(stats, str):
+    if stats is None:
+        stats = ["count", "median"]
+    elif isinstance(stats, str):
         stats = [stats]
 
     if engine == "pyqgis":

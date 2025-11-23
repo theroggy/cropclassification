@@ -28,7 +28,7 @@ def calculate_periodic_timeseries(
     nb_parallel: int,
     on_missing_image: str,
     force: bool = False,
-):
+) -> None:
     """Calculate timeseries data for the input parcels.
 
     Args:

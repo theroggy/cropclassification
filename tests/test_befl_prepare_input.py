@@ -25,7 +25,7 @@ from tests.test_helper import SampleData
     ],
 )
 @pytest.mark.parametrize("groundtruth", [False])
-def test_befl_prepare_input(tmp_path, configfile, classtype_to_prepare, groundtruth):
+def test_befl_prepare_input(configfile, classtype_to_prepare, groundtruth):
     """Basic test on the preparation of BEFL input data for a classtype/markertype."""
     if groundtruth:
         classtype_to_prepare = f"{classtype_to_prepare}-GROUNDTRUTH"
@@ -37,13 +37,11 @@ def test_befl_prepare_input(tmp_path, configfile, classtype_to_prepare, groundtr
         default_basedir=SampleData.markers_dir,
     )
 
-    output_dir = tmp_path
     df_parceldata = befl.prepare_input(
         input_parcel_path=SampleData.input_parcel_path,
         classtype_to_prepare=classtype_to_prepare,
         classes_refe_path=SampleData.classes_refe_path,
         min_parcels_in_class=1,
-        output_dir=output_dir,
     )
 
     assert df_parceldata is not None

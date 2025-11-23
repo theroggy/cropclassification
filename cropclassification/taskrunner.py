@@ -11,16 +11,16 @@ import geofileops as gfo  # noqa: F401
 from cropclassification import calc_cover, calc_cropclass, calc_periodic_mosaic
 
 
-def _get_version():
+def _get_version() -> str:
     version_path = Path(__file__).resolve().parent / "version.txt"
-    with open(version_path) as file:
+    with version_path.open() as file:
         return file.readline()
 
 
 __version__ = _get_version()
 
 
-def main():
+def main() -> None:
     """Parse the arguments and run the tasks."""
     # Interprete arguments
     parser = argparse.ArgumentParser(add_help=False)
@@ -58,7 +58,7 @@ def main():
             sys.exit(1)
 
 
-def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
+def run_tasks(tasksdir: Path, config_overrules: list[str] | None = None) -> None:
     """Run the tasks in the tasks directory.
 
     Args:
@@ -67,6 +67,9 @@ def run_tasks(tasksdir: Path, config_overrules: list[str] = []):
             configuration. They should be specified as a list of
             "<section>.<parameter>=<value>" strings. Defaults to [].
     """
+    if config_overrules is None:
+        config_overrules = []
+
     # Get the tasks and treat them
     task_paths = sorted(tasksdir.glob("task_*.ini"))
     for task_path in task_paths:
