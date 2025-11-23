@@ -3,7 +3,6 @@
 import datetime
 import logging
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import numpy as np
@@ -23,9 +22,9 @@ def calc_top_classes_and_consolidation(
     output_predictions_path: Path,
     output_predictions_geopath: Path,
     top_classes: int,
-    output_predictions_output_path: Optional[Path] = None,
+    output_predictions_output_path: Path | None = None,
     force: bool = False,
-):
+) -> None:
     """Calculate the top3 prediction and a consolidation prediction.
 
     Remark: in this logic the declared crop/class (class_declared) is used, as we want
@@ -151,7 +150,7 @@ def calc_top_classes_and_consolidation(
             )
 
         if table_name is not None and table_columns is not None:
-            with open(str(output_predictions_output_path) + ".ctl", "w") as ctlfile:
+            with (Path(f"{output_predictions_output_path}.ctl")).open("w") as ctlfile:
                 # SKIP=1 to skip the columns names line, the other ones to evade
                 # more commits than needed
                 ctlfile.write(
@@ -230,7 +229,7 @@ def add_doubt_column(
     apply_doubt_pct_proba: bool,
     apply_doubt_min_nb_pixels: bool,
     apply_doubt_marker_specific: bool,
-):
+) -> None:
     """Add a doubt column to the prediction dataframe.
 
     Args:
@@ -283,18 +282,38 @@ def add_doubt_column(
         doubt_pred_ne_input_proba1_st_pct = conf.postprocess.getfloat(
             "doubt_pred_ne_input_proba1_st_pct"
         )
+        proba_correction_eval = conf.postprocess.get("proba_correction_eval")
         if doubt_pred_ne_input_proba1_st_pct > 0:
             if doubt_pred_ne_input_proba1_st_pct > 100:
                 raise Exception(
                     "doubt_pred_ne_input_proba1_st_pct should be float from 0 till 100,"
                     f" not {doubt_pred_ne_input_proba1_st_pct}"
                 )
+
+            # First apply already without correction
             pred_df.loc[
                 (pred_df[new_pred_column] == "UNDEFINED")
                 & (pred_df["pred1"] != pred_df[conf.columns["class_declared"]])
                 & (pred_df["pred1_prob"] < (doubt_pred_ne_input_proba1_st_pct / 100)),
                 new_pred_column,
             ] = "DOUBT:PRED<>INPUT-PROBA1<X"
+
+            # If a correction is specified, apply it now and re-apply the doubt
+            if proba_correction_eval is not None and proba_correction_eval != "":
+                logger.info(
+                    f"Apply probability correction eval: {proba_correction_eval} "
+                    "before applying doubt_pred_ne_input_proba1_st_pct"
+                )
+                pred_df["pred_prob"] = pred_df.eval(proba_correction_eval)
+
+                pred_df.loc[
+                    (pred_df[new_pred_column] == "UNDEFINED")
+                    & (pred_df["pred1"] != pred_df[conf.columns["class_declared"]])
+                    & (
+                        pred_df["pred_prob"] < (doubt_pred_ne_input_proba1_st_pct / 100)
+                    ),
+                    new_pred_column,
+                ] = "DOUBT:PRED<>INPUT-PROBA1_CORRECTED<X"
 
         # Apply doubt for parcels with prediction == unverified input
         doubt_pred_eq_input_proba1_st_pct = conf.postprocess.getfloat(

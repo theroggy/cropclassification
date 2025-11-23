@@ -1,7 +1,6 @@
 """Module with helper functions to preprocess the data to use for the classification."""
 
 import logging
-import os
 import shutil
 from pathlib import Path
 
@@ -26,7 +25,7 @@ def prepare(
     min_parcels_in_class: int,
     output_parcel_path: Path,
     force: bool = False,
-):
+) -> None:
     """Prepare an input file so it is ready to use it for a crop classification."""
     # If force == False Check and the output file exists already, stop.
     if not force and output_parcel_path.exists():
@@ -50,12 +49,11 @@ def prepare(
             classtype_to_prepare=classtype_to_prepare,
             classes_refe_path=classes_refe_path,
             min_parcels_in_class=min_parcels_in_class,
-            output_dir=output_parcel_path.parent,
         )
     else:
         message = f"Unknown value for input_parcel_filetype: {input_parcel_filetype}"
         logger.critical(message)
-        raise Exception(message)
+        raise RuntimeError(message)
 
     # Load pixcount data and join it
     parcel_pixcount_path = (
@@ -101,7 +99,7 @@ def prepare(
     df_parceldata.fillna({conf.columns["pixcount_s1s2"]: 0}, inplace=True)
 
     # Export result to file
-    output_ext = os.path.splitext(output_parcel_path)[1]
+    output_ext = output_parcel_path.suffix.lower()
     for column in df_parceldata.columns:
         # if the output asked is a csv... we don't need the geometry...
         if column == conf.columns["geom"] and output_ext == ".csv":
@@ -112,4 +110,4 @@ def prepare(
     if output_ext.lower() != ".shp":
         pdh.to_file(df_parceldata, output_parcel_path)
     else:
-        df_parceldata.to_file(output_parcel_path, index=False)
+        df_parceldata.to_file(output_parcel_path, index=False)  # type: ignore[operator]

@@ -6,6 +6,7 @@ References:
 """
 
 import warnings
+from pathlib import Path
 
 import numexpr as ne
 import numpy as np
@@ -16,7 +17,7 @@ import scipy.signal
 from . import raster_util
 
 
-def _moving_average(image, size):
+def _moving_average(image: np.ndarray, size: int) -> np.ndarray:
     Im = np.empty(image.shape, dtype=np.float32)
     # scipy.ndimage.filters.uniform_filter(image, filtsize, output=Im)
     # scipy.ndimage.generic_filter(image, function=np.nanmean, size=size, output=Im)
@@ -24,7 +25,7 @@ def _moving_average(image, size):
     return Im
 
 
-def _moving_stddev(image, size):
+def _moving_stddev(image: np.ndarray, size: int) -> np.ndarray:
     Im = np.empty(image.shape, dtype=np.float32)
     # scipy.ndimage.filters.uniform_filter(image, filtersize, output=Im)
     # scipy.ndimage.generic_filter(image, function=np.nanmean, size=size, output=Im)
@@ -36,7 +37,7 @@ def _moving_stddev(image, size):
     return ne.evaluate("sqrt(Im)")
 
 
-def _filter_nanmean(image, size):
+def _filter_nanmean(image: np.ndarray, size: int) -> np.ndarray:
     kernel = np.ones((size, size))
     kernel[1, 1] = 0
 
@@ -52,8 +53,11 @@ def _filter_nanmean(image, size):
 
 
 def lee_enhanced(
-    image, filtersize: int = 5, nlooks: float = 10.0, dfactor: float = 10.0
-):
+    image: np.ndarray,
+    filtersize: int = 5,
+    nlooks: float = 10.0,
+    dfactor: float = 10.0,  # noqa: ARG001
+) -> np.ndarray:
     """Apply the Enhanced Lee Filter to an image.
 
     Args:
@@ -91,13 +95,13 @@ def lee_enhanced(
 
 
 def lee_enhanced_file(
-    input_path,
-    output_path,
+    input_path: Path,
+    output_path: Path,
     filtersize: int = 5,
     nlooks: float = 10.0,
     dfactor: float = 10.0,
     force: bool = False,
-):
+) -> None:
     """Apply the Enhanced Lee Filter to an image.
 
     Args:
@@ -118,13 +122,13 @@ def lee_enhanced_file(
         else:
             return
 
-    with rio.open(input_path) as input:
-        profile = input.profile
-        band1 = input.read(1)
+    with rio.open(input_path) as input_image:
+        profile = input_image.profile
+        band1 = input_image.read(1)
         band1_lee = lee_enhanced(
             band1, filtersize=filtersize, nlooks=nlooks, dfactor=dfactor
         )
-        band2 = input.read(2)
+        band2 = input_image.read(2)
         band2_lee = lee_enhanced(
             band2, filtersize=filtersize, nlooks=nlooks, dfactor=dfactor
         )
