@@ -162,7 +162,7 @@ def calc_periodic_mosaic(
     output_base_dir: Path,
     delete_existing_openeo_jobs: bool = False,
     on_missing_image: str = "calculate_raise",
-    images_available_delay: Optional[int] = None,
+    images_available_delay: int | None = None,
     force: bool = False,
 ) -> list[dict[str, Any]]:
     """Generate a periodic mosaic.
@@ -203,8 +203,8 @@ def calc_periodic_mosaic(
               - ignore: ignore that the image, don't try to download it
               - calculate_raise: calculate the image and raise an error if it fails
               - calculate_ignore: calculate the image and ignore the error if it fails
-        images_available_delay (int): number of days to wait before the images are
-            available.
+        images_available_delay (int | None, optional): number of days to wait before the
+            images are available. Defaults to None.
 
         force (bool, optional): True to force recreation of existing output files.
             Defaults to False.
@@ -275,7 +275,9 @@ def calc_periodic_mosaic(
     return periodic_mosaic_params
 
 
-def _is_image_outdated(image, images_available_delay: Optional[int] = None) -> bool:
+def _is_image_outdated(
+    image: dict[str, Any], images_available_delay: int | None = None
+) -> bool:
     creation_date = datetime.fromtimestamp(image["path"].stat().st_ctime)
     # Check if the creation date is different from the current date
     if creation_date != datetime.now():
