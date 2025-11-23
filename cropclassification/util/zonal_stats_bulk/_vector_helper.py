@@ -2,10 +2,10 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import geopandas as gpd
+import shapely
 
 from cropclassification.util import io_util
 
@@ -16,7 +16,7 @@ def reproject_synced(
     path: Path,
     columns: list[str],
     target_epsg: int,
-    dst_dir: Optional[Path] = None,
+    dst_dir: Path | None = None,
 ) -> Path:
     """Reproject the input file.
 
@@ -119,8 +119,8 @@ def _load_features_file(
     features_path: Path,
     columns_to_retain: list[str],
     target_epsg: int,
-    bbox=None,
-    polygon=None,
+    bbox: tuple[float, float, float, float] | None = None,
+    polygon: shapely.Polygon | None = None,
 ) -> gpd.GeoDataFrame:
     """Load the features and reproject to the target crs.
 

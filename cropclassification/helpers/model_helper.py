@@ -1,10 +1,7 @@
 """Module with helper functions regarding (keras) models."""
 
-import glob
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -152,9 +149,7 @@ def parse_model_filename(path: Path) -> dict:
     }
 
 
-def get_models(
-    model_dir: Path, model_base_filename: Optional[str] = None
-) -> pd.DataFrame:
+def get_models(model_dir: Path, model_base_filename: str | None = None) -> pd.DataFrame:
     """Return the list of models in the model_dir passed.
 
     It is returned as a dataframe with the columns as returned in parse_model_filename.
@@ -166,11 +161,9 @@ def get_models(
     """
     # glob search string
     if model_base_filename is not None:
-        model_weight_paths = glob.glob(
-            f"{model_dir!s}{os.sep}{model_base_filename}_*.hdf5"
-        )
+        model_weight_paths = list(model_dir.glob(f"{model_base_filename}_*.hdf5"))
     else:
-        model_weight_paths = glob.glob(f"{model_dir!s}{os.sep}*.hdf5")
+        model_weight_paths = list(model_dir.glob("*.hdf5"))
 
     # Loop through all models and extract necessary info...
     model_info_list = []
@@ -181,8 +174,8 @@ def get_models(
 
 
 def get_best_model(
-    model_dir: Path, acc_metric_mode: str, model_base_filename: Optional[str] = None
-) -> Optional[dict]:
+    model_dir: Path, acc_metric_mode: str, model_base_filename: str | None = None
+) -> dict | None:
     """Get model with the highest accuracy for the highest traindata version in the dir.
 
     Args:
@@ -227,15 +220,15 @@ def save_and_clean_models(
     model_save_dir: Path,
     model_save_base_filename: str,
     acc_metric_mode: str,
-    new_model=None,
-    new_model_acc_train: Optional[float] = None,
-    new_model_acc_val: Optional[float] = None,
-    new_model_epoch: Optional[int] = None,
+    new_model=None,  # noqa: ANN001
+    new_model_acc_train: float | None = None,
+    new_model_acc_val: float | None = None,
+    new_model_epoch: int | None = None,
     save_weights_only: bool = False,
     verbose: bool = True,
     debug: bool = False,
     only_report: bool = False,
-):
+) -> None:
     """Save the new model if it is good enough.
 
     Existing models are removed if they are worse than the new or other existing models.
@@ -340,7 +333,7 @@ def save_and_clean_models(
                 logger.debug(f"DELETE {model_info['filename']}")
             elif model_info["path"].exists():
                 logger.debug(f"DELETE {model_info['filename']}")
-                os.remove(model_info["path"])
+                model_info["path"].unlink()
 
             if debug:
                 print(f"Better one(s) found for{model_info['filename']}:")

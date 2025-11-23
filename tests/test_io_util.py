@@ -23,6 +23,6 @@ def test_output_exists(tmp_path):
     assert io_util.output_exists(path, remove_if_exists=False)
     assert not io_util.output_exists(path, remove_if_exists=True)
 
-    dir = tmp_path / "subdir" / "test.txt"
+    tmp_dir = tmp_path / "subdir" / "test.txt"
     with pytest.raises(ValueError, match="output directory does not exist"):
-        io_util.output_exists(dir, remove_if_exists=False)
+        io_util.output_exists(tmp_dir, remove_if_exists=False)

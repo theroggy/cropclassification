@@ -6,14 +6,14 @@ import pprint
 import tempfile
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from cropclassification.util.mosaic_util import ImageProfile
 
 config: configparser.ConfigParser
 config_paths_used: list[Path]
 config_overrules: list[str] = []
-config_overrules_path: Optional[Path] = None
+config_overrules_path: Path | None = None
 general: Any
 calc_timeseries_params: Any
 calc_marker_params: Any
@@ -37,9 +37,9 @@ class ImageConfig:
     def __init__(
         self,
         imageprofile_name: str,
-        imageprofile: Optional[ImageProfile] = None,
-        bands: Optional[list[str]] = None,
-    ):
+        imageprofile: ImageProfile | None = None,
+        bands: list[str] | None = None,
+    ) -> None:
         """Constructor for ImageConfig.
 
         Args:
@@ -60,11 +60,11 @@ class ImageConfig:
 
 
 def read_config(
-    config_paths: Union[list[Path], Path, None],
-    default_basedir: Optional[Path] = None,
-    overrules: list[str] = [],
+    config_paths: list[Path] | Path | None,
+    default_basedir: Path | None = None,
+    overrules: list[str] | None = None,
     preload_defaults: bool = True,
-):
+) -> None:
     """Read cropclassification configuration file(s).
 
     Args:
@@ -102,10 +102,13 @@ def read_config(
         if not config_path.exists():
             raise ValueError(f"Config file doesn't exist: {config_path}")
 
+    if overrules is None:
+        overrules = []
+
     # If there are overrules, write them to a temporary configuration file.
-    global config_overrules
+    global config_overrules  # noqa: PLW0603
     config_overrules = overrules
-    global config_overrules_path
+    global config_overrules_path  # noqa: PLW0603
     config_overrules_path = None
     if len(config_overrules) > 0:
         tmp_dir = Path(tempfile.gettempdir())
@@ -131,12 +134,12 @@ def read_config(
             overrules_parser[section][parameter] = value
 
         # Write to temp file and add file to config_paths
-        with open(config_overrules_path, "w") as overrules_file:
+        with config_overrules_path.open("w") as overrules_file:
             overrules_parser.write(overrules_file)
         config_paths.append(config_overrules_path)
 
     # Read and parse the config files
-    global config
+    global config  # noqa: PLW0603
     config = configparser.ConfigParser(
         interpolation=configparser.ExtendedInterpolation(),
         converters={
@@ -195,40 +198,40 @@ def read_config(
         tmp_dir=tmp_dir_str
     )
 
-    global config_paths_used
+    global config_paths_used  # noqa: PLW0603
     config_paths_used = config_paths
 
     # Now set global variables to each section as shortcuts
-    global general
+    global general  # noqa: PLW0603
     general = config["general"]
-    global calc_timeseries_params
+    global calc_timeseries_params  # noqa: PLW0603
     calc_timeseries_params = config["calc_timeseries_params"]
-    global calc_marker_params
+    global calc_marker_params  # noqa: PLW0603
     calc_marker_params = config["calc_marker_params"]
-    global calc_periodic_mosaic_params
+    global calc_periodic_mosaic_params  # noqa: PLW0603
     if "calc_periodic_mosaic_params" in config:
         calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
     else:
         calc_periodic_mosaic_params = None
-    global roi
+    global roi  # noqa: PLW0603
     roi = config["roi"]
-    global period
+    global period  # noqa: PLW0603
     period = config["period"]
-    global images
+    global images  # noqa: PLW0603
     images = config["images"]
-    global marker
+    global marker  # noqa: PLW0603
     marker = config["marker"]
-    global timeseries
+    global timeseries  # noqa: PLW0603
     timeseries = config["timeseries"]
-    global preprocess
+    global preprocess  # noqa: PLW0603
     preprocess = config["preprocess"]
-    global classifier
+    global classifier  # noqa: PLW0603
     classifier = config["classifier"]
-    global postprocess
+    global postprocess  # noqa: PLW0603
     postprocess = config["postprocess"]
-    global columns
+    global columns  # noqa: PLW0603
     columns = config["columns"]
-    global paths
+    global paths  # noqa: PLW0603
     paths = config["paths"]
 
     # Check some parameters that should be overriden to have a valid config
@@ -239,7 +242,7 @@ def read_config(
         raise ValueError("paths.images_periodic_dir must be overridden")
 
     # Load image profiles
-    global image_profiles
+    global image_profiles  # noqa: PLW0603
     image_profiles_config_filepath = paths.getpath("image_profiles_config_filepath")
     if image_profiles_config_filepath is not None:
         image_profiles = _get_image_profiles(
@@ -250,12 +253,12 @@ def read_config(
         image_profiles = {}
 
 
-def parse_image_config(input) -> dict[str, ImageConfig]:
+def parse_image_config(image_config: str) -> dict[str, ImageConfig]:
     """Parses the json input to a dictionary of ImageConfig objects."""
     result = None
     imageconfig_parsed = None
     try:
-        imageconfig_parsed = json.loads(input)
+        imageconfig_parsed = json.loads(image_config)
     except Exception:
         pass
 
@@ -281,7 +284,7 @@ def parse_image_config(input) -> dict[str, ImageConfig]:
                 )
     else:
         # It was no json object, so it must be a list
-        result = {i.strip(): ImageConfig(i.strip()) for i in input.split(",")}
+        result = {i.strip(): ImageConfig(i.strip()) for i in image_config.split(",")}
 
     return result
 
@@ -330,7 +333,7 @@ def _get_image_profiles(image_profiles_path: Path) -> dict[str, ImageProfile]:
     return profiles
 
 
-def _validate_image_profiles(profiles: dict[str, ImageProfile]):
+def _validate_image_profiles(profiles: dict[str, ImageProfile]) -> None:
     # Check that all base_image_profile s are actually existing image profiles.
     for profile in list(profiles):
         base_image_profile = profiles[profile].base_imageprofile
@@ -340,7 +343,7 @@ def _validate_image_profiles(profiles: dict[str, ImageProfile]):
             )
 
 
-def pformat_config():
+def pformat_config() -> str:
     """Formats the config as a pretty string."""
     message = (
         f"Config files used: {pprint.pformat(config_paths_used)} \n"
@@ -351,13 +354,13 @@ def pformat_config():
     return message
 
 
-def as_dict():
+def as_dict() -> dict[str, Any]:
     """Converts the config objects into a dictionary.
 
     The resulting dictionary has sections as keys which point to a dict of the
     sections options as key => value pairs.
     """
-    the_dict = {}
+    the_dict: dict[str, dict[str, Any]] = {}
     for section in config.sections():
         the_dict[section] = {}
         for key, val in config.items(section):

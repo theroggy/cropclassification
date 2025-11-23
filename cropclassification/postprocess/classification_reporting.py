@@ -1,9 +1,10 @@
 """Module with some helper functions to report on the classification results."""
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from string import Template
-from typing import Optional
+from typing import Any
 
 import geofileops as gfo
 import numpy as np
@@ -26,11 +27,11 @@ logger = logging.getLogger(__name__)
 def write_full_report(
     parcel_predictions_geopath: Path,
     output_report_txt: Path,
-    parcel_ground_truth_path: Optional[Path] = None,
-    parcel_train_path: Optional[Path] = None,
-    parcel_classification_data_path: Optional[Path] = None,
+    parcel_ground_truth_path: Path | None = None,
+    parcel_train_path: Path | None = None,
+    parcel_classification_data_path: Path | None = None,
     force: bool = False,
-):
+) -> None:
     """Writes a report about the accuracy of the predictions to a file.
 
     Args:
@@ -135,7 +136,7 @@ def write_full_report(
     }
 
     # Build and write report...
-    with open(output_report_txt, "w") as outputfile:
+    with output_report_txt.open("w") as outputfile:
         outputfile.write("**************************************************\n")
         outputfile.write("**************** PARAMETERS USED *****************\n")
         outputfile.write("**************************************************\n\n")
@@ -1147,17 +1148,19 @@ def write_full_report(
                         sdf_per_column.to_html()
                     )
 
-    with open(output_report_html, "w") as outputfile:
+    with output_report_html.open("w") as outputfile:
         script_dir = Path(__file__).resolve().parent
         html_template_path = script_dir / "html_rapport_template.html"
-        html_template_file = open(html_template_path).read()
+        html_template_file = html_template_path.read_text()
         src = Template(html_template_file)
         # replace strings and write to file
         output = src.substitute(html_data)
         outputfile.write(output)
 
 
-def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
+def _get_confusion_matrix_ext(
+    df_predict: pd.DataFrame, prediction_column_to_use: str
+) -> pd.DataFrame:
     """Returns a dataset with an extended confusion matrix."""
     classes = sorted(
         np.unique(
@@ -1228,8 +1231,11 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
 
 
 def _add_prediction_conclusion(
-    in_df, new_columnname, prediction_column_to_use, detailed: bool
-):
+    in_df: pd.DataFrame,
+    new_columnname: str,
+    prediction_column_to_use: str,
+    detailed: bool,
+) -> None:
     """Calculate the "conclusions" for the predictions.
 
     REMARK: calculating it like this, using native pandas operations, is 300 times
@@ -1317,7 +1323,7 @@ def _add_prediction_conclusion(
     )
 
 
-def _add_gt_conclusions(in_df, prediction_column_to_use):
+def _add_gt_conclusions(in_df: pd.DataFrame, prediction_column_to_use: str) -> None:
     """Add some columns with groundtruth conclusions."""
     # Add the new column with a fixed value first
     gt_vs_declared_column = f"gt_vs_input_{prediction_column_to_use}"
@@ -1489,14 +1495,14 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
 
 def _get_errors_per_column(
     groupbycolumn: str,
-    df_predquality,
+    df_predquality: pd.DataFrame,
     pred_quality_column: str,
     pred_quality_full_doubt_column: str,
     error_codes_numerator: list[str],
     error_codes_denominator: list[str],
     include_cumulative_columns: bool,
     ascending: bool = True,
-):
+) -> pd.DataFrame:
     """Calculates a detailed overview about the number of errors per group specified."""
     # First filter on the parcels we need to calculate the pct alpha errors
     df_predquality_filtered = df_predquality[
@@ -1565,7 +1571,7 @@ def _get_errors_per_column(
     values = (
         df_predquality_full_doubt_filtered.groupby(groupbycolumn)
         .size()
-        .to_frame("count_all_full_doubt")
+        .to_frame("count_all_full_doubt")  # type: ignore[assignment]
     )
     df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
@@ -1574,13 +1580,13 @@ def _get_errors_per_column(
         values = (
             df_errors_per_column["count_error"]
             .cumsum(axis=0)
-            .to_frame("count_error_cumul")
+            .to_frame("count_error_cumul")  # type: ignore[assignment]
         )
         df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
     values = (
         100 * df_errors_per_column["count_error"] / df_errors_per_column["count_all"]
-    ).to_frame("pct_error_all")
+    ).to_frame("pct_error_all")  # type: ignore[assignment]
     df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
     if include_cumulative_columns:
@@ -1603,7 +1609,7 @@ def _get_errors_per_column(
 
 def _write_OA_per_pixcount(
     df_parcel_predictions: pd.DataFrame, output_report_txt: Path, force: bool = False
-):
+) -> None:
     """Write a report of the overall accuracy that parcels per pixcount get."""
     # If force == False Check and the output file exists already, stop.
     if not force and output_report_txt.exists():
@@ -1612,7 +1618,7 @@ def _write_OA_per_pixcount(
 
     # Write output...
     nb_predictions_total = len(df_parcel_predictions.index)
-    with open(output_report_txt, "w") as outputfile:
+    with output_report_txt.open("w") as outputfile:
         for i in range(40):
             df_result_cur_pixcount = df_parcel_predictions[
                 df_parcel_predictions[conf.columns["pixcount_s1s2"]] == i
@@ -1637,7 +1643,7 @@ def _write_OA_per_pixcount(
             outputfile.write(f"{message}\n")
 
 
-def _calc_accuracies(df_predict):
+def _calc_accuracies(df_predict: pd.DataFrame) -> pd.DataFrame:
     df_result = pd.DataFrame(
         _calc_accuracy(
             df_predict,
@@ -1690,7 +1696,9 @@ def _calc_accuracies(df_predict):
     return df_result
 
 
-def _calc_accuracy(df_predict, score_name: str, score_fn, score_kwargs):
+def _calc_accuracy(
+    df_predict: pd.DataFrame, score_name: str, score_fn: Callable, score_kwargs: dict
+) -> list[dict]:
     # Calculate accuracies for all parcels
     result = []
     try:
@@ -1812,7 +1820,7 @@ def _calc_accuracy(df_predict, score_name: str, score_fn, score_kwargs):
     return result
 
 
-def _add_tooltips(df) -> pd.DataFrame:
+def _add_tooltips(df: pd.DataFrame) -> Any:  # noqa: ANN401
     df_tooltip = pd.DataFrame(
         df.apply(
             lambda row: [
