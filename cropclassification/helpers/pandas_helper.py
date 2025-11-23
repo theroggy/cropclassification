@@ -49,7 +49,7 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 
 def read_file(
     path: Path,
-    table_name: str = "info",
+    table_name: str | None = None,
     columns: list[str] | None = None,
     sql: str | None = None,
     ignore_geometry: bool = True,
