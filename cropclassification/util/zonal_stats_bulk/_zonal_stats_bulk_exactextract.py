@@ -6,8 +6,8 @@ import sys
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
-from typing import Union
 
+import exactextract
 import geopandas as gpd
 import pandas as pd
 import psutil
@@ -31,7 +31,7 @@ def zonal_stats(
     stats: list[str],
     nb_parallel: int = -1,
     force: bool = False,
-):
+) -> None:
     """Calculate zonal statistics.
 
     Args:
@@ -71,7 +71,8 @@ def zonal_stats(
     # Loop over all images and bands to calculate zonal stats in parallel...
     calc_queue = {}
     pool = futures.ProcessPoolExecutor(
-        max_workers=nb_parallel, initializer=processing_util.initialize_worker()
+        max_workers=nb_parallel,
+        initializer=processing_util.initialize_worker(),  # type: ignore[func-returns-value]
     )
     try:
         for raster_path, bands in rasters_bands:
@@ -208,12 +209,12 @@ def zonal_stats(
 
 
 def zonal_stats_band(
-    vector_path,
+    vector_path: Path,
     raster_path: Path,
     tmp_dir: Path,
     stats: list[str],
     include_cols: list[str],
-) -> Union[pd.DataFrame, gpd.GeoDataFrame]:
+) -> pd.DataFrame | gpd.GeoDataFrame:
     # Get the image info
     image_info = raster_helper.get_image_info(raster_path)
 
@@ -227,8 +228,6 @@ def zonal_stats_band(
     )
 
     try:
-        import exactextract
-
         stats_df = exactextract.exact_extract(
             rast=raster_path,
             vec=vector_proj_path,
@@ -245,7 +244,7 @@ def zonal_stats_band(
 
 
 def zonal_stats_band_tofile(
-    vector_path,
+    vector_path: Path,
     raster_path: Path,
     output_paths: dict[str, Path],
     bands: list[str],

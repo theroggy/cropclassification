@@ -8,42 +8,40 @@ from tests.test_helper import SampleData
 
 
 @pytest.mark.parametrize(
-    "classtype_to_prepare",
+    "configfile, classtype_to_prepare",
     [
-        "CROPGROUP",
-        "CROPGROUP-EARLY",
-        "CROPROTATION",
-        "CROPROTATION-EARLY",
-        "CARBONSUPPLY",
-        "CARBONSUPPLY-EARLY",
-        "LANDCOVER",
-        "LANDCOVER-EARLY",
-        "LATECROP-EARLY",
-        "LATECROP-LATE",
-        "RUGGENTEELT",
-        "RUGGENTEELT-EARLY",
+        ("cropgroup.ini", "CROPGROUP"),
+        ("cropgroup.ini", "CROPGROUP-EARLY"),
+        ("cropgroup.ini", "CROPROTATION"),
+        ("cropgroup.ini", "CROPROTATION-EARLY"),
+        ("cropgroup.ini", "CARBONSUPPLY"),
+        ("cropgroup.ini", "CARBONSUPPLY-EARLY"),
+        ("cropgroup.ini", "LANDCOVER"),
+        ("cropgroup.ini", "LANDCOVER-EARLY"),
+        ("latecrop.ini", "LATECROP-EARLY"),
+        ("latecrop.ini", "LATECROP-LATE"),
+        ("cropgroup.ini", "RUGGENTEELT"),
+        ("cropgroup.ini", "RUGGENTEELT-EARLY"),
     ],
 )
 @pytest.mark.parametrize("groundtruth", [False])
-def test_befl_prepare_input(tmp_path, classtype_to_prepare, groundtruth):
+def test_befl_prepare_input(configfile, classtype_to_prepare, groundtruth):
     """Basic test on the preparation of BEFL input data for a classtype/markertype."""
     if groundtruth:
         classtype_to_prepare = f"{classtype_to_prepare}-GROUNDTRUTH"
     conf.read_config(
         config_paths=[
             SampleData.tasks_dir / "local_overrule.ini",
-            SampleData.config_dir / "cropgroup.ini",
+            SampleData.config_dir / configfile,
         ],
         default_basedir=SampleData.markers_dir,
     )
 
-    output_dir = tmp_path
     df_parceldata = befl.prepare_input(
         input_parcel_path=SampleData.input_parcel_path,
         classtype_to_prepare=classtype_to_prepare,
         classes_refe_path=SampleData.classes_refe_path,
-        min_parcels_in_class=50,
-        output_dir=output_dir,
+        min_parcels_in_class=1,
     )
 
     assert df_parceldata is not None

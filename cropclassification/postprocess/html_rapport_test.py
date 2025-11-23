@@ -1,6 +1,5 @@
 """Test script to generate a classification report for a classification."""
 
-import os
 from pathlib import Path
 
 import cropclassification.postprocess.classification_reporting as class_report
@@ -26,10 +25,10 @@ parcel_predictions_all_path = (
 report_txt = marker_dir / "test_accuracy_report.txt"
 report_html = Path(str(report_txt).replace(".txt", ".html"))
 
-if os.path.exists(report_txt):
-    os.remove(report_txt)
-if os.path.exists(report_html):
-    os.remove(report_html)
+if report_txt.exists():
+    report_txt.unlink()
+if report_html.exists():
+    report_html.unlink()
 
 class_report.write_full_report(
     parcel_predictions_geopath=parcel_predictions_all_path,

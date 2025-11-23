@@ -11,7 +11,7 @@ import time
 from concurrent import futures
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 import psutil  # To catch CTRL-C explicitly and kill children
@@ -38,11 +38,11 @@ def zonal_stats(
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
     stats: list[str],
-    cloud_filter_band: Optional[str] = None,
+    cloud_filter_band: str | None = None,
     calc_bands_parallel: bool = True,
     nb_parallel: int = -1,
     force: bool = False,
-):
+) -> None:
     """Calculate zonal statistics."""
     # TODO: probably need to apply some object oriented approach here for "image",
     # because there are to many properties,... to be clean/clear this way.
@@ -78,7 +78,8 @@ def zonal_stats(
     image_idx = 0
 
     pool = futures.ProcessPoolExecutor(
-        max_workers=nb_parallel, initializer=processing_util.initialize_worker()
+        max_workers=nb_parallel,
+        initializer=processing_util.initialize_worker(),  # type: ignore[func-returns-value]
     )
     try:
         # Keep looping. At the end of the loop there are checks when to
@@ -421,11 +422,11 @@ def zonal_stats(
     )
 
 
-def _filter_on_status(dict: dict, status_to_check: str) -> list[str]:
+def _filter_on_status(dict_to_filter: dict, status_to_check: str) -> list[str]:
     """Check the number of images that are being prepared for processing."""
     keys_with_status = []
-    for key in dict:
-        if dict[key]["status"] == status_to_check:
+    for key in dict_to_filter:
+        if dict_to_filter[key]["status"] == status_to_check:
             keys_with_status.append(key)
     return keys_with_status
 
@@ -459,7 +460,7 @@ def _prepare_calc(
             handlers=[filehandler],
         )
 
-    global logger
+    global logger  # noqa: PLW0603
     logger = logging.getLogger("prepare_calc")
     ret_val: dict[str, Any] = {}
 
@@ -550,16 +551,16 @@ def _prepare_calc(
 
 
 def _zonal_stats_image_gdf(
-    features,
+    features: pd.DataFrame | str | Path,
     id_column: str,
     image_path: Path,
-    bands: Union[list[str], str],
+    bands: list[str] | str,
     output_base_path: Path,
     stats: list[str],
     log_dir: Path,
-    log_level: Union[str, int],
-    future_start_time=None,
-    cloud_filter_band: Optional[str] = None,
+    log_level: str | int,
+    future_start_time: datetime | None = None,
+    cloud_filter_band: str | None = None,
 ) -> bool:
     """Calculate stats for an image.
 
@@ -585,7 +586,7 @@ def _zonal_stats_image_gdf(
             handlers=[filehandler],
         )
 
-    global logger
+    global logger  # noqa: PLW0603
     logger = logging.getLogger("calc_stats_image")
 
     # Log the time between scheduling the future and acually run...
@@ -596,18 +597,18 @@ def _zonal_stats_image_gdf(
         )
 
     # If the features_gdf is a string, use it as file path to unpickle geodataframe...
-    if isinstance(features, (str, Path)):
+    if isinstance(features, (str | Path)):
         features_gdf_pkl_path = features
         logger.info(f"Read pickle: {features_gdf_pkl_path}")
         features = pd.read_pickle(features_gdf_pkl_path)
+        assert isinstance(features, pd.DataFrame)
         logger.info(f"Read pickle with {len(features.index)} features ready")
 
     if isinstance(bands, str):
         bands = [bands]
 
     # Init some variables
-    features_total_bounds = features.total_bounds
-    output_base_path_noext, output_ext = os.path.splitext(output_base_path)
+    features_total_bounds = tuple(features.total_bounds)
 
     # If the image has a quality band, check that one first so parcels with
     # bad pixels can be removed as the data can't be trusted anyway
@@ -719,7 +720,7 @@ def _zonal_stats_image_gdf(
             return True
 
     # Loop over image bands
-    features_total_bounds = features.total_bounds
+    features_total_bounds = tuple(features.total_bounds)
     for band in bands:
         # Check if output file exists already...
         output_band_path = output_base_path.with_stem(f"{output_base_path.stem}_{band}")

@@ -24,7 +24,7 @@
     - Remove `general.run_id`.
 - Rename some main modules to make naming more logical with non-cropclassification
   markers being added (#162)
-- Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
+- Update minimal python version to >= 3.10 (#203)
 
 ### Improvements
 
@@ -45,13 +45,18 @@
 - Add support to generate vvdvh index (#151)
 - Add support to generate sarrgb images and apply enhanced lee despeckling (#157)
 - Add LATECROP-LATE detection (#177)
-- Add POC (not for operational use) of a cover/bare soil marker (#168)
+- Add option to apply a correction factor to the probablity for latecrop marker (#205)
+- Add RUGGENTEELT-EARLY and RUGGENTEELT detection (#187)
+- Add support for groundtruth data processing for latecrop marker (#193)
+- Add first version of a cover/bare soil marker (#168, #200)
+- Avoid high committed memory for zonal stats calculation (#197)
 - General small improvements, e.g. save randomforest models compressed,.. (#144)
 
 ### Bugs fixed
 
 - Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
   config (#130)
+- Fix encoding error when reading sqlite files (#196)
 
 ## 0.2.0 (2024-06-17)
 

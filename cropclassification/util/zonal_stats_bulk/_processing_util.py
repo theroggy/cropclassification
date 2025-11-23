@@ -1,8 +1,9 @@
 """Module containing utilities regarding processes."""
 
 import os
+from collections.abc import Callable
 from concurrent import futures
-from typing import Optional
+from types import TracebackType
 
 import psutil
 
@@ -18,14 +19,19 @@ class PooledExecutorFactory:
         initialisze (function, optional): Function that does initialisations.
     """
 
-    def __init__(self, threadpool: bool = True, max_workers=None, initializer=None):
+    def __init__(
+        self,
+        threadpool: bool = True,
+        max_workers: int | None = None,
+        initializer: None | Callable = None,
+    ) -> None:
         self.threadpool = threadpool
         if max_workers is not None and os.name == "nt":
-            self.max_workers = min(max_workers, 61)
+            self.max_workers: int | None = min(max_workers, 61)
         else:
             self.max_workers = max_workers
         self.initializer = initializer
-        self.pool: Optional[futures.Executor] = None
+        self.pool: futures.Executor | None = None
 
     def __enter__(self) -> futures.Executor:
         if self.threadpool:
@@ -38,12 +44,25 @@ class PooledExecutorFactory:
             )
         return self.pool
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(
+        self,
+        type: type[BaseException] | None,  # noqa: A002
+        value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         if self.pool is not None:
             self.pool.shutdown(wait=True)
 
 
-def initialize_worker():
+def initialize_worker() -> None:
+    """Some default inits for workers."""
+    # Reduce OpenMP threads to avoid the committed memory usage becoming huge when using
+    # multiprocessing.
+    # Should work for any numeric library used (openblas, mkl,...).
+    # Ref: https://stackoverflow.com/questions/77764228/pandas-scipy-high-commit-memory-usage-windows
+    if os.environ.get("OMP_NUM_THREADS") is None:
+        os.environ["OMP_NUM_THREADS"] = "1"
+
     # We don't want the workers to block the entire system, so make them nice
     # if they aren't quite nice already.
     # Remark: on linux, depending on system settings it is not possible to
@@ -74,7 +93,7 @@ def getprocessnice() -> int:
         return int(nice_value)
 
 
-def setprocessnice(nice_value: int):
+def setprocessnice(nice_value: int) -> None:
     """Set the niceness of the current process.
 
     The nice value can (typically) range from 19, which gives all other

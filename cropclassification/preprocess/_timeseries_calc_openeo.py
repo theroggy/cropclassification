@@ -2,7 +2,6 @@ import logging
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import pyproj
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 def calculate_periodic_timeseries(
     input_parcel_path: Path,
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: pyproj.CRS | None,
     start_date: datetime,
     end_date: datetime,
     imageprofiles_to_get: list[str],
@@ -29,7 +28,8 @@ def calculate_periodic_timeseries(
     nb_parallel: int,
     on_missing_image: str,
     images_available_delay: Optional[int] = None,
-):
+    force: bool = False,
+) -> None:
     """Calculate timeseries data for the input parcels.
 
     Args:
@@ -52,10 +52,14 @@ def calculate_periodic_timeseries(
             - calculate_raise: calculate the image and raise an error if it fails
             - calculate_ignore: calculate the image and ignore the error if it fails
         images_available_delay (Optional[int]): delay in days for images to be available
+        force (bool = False): whether to force recalculation of existing data.
     """
     info = gfo.get_layerinfo(input_parcel_path)
     if info.crs is not None and not info.crs.equals(roi_crs):
-        raise ValueError(f"parcel crs ({info.crs}) <> roi crs ({roi_crs})")
+        raise ValueError(
+            f"parcel crs ({info.crs.to_string()}) not equal to roi_crs "
+            f"({roi_crs.to_string()})"
+        )
     if not shapely.box(*info.total_bounds).within(shapely.box(*roi_bounds)):
         raise ValueError(
             f"parcel bounds ({info.total_bounds}) not within roi_bounds ({roi_bounds})"
@@ -71,7 +75,7 @@ def calculate_periodic_timeseries(
         imageprofiles=imageprofiles,
         on_missing_image=on_missing_image,
         images_available_delay=conf.period["images_available_delay"],
-        force=False,
+        force=False,  # dont redownload on force
     )
 
     # Now calculate the timeseries
@@ -98,4 +102,5 @@ def calculate_periodic_timeseries(
         stats=["count", "mean", "median", "std", "min", "max"],
         engine="pyqgis",
         nb_parallel=nb_parallel,
+        force=force,
     )

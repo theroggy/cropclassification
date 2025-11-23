@@ -2,7 +2,6 @@
 
 import datetime
 import logging
-import os
 from pathlib import Path
 
 
@@ -21,7 +20,7 @@ def main_log_init(
     """
     # Make sure the log dir exists
     if not log_dir.exists():
-        os.makedirs(log_dir, exist_ok=True)
+        log_dir.mkdir(parents=True, exist_ok=True)
 
     # Get root logger
     logger = logging.getLogger("")

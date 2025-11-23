@@ -1,11 +1,9 @@
 """This module contains general functions that apply to timeseries data..."""
 
 import logging
-import os
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import numpy as np
@@ -13,6 +11,7 @@ import pyproj
 
 import cropclassification.helpers.config_helper as conf
 import cropclassification.helpers.pandas_helper as pdh
+import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
 import cropclassification.preprocess._timeseries_helper as ts_helper
 
 # Get a logger...
@@ -22,12 +21,13 @@ logger = logging.getLogger(__name__)
 def calc_timeseries_data(
     input_parcel_path: Path,
     roi_bounds: tuple[float, float, float, float],
-    roi_crs: Optional[pyproj.CRS],
+    roi_crs: pyproj.CRS | None,
     start_date: datetime,
     end_date: datetime,
     images_to_use: dict[str, conf.ImageConfig],
     timeseries_periodic_dir: Path,
-):
+    force: bool = False,
+) -> None:
     """Calculate timeseries data for the input parcels.
 
     Args:
@@ -40,6 +40,7 @@ def calc_timeseries_data(
         images_to_use (List[str]): an array with data you want to be calculated:
             check out the constants starting with DATA_TO_GET... for the options.
         timeseries_periodic_dir (Path): Directory the timeseries will be written to.
+        force (bool = False): whether to force recalculation of existing data.
     """
     # Check some variables...
     if images_to_use is None:
@@ -53,8 +54,6 @@ def calc_timeseries_data(
 
     if len(sensordata_to_get_openeo) > 0:
         # Prepare periodic images + calculate base timeseries on them
-        import cropclassification.preprocess._timeseries_calc_openeo as ts_calc_openeo
-
         ts_calc_openeo.calculate_periodic_timeseries(
             input_parcel_path=input_parcel_path,
             roi_bounds=roi_bounds,
@@ -68,6 +67,7 @@ def calc_timeseries_data(
             nb_parallel=conf.general.getint("nb_parallel", -1),
             on_missing_image=conf.images.get("on_missing_image", "calculate_raise"),
             images_available_delay=conf.period["images_available_delay"],
+            force=force,
         )
 
 
@@ -81,7 +81,7 @@ def collect_and_prepare_timeseries_data(
     parceldata_aggregations_to_use: list[str],
     max_fraction_null: float = 0.6,
     force: bool = False,
-):
+) -> None:
     """Collect and preprocess timeseries data needed for the classification.
 
     Args:
@@ -157,7 +157,7 @@ def collect_and_prepare_timeseries_data(
 
         # An empty file signifies that there wasn't any valable data for that
         # period/sensor/...
-        if os.path.getsize(curr_path) == 0:
+        if curr_path.stat().st_size == 0:
             logger.info(f"SKIP: file is empty: {curr_path}")
             continue
 
@@ -259,10 +259,10 @@ def collect_and_prepare_timeseries_data(
                         data_read_df[column] = data_read_df[column].clip(upper=1)
                     if step == "normalize":
                         # normalize all values to be between 0 and 1
-                        min = np.min(data_read_df[column])
-                        max = np.max(data_read_df[column])
-                        data_read_df[column] = (data_read_df[column] - min) / (
-                            max - min
+                        min_val = np.min(data_read_df[column])
+                        max_val = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min_val) / (
+                            max_val - min_val
                         )
                     if step == "abs":
                         data_read_df[column] = np.abs(data_read_df[column])
@@ -283,10 +283,10 @@ def collect_and_prepare_timeseries_data(
                         data_read_df[column] = data_read_df[column].clip(upper=1)
                     if step == "normalize":
                         # normalize all values to be between 0 and 1
-                        min = np.min(data_read_df[column])
-                        max = np.max(data_read_df[column])
-                        data_read_df[column] = (data_read_df[column] - min) / (
-                            max - min
+                        min_val = np.min(data_read_df[column])
+                        max_val = np.max(data_read_df[column])
+                        data_read_df[column] = (data_read_df[column] - min_val) / (
+                            max_val - min_val
                         )
                     if step == "abs":
                         data_read_df[column] = np.abs(data_read_df[column])
@@ -296,11 +296,12 @@ def collect_and_prepare_timeseries_data(
 
         # Write warning if the data isn't scaled between 0 and 1
         for column in data_read_df.columns:
-            max = data_read_df[column].max()
-            min = data_read_df[column].min()
-            if max > 1 or min < 0:
+            max_val = data_read_df[column].max()
+            min_val = data_read_df[column].min()
+            if max_val > 1 or min_val < 0:
                 warnings.warn(
-                    f"{column=} in {curr_path} isn't fully normalized ({min=}, {max=})",
+                    f"{column=} in {curr_path} isn't fully normalized "
+                    f"({min_val=}, {max_val=})",
                     stacklevel=1,
                 )
 

@@ -2,7 +2,6 @@
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Union
 
 import rasterio
 from osgeo import gdal
@@ -11,7 +10,9 @@ from osgeo import gdal
 gdal.PushErrorHandler("CPLQuietErrorHandler")
 
 
-def add_overviews(path: Path, min_pixels=512, resampling="average"):
+def add_overviews(
+    path: Path, min_pixels: int = 512, resampling: str = "average"
+) -> None:
     """Add overviews to the file.
 
     Args:
@@ -47,9 +48,9 @@ def get_band_descriptions(path: Path) -> dict[str, int]:
 
 def set_band_descriptions(
     path: Path,
-    band_descriptions: Union[Iterable[str], dict[int, str], str],
+    band_descriptions: Iterable[str] | dict[int, str] | str,
     overwrite: bool = True,
-):
+) -> None:
     """Add band descriptions to a raster file.
 
     Args:
