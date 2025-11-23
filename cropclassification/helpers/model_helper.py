@@ -5,11 +5,6 @@ from pathlib import Path
 
 import pandas as pd
 
-try:
-    from tensorflow.keras import Model
-except ImportError:
-    Model = None
-
 # -------------------------------------------------------------
 # First define/init some general variables/constants
 # -------------------------------------------------------------
@@ -225,7 +220,7 @@ def save_and_clean_models(
     model_save_dir: Path,
     model_save_base_filename: str,
     acc_metric_mode: str,
-    new_model: Model | None = None,
+    new_model=None,  # noqa: ANN001
     new_model_acc_train: float | None = None,
     new_model_acc_val: float | None = None,
     new_model_epoch: int | None = None,
