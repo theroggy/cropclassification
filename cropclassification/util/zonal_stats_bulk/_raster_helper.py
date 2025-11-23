@@ -8,15 +8,14 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+import rasterio
+import shapely.geometry as sh_geom
 from osgeo import gdal
+
+from cropclassification.util import io_util
 
 # Suppress gdal warnings/errors
 gdal.PushErrorHandler("CPLQuietErrorHandler")
-
-import rasterio
-import shapely.geometry as sh_geom
-
-from cropclassification.util import io_util
 
 # General init
 logger = logging.getLogger(__name__)
@@ -29,11 +28,11 @@ class BandInfo:
         relative_path: str | None,
         filename: str,
         bandindex: int,
-        bounds: tuple[float, float, float] | None = None,
-        affine=None,
+        bounds: tuple[float, float, float, float] | None = None,
+        affine: rasterio.Affine | None = None,
         crs: str | None = None,
         epsg: int | None = None,
-    ):
+    ) -> None:
         """Constructor of BandInfo.
 
         Args:
@@ -67,11 +66,11 @@ class ImageInfo:
         footprint: dict | None,
         image_epsg: int,
         image_crs: str,
-        image_bounds: tuple[float, float, float],
-        image_affine,
+        image_bounds: tuple[float, float, float, float],
+        image_affine: rasterio.Affine,
         bands: dict[str, BandInfo],
         extra: dict,
-    ):
+    ) -> None:
         self.imagetype = imagetype
         self.filetype = filetype
         self.image_id = image_id
@@ -177,12 +176,12 @@ def get_image_info(image_path: Path) -> ImageInfo:
 
 
 def projected_bounds_to_window(
-    projected_bounds,
-    image_transform,
+    projected_bounds: tuple[float, float, float, float],
+    image_transform: rasterio.Affine,
     image_pixel_width: int,
     image_pixel_height: int,
     pixel_buffer: int = 0,
-):
+) -> rasterio.windows.Window:
     """Convert projectd bounds to a rasterio.windows.Window object.
 
     Args:
@@ -259,9 +258,7 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
     else:
         # It is a zip file, so it needs to be unzipped first...
         # Create destination file path
-        image_basename_withzipext = os.path.basename(image_path)
-        image_basename = os.path.splitext(image_basename_withzipext)[0]
-        image_unzipped_path = temp_dir / image_basename
+        image_unzipped_path = temp_dir / image_path.stem
 
         image_unzipped_path_busy = Path(f"{image_unzipped_path}_busy")
         # If the input is a zip file, unzip file to temp local location if it doesn't
@@ -269,7 +266,7 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
         # input file to reproject/write to new file with correct epsg
         if not (image_unzipped_path_busy.exists() or image_unzipped_path.exists()):
             # Create temp dir if it doesn't exist yet
-            os.makedirs(temp_dir, exist_ok=True)
+            temp_dir.mkdir(parents=True, exist_ok=True)
 
             # Create lock file in an atomic way, so we are sure we are the only process
             # working on it. If function returns true, there isn't any other
@@ -286,7 +283,7 @@ def prepare_image(image_path: Path, temp_dir: Path) -> Path:
                             zippedfile.extractall(temp_dir)
                 finally:
                     # Remove lock file when we are ready
-                    os.remove(image_unzipped_path_busy)
+                    image_unzipped_path_busy.unlink()
 
         # If a "busy file" still exists, the file isn't ready yet, but another process
         # is working on it, so wait till it disappears
@@ -667,9 +664,7 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
 
     bands = {}
     for i, band_path in enumerate(band_paths):
-        band_filename = os.path.basename(band_path)
-        band_filename_noext, _ = os.path.splitext(band_filename)
-        band_filename_noext_split = band_filename_noext.split("_")
+        band_filename_noext_split = band_path.stem.split("_")
 
         if len(band_filename_noext_split) == 4:
             # IMG_DATA files
@@ -679,7 +674,7 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
             band = f"{band_filename_noext_split[3]}-{band_filename_noext_split[4]}"
         elif len(band_filename_noext_split) == 3:
             # QI_DATA files
-            band = band_filename_noext
+            band = band_path.stem
         else:
             message = f"Filename of band doesn't have supported format: {band_path}"
             logger.error(message)
@@ -700,16 +695,15 @@ def _get_image_info_safe(image_path: Path) -> ImageInfo:
         # Store the crs also on image level + check if all bands have the same crs
         if i == 0:
             image_bounds = band_bounds
-        else:
-            if image_crs != band_crs or image_epsg != band_epsg:
-                message = f"Not all bands have the same crs for {image_path}"
-                logger.error(message)
-                raise Exception(message)
+        elif image_crs != band_crs or image_epsg != band_epsg:
+            message = f"Not all bands have the same crs for {image_path}"
+            logger.error(message)
+            raise Exception(message)
 
         bands[band] = BandInfo(
             path=str(band_path),
             relative_path=str(band_path).replace(str(image_path), "")[1:],
-            filename=band_filename,
+            filename=band_path.name,
             bandindex=0,
             bounds=band_bounds,
             affine=band_affine,

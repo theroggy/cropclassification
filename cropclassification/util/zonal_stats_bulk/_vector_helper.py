@@ -5,6 +5,7 @@ from pathlib import Path
 
 import geofileops as gfo
 import geopandas as gpd
+import shapely
 
 from cropclassification.util import io_util
 
@@ -118,8 +119,8 @@ def _load_features_file(
     features_path: Path,
     columns_to_retain: list[str],
     target_epsg: int,
-    bbox=None,
-    polygon=None,
+    bbox: tuple[float, float, float, float] | None = None,
+    polygon: shapely.Polygon | None = None,
 ) -> gpd.GeoDataFrame:
     """Load the features and reproject to the target crs.
 

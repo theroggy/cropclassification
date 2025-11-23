@@ -89,9 +89,9 @@ def format_progress_message(
     return message
 
 
-def formatbytes(bytes: float):
+def formatbytes(nb_bytes: float) -> str:
     """Return the given bytes as a human friendly KB, MB, GB, or TB string."""
-    bytes_float = float(bytes)
+    bytes_float = float(nb_bytes)
     KB = float(1024)
     MB = float(KB**2)  # 1,048,576
     GB = float(KB**3)  # 1,073,741,824
@@ -105,5 +105,5 @@ def formatbytes(bytes: float):
         return f"{bytes_float / MB:.2f} MB"
     elif GB <= bytes_float < TB:
         return f"{bytes_float / GB:.2f} GB"
-    elif TB <= bytes_float:
+    else:
         return f"{bytes_float / TB:.2f} TB"

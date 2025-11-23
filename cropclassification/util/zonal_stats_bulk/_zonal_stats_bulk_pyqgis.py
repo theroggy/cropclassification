@@ -50,7 +50,7 @@ def zonal_stats(
     stats: list[str],
     nb_parallel: int = -1,
     force: bool = False,
-):
+) -> None:
     """Calculate zonal statistics."""
     # Make sure QGIS is available
     if not HAS_QGIS:
@@ -76,7 +76,8 @@ def zonal_stats(
     # Loop over all images and bands to calculate zonal stats in parallel...
     calc_queue = {}
     pool = futures.ProcessPoolExecutor(
-        max_workers=nb_parallel, initializer=processing_util.initialize_worker()
+        max_workers=nb_parallel,
+        initializer=processing_util.initialize_worker(),  # type: ignore[func-returns-value]
     )
     try:
         for raster_path, bands in rasters_bands:
@@ -215,7 +216,7 @@ def zonal_stats(
 
 
 def zonal_stats_band(
-    vector_path,
+    vector_path: Path,
     raster_path: Path,
     band: str,
     tmp_dir: Path,
@@ -223,7 +224,7 @@ def zonal_stats_band(
     columns: list[str],
 ) -> pd.DataFrame | gpd.GeoDataFrame:
     # Init
-    stats_mask = None
+    stats_mask: int | None = None
     for stat in stats:
         if stats_mask is None:
             stats_mask = stat_to_qgisstat(stat)
@@ -284,12 +285,15 @@ def zonal_stats_band(
     if "geometry" in columns:
         columns = [f.name() for f in vector_mem.fields()] + ["geometry"]
         data = [
-            dict(zip(columns, [*f.attributes(), f.geometry().asWkt()]))
+            dict(zip(columns, [*f.attributes(), f.geometry().asWkt()], strict=True))
             for f in vector_mem.getFeatures()
         ]
     else:
         columns = [f.name() for f in vector_mem.fields()]
-        data = [dict(zip(columns, f.attributes())) for f in vector_mem.getFeatures()]
+        data = [
+            dict(zip(columns, f.attributes(), strict=True))
+            for f in vector_mem.getFeatures()
+        ]
     stats_df = pd.DataFrame(data, columns=columns)
 
     if "geometry" in columns:
@@ -302,7 +306,7 @@ def zonal_stats_band(
 
 
 def zonal_stats_band_tofile(
-    vector_path,
+    vector_path: Path,
     raster_path: Path,
     output_band_path: Path,
     band: str,
@@ -335,7 +339,7 @@ def zonal_stats_band_tofile(
     return output_band_path
 
 
-def stat_to_qgisstat(stat: str):
+def stat_to_qgisstat(stat: str) -> int:
     import qgis.analysis  # noqa: PLC0415
 
     if stat == "count":

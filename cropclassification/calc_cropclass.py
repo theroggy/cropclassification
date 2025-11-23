@@ -23,8 +23,8 @@ from cropclassification.preprocess import timeseries as ts
 def run_cropclass(
     config_paths: list[Path],
     default_basedir: Path,
-    config_overrules: list[str] = [],
-):
+    config_overrules: list[str] | None = None,
+) -> None:
     """Runs a crop classification marker using the setting in the config_paths.
 
     Args:
@@ -80,7 +80,7 @@ def run_cropclass(
         logger.info(
             "Write new config_used.ini, because some parameters might have been added"
         )
-        with open(config_used_path, "w") as config_used_file:
+        with config_used_path.open("w") as config_used_file:
             conf.config.write(config_used_file)
     else:
         # Copy the config files to a config dir for later notice
@@ -101,7 +101,7 @@ def run_cropclass(
 
             # Write the resolved complete config, so it can be reused
             logger.info("Write config_used.ini, so it can be reused later on")
-            with open(config_used_path, "w") as config_used_file:
+            with config_used_path.open("w") as config_used_file:
                 conf.config.write(config_used_file)
 
     # Read the info about the run
