@@ -6,6 +6,7 @@ parcel that don't have a clear classification in the input file get class 'UNKNO
 
 import logging
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 from typing_extensions import deprecated
@@ -328,7 +329,7 @@ def prepare_input(
             classes_refe_path=classes_refe_path,
             min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=is_groundtruth,
-            scope=scope,
+            scope=scope,  # type: ignore[arg-type]
         )
     elif classtype_to_prepare == "FABACEAE":
         parceldata_df = prepare_input_fabaceae(
@@ -1113,7 +1114,7 @@ def prepare_input_latecrop(
     classes_refe_path: Path,
     min_parcels_in_class: int,
     is_groundtruth: bool,
-    scope: str,
+    scope: Literal["ALL", "EARLY_MAINCROP", "LATE_MAINCROP"],
 ) -> pd.DataFrame:
     """Prepare input file for use in the latecrop marker.
 
@@ -1249,7 +1250,7 @@ def prepare_input_latecrop(
 
     elif scope == "LATE_MAINCROP":
         # Only process parcels with a late main crop.
-        # Hence, set parcels with a main crop that is remove early to an IGNORE class.
+        # Hence, set parcels with a main crop that is removed early to an IGNORE class.
         early_maincrop_classname = "IGNORE:EARLY_MAINCROP"
 
         early_maincrops = []
@@ -1265,6 +1266,12 @@ def prepare_input_latecrop(
                 ~parceldata_df[column_BEFL_maincrop].isin(early_maincrops),
                 conf.columns["class_declared"],
             ] = early_maincrop_classname
+
+    elif scope == "ALL":
+        # Process all parcels, so no action needed
+        pass
+    else:
+        raise ValueError(f"Invalid value for scope: {scope}")
 
     # For rows with no class, set to UNKNOWN
     parceldata_df.fillna(value={column_output_class: "UNKNOWN"}, inplace=True)
@@ -1342,7 +1349,10 @@ def prepare_input_latecrop(
                 ] = "IGNORE:NOT_ENOUGH_SAMPLES"
 
     # Add copy of class as class_declared
-    parceldata_df[conf.columns["class_declared"]] = parceldata_df[column_output_class]
+    if not is_groundtruth:
+        parceldata_df[conf.columns["class_declared"]] = parceldata_df[
+            column_output_class
+        ]
 
     # Add a column with a correction factor to use when applying doubt thresholds.
     # Determine the correction factor based on the EOC score at the end of
@@ -1359,15 +1369,18 @@ def prepare_input_latecrop(
 
         return eoc_score
 
-    parceldata_df["eoc_score"] = parceldata_df[conf.columns["class_declared"]].apply(
-        lambda x: get_eoc_score(x)
-    )
-    eoc_score_max = parceldata_df["eoc_score"].max()
-    if eoc_score_max == 0:
-        raise ValueError("Maximum EOC score is 0, cannot calculate correction factor")
-    parceldata_df["proba_correction_factor"] = (
-        parceldata_df["eoc_score"] / eoc_score_max
-    )
+    if not is_groundtruth:
+        parceldata_df["eoc_score"] = parceldata_df[
+            conf.columns["class_declared"]
+        ].apply(lambda x: get_eoc_score(x))
+        eoc_score_max = parceldata_df["eoc_score"].max()
+        if eoc_score_max == 0:
+            raise ValueError(
+                "Maximum EOC score is 0, cannot calculate correction factor"
+            )
+        parceldata_df["proba_correction_factor"] = (
+            parceldata_df["eoc_score"] / eoc_score_max
+        )
 
     """
     # Add IGNORE:FOR_TRAINING column: if 1, ignore for training

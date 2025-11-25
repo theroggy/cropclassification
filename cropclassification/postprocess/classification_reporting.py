@@ -679,7 +679,7 @@ def write_full_report(
                 html_data["PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT"] = message
 
                 # For pixcount report, use error conclusions without min_nb_pixels
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_min_pix",
                     apply_doubt_pct_proba=True,
@@ -798,7 +798,7 @@ def write_full_report(
                 html_data["PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT"] = message
 
                 # For class report, use error conclusions without marker specific stuff
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_marker_specific",
                     apply_doubt_pct_proba=True,
@@ -916,7 +916,7 @@ def write_full_report(
                 html_data["PREDICTION_QUALITY_ALPHA_PER_CROP_TEXT"] = message
 
                 # For crop report, use error conclusions without marker specific stuff
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_marker_specific",
                     apply_doubt_pct_proba=True,
@@ -1035,7 +1035,7 @@ def write_full_report(
 
                 # For pixcount report, use error conclusions without doubt reasons
                 # that use the pct probability + round the probabilities
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_pct_prob",
                     apply_doubt_pct_proba=False,
