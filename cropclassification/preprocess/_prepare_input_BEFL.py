@@ -329,7 +329,7 @@ def prepare_input(
             classes_refe_path=classes_refe_path,
             min_parcels_in_class=min_parcels_in_class,
             is_groundtruth=is_groundtruth,
-            scope=scope,
+            scope=scope,  # type: ignore[arg-type]
         )
     elif classtype_to_prepare == "FABACEAE":
         parceldata_df = prepare_input_fabaceae(
