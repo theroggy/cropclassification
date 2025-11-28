@@ -1,5 +1,7 @@
 """Module that manages configuration data."""
 
+# ruff: noqa: PLW0603
+
 import configparser
 import json
 import pprint
@@ -106,9 +108,9 @@ def read_config(
         overrules = []
 
     # If there are overrules, write them to a temporary configuration file.
-    global config_overrules  # noqa: PLW0603
+    global config_overrules
     config_overrules = overrules
-    global config_overrules_path  # noqa: PLW0603
+    global config_overrules_path
     config_overrules_path = None
     if len(config_overrules) > 0:
         tmp_dir = Path(tempfile.gettempdir())
@@ -139,7 +141,7 @@ def read_config(
         config_paths.append(config_overrules_path)
 
     # Read and parse the config files
-    global config  # noqa: PLW0603
+    global config
     config = configparser.ConfigParser(
         interpolation=configparser.ExtendedInterpolation(),
         converters={
@@ -198,40 +200,40 @@ def read_config(
         tmp_dir=tmp_dir_str
     )
 
-    global config_paths_used  # noqa: PLW0603
+    global config_paths_used
     config_paths_used = config_paths
 
     # Now set global variables to each section as shortcuts
-    global general  # noqa: PLW0603
+    global general
     general = config["general"]
-    global calc_timeseries_params  # noqa: PLW0603
+    global calc_timeseries_params
     calc_timeseries_params = config["calc_timeseries_params"]
-    global calc_marker_params  # noqa: PLW0603
+    global calc_marker_params
     calc_marker_params = config["calc_marker_params"]
-    global calc_periodic_mosaic_params  # noqa: PLW0603
+    global calc_periodic_mosaic_params
     if "calc_periodic_mosaic_params" in config:
         calc_periodic_mosaic_params = config["calc_periodic_mosaic_params"]
     else:
         calc_periodic_mosaic_params = None
-    global roi  # noqa: PLW0603
+    global roi
     roi = config["roi"]
-    global period  # noqa: PLW0603
+    global period
     period = config["period"]
-    global images  # noqa: PLW0603
+    global images
     images = config["images"]
-    global marker  # noqa: PLW0603
+    global marker
     marker = config["marker"]
-    global timeseries  # noqa: PLW0603
+    global timeseries
     timeseries = config["timeseries"]
-    global preprocess  # noqa: PLW0603
+    global preprocess
     preprocess = config["preprocess"]
-    global classifier  # noqa: PLW0603
+    global classifier
     classifier = config["classifier"]
-    global postprocess  # noqa: PLW0603
+    global postprocess
     postprocess = config["postprocess"]
-    global columns  # noqa: PLW0603
+    global columns
     columns = config["columns"]
-    global paths  # noqa: PLW0603
+    global paths
     paths = config["paths"]
 
     # Check some parameters that should be overriden to have a valid config
@@ -242,7 +244,7 @@ def read_config(
         raise ValueError("paths.images_periodic_dir must be overridden")
 
     # Load image profiles
-    global image_profiles  # noqa: PLW0603
+    global image_profiles
     image_profiles_config_filepath = paths.getpath("image_profiles_config_filepath")
     if image_profiles_config_filepath is not None:
         image_profiles = _get_image_profiles(
