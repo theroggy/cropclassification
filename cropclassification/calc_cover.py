@@ -75,8 +75,17 @@ def run_cover(
     # Depending on the specific markertype, export only the relevant parcels
     input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
     input_preprocessed_dir.mkdir(parents=True, exist_ok=True)
-    if markertype in ("COVER", "COVER_EEF_VOORJAAR"):
-        pass
+    if markertype in ("COVER", "COVER_EEF_VOORJAAR", "ONBEDEKT_NA_WINTER"):
+        input_parcel_filename = f"{input_parcel_path.stem}_{markertype}.gpkg"
+        input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
+
+        where = """
+               "ALL_BEST" like '%EEF%'
+        """
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
+        input_parcel_path = input_parcel_filtered_path
     elif markertype in ("ONBEDEKT_NA_ZOMER", "COVER_BMG_MEG_MEV_EEF_NAJAAR"):
         input_parcel_filename = f"{input_parcel_path.stem}_{markertype}.gpkg"
         input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
@@ -228,9 +237,9 @@ def run_cover(
     )
     parcels_selected = None
     for path in parcels_cover_paths:
-        if markertype == "COVER_EEF_VOORJAAR":
+        if markertype in ("COVER_EEF_VOORJAAR", "ONBEDEKT_NA_WINTER"):
             parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
-            _select_parcels_EEF(path, parcels_selected_path)
+            _filter_parcels_with_enough_sentinel_data(path, parcels_selected_path)
         else:
             parcels_selected_path = path
 
@@ -541,8 +550,10 @@ def _select_parcels_BMG_MEG_MEV_EEF(
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def _select_parcels_EEF(input_geo_path: Path, output_geo_path: Path) -> None:
-    """Select parcels based on the cover marker."""
+def _filter_parcels_with_enough_sentinel_data(
+    input_geo_path: Path, output_geo_path: Path
+) -> None:
+    """Select parcels based on the ndvi median/s1 cover."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
     columns = {}
@@ -553,17 +564,14 @@ def _select_parcels_EEF(input_geo_path: Path, output_geo_path: Path) -> None:
         if column_lower.endswith("_ndvi_median"):
             columns["ndvi_median"] = column
 
-    # Filter used in the selection of 03/2025
     where = f"""
-            ( ALL_BEST like '%EEF%'
-              AND ( ( "{columns["ndvi_median"]}" <> 0
+             ( ( "{columns["ndvi_median"]}" <> 0
                       AND "{columns["ndvi_median"]}" < 0.35
                     )
                     OR ( cover_s1 = 'bare-soil'
                          AND "{columns["ndvi_median"]}" = 0  -- no NDVI available
-                    )
-                  )
-            )
+               )
+             )
     """
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
