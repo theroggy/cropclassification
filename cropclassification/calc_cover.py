@@ -345,6 +345,7 @@ def run_cover(
         classes_refe_path=classes_refe_path,
         id_column=conf.columns["id"],
         start_date=start_date,
+        end_date=end_date,
     )
 
     logging.shutdown()
@@ -650,6 +651,7 @@ def report(
     classes_refe_path: Path | None = None,
     id_column: str = "UID",
     start_date: datetime | None = None,
+    end_date: datetime | None = None,
     force: bool = False,
 ) -> None:
     """Create a report for the cover marker.
@@ -663,6 +665,8 @@ def report(
         id_column: Name of the ID column to use for matching parcels.
         start_date: Start date of the detection period. Ground truth observations
             before this date are filtered out.
+        end_date: End date of the detection period. Ground truth observations
+            after end_date + 2 months are filtered out.
         force: Whether to force re-creation of the report.
     """
     report_dir = parcels_selected_path.parent
@@ -727,16 +731,55 @@ def report(
         groundtruth_df = pdh.read_file(ground_truth_path)
         logger.info(f"Loaded {len(groundtruth_df)} parcels from ground truth file")
 
+        # Filter out records that have neither NATEELT_CTRL_COD nor VASTSTELLINGEN
+        # These records cannot be used for validation
+        if "NATEELT_CTRL_COD" in groundtruth_df.columns:
+            before_filter = len(groundtruth_df)
+
+            has_nateelt = groundtruth_df["NATEELT_CTRL_COD"].notna() & (
+                groundtruth_df["NATEELT_CTRL_COD"].astype(str).str.strip() != ""
+            )
+
+            has_vaststellingen = False
+            if "VASTSTELLINGEN" in groundtruth_df.columns:
+                has_vaststellingen = groundtruth_df["VASTSTELLINGEN"].notna() & (
+                    groundtruth_df["VASTSTELLINGEN"].astype(str).str.strip() != ""
+                )
+
+            groundtruth_df = groundtruth_df[has_nateelt | has_vaststellingen].copy()
+            logger.info(
+                f"Filtered out records without NATEELT_CTRL_COD and VASTSTELLINGEN: "
+                f"{before_filter} -> {len(groundtruth_df)} parcels"
+            )
+
         if start_date is not None and "CONTROLEDATUM" in groundtruth_df.columns:
+            from dateutil.relativedelta import relativedelta
+
             groundtruth_df["CONTROLEDATUM"] = pd.to_datetime(
-                groundtruth_df["CONTROLEDATUM"], errors="coerce"
+                groundtruth_df["CONTROLEDATUM"],
+                format="%d/%m/%Y %H:%M:%S",
+                errors="coerce",
             )
             before_filter = len(groundtruth_df)
-            groundtruth_df = groundtruth_df[
-                groundtruth_df["CONTROLEDATUM"] >= start_date
-            ].copy()
+
+            # Filter CONTROLEDATUM >= start_date
+            date_filter = (groundtruth_df["CONTROLEDATUM"] >= start_date) & (
+                groundtruth_df["CONTROLEDATUM"].notna()
+            )
+
+            # And CONTROLEDATUM <= end_date + 2 months (if end_date provided)
+            if end_date is not None:
+                max_date = end_date + relativedelta(months=2)
+                date_filter = date_filter & (
+                    groundtruth_df["CONTROLEDATUM"] <= max_date
+                )
+                date_range_msg = f">= {start_date.date()} and <= {max_date.date()}"
+            else:
+                date_range_msg = f">= {start_date.date()}"
+
+            groundtruth_df = groundtruth_df[date_filter].copy()
             logger.info(
-                f"Filtered ground truth by date (>= {start_date.date()}): "
+                f"Filtered ground truth by date ({date_range_msg}): "
                 f"{before_filter} -> {len(groundtruth_df)} parcels"
             )
 
@@ -771,7 +814,6 @@ def report(
                 groundtruth_df[id_column].astype(str).str.strip()
             )
 
-        # Merge ground truth with classes reference to get crop characteristics
         groundtruth_df = groundtruth_df.merge(
             classes_refe_df[["CROPCODE", "MON_VRU", "CROP_DESC"]],
             left_on="NATEELT_CTRL_COD",
@@ -779,23 +821,33 @@ def report(
             how="left",
         )
 
-        # Merge results with ground truth on the ID column
         merged_df = parcels_selected_df.merge(groundtruth_df, on=id_column, how="inner")
         logger.info(
-            f"Matched {len(merged_df)} parcels between results and ground truth"
+            f"Matched {len(merged_df)} parcels between results and ground truth "
+            f"(after date filtering)"
         )
 
         if len(merged_df) > 0:
 
             def determine_gt_cover(row: pd.Series) -> str:
                 vaststellingen = row.get("VASTSTELLINGEN")
-                # Indien PCSCHEUR -> Ga uit van ONBEDEKT
+                onbedekt_vaststellingen = [
+                    "PCSCHEUR",
+                    "PCPLOZM",
+                    "PC35ET",
+                    "PC35ME",
+                    "PC35EG",
+                    "PCVEGWEG",
+                ]
                 if not pd.isna(vaststellingen):
                     vaststellingen_str = str(vaststellingen).upper()
-                    if "PCSCHEUR" in vaststellingen_str:
+                    if any(
+                        vaststelling in vaststellingen_str
+                        for vaststelling in onbedekt_vaststellingen
+                    ):
                         return "ONBEDEKT"
 
-                # fallback to the MON_VRU mapping (MON_VRU_BRAAK -> ONBEDEKT, else BEDEKT)
+                # fallback to the MON_VRU mapping
                 mon_vru = row.get("MON_VRU")
                 if pd.isna(mon_vru):
                     return "NODATA"
@@ -806,18 +858,17 @@ def report(
                     return "BEDEKT"
 
             merged_df["gt_cover"] = merged_df.apply(determine_gt_cover, axis=1)
+            merged_df["correct"] = merged_df["gt_cover"] == merged_df[pred_column]
 
             valid_df = merged_df[
                 (merged_df["gt_cover"] != "NODATA")
                 & (merged_df[pred_column] != "NODATA")
-                & (merged_df[pred_column] != "DOUBT")
+                # & (merged_df[pred_column] != "DOUBT")
             ].copy()
 
             logger.info(f"Valid parcels for accuracy calculation: {len(valid_df)}")
 
             if len(valid_df) > 0:
-                valid_df["correct"] = valid_df["gt_cover"] == valid_df[pred_column]
-
                 total_valid = len(valid_df)
                 total_correct = valid_df["correct"].sum()
                 accuracy = total_correct / total_valid if total_valid > 0 else 0
@@ -865,11 +916,9 @@ def report(
 
     stats_df = pd.DataFrame(stats_list)
 
-    # Save the report as HTML
     report_name = f"{parcels_selected_path.stem}_accuracy_report.html"
     report_html_path = report_dir / report_name
 
-    # Create HTML with statistics and details
     html_parts = []
     html_parts.append("<html><head><style>")
     html_parts.append("table { border-collapse: collapse; margin: 20px 0; }")
@@ -878,15 +927,16 @@ def report(
     )
     html_parts.append("th { background-color: #4CAF50; color: white; }")
     html_parts.append("h2 { color: #333; }")
+    html_parts.append(".incorrect { background-color: #ffcccc; }")
+    html_parts.append(".correct { background-color: #ccffcc; }")
+    html_parts.append(".nodata { background-color: #f0f0f0; }")
     html_parts.append("</style></head><body>")
     html_parts.append("<h1>Cover Marker Report</h1>")
 
-    # Statistics section
     html_parts.append("<h2>Statistics</h2>")
     html_parts.append(stats_df.to_html(index=False, border=0))
 
-    # Details section
-    html_parts.append("<h2>Details</h2>")
+    html_parts.append("<h2>Ground truth</h2>")
     columns_to_save = [
         id_column,
         "pred1",
@@ -895,10 +945,10 @@ def report(
         "pred_cons_status",
     ]
 
-    # Add ground truth columns if available
     if "gt_cover" in merged_df.columns:
         columns_to_save.extend(
             [
+                "CONTROLEDATUM",
                 "VASTSTELLINGEN",
                 "NATEELT_CTRL_COD",
                 "gt_cover",
@@ -908,11 +958,37 @@ def report(
 
     available_columns = [col for col in columns_to_save if col in merged_df.columns]
     details_df = merged_df[available_columns]
-    html_parts.append(details_df.to_html(index=False, border=0))
+
+    # Generate HTML with conditional row coloring based on correctness
+    if "correct" in details_df.columns:
+        html_table = '<table border="0">\n<thead>\n<tr style="text-align: right;">\n'
+        for col in details_df.columns:
+            html_table += f"<th>{col}</th>\n"
+        html_table += "</tr>\n</thead>\n<tbody>\n"
+
+        for _, row in details_df.iterrows():
+            gt_cover = row.get("gt_cover")
+            if gt_cover == "NODATA" or pd.isna(gt_cover):
+                row_class = "nodata"
+            elif pd.isna(row.get("correct")):
+                row_class = "nodata"
+            elif row.get("correct"):
+                row_class = "correct"
+            else:
+                row_class = "incorrect"
+
+            html_table += f'<tr class="{row_class}">\n'
+            for col in details_df.columns:
+                html_table += f"<td>{row[col]}</td>\n"
+            html_table += "</tr>\n"
+
+        html_table += "</tbody>\n</table>"
+        html_parts.append(html_table)
+    else:
+        html_parts.append(details_df.to_html(index=False, border=0))
 
     html_parts.append("</body></html>")
 
-    # Write HTML file
     with report_html_path.open("w", encoding="utf-8") as f:
         f.write("\n".join(html_parts))
 
