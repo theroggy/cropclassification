@@ -1,16 +1,21 @@
 """Run a cover classification."""
 
 import logging
+import re
 import shutil
-import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo
+import numpy as np
 import pandas as pd
 import pyproj
+from dateutil.relativedelta import relativedelta
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
 
 from cropclassification.helpers import config_helper as conf
 from cropclassification.helpers import dir_helper, log_helper
@@ -35,95 +40,213 @@ def run_cover(
             overrule other ways to supply configuration. They should be specified as a
             list of "<section>.<parameter>=<value>". Defaults to [].
     """
-    # Read the configuration files
     conf.read_config(
         config_paths, default_basedir=default_basedir, overrules=config_overrules
     )
 
-    # Main initialisation of the logging
     log_level = conf.general.get("log_level")
     log_dir = conf.paths.getpath("log_dir")
     global logger  # noqa: PLW0603
     logger = log_helper.main_log_init(log_dir, __name__, log_level)
 
-    logger.warning("This is a POC for a cover marker, so not for operational use!")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
-    force = True
+    # force = True
     force = False
     markertype = conf.marker["markertype"]
 
     if not markertype.startswith(("COVER", "ONBEDEKT")):
         raise ValueError(f"Invalid markertype {markertype}, expected COVER_XXX")
 
-    # Create run dir to be used for the results
     reuse_last_run_dir = conf.calc_marker_params.getboolean("reuse_last_run_dir")
     run_dir = dir_helper.create_run_dir(
         conf.paths.getpath("marker_dir"), reuse_last_run_dir
+    )
+    input_dir = conf.paths.getpath("input_dir")
+
+    _store_config_files(
+        config_paths, default_basedir, config_overrules, reuse_last_run_dir, run_dir
     )
 
     parcels_marker_path = (
         run_dir / f"{markertype}_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     )
     parcel_selected_sqlite_path = parcels_marker_path.with_suffix(".sqlite")
-
+    ndvi_threshold = conf.calc_marker_params.getfloat("ndvi_threshold", fallback=0.35)
+    s1_ml_onbedekt_threshold = conf.calc_marker_params.getfloat(
+        "s1_ml_onbedekt_threshold", fallback=0.65
+    )
     start_date = datetime.fromisoformat(conf.period["start_date"])
     end_date = datetime.fromisoformat(conf.period["end_date"])
-
-    # If the config needs to be reused as well, load it, else write it
-    config_used_path = run_dir / "config_used.ini"
-    if reuse_last_run_dir and run_dir.exists() and config_used_path.exists():
-        config_paths.append(config_used_path)
-        logger.info(f"Run dir config needs to be reused, so {config_paths}")
-        conf.read_config(
-            config_paths=config_paths,
-            default_basedir=default_basedir,
-            overrules=config_overrules,
-        )
-        logger.info(
-            "Write new config_used.ini, because some parameters might have been added"
-        )
-        with config_used_path.open("w") as config_used_file:
-            conf.config.write(config_used_file)
-    else:
-        # Copy the config files to a config dir for later notice
-        configfiles_used_dir = run_dir / "configfiles_used"
-        if configfiles_used_dir.exists():
-            configfiles_used = sorted(configfiles_used_dir.glob("*.ini"))
-            conf.read_config(
-                config_paths=configfiles_used,
-                default_basedir=default_basedir,
-                overrules=config_overrules,
-            )
-        else:
-            configfiles_used_dir.mkdir(parents=True)
-            for idx, config_path in enumerate(config_paths):
-                # Prepend with idx so the order of config files is retained...
-                dst = configfiles_used_dir / f"{idx}_{config_path.name}"
-                shutil.copy(config_path, dst)
-
-            # Write the resolved complete config, so it can be reused
-            logger.info("Write config_used.ini, so it can be reused later on")
-            with config_used_path.open("w") as config_used_file:
-                conf.config.write(config_used_file)
+    # Optional extra wider training date window for the S1 ML model.
+    # Useful when S2 cloud coverage is poor in the detection period.
+    conf_training_start = conf.period.get("training_start_date")
+    conf_training_end = conf.period.get("training_end_date")
+    training_start_date = (
+        datetime.fromisoformat(conf_training_start)
+        if conf_training_start
+        else start_date
+    )
+    training_end_date = (
+        datetime.fromisoformat(conf_training_end) if conf_training_end else end_date
+    )
 
     if not parcels_marker_path.exists() or force:
-        # Read the info about the run
         input_parcel_filename = conf.calc_marker_params.getpath("input_parcel_filename")
-        input_dir = conf.paths.getpath("input_dir")
-        input_parcel_path = input_dir / input_parcel_filename
+        all_input_parcel_path = input_dir / input_parcel_filename
 
-        # Check if the necessary input files exist...
-        for path in [input_parcel_path]:
-            if path is not None and not path.exists():
-                message = f"Input file doesn't exist, so STOP: {path}"
-                logger.critical(message)
-                raise ValueError(message)
+        if not all_input_parcel_path.exists():
+            message = f"Input file doesn't exist, so STOP: {all_input_parcel_path}"
+            logger.critical(message)
+            raise ValueError(message)
 
-        # Depending on the specific markertype, export only the relevant parcels
+        # Get some general config
+        data_ext = conf.general["data_ext"]
+        geofile_ext = conf.general["geofile_ext"]
+        buffer = conf.timeseries.getfloat("buffer")
         input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
         input_preprocessed_dir.mkdir(parents=True, exist_ok=True)
-        if markertype in ("COVER", "COVER_EEF_VOORJAAR", "ONBEDEKT_NA_WINTER"):
+        images_to_use = conf.parse_image_config(conf.images["images"])
+
+        # -------------------------------------------------------------------
+        # STEP 1: Buffer all parcels and extract their timeseries.
+        # -------------------------------------------------------------------
+
+        all_bufm_filename = f"{all_input_parcel_path.stem}_bufm{buffer:g}{geofile_ext}"
+        all_bufm_path = input_preprocessed_dir / all_bufm_filename
+        all_nogeo_path = (
+            input_preprocessed_dir / f"{all_input_parcel_path.stem}{data_ext}"
+        )
+        ts_helper.prepare_input(
+            input_parcel_path=all_input_parcel_path,
+            output_imagedata_parcel_input_path=all_bufm_path,
+            output_parcel_nogeo_path=all_nogeo_path,
+            force=force,
+        )
+        timeseries_periodic_dir = (
+            conf.paths.getpath("timeseries_periodic_dir") / all_bufm_path.stem
+        )
+        ts.calc_timeseries_data(
+            input_parcel_path=all_bufm_path,
+            roi_bounds=tuple(conf.roi.getlistfloat("roi_bounds")),
+            roi_crs=pyproj.CRS.from_user_input(conf.roi.get("roi_crs")),
+            start_date=start_date,
+            end_date=end_date,
+            images_to_use=images_to_use,
+            timeseries_periodic_dir=timeseries_periodic_dir,
+            force=force,
+        )
+
+        # -------------------------------------------------------------------
+        # STEP 2: Collect weekly timeseries for all parcels.
+        # -------------------------------------------------------------------
+        cover_dir = run_dir / all_input_parcel_path.stem
+        cover_dir.mkdir(parents=True, exist_ok=True)
+
+        ts_periods_cache_dir = run_dir / "_ts_periods"
+        ts_periods_cache_dir.mkdir(parents=True, exist_ok=True)
+
+        all_covers_calculated = True
+        cover_periods: list[dict] = []
+        for period in mosaic_util._prepare_periods(
+            start_date=start_date,
+            end_date=end_date,
+            period_name="weekly",
+            period_days=None,
+        ):
+            cover_periods.append(period)
+
+            period_start_str = period["start_date"].strftime("%Y-%m-%d")
+            period_end_str = period["end_date"].strftime("%Y-%m-%d")
+            output_name = f"cover_{period_start_str}_{period_end_str}{data_ext}"
+
+            if not (cover_dir / output_name).exists():
+                all_covers_calculated = False
+
+        # optionally also fetch periods for an extended training window
+        training_periods: list[dict] = []
+        for period in mosaic_util._prepare_periods(
+            start_date=training_start_date,
+            end_date=training_end_date,
+            period_name="weekly",
+            period_days=None,
+        ):
+            training_periods.append(period)
+
+        all_periods = {
+            (p["start_date"], p["end_date"]): p
+            for p in cover_periods + training_periods
+        }
+
+        parceldata_aggregations_to_use = conf.marker.getlist(
+            "parceldata_aggregations_to_use"
+        )
+        ts_period_paths: dict[tuple, Path] = {}
+        for period_start, period_end in all_periods:
+            pstart_str = period_start.strftime("%Y-%m-%d")
+            pend_str = period_end.strftime("%Y-%m-%d")
+            ts_path = (
+                ts_periods_cache_dir
+                / f"{all_nogeo_path.stem}_{pstart_str}_{pend_str}.sqlite"
+            )
+            try:
+                ts.collect_and_prepare_timeseries_data(
+                    input_parcel_path=all_nogeo_path,
+                    timeseries_dir=timeseries_periodic_dir,
+                    output_path=ts_path,
+                    start_date=period_start,
+                    end_date=period_end,
+                    images_to_use=images_to_use,
+                    parceldata_aggregations_to_use=parceldata_aggregations_to_use,
+                    max_fraction_null=1,
+                    force=force,
+                )
+                ts_period_paths[(period_start, period_end)] = ts_path
+
+            except Exception:
+                logger.warning(
+                    f"Skipping period {period_start.date()} for timeseries collection",
+                    exc_info=True,
+                )
+
+        # -------------------------------------------------------------------
+        # STEP 3: Train the S1 ML model.
+        # -------------------------------------------------------------------
+        classifier = None
+        feature_names = []
+
+        if not all_covers_calculated or force:
+            training_period_dfs: list[tuple[datetime, pd.DataFrame]] = []
+            for period in training_periods:
+                period_key = (period["start_date"], period["end_date"])
+                if period_key not in ts_period_paths:
+                    continue
+
+                training_period_dfs.append(
+                    (
+                        period["start_date"],
+                        pdh.read_file(
+                            ts_period_paths[(period["start_date"], period["end_date"])]
+                        ),
+                    )
+                )
+
+            classifier, feature_names = _train_ml_cover_model(
+                period_timeseries=training_period_dfs,
+                id_column=conf.columns["id"],
+                ndvi_threshold=ndvi_threshold,
+            )
+            logger.info(f"S1 ML model trained on {len(feature_names)} features.")
+
+        # -------------------------------------------------------------------
+        # STEP 4: Filter parcels for the specific markertype.
+        # -------------------------------------------------------------------
+        input_parcel_path = all_input_parcel_path
+        if markertype in (
+            "COVER",
+            "COVER_EEF_VOORJAAR",
+            "ONBEDEKT_NA_WINTER",
+        ):
             input_parcel_filename = f"{input_parcel_path.stem}_{markertype}.gpkg"
             input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
@@ -139,7 +262,7 @@ def run_cover(
             input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
             where = """
-                "ALL_BEST" like '%BMG%'
+                   "ALL_BEST" like '%BMG%'
                 OR "ALL_BEST" like '%MEV%'
                 OR "ALL_BEST" like '%MEG%'
                 OR "ALL_BEST" like '%EEF%'
@@ -151,21 +274,30 @@ def run_cover(
             )
             input_parcel_path = input_parcel_filtered_path
 
-        elif markertype == "COVER_EEB_VOORJAAR":
-            # Fallow parcels with a premium having as requirement that there is no activity
-            # on them from 15/01 till 10/04 + that they have maize as main crop.
-            input_parcel_filename = f"{input_parcel_path.stem}_EEB.gpkg"
+        elif markertype in ("COVER_EEB_VOORJAAR", "ONBEDEKT_LENTE"):
+            # Fallow parcels with a premium having as requirement that there is no
+            # activity on them from 15/03 till 10/05 + that they have maize as main crop
+            # OR
+            # Grassland parcels with a premium having a requirement that they cannot be
+            # resown -> should never be ploughed.
+
+            input_parcel_filename = f"{input_parcel_path.stem}_{markertype}.gpkg"
             input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
-            where = "ALL_BEST like '%EEB%' AND GWSCOD_V = '83' AND GWSCOD_H IN ('201', '202')"
+            where = """
+                (
+                    ("ALL_BEST" like '%EEB%'
+                 AND "GWSCOD_V" = '83' AND "GWSCOD_H" IN ('201', '202'))
+                 OR ("ALL_BEST" like '%TBG%')
+                 OR ("ALL_BEST" like '%BMG%')
+                )
+            """
             gfo.copy_layer(
                 input_parcel_path, input_parcel_filtered_path, where=where, force=force
             )
             input_parcel_path = input_parcel_filtered_path
 
         elif markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
-            # Grassland parcels with a premium having a requirement that they cannot be
-            # resown -> should never be ploughed.
             input_parcel_filename = f"{input_parcel_path.stem}_TBG_BMG.gpkg"
             input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
@@ -178,85 +310,35 @@ def run_cover(
         else:
             raise ValueError(f"Invalid {markertype=}")
 
-        # Get some general config
-        data_ext = conf.general["data_ext"]
-        geofile_ext = conf.general["geofile_ext"]
-
-        # -------------------------------------------------------------
-        # The real work
-        # -------------------------------------------------------------
-        # STEP 1: prepare parcel data for classification and image data extraction
-        # -------------------------------------------------------------
-
-        # Prepare the input data for optimal image data extraction:
-        #    1) apply a negative buffer on the parcel to evade mixels
-        #    2) remove features that became null because of buffer
-        buffer = conf.timeseries.getfloat("buffer")
-        input_parcel_nogeo_path = (
-            input_preprocessed_dir / f"{input_parcel_path.stem}{data_ext}"
-        )
-
-        imagedata_input_parcel_filename = (
-            f"{input_parcel_path.stem}_bufm{buffer:g}{geofile_ext}"
-        )
-        imagedata_input_parcel_path = (
-            input_preprocessed_dir / imagedata_input_parcel_filename
-        )
-        ts_helper.prepare_input(
-            input_parcel_path=input_parcel_path,
-            output_imagedata_parcel_input_path=imagedata_input_parcel_path,
-            output_parcel_nogeo_path=input_parcel_nogeo_path,
-            force=force,
-        )
-
-        # STEP 2: Calculate the timeseries data needed
-        # -------------------------------------------------------------
-        # Get the time series data (eg. S1, S2,...) to be used for the classification
-        # Result: data is put in files in timeseries_periodic_dir, in one file per
-        #         date/period
-        timeseries_periodic_dir = conf.paths.getpath("timeseries_periodic_dir")
-        timeseries_periodic_dir /= f"{imagedata_input_parcel_path.stem}"
-        images_to_use = conf.parse_image_config(conf.images["images"])
-
-        ts.calc_timeseries_data(
-            input_parcel_path=imagedata_input_parcel_path,
-            roi_bounds=tuple(conf.roi.getlistfloat("roi_bounds")),
-            roi_crs=pyproj.CRS.from_user_input(conf.roi.get("roi_crs")),
-            start_date=start_date,
-            end_date=end_date,
-            images_to_use=images_to_use,
-            timeseries_periodic_dir=timeseries_periodic_dir,
-            force=force,
-        )
-
-        # STEP 3: Determine the cover for the parcels for all periods
-        # -------------------------------------------------------------
-        # Loop over all periods
-        periods = mosaic_util._prepare_periods(
-            start_date, end_date, period_name="weekly", period_days=None
-        )
-        cover_dir = run_dir / input_parcel_nogeo_path.stem
-        cover_dir.mkdir(parents=True, exist_ok=True)
-
+        # ---------------------------------------------------------------------
+        # STEP 5: Calculate cover and prediction per week for filtered parcels.
+        # ---------------------------------------------------------------------
         on_error = "warn"
         parcels_cover_paths = []
 
-        for period in periods:
+        for period in cover_periods:
             period_start_date = period["start_date"].strftime("%Y-%m-%d")
             period_end_date = period["end_date"].strftime("%Y-%m-%d")
             output_name = f"cover_{period_start_date}_{period_end_date}{data_ext}"
             output_path = cover_dir / output_name
 
+            period_key = (period["start_date"], period["end_date"])
+            if period_key not in ts_period_paths:
+                logger.warning(
+                    f"No timeseries for period {period['start_date'].date()}, skipping"
+                )
+                continue
+
             try:
                 geo_path = output_path.with_suffix(geofile_ext)
-                _calc_cover(
+                _calc_cover_and_predict(
                     input_parcel_path=input_parcel_path,
-                    timeseries_periodic_dir=timeseries_periodic_dir,
-                    images_to_use=images_to_use,
-                    start_date=period["start_date"],
-                    end_date=period["end_date"],
+                    ts_path=ts_period_paths[period_key],
                     parcel_columns=None,
+                    ndvi_threshold=ndvi_threshold,
                     output_path=output_path,
+                    classifier=classifier,
+                    feature_names=feature_names,
                     output_geo_path=geo_path,
                     force=force,
                 )
@@ -275,51 +357,127 @@ def run_cover(
                     )
                     raise RuntimeError(message) from ex
 
-        # STEP 4: Create the final list of parcels
-        # ----------------------------------------
-        # Consolidate the list of parcels that need to be controlled
-        parcels_selected = None
+        # ---------------------------------------------------------------
+        # STEP 6: Consolidate period results into one row per parcel
+        # ---------------------------------------------------------------
+        parcels_stacked = None
         for path in parcels_cover_paths:
-            parcels_selected_path = path
-            parcels = gfo.read_file(parcels_selected_path, ignore_geometry=True)
-
-            if parcels_selected is None:
-                parcels_selected = parcels
+            parcels = gfo.read_file(path, ignore_geometry=True)
+            if parcels_stacked is None:
+                parcels_stacked = parcels
             else:
-                parcels_selected = pd.concat([parcels_selected, parcels])
+                parcels_stacked = pd.concat([parcels_stacked, parcels])
 
-        # Determine max probability for every parcel
-        assert parcels_selected is not None
+        assert parcels_stacked is not None
+        id_col = conf.columns["id"]
+
+        # Parcel attribute columns to carry over to the output
         input_info = gfo.get_layerinfo(input_parcel_path)
-        cols_to_keep = [*list(input_info.columns), "pred1"]
-        if "provincie" in parcels_selected.columns:
-            cols_to_keep.append("provincie")
+        attr_cols = list(input_info.columns)
+        if "provincie" in parcels_stacked.columns:
+            attr_cols.append("provincie")
 
-        parcels_selected = (
-            parcels_selected[[*cols_to_keep, "pred1_prob"]]
+        best_s2_df = (
+            parcels_stacked[[*attr_cols, "pred1", "pred1_prob"]]
             .sort_values("pred1_prob", ascending=False)
-            .groupby(conf.columns["id"], dropna=False, as_index=False)
-            .first()  # Take the highest pred1_prob per id
+            .groupby(id_col, dropna=False, as_index=False)
+            .first()
+            .rename(columns={"pred1_prob": "thresh_prob", "pred1": "thresh_pred"})
         )
 
-        # Add pred_consolidated based on max pred1_proba
-        parcels_selected["pred_consolidated"] = parcels_selected["pred1_prob"].apply(
-            _categorize_pred
+        if "cover_s2_ndvi" in parcels_stacked.columns:
+            s2_available_df = (
+                parcels_stacked.groupby(id_col, dropna=False)["cover_s2_ndvi"]
+                .apply(lambda s: (s != "NODATA").any())
+                .reset_index(name="s2_available")
+            )
+        else:
+            s2_available_df = best_s2_df[[id_col]].copy()
+            s2_available_df["s2_available"] = True
+
+        if "s1_ml_prob" in parcels_stacked.columns:
+            s1_df = (
+                parcels_stacked.groupby(id_col, dropna=False)["s1_ml_prob"]
+                .max()
+                .reset_index(name="s1_ml_prob_max")
+            )
+        else:
+            s1_df = best_s2_df[[id_col]].copy()
+            s1_df["s1_ml_prob_max"] = float("nan")
+
+        # Join all per-parcel aggregations
+        parcels_selected = best_s2_df.merge(s2_available_df, on=id_col, how="left")
+        parcels_selected = parcels_selected.merge(s1_df, on=id_col, how="left")
+
+        # Fraction of parcels to force to use S1 ML result.
+        # Natural S1 fallbacks (S2 unavailable) are always included. If those don't
+        # reach the quota, the highest-confidence parcels from the S2+S1 pool are
+        # promoted to S1 to fill it.
+        # 0.0 = natural S1 fallback only, no forcing.
+        s1_result_fraction = conf.calc_marker_params.getfloat(
+            "s1_result_fraction", fallback=0.2
         )
 
-        # Add pred_cons_status based on pred_consolidated
+        # Base assignment: S2 when available, S1 as natural fallback, NODATA otherwise.
+        has_s1 = parcels_selected["s1_ml_prob_max"].notna()
+        parcels_selected["pred_source"] = "NODATA"
+        parcels_selected.loc[has_s1, "pred_source"] = "S1_ML"
+        parcels_selected.loc[parcels_selected["s2_available"], "pred_source"] = "S2"
+
+        if s1_result_fraction > 0:
+            n_total = len(parcels_selected)
+            n_quota = int(np.ceil(n_total * s1_result_fraction))
+
+            natural_s1_mask = ~parcels_selected["s2_available"] & has_s1
+            n_natural = int(natural_s1_mask.sum())
+
+            # force the top-confidence parcels that have both S2 and S1 available.
+            n_still_needed = max(0, n_quota - n_natural)
+            if n_still_needed > 0:
+                both_avail = parcels_selected["s2_available"] & has_s1
+                candidates = (
+                    parcels_selected[both_avail]
+                    .nlargest(n_still_needed, "s1_ml_prob_max")
+                    .index
+                )
+                parcels_selected.loc[candidates, "pred_source"] = "S1_ML"
+
+        # pred1_prob: pick the source-appropriate probability per parcel
+        parcels_selected["pred1_prob"] = parcels_selected.apply(
+            lambda row: (
+                row["s1_ml_prob_max"]
+                if row["pred_source"] == "S1_ML"
+                else (
+                    row["thresh_prob"] if row["pred_source"] == "S2" else float("nan")
+                )
+            ),
+            axis=1,
+        )
+
+        # pred_consolidated from the final probability + source
+        parcels_selected["pred_consolidated"] = parcels_selected.apply(
+            lambda row: _categorize_pred_by_source(
+                row["pred1_prob"],
+                row["pred_source"],
+                s1_ml_onbedekt_threshold,
+            ),
+            axis=1,
+        )
+
         parcels_selected["pred_cons_status"] = parcels_selected[
             "pred_consolidated"
         ].apply(lambda x: "NOK" if x in ("NODATA", "DOUBT") else "OK")
+
+        src_counts = parcels_selected["pred_source"].value_counts().to_dict()
+        logger.info(f"Consolidation source distribution: {src_counts}")
 
         # Export to excel
         pdh.to_excel(parcels_selected, parcels_marker_path, index=False)
         pdh.to_file(parcels_selected, parcel_selected_sqlite_path, index=False)
 
-    # STEP 5: reporting
-    # ----------------------------------------
-
-    input_dir = conf.paths.getpath("input_dir")
+    # -------------------------------------------------------------------
+    # Reporting
+    # -------------------------------------------------------------------
     input_groundtruth_filename = conf.calc_marker_params.getpath(
         "input_groundtruth_filename"
     )
@@ -351,6 +509,50 @@ def run_cover(
     logging.shutdown()
 
 
+def _store_config_files(
+    config_paths: list[Path],
+    default_basedir: Path,
+    config_overrules: list[str] | None,
+    reuse_last_run_dir: bool,
+    run_dir: Path,
+) -> None:
+    config_used_path = run_dir / "config_used.ini"
+    if reuse_last_run_dir and run_dir.exists() and config_used_path.exists():
+        config_paths.append(config_used_path)
+        logger.info(f"Run dir config needs to be reused, so {config_paths}")
+        conf.read_config(
+            config_paths=config_paths,
+            default_basedir=default_basedir,
+            overrules=config_overrules,
+        )
+        logger.info(
+            "Write new config_used.ini, because some parameters might have been added"
+        )
+        with config_used_path.open("w") as config_used_file:
+            conf.config.write(config_used_file)
+    else:
+        # Copy the config files to a config dir for later reference
+        configfiles_used_dir = run_dir / "configfiles_used"
+        if configfiles_used_dir.exists():
+            configfiles_used = sorted(configfiles_used_dir.glob("*.ini"))
+            conf.read_config(
+                config_paths=configfiles_used,
+                default_basedir=default_basedir,
+                overrules=config_overrules,
+            )
+        else:
+            configfiles_used_dir.mkdir(parents=True)
+            for idx, config_path in enumerate(config_paths):
+                # Prepend with idx so the order of config files is retained...
+                dst = configfiles_used_dir / f"{idx}_{config_path.name}"
+                shutil.copy(config_path, dst)
+
+            # Write the resolved complete config, so it can be reused
+            logger.info("Write config_used.ini, so it can be reused later on")
+            with config_used_path.open("w") as config_used_file:
+                conf.config.write(config_used_file)
+
+
 def _categorize_pred(x: float | str) -> str:
     if pd.isna(x):
         return "NODATA"
@@ -366,13 +568,48 @@ def _categorize_pred(x: float | str) -> str:
         return "NODATA"
 
 
+def _categorize_pred_by_source(
+    prob: float, source: str, s1_ml_onbedekt_threshold: float
+) -> str:
+    """Categorize a consolidated prediction using source-appropriate thresholds.
+
+    Args:
+        prob: probability of ONBEDEKT (bare soil).
+        source: ``"S2"``, ``"S1_ML"``, or ``"NODATA"``.
+        s1_ml_onbedekt_threshold: Threshold for S1 ML probability to consider
+          something as ONBEDEKT.
+
+    Returns:
+        One of ``"ONBEDEKT"``, ``"DOUBT"``, ``"BEDEKT"``, ``"NODATA"``.
+    """
+    if source == "NODATA" or pd.isna(prob):
+        return "NODATA"
+    try:
+        p = float(prob)
+    except (ValueError, TypeError):
+        return "NODATA"
+    if source == "S1_ML":
+        if p >= s1_ml_onbedekt_threshold:
+            return "ONBEDEKT"
+        elif p >= 0.4:
+            return "DOUBT"
+        else:
+            return "BEDEKT"
+    elif source == "S2":
+        # S2 rule-based result
+        if p > 0.5:
+            return "ONBEDEKT"
+        elif p > 0.4:
+            return "DOUBT"
+        else:
+            return "BEDEKT"
+    return "NODATA"
+
+
 def _calc_cover(
     input_parcel_path: Path,
-    timeseries_periodic_dir: Path,
-    images_to_use: dict[str, conf.ImageConfig],
-    start_date: datetime,
-    end_date: datetime,
-    parcel_columns: list[str] | None,
+    ts_path: Path,
+    ndvi_threshold: float,
     output_path: Path,
     output_geo_path: Path | None = None,
     force: bool = False,
@@ -391,22 +628,11 @@ def _calc_cover(
 
     id_column = conf.columns["id"]
     result_df = None
-    # Collect all data needed to do the classification in one input file
-    tmp_dir = Path(tempfile.mkdtemp(prefix="calc_index_"))
-    tmp_path = tmp_dir / f"{input_parcel_path.stem}.sqlite"
-    ts.collect_and_prepare_timeseries_data(
-        input_parcel_path=input_parcel_path,
-        timeseries_dir=timeseries_periodic_dir,
-        output_path=tmp_path,
-        start_date=start_date,
-        end_date=end_date,
-        images_to_use=images_to_use,
-        parceldata_aggregations_to_use=["count", "mean", "median", "stdev"],
-        max_fraction_null=1,
-        force=force,
-    )
+    parcel_ids = pdh.read_file(
+        input_parcel_path, ignore_geometry=True, columns=[id_column]
+    )[id_column]
 
-    info = gfo.get_layerinfo(tmp_path, layer="info", raise_on_nogeom=False)
+    info = gfo.get_layerinfo(ts_path, layer="info", raise_on_nogeom=False)
     columns = {}
     for column in info.columns:
         column_lower = column.lower()
@@ -414,7 +640,7 @@ def _calc_cover(
             orbit = "asc"
         elif "-desc-" in column_lower:
             orbit = "desc"
-        elif column_lower.startswith("s2-ndvi-weekly"):
+        elif column_lower.startswith("s2-ndvi"):
             if column_lower.endswith("_ndvi_median"):
                 columns["ndvi_median"] = column
         else:
@@ -423,8 +649,9 @@ def _calc_cover(
         key = f"s1{orbit}_{'_'.join(column_lower.split('-')[-1].split('_')[-2:])}"
         columns[key] = column
 
-    # Minimum NDVI where we judge some vegetation is present
-    ndvi_vegetation_min = 0.35
+    if columns["ndvi_median"] is None:
+        # No s2 data found for this period
+        return
 
     # Remarks:
     #   - for asc, asc_vh_median seems typically lower -> different thresshold
@@ -481,7 +708,7 @@ def _calc_cover(
                 END AS cover_s1_desc
                 ,CASE WHEN "{columns["ndvi_median"]}" IS NULL
                                 OR "{columns["ndvi_median"]}" = 0 THEN 'NODATA'
-                      WHEN "{columns["ndvi_median"]}" < {ndvi_vegetation_min} THEN 'bare-soil'
+                      WHEN "{columns["ndvi_median"]}" < {ndvi_threshold} THEN 'bare-soil'
                       ELSE 'other'
                  END AS cover_s2_ndvi
                  ,"{columns["ndvi_median"]}" AS s2_ndvi_median
@@ -495,8 +722,8 @@ def _calc_cover(
     sql = f"""
         SELECT sub.*
                 ,CASE
-                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median >= {ndvi_vegetation_min} THEN 0.0
-                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median <> 0 AND s2_ndvi_median < {ndvi_vegetation_min} THEN 1 - s2_ndvi_median
+                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median >= {ndvi_threshold} THEN 0.0
+                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median <> 0 AND s2_ndvi_median < {ndvi_threshold} THEN 1 - s2_ndvi_median
                     WHEN cover_s1 = 'NODATA' THEN NULL
                     WHEN cover_s1_asc = 'bare-soil' THEN 0.5
                     ELSE 0.0
@@ -515,12 +742,255 @@ def _calc_cover(
                 END AS pred1
           FROM ({sql}) sub2
     """
-    result_df = pdh.read_file(tmp_path, sql=sql)
+    result_df = pdh.read_file(ts_path, sql=sql)
+    result_df = result_df[result_df[id_column].isin(parcel_ids)]
     pdh.to_file(result_df, output_path)
+
+
+def _get_generic_sentinel_column_mapping(
+    columns_list: list[str],
+) -> tuple[dict[str, str], str | None]:
+    """Map raw period-specific S1 column names to generic names.
+
+    eg: ``s1-grd-sigma0-asc-weekly_20250901_VV_median``
+        is mapped to ``s1-grd-sigma0-asc_vv_median``.
+    This allows the trained model to be used for multiple time periods.
+
+    Args:
+        columns_list: list of raw column names (as returned by gfo.get_layerinfo).
+
+    Returns:
+        Tuple of:
+            - s1_col_map: {generic_name: raw_column_name} for all S1 columns found.
+            - ndvi_col: raw column name of the NDVI median, or None if not present.
+    """
+    _NDVI_RE = re.compile(r"^s2-ndvi-.*_ndvi_median$", re.IGNORECASE)
+    _S1_RE = re.compile(r"^s1-.*", re.IGNORECASE)
+    _PERIOD_RE = re.compile(r"(?:daily|weekly|monthly)_\d{8}_", re.IGNORECASE)
+
+    s1_col_map: dict[str, str] = {}
+    ndvi_col: str | None = None
+    for column in columns_list:
+        if _NDVI_RE.match(column):
+            ndvi_col = column
+        elif _S1_RE.match(column):
+            s1_col_map[_PERIOD_RE.sub("", column.lower())] = column
+    return s1_col_map, ndvi_col
+
+
+def _train_ml_cover_model(
+    period_timeseries: list[tuple[datetime, pd.DataFrame]],
+    id_column: str,
+    ndvi_threshold: float,
+) -> tuple:
+    """Train a Random Forest on S1 features labelled by S2 NDVI.
+
+    Accepts per-period DataFrames that were already collected by the caller
+    (one DataFrame per weekly period, containing both S1 bands and S2 NDVI).
+    A single model is trained on samples pooled across all periods, which gives
+    more training data than any single-period subset.
+
+    At prediction time the model is applied per-period to S1 features only, so
+    it can produce cover predictions even when S2 is cloudy.
+
+    Args:
+        period_timeseries: List of ``(period_start_date, DataFrame)`` tuples.
+            Each DataFrame contains the aggregated S1 and S2 NDVI columns for
+            all parcels in that period.
+        id_column: Name of the parcel ID column.
+        ndvi_threshold: NDVI threshold to binarize S2 labels into ONBEDEKT vs BEDEKT.
+
+    Returns:
+        Tuple ``(classifier, s1_feature_names)`` where *classifier* is a fitted
+        ``RandomForestClassifier`` and *s1_feature_names* is the ordered list of
+        stable generic S1 feature names the model was trained on.
+    """
+    # one record per parcel per period that had enough S2 data to use as labels
+    s1_features_per_period: list = []
+    bare_soil_labels_per_period: list = []
+    parcel_ids_per_period: list = []
+    s1_feature_names: list[str] | None = None
+
+    for period_start_date, period_df in period_timeseries:
+        s1_col_map, ndvi_column = _get_generic_sentinel_column_mapping(
+            list(period_df.columns)
+        )
+
+        if ndvi_column is None or not s1_col_map:
+            logger.debug(
+                f"No S1/NDVI columns for period {period_start_date.date()}, skipping"
+            )
+            continue
+
+        ndvi_values = period_df[ndvi_column]
+        # Only rows where S2 NDVI is available (non-null, non-zero)
+        rows_with_s2_data = ndvi_values.notna() & (ndvi_values != 0)
+
+        if rows_with_s2_data.sum() < 5:
+            logger.debug(
+                f"Too few S2 observations for period {period_start_date.date()}, "
+                "skipping"
+            )
+            continue
+
+        # Rename date-specific S1 columns to stable generic names so one model
+        # can be applied across different time periods
+        if s1_feature_names is None:
+            s1_feature_names = sorted(s1_col_map.keys())
+
+        period_s1_features = (
+            period_df.loc[rows_with_s2_data, list(s1_col_map.values())]
+            .rename(columns={v: k for k, v in s1_col_map.items()})
+            .reindex(columns=s1_feature_names, fill_value=0)
+            .fillna(0)
+            .to_numpy()
+        )
+        period_bare_soil_labels = (
+            (ndvi_values.loc[rows_with_s2_data] < ndvi_threshold).astype(int).to_numpy()
+        )
+        period_parcel_ids = period_df.loc[rows_with_s2_data, id_column].to_numpy()
+
+        s1_features_per_period.append(period_s1_features)
+        bare_soil_labels_per_period.append(period_bare_soil_labels)
+        parcel_ids_per_period.append(period_parcel_ids)
+
+    if not s1_features_per_period or s1_feature_names is None:
+        raise RuntimeError(
+            "Could not collect any S2-labelled training samples for the S1 ML model. "
+            "Make sure both S1 and S2 NDVI timeseries data are present."
+        )
+
+    # Pool all periods together
+    all_s1_features = np.vstack(s1_features_per_period)
+    all_bare_soil_labels = np.concatenate(bare_soil_labels_per_period)
+    all_parcel_ids = np.concatenate(parcel_ids_per_period)
+
+    # Parcel-based 80/20 train/test split to prevent data leakage.
+    # Make the split on unique ids, because an id can appear in multiple periods.
+    # This ensures the test set only contains parcels the model has never seen.
+    unique_parcel_ids = np.unique(all_parcel_ids)
+    train_parcel_ids, test_parcel_ids = train_test_split(
+        unique_parcel_ids, test_size=0.2, random_state=42
+    )
+    train_parcel_set = set(train_parcel_ids)
+    is_train_parcel = np.array([pid in train_parcel_set for pid in all_parcel_ids])
+    is_test_parcel = ~is_train_parcel
+
+    train_features = all_s1_features[is_train_parcel]
+    test_features = all_s1_features[is_test_parcel]
+    train_labels = all_bare_soil_labels[is_train_parcel]
+    test_labels = all_bare_soil_labels[is_test_parcel]
+
+    n_bare_soil_in_train = int(train_labels.sum())
+    n_vegetated_in_train = len(train_labels) - n_bare_soil_in_train
+    logger.info(
+        f"Training S1 Random Forest on {len(train_labels)} samples "
+        f"({len(test_labels)} held out for test) from "
+        f"{len(s1_features_per_period)} periods "
+        f"(train: {n_bare_soil_in_train} ONBEDEKT / {n_vegetated_in_train} BEDEKT)"
+    )
+    classifier_type_lower = conf.classifier["classifier_type"].lower()
+    classifier_kwargs = conf.classifier.getdict("classifier_sklearn_kwargs")
+    if classifier_kwargs is None:
+        classifier_kwargs = {}
+
+    if classifier_type_lower == "randomforest":
+        classifier = RandomForestClassifier(**classifier_kwargs)
+    else:
+        raise ValueError(f"Unsupported classifier type: {classifier_type_lower}")
+
+    classifier.fit(train_features, train_labels)
+
+    if len(test_labels) > 0:
+        test_report = classification_report(
+            test_labels,
+            classifier.predict(test_features),
+            target_names=["BEDEKT", "ONBEDEKT"],
+            zero_division=0,
+        )
+        logger.info(f"S1 ML model test-set evaluation:\n{test_report}")
+
+    return classifier, s1_feature_names
+
+
+def _calc_cover_and_predict(
+    input_parcel_path: Path,
+    ts_path: Path,
+    parcel_columns: list[str] | None,
+    ndvi_threshold: float,
+    output_path: Path,
+    classifier: RandomForestClassifier,
+    feature_names: list[str],
+    output_geo_path: Path | None = None,
+    force: bool = False,
+) -> None:
+    """Run rule-based cover detection and add S1 ML prediction for comparison.
+
+    First runs the standard :func:`_calc_cover` to produce ``pred1_prob``
+    (S2-dominated threshold-based result), then applies the pre-trained *classifier*
+    to the S1 features of this period to produce ``s1_ml_prob``.
+
+    Output columns added on top of :func:`_calc_cover`:
+        s1_ml_prob -- probability of ONBEDEKT according to the S1 ML model
+    """
+    if not force and output_path.exists():
+        return
+
+    logger.info(f"start ML+rules cover processing {output_path}")
+
+    # Step 1: Run standard rule-based detection.
+    _calc_cover(
+        input_parcel_path=input_parcel_path,
+        ts_path=ts_path,
+        ndvi_threshold=ndvi_threshold,
+        output_path=output_path,
+        output_geo_path=None,
+        force=force,
+    )
+
+    # Step 2: Predict using classifier
+    try:
+        id_column = conf.columns["id"]
+        parcel_ids = pdh.read_file(
+            input_parcel_path, ignore_geometry=True, columns=[id_column]
+        )[id_column]
+        info = gfo.get_layerinfo(ts_path, layer="info", raise_on_nogeom=False)
+        s1_col_map, _ = _get_generic_sentinel_column_mapping(list(info.columns))
+
+        raw_df = pdh.read_file(ts_path)
+        raw_df = raw_df[raw_df[id_column].isin(parcel_ids)].reset_index(drop=True)
+        generic_df = raw_df.rename(columns={v: k for k, v in s1_col_map.items()})
+
+        # Parcels with at least some valid S1 signal
+        s1_raw_cols = [c for c in s1_col_map.values() if c in raw_df.columns]
+        s1_has_data_series = raw_df[s1_raw_cols].fillna(0).ne(0).any(axis=1)
+        s1_ml_prob_series = pd.Series(float("nan"), index=raw_df.index, dtype=float)
+        model_trained_on_columns = [f for f in feature_names if f in generic_df.columns]
+        if model_trained_on_columns and s1_has_data_series.any():
+            proba = classifier.predict_proba(
+                generic_df.loc[s1_has_data_series, model_trained_on_columns]
+                .fillna(0)
+                .to_numpy()
+            )
+            classes = classifier.classes_.tolist()
+            onbedekt_idx = classes.index(1) if 1 in classes else None
+            if onbedekt_idx is not None:
+                s1_ml_prob_series.loc[s1_has_data_series] = proba[:, onbedekt_idx]
+
+        # Add ML column to the rule-based output and re-save
+        result_df = pdh.read_file(output_path)
+        ml_df = pd.DataFrame(
+            {id_column: raw_df[id_column], "s1_ml_prob": s1_ml_prob_series.to_numpy()}
+        )
+        result_df = result_df.merge(ml_df, on=id_column, how="left")
+        gfo.remove(output_path, missing_ok=True)
+        pdh.to_file(result_df, output_path)
+    except Exception as e:
+        logger.error(f"Error in ML cover calculation for {output_path}: {e}")
+        raise
 
     if output_geo_path is not None:
         # If a geo file is asked, always recreate it so it is in sync with the output
-        # file
         gfo.remove(output_geo_path, missing_ok=True)
         parcels_gdf = pdh.read_file(
             input_parcel_path,
@@ -548,7 +1018,8 @@ def _calc_cover(
             result_df = pdh.read_file(output_path)
         result_gdf = parcels_gdf.merge(result_df, on=id_column)
 
-        satdata_df = pdh.read_file(tmp_path)
+        satdata_df = pdh.read_file(ts_path)
+        satdata_df = satdata_df[satdata_df[id_column].isin(parcel_ids)]
 
         """
         # Add the ratio of the median of the VV and VH bands
@@ -563,8 +1034,6 @@ def _calc_cover(
 
         result_gdf = result_gdf.merge(satdata_df, on=id_column)
         gfo.to_file(result_gdf, output_geo_path)
-
-    shutil.rmtree(tmp_dir)
 
 
 def _select_parcels_BMG_MEG_MEV_EEF(
@@ -740,7 +1209,7 @@ def report(
                 groundtruth_df["NATEELT_CTRL_COD"].astype(str).str.strip() != ""
             )
 
-            has_vaststellingen = False
+            has_vaststellingen: pd.Series | bool = False
             if "VASTSTELLINGEN" in groundtruth_df.columns:
                 has_vaststellingen = groundtruth_df["VASTSTELLINGEN"].notna() & (
                     groundtruth_df["VASTSTELLINGEN"].astype(str).str.strip() != ""
@@ -753,8 +1222,6 @@ def report(
             )
 
         if start_date is not None and "CONTROLEDATUM" in groundtruth_df.columns:
-            from dateutil.relativedelta import relativedelta
-
             groundtruth_df["CONTROLEDATUM"] = pd.to_datetime(
                 groundtruth_df["CONTROLEDATUM"],
                 format="%d/%m/%Y %H:%M:%S",
@@ -939,10 +1406,17 @@ def report(
     html_parts.append("<h2>Ground truth</h2>")
     columns_to_save = [
         id_column,
-        "pred1",
-        "pred1_prob",
+        # Final outputs
         "pred_consolidated",
         "pred_cons_status",
+        "pred1_prob",
+        "pred_source",
+        # Threshold rule-based
+        "thresh_pred",
+        "thresh_prob",
+        "s2_available",
+        # S1 ML input
+        "s1_ml_prob_max",
     ]
 
     if "gt_cover" in merged_df.columns:

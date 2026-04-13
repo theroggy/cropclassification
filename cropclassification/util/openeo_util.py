@@ -259,6 +259,7 @@ def _create_mosaic_job(
         )
 
         # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
+        # NOTE: deprecation warning, use to_scl_dilation_mask
         if cloud_filter_band_dilated is not None:
             cube = cube.process(
                 "mask_scl_dilation",
