@@ -2,7 +2,7 @@
 
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import pandas as pd
 import pyogrio
@@ -49,9 +49,9 @@ def get_table_info(path: Path, table_name: str = "info") -> dict[str, Any]:
 
 def read_file(
     path: Path,
-    table_name: str = "info",
-    columns: Optional[list[str]] = None,
-    sql: Optional[str] = None,
+    table_name: str | None = None,
+    columns: list[str] | None = None,
+    sql: str | None = None,
     ignore_geometry: bool = True,
 ) -> pd.DataFrame:
     """Read a file to a pandas dataframe.
@@ -108,6 +108,7 @@ def read_file(
         return pyogrio.read_dataframe(
             path,
             columns=columns,
+            layer=table_name,
             read_geometry=not ignore_geometry,
             sql=sql,
             encoding="utf-8",
@@ -117,12 +118,12 @@ def read_file(
 
 
 def to_file(
-    df: Optional[Union[pd.DataFrame, pd.Series]],
+    df: pd.DataFrame | pd.Series | None,
     path: Path,
     table_name: str = "info",
     index: bool = True,
     append: bool = False,
-):
+) -> None:
     """Writes a pandas dataframe to file.
 
     The file format is detected based on the path extension.
@@ -196,8 +197,8 @@ def to_excel(
         _apply_formatting(writer, sheet_name, columns_format)
 
 
-def _get_columns_for_formatting(df, index: bool) -> dict:
-    def get_format(col: str, dtype) -> Optional[dict]:
+def _get_columns_for_formatting(df: pd.DataFrame, index: bool) -> dict:
+    def get_format(col: str, dtype: Any) -> dict | None:  # noqa: ANN401
         if pd.api.types.is_integer_dtype(dtype):
             return {"num_format": "0"}
         elif pd.api.types.is_numeric_dtype(dtype):
@@ -234,15 +235,17 @@ def _get_columns_for_formatting(df, index: bool) -> dict:
     return result
 
 
-def _apply_formatting(writer, sheet_name: str, format_info: dict):
+def _apply_formatting(
+    writer: pd.ExcelWriter, sheet_name: str, format_info: dict
+) -> None:
     # Apply format info
     for column in format_info:
-        format = None
+        fmt = None
         if format_info[column]["format"] is not None:
-            format = writer.book.add_format(format_info[column]["format"])
+            fmt = writer.book.add_format(format_info[column]["format"])
         writer.sheets[sheet_name].set_column(
             first_col=format_info[column]["index"],
             last_col=format_info[column]["index"],
             width=format_info[column]["width"],
-            cell_format=format,
+            cell_format=fmt,
         )

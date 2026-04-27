@@ -18,7 +18,7 @@ class SampleData:
     image_roi_dir = image_dir / roi_name
 
     input_parcel_path = inputdata_dir / "Prc_BEFL_2023_2023-07-24.gpkg"
-    classes_refe_path = refe_dir / "BEFL_2023_mon_refe_2023-07-24.tsv"
+    classes_refe_path = refe_dir / "BEFL_2025_mon_refe_2025-11-03.tsv"
     image_s1_asc_path = (
         image_roi_dir
         / "s1-grd-sigma0-asc-weekly"

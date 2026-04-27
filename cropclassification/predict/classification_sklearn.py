@@ -1,9 +1,7 @@
 """Module that implements the classification logic."""
 
 import ast
-import glob
 import logging
-import os
 from pathlib import Path
 
 import joblib
@@ -31,10 +29,9 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
             * ... all columns that will be used as classification data
         output_classifier_basepath: the path where the classifier can be written
     """
-    output_classifier_path_noext, _ = os.path.splitext(output_classifier_basepath)
     output_classifier_path = output_classifier_basepath
-    output_classifier_datacolumns_path = Path(
-        f"{output_classifier_path_noext}_datacolumns.txt"
+    output_classifier_datacolumns_path = output_classifier_basepath.with_name(
+        f"{output_classifier_basepath.stem}_datacolumns.txt"
     )
 
     # Split the input dataframe in one with the train classes and one with the train
@@ -51,7 +48,7 @@ def train(train_df: pd.DataFrame, output_classifier_basepath: Path) -> Path:
     )
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         logger.info(f"Resulting Columns for training data: {train_data_df.columns}")
-    with open(output_classifier_datacolumns_path, "w") as file:
+    with output_classifier_datacolumns_path.open("w") as file:
         file.write(str(list(train_data_df.columns)))
 
     # Using almost all defaults for the classifier seems to work best...
@@ -138,11 +135,9 @@ def predict_proba(
     with pd.option_context("display.max_rows", None, "display.max_columns", None):
         logger.info(f"Resulting Columns for training data: {parcel_data_df.columns}")
 
-    # Check of the input data columns match the columns needed for the classifier
-    classifier_datacolumns_path = glob.glob(
-        os.path.join(os.path.dirname(classifier_path), "*_datacolumns.txt")
-    )[0]
-    with open(classifier_datacolumns_path) as file:
+    # Check if the input data columns match the columns needed for the classifier
+    classifier_datacolumns_path = next(classifier_path.parent.glob("*_datacolumns.txt"))
+    with classifier_datacolumns_path.open() as file:
         classifier_datacolumns = ast.literal_eval(file.readline())
     if classifier_datacolumns != list(parcel_data_df.columns):
         raise Exception(

@@ -1,9 +1,7 @@
 """Module that implements the classification logic."""
 
 import ast
-import glob
 import logging
-import os
 from pathlib import Path
 
 import numpy as np
@@ -50,12 +48,12 @@ def train(
         output_classifier_basepath: the path where the classifier can be written
     """
     # Prepare and check some input + init some variables
-    output_classifier_path_noext, output_ext = os.path.splitext(
-        output_classifier_basepath
+    output_ext = output_classifier_basepath.suffix
+    output_classifier_classes_path = output_classifier_basepath.with_name(
+        f"{output_classifier_basepath.stem}_classes.txt"
     )
-    output_classifier_classes_path = Path(f"{output_classifier_path_noext}_classes.txt")
-    output_classifier_datacolumns_path = Path(
-        f"{output_classifier_path_noext}_datacolumns.txt"
+    output_classifier_datacolumns_path = output_classifier_basepath.with_name(
+        f"{output_classifier_basepath.stem}_datacolumns.txt"
     )
 
     if output_ext.lower() != ".hdf5":
@@ -68,7 +66,7 @@ def train(
     classes_dict = {
         key: value for value, key in enumerate(train_df[conf.columns["class"]].unique())
     }
-    with open(output_classifier_classes_path, "w") as file:
+    with output_classifier_classes_path.open("w") as file:
         file.write(str(classes_dict))
     # Replace the string values with the ints
     column_class = conf.columns["class"]
@@ -114,7 +112,7 @@ def train(
         logger.info(
             f"Resulting Columns for training data: {list(train_data_df.columns)}"
         )
-    with open(output_classifier_datacolumns_path, "w") as file:
+    with output_classifier_datacolumns_path.open("w") as file:
         file.write(str(list(train_data_df.columns)))
 
     classifier_type_lower = conf.classifier["classifier_type"].lower()
@@ -144,7 +142,7 @@ def train(
         hidden_layer_size = safe_math_eval(
             hidden_layer_size_str.format(input_layer_size=len(train_data_df.columns))
         )
-        hidden_layer_sizes.append(int(hidden_layer_size))
+        hidden_layer_sizes.append(int(hidden_layer_size))  # type: ignore[arg-type]
 
     max_iter = conf.classifier.getint("multilayer_perceptron_max_iter")
     learning_rate_init = conf.classifier.getfloat(
@@ -208,8 +206,10 @@ def train(
         to_be_formatted_by_callback = (
             "{val_loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
         )
-        best_model_path = (
-            f"{output_classifier_path_noext}_{to_be_formatted_by_callback}{output_ext}"
+        best_model_path = str(
+            output_classifier_basepath.with_name(
+                f"{output_classifier_basepath.stem}_{to_be_formatted_by_callback}{output_ext}"
+            )
         )
         callbacks.append(
             tf.keras.callbacks.ModelCheckpoint(
@@ -229,8 +229,10 @@ def train(
         )
     elif best_model_strategy == "LOSS":
         to_be_formatted_by_callback = "{loss:.5f}_{loss:.5f}_{val_loss:.5f}_{epoch:02d}"
-        best_model_path = (
-            f"{output_classifier_path_noext}_{to_be_formatted_by_callback}{output_ext}"
+        best_model_path = str(
+            output_classifier_basepath.with_name(
+                f"{output_classifier_basepath.stem}_{to_be_formatted_by_callback}{output_ext}"
+            )
         )
         callbacks.append(
             tf.keras.callbacks.ModelCheckpoint(
@@ -265,7 +267,9 @@ def train(
     else:
         raise ValueError(f"unsupported {best_model_strategy=}")
 
-    csv_log_path = Path(f"{output_classifier_path_noext}_train_log.csv")
+    csv_log_path = output_classifier_basepath.with_name(
+        f"{output_classifier_basepath.stem}_train_log.csv"
+    )
     callbacks.append(
         tf.keras.callbacks.CSVLogger(csv_log_path, append=True, separator=";")
     )
@@ -334,10 +338,8 @@ def predict_proba(
     )
 
     # Check of the input data columns match the columns needed for the neural net
-    classifier_datacolumns_path = glob.glob(
-        os.path.join(os.path.dirname(classifier_path), "*_datacolumns.txt")
-    )[0]
-    with open(classifier_datacolumns_path) as file:
+    classifier_datacolumns_path = next(classifier_path.parent.glob("*_datacolumns.txt"))
+    with classifier_datacolumns_path.open() as file:
         classifier_datacolumns = ast.literal_eval(file.readline())
     if classifier_datacolumns != list(parcel_data_df.columns):
         raise Exception(
@@ -363,10 +365,8 @@ def predict_proba(
 
     # Convert probabilities to dataframe, combine with input data and write to file
     # Load the classes from the classes file
-    classifier_classes_path = glob.glob(
-        os.path.join(os.path.dirname(classifier_path), "*_classes.txt")
-    )[0]
-    with open(classifier_classes_path) as file:
+    classifier_classes_path = next(classifier_path.parent.glob("*_classes.txt"))
+    with classifier_classes_path.open() as file:
         classes_dict = ast.literal_eval(file.readline())
 
     id_class_proba = np.concatenate(
@@ -388,7 +388,7 @@ def predict_proba(
     return proba_df
 
 
-def safe_math_eval(string):
+def safe_math_eval(string: str | None) -> int | float | str | None:
     """Function to evaluate a mathematical expression safely."""
     if string is None:
         return None
@@ -414,7 +414,7 @@ class ModelCheckpointExt(kr.callbacks.Callback):
         save_weights_only: bool = False,
         verbose: bool = True,
         only_report: bool = False,
-    ):
+    ) -> None:
         """ModelCheckpoint callback that can use more metrics to choose the best model.
 
         Args:
@@ -445,8 +445,10 @@ class ModelCheckpointExt(kr.callbacks.Callback):
         self.verbose = verbose
         self.only_report = only_report
 
-    def on_epoch_end(self, epoch, logs={}):  # noqa: D102
+    def on_epoch_end(self, epoch: int, logs: dict | None = None) -> None:  # noqa: D102
         logger.debug("Start in callback on_epoch_begin")
+        if logs is None:
+            logs = {}
 
         mh.save_and_clean_models(
             model_save_dir=self.model_save_dir,

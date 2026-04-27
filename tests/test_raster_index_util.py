@@ -63,7 +63,7 @@ def create_gdal_raster(
             rasterband.SetDescription(band)
 
 
-def make_rect(xmin, ymin, xmax, ymax, id=None, properties=None):
+def make_rect(xmin, ymin, xmax, ymax, rect_id=None, properties=None):
     f = {
         "type": "Feature",
         "geometry": {
@@ -73,8 +73,8 @@ def make_rect(xmin, ymin, xmax, ymax, id=None, properties=None):
             ],
         },
     }
-    if id is not None:
-        f["id"] = id
+    if rect_id is not None:
+        f["id"] = rect_id
     if properties is not None:
         f["properties"] = properties
     return f

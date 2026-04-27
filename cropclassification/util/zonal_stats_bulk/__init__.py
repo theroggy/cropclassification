@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional, Union
 
 from . import (
     _zonal_stats_bulk_exactextract,
@@ -20,13 +19,13 @@ def zonal_stats(
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
     engine: str,
-    stats: Union[list[str], str],
-    cloud_filter_band: Optional[str] = None,
+    stats: list[str] | str | None = None,
+    cloud_filter_band: str | None = None,
     calc_bands_parallel: bool = True,
     nb_parallel: int = -1,
     force: bool = False,
-):
-    """Calculate zonal statistics.
+) -> None:
+    """Calculate zonal statistics and save the results in the output directory.
 
     Args:
         vector_path (Path): input file with vector data.
@@ -35,31 +34,27 @@ def zonal_stats(
         rasters_bands (List[Tuple[Path, List[str]]]): List of tuples with the path to
             the raster files and the bands to calculate the zonal statistics on.
         output_dir (Path): directory to write the results to.
-        stats (List[str]): statistics to calculate. Available statistics and
-            special options are dependent on the `engine` specified:
-        cloud_filter_band (str, optional): the band to use as a cloud filter. Only
-            supported for engine "rasterstats". Defaults to None.
-        calc_bands_parallel (bool, optional): True to calculate the bands in parallel.
-            Only supported for engine "rasterstats". Defaults to True.
         engine (str): the engine to use for the calculation. Options are
             "exactextract", "rasterstats" and "pyqgis".
-        stats (list[str]): statistics to calculate. Available statistics and
-            special options are dependent on the `engine` specified:
+        stats (List[str]): statistics to calculate. Default to ["count", "median"].
+            Available statistics and special options are dependent on the `engine`
+            specified:
                 - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
                 - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
                         "range", "minority", "majority" and "variance".
                 - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
-
+        cloud_filter_band (str, optional): the band to use as a cloud filter. Only
+            supported for engine "rasterstats". Defaults to None.
+        calc_bands_parallel (bool, optional): True to calculate the bands in parallel.
+            Only supported for engine "rasterstats". Defaults to True.
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
         force (bool, optional): False to skip calculating existing output files. True to
             recalculate and overwrite existing output files. Defaults to False.
     """
-    logger.info(
-        f"Calculate zonal statistics for {len(rasters_bands)} rasters ({nb_parallel=})"
-    )
-
-    if isinstance(stats, str):
+    if stats is None:
+        stats = ["count", "median"]
+    elif isinstance(stats, str):
         stats = [stats]
 
     if engine == "pyqgis":

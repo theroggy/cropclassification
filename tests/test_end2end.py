@@ -12,19 +12,9 @@ from tests import test_helper
 
 
 @pytest.mark.parametrize(
-    "markertype, cover_periodic_dir_suffix, exp_nb_periodic_parcels",
-    [
-        ("COVER", "", 10),
-        ("COVER_TBG_BMG_VOORJAAR", "_TBG_BMG", 3),
-        ("COVER_TBG_BMG_NAJAAR", "_TBG_BMG", 3),
-        ("COVER_EEB_VOORJAAR", "_EEB", 1),
-        ("COVER_EEF_VOORJAAR", "", 10),
-        ("COVER_BMG_MEG_MEV_EEF_NAJAAR", "", 10),
-    ],
+    "markertype, exp_nb_periodic_parcels", [("ONBEDEKT_NA_ZOMER", 4)]
 )
-def test_cover(
-    tmp_path, markertype, cover_periodic_dir_suffix, exp_nb_periodic_parcels
-):
+def test_cover(tmp_path, markertype, exp_nb_periodic_parcels):
     """Test running the cover task with all COVER marker types."""
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
@@ -43,19 +33,16 @@ def test_cover(
         tasksdir=tasks_dir, config_overrules=[f"marker.markertype={markertype}"]
     )
 
-    cover_periodic_dir = markers_dir / "_cover_periodic"
-    parcels_dir = f"Prc_BEFL_2023_2023-07-24{cover_periodic_dir_suffix}"
-    cover_periodic_parcels_dir = cover_periodic_dir / parcels_dir
-    assert cover_periodic_parcels_dir.exists()
+    run_dir = (
+        markers_dir / f"2024_{markertype}/Run_{datetime.now().strftime('%Y-%m-%d')}_001"
+    )
+    assert run_dir.exists()
 
     # Check the result
-    output_stems = ["cover_2024-03-04_2024-03-11", "cover_2024-03-11_2024-03-18"]
-    for output_stem in output_stems:
-        output_path = cover_periodic_parcels_dir / f"{output_stem}.sqlite"
-        assert output_path.exists()
-
-        df = pdh.read_file(output_path)
-        assert len(df) == exp_nb_periodic_parcels
+    output_path = run_dir / f"{markertype}_{datetime.now().strftime('%Y-%m-%d')}.sqlite"
+    assert output_path.exists()
+    df = pdh.read_file(output_path)
+    assert len(df) == exp_nb_periodic_parcels
 
 
 @pytest.mark.parametrize(

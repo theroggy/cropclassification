@@ -6,7 +6,6 @@ import tempfile
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Import geofilops here already, if tensorflow is loaded first leads to dll load errors
 import geofileops as gfo
@@ -24,8 +23,8 @@ from cropclassification.util import mosaic_util
 def run_cover(
     config_paths: list[Path],
     default_basedir: Path,
-    config_overrules: list[str] = [],
-):
+    config_overrules: list[str] | None = None,
+) -> None:
     """Run a the cover marker using the setting in the config_paths.
 
     Args:
@@ -44,14 +43,15 @@ def run_cover(
     # Main initialisation of the logging
     log_level = conf.general.get("log_level")
     log_dir = conf.paths.getpath("log_dir")
-    global logger
+    global logger  # noqa: PLW0603
     logger = log_helper.main_log_init(log_dir, __name__, log_level)
 
     logger.warning("This is a POC for a cover marker, so not for operational use!")
     logger.info(f"Config used: \n{conf.pformat_config()}")
 
+    force = True
     markertype = conf.marker["markertype"]
-    if not markertype.startswith("COVER"):
+    if not markertype.startswith(("COVER", "ONBEDEKT")):
         raise ValueError(f"Invalid markertype {markertype}, expected COVER_XXX")
 
     # Create run dir to be used for the results
@@ -75,8 +75,25 @@ def run_cover(
     # Depending on the specific markertype, export only the relevant parcels
     input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
     input_preprocessed_dir.mkdir(parents=True, exist_ok=True)
-    if markertype in ("COVER", "COVER_EEF_VOORJAAR", "COVER_BMG_MEG_MEV_EEF_NAJAAR"):
+    if markertype in ("COVER", "COVER_EEF_VOORJAAR"):
         pass
+    elif markertype in ("ONBEDEKT_NA_ZOMER", "COVER_BMG_MEG_MEV_EEF_NAJAAR"):
+        input_parcel_filename = f"{input_parcel_path.stem}_{markertype}.gpkg"
+        input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
+
+        where = """
+               "ALL_BEST" like '%BMG%'
+            OR "ALL_BEST" like '%MEV%'
+            OR "ALL_BEST" like '%MEG%'
+            OR "ALL_BEST" like '%EEF%'
+            OR "ALL_BEST" like '%TBG%'
+            OR "ALL_BEST" like '%EBG%'
+        """
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
+        input_parcel_path = input_parcel_filtered_path
+
     elif markertype == "COVER_EEB_VOORJAAR":
         # Fallow parcels with a premium having as requirement that there is no activity
         # on them from 15/01 till 10/04 + that they have maize as main crop.
@@ -86,7 +103,9 @@ def run_cover(
         where = (
             "ALL_BEST like '%EEB%' AND GWSCOD_V = '83' AND GWSCOD_H IN ('201', '202')"
         )
-        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
         input_parcel_path = input_parcel_filtered_path
 
     elif markertype in ("COVER_TBG_BMG_VOORJAAR", "COVER_TBG_BMG_NAJAAR"):
@@ -96,7 +115,9 @@ def run_cover(
         input_parcel_filtered_path = input_preprocessed_dir / input_parcel_filename
 
         where = "ALL_BEST like '%TBG%' OR ALL_BEST like '%BMG%'"
-        gfo.copy_layer(input_parcel_path, input_parcel_filtered_path, where=where)
+        gfo.copy_layer(
+            input_parcel_path, input_parcel_filtered_path, where=where, force=force
+        )
         input_parcel_path = input_parcel_filtered_path
 
     else:
@@ -105,20 +126,6 @@ def run_cover(
     # Get some general config
     data_ext = conf.general["data_ext"]
     geofile_ext = conf.general["geofile_ext"]
-    id_column = conf.columns["id"]
-    parcel_columns = [
-        id_column,
-        "ALL_BEST",
-        "GWSCOD_H",
-        "GWSNAM_H",
-        "GWSCOD_N",
-        "GWSNAM_N",
-        "GWSCOD_N2",
-        "GWSNAM_N2",
-        "PRC_NIS",
-        "ALV_NUMMER",
-        "PRC_NMR",
-    ]
 
     # -------------------------------------------------------------
     # The real work
@@ -144,6 +151,7 @@ def run_cover(
         input_parcel_path=input_parcel_path,
         output_imagedata_parcel_input_path=imagedata_input_parcel_path,
         output_parcel_nogeo_path=input_parcel_nogeo_path,
+        force=force,
     )
 
     # STEP 2: Calculate the timeseries data needed
@@ -165,6 +173,7 @@ def run_cover(
         end_date=end_date,
         images_to_use=images_to_use,
         timeseries_periodic_dir=timeseries_periodic_dir,
+        force=force,
     )
 
     # STEP 3: Determine the cover for the parcels for all periods
@@ -173,12 +182,11 @@ def run_cover(
     periods = mosaic_util._prepare_periods(
         start_date, end_date, period_name="weekly", period_days=None
     )
-    cover_periodic_dir = conf.paths.getpath("cover_periodic_dir")
-    cover_dir = cover_periodic_dir / input_parcel_nogeo_path.stem
+    cover_dir = run_dir / input_parcel_nogeo_path.stem
     cover_dir.mkdir(parents=True, exist_ok=True)
-    force = False
+
     on_error = "warn"
-    parcels_selected_paths = []
+    parcels_cover_paths = []
 
     for period in periods:
         period_start_date = period["start_date"].strftime("%Y-%m-%d")
@@ -194,24 +202,12 @@ def run_cover(
                 images_to_use=images_to_use,
                 start_date=period["start_date"],
                 end_date=period["end_date"],
-                parcel_columns=parcel_columns,
+                parcel_columns=None,
                 output_path=output_path,
                 output_geo_path=geo_path,
                 force=force,
             )
-
-            if markertype == "COVER_EEF_VOORJAAR":
-                parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
-                _select_parcels_EEF(geo_path, parcels_selected_path)
-                parcels_selected_paths.append(parcels_selected_path)
-            elif markertype == "COVER_BMG_MEG_MEV_EEF_NAJAAR":
-                parcels_selected_path = run_dir / f"{geo_path.stem}_BMG{geofile_ext}"
-                _select_parcels_BMG_MEG_MEV_EEF(geo_path, parcels_selected_path)
-                parcels_selected_paths.append(parcels_selected_path)
-            else:
-                parcels_selected_path = run_dir / f"{geo_path.stem}_filter{geofile_ext}"
-                _select_parcels(geo_path, parcels_selected_path)
-                parcels_selected_paths.append(parcels_selected_path)
+            parcels_cover_paths.append(geo_path)
 
         except Exception as ex:
             message = f"Error calculating {output_path.stem}"
@@ -227,45 +223,90 @@ def run_cover(
     # STEP 4: Create the final list of parcels
     # ----------------------------------------
     # Consolidate the list of parcels that need to be controlled
-    parcels_selected_path = (
-        run_dir / f"selectie_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
+    parcels_marker_path = (
+        run_dir / f"{markertype}_{datetime.now().strftime('%Y-%m-%d')}.xlsx"
     )
     parcels_selected = None
-    for path in parcels_selected_paths:
-        columns = [*parcel_columns, "provincie"]
-        parcels = gfo.read_file(path, columns=columns, ignore_geometry=True)
+    for path in parcels_cover_paths:
+        if markertype == "COVER_EEF_VOORJAAR":
+            parcels_selected_path = run_dir / f"{geo_path.stem}_EEF{geofile_ext}"
+            _select_parcels_EEF(path, parcels_selected_path)
+        else:
+            parcels_selected_path = path
+
+        parcels = gfo.read_file(parcels_selected_path, ignore_geometry=True)
 
         if parcels_selected is None:
             parcels_selected = parcels
         else:
             parcels_selected = pd.concat([parcels_selected, parcels])
 
-    # Create list with unique parcels
+    # Determine max probability for every parcel
     assert parcels_selected is not None
-    parcels_selected = parcels_selected.drop_duplicates()
-    pdh.to_excel(parcels_selected, parcels_selected_path, index=False)
+    input_info = gfo.get_layerinfo(input_parcel_path)
+    cols_to_keep = [*list(input_info.columns), "pred1"]
+    if "provincie" in parcels_selected.columns:
+        cols_to_keep.append("provincie")
+
+    parcels_selected = (
+        parcels_selected[[*cols_to_keep, "pred1_prob"]]
+        .sort_values("pred1_prob", ascending=False)
+        .groupby(conf.columns["id"], dropna=False, as_index=False)
+        .first()  # Take the highest pred1_prob per id
+    )
+
+    # Add pred_consolidated based on max pred1_proba
+    parcels_selected["pred_consolidated"] = parcels_selected["pred1_prob"].apply(
+        _categorize_pred
+    )
+
+    # Add pred_cons_status based on pred_consolidated
+    parcels_selected["pred_cons_status"] = parcels_selected["pred_consolidated"].apply(
+        lambda x: "NOK" if x in ("NODATA", "DOUBT") else "OK"
+    )
+
+    # Export to excel
+    pdh.to_excel(parcels_selected, parcels_marker_path, index=False)
+    pdh.to_file(
+        parcels_selected, parcels_marker_path.with_suffix(".sqlite"), index=False
+    )
 
     logging.shutdown()
 
 
+def _categorize_pred(x: float | str) -> str:
+    if pd.isna(x):
+        return "NODATA"
+    try:
+        x_num = float(x)
+        if x_num > 0.5:
+            return "ONBEDEKT"
+        elif x_num > 0.4:
+            return "DOUBT"
+        else:
+            return "BEDEKT"
+    except (ValueError, TypeError):
+        return "NODATA"
+
+
 def _calc_cover(
-    input_parcel_path,
-    timeseries_periodic_dir,
-    images_to_use,
+    input_parcel_path: Path,
+    timeseries_periodic_dir: Path,
+    images_to_use: dict[str, conf.ImageConfig],
     start_date: datetime,
     end_date: datetime,
-    parcel_columns: list[str],
+    parcel_columns: list[str] | None,
     output_path: Path,
-    output_geo_path: Optional[Path] = None,
+    output_geo_path: Path | None = None,
     force: bool = False,
-):
+) -> None:
     logger.info(f"start processing {output_path}")
 
     if output_path.exists():
         if force:
             gfo.remove(output_path)
         elif output_geo_path is not None and not output_geo_path.exists():
-            # Geo file is asked bu missing: we need to recalculate the output file as
+            # Geo file is asked but missing: we need to recalculate the output file as
             # well because we need temporary files to create the geo file.
             gfo.remove(output_path)
         else:
@@ -296,11 +337,17 @@ def _calc_cover(
             orbit = "asc"
         elif "-desc-" in column_lower:
             orbit = "desc"
+        elif column_lower.startswith("s2-ndvi-weekly"):
+            if column_lower.endswith("_ndvi_median"):
+                columns["ndvi_median"] = column
         else:
             continue
 
         key = f"s1{orbit}_{'_'.join(column_lower.split('-')[-1].split('_')[-2:])}"
         columns[key] = column
+
+    # Minimum NDVI where we judge some vegetation is present
+    ndvi_vegetation_min = 0.35
 
     # Remarks:
     #   - for asc, asc_vh_median seems typically lower -> different thresshold
@@ -319,8 +366,10 @@ def _calc_cover(
             END cover_s1
             ,cover_s1_asc
             ,cover_s1_desc
+            ,cover_s2_ndvi
+            ,s2_ndvi_median
         FROM (
-            SELECT "{id_column}"
+              SELECT "{id_column}"
                 ,CASE
                     WHEN "{columns["s1asc_vv_mean"]}" IS NULL OR "{columns["s1asc_vv_mean"]}" = 0
                         THEN 'NODATA'
@@ -353,14 +402,47 @@ def _calc_cover(
                     WHEN "{columns["s1desc_vv_mean"]}" > 0.25 THEN 'urban'
                     ELSE 'other'
                 END AS cover_s1_desc
-            FROM "info" info
-        ) covers
+                ,CASE WHEN "{columns["ndvi_median"]}" IS NULL
+                                OR "{columns["ndvi_median"]}" = 0 THEN 'NODATA'
+                      WHEN "{columns["ndvi_median"]}" < {ndvi_vegetation_min} THEN 'bare-soil'
+                      ELSE 'other'
+                 END AS cover_s2_ndvi
+                 ,"{columns["ndvi_median"]}" AS s2_ndvi_median
+              FROM "info" info
+            ) covers
     """  # noqa: E501
+
+    # Add pred1_prob column based on all previous columns
+    # TODO: "AND s2_ndvi_median <> 0" should not be in below expression, but apparently
+    # s2_ndvi_median is never NULL -> problem with zonal stats?
+    sql = f"""
+        SELECT sub.*
+                ,CASE
+                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median >= {ndvi_vegetation_min} THEN 0.0
+                    WHEN s2_ndvi_median IS NOT NULL AND s2_ndvi_median <> 0 AND s2_ndvi_median < {ndvi_vegetation_min} THEN 1 - s2_ndvi_median
+                    WHEN cover_s1 = 'NODATA' THEN NULL
+                    WHEN cover_s1_asc = 'bare-soil' THEN 0.5
+                    ELSE 0.0
+                END AS pred1_prob
+          FROM ({sql}) sub
+    """  # noqa: E501
+
+    # Add pred1 column based on pred1_prob
+    sql = f"""
+        SELECT sub2.*
+                ,CASE
+                    WHEN pred1_prob IS NULL THEN 'NODATA'
+                    WHEN pred1_prob > 0.5 THEN 'bare-soil'
+                    WHEN pred1_prob > 0.4 THEN 'DOUBT'
+                    ELSE 'other'
+                END AS pred1
+          FROM ({sql}) sub2
+    """
     result_df = pdh.read_file(tmp_path, sql=sql)
     pdh.to_file(result_df, output_path)
 
     if output_geo_path is not None:
-        # If a geo file is asked, always recreated it so it is in sync with the output
+        # If a geo file is asked, always recreate it so it is in sync with the output
         # file
         gfo.remove(output_geo_path, missing_ok=True)
         parcels_gdf = pdh.read_file(
@@ -408,7 +490,9 @@ def _calc_cover(
     shutil.rmtree(tmp_dir)
 
 
-def _select_parcels_BMG_MEG_MEV_EEF(input_geo_path, output_geo_path):
+def _select_parcels_BMG_MEG_MEV_EEF(
+    input_geo_path: Path, output_geo_path: Path
+) -> None:
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
@@ -457,7 +541,7 @@ def _select_parcels_BMG_MEG_MEV_EEF(input_geo_path, output_geo_path):
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def _select_parcels_EEF(input_geo_path, output_geo_path):
+def _select_parcels_EEF(input_geo_path: Path, output_geo_path: Path) -> None:
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
@@ -484,7 +568,7 @@ def _select_parcels_EEF(input_geo_path, output_geo_path):
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def _select_parcels(input_geo_path, output_geo_path):
+def _select_parcels(input_geo_path: Path, output_geo_path: Path) -> None:
     """Select parcels based on the cover marker."""
     # Select the relevant parcels based on the cover marker
     info = gfo.get_layerinfo(input_geo_path)
@@ -511,7 +595,7 @@ def _select_parcels(input_geo_path, output_geo_path):
     gfo.copy_layer(input_geo_path, output_geo_path, where=where)
 
 
-def report():
+def report() -> None:
     """Create a report for the cover marker."""
     # Read parcels selected to be controlled for the cover marker
     prc_selectie_path = Path(
