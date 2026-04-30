@@ -236,20 +236,20 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
     [
         ("ndvi", "BYTE", gdal.GDT_UInt16, 32676, ["B04", "B08", "b1"], "uint8", 255),
         ("ndvi", "BYTE", gdal.GDT_Float32, np.nan, ["B04", "B08"], "uint8", 255),
-        ("ndvi", "FLOAT16", gdal.GDT_UInt16, 32676, ["B04", "B08"], "float16", np.nan),
+        ("ndvi", "FLOAT16", gdal.GDT_UInt16, 32676, ["B04", "B08"], "float32", np.nan),
         (
             "ndvi",
             "FLOAT16",
             gdal.GDT_Float32,
             np.nan,
             ["B04", "B08"],
-            "float16",
+            "float32",
             np.nan,
         ),
         ("dprvi", "BYTE", gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255),
         ("dprvi", "BYTE", gdal.GDT_Float32, np.nan, ["VH", "VV"], "uint8", 255),
-        ("dprvi", "FLOAT16", gdal.GDT_UInt16, 32676, ["VH", "VV"], "float16", np.nan),
-        ("dprvi", "FLOAT16", gdal.GDT_Float32, np.nan, ["VH", "VV"], "float16", np.nan),
+        ("dprvi", "FLOAT16", gdal.GDT_UInt16, 32676, ["VH", "VV"], "float32", np.nan),
+        ("dprvi", "FLOAT16", gdal.GDT_Float32, np.nan, ["VH", "VV"], "float32", np.nan),
     ],
 )
 def test_calc_index_by_gdal_raster(
