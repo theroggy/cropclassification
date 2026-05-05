@@ -369,10 +369,10 @@ def run_cover(
             id_column=conf.columns["id"],
             ndvi_threshold=ndvi_threshold,
             ground_truth_path=input_groundtruth_path,
-            output_test_eval_path=run_dir / "s1_ml_test_eval.txt",
-            output_gt_eval_path=run_dir / "s1_ml_groundtruth_eval.txt",
+            output_test_eval_path=run_dir / "ml_test_eval.txt",
+            output_gt_eval_path=run_dir / "ml_groundtruth_eval.txt",
         )
-        logger.info(f"S1 ML model trained on {len(feature_names)} features.")
+        logger.info(f"ML model trained on {len(feature_names)} features.")
     else:
         logger.info("All cover output files exist, skipping ML training")
 
@@ -632,23 +632,25 @@ def _consolidate_cover_predictions(
         s2_available_df["s2_available"] = True
 
     if "ml_prob" in parcels_stacked.columns:
-        s1_df = (
+        ml_df = (
             parcels_stacked.groupby(id_column, dropna=False, as_index=False)["ml_prob"]
             .max()
             .rename(columns={"ml_prob": "ml_prob_max"})
         )
     else:
-        s1_df = best_s2_df[[id_column]].copy()
-        s1_df["ml_prob_max"] = float("nan")
+        ml_df = best_s2_df[[id_column]].copy()
+        ml_df["ml_prob_max"] = float("nan")
 
     parcels_selected = best_s2_df.merge(s2_available_df, on=id_column, how="left")
-    parcels_selected = parcels_selected.merge(s1_df, on=id_column, how="left")
+    parcels_selected = parcels_selected.merge(ml_df, on=id_column, how="left")
 
-    has_ml = parcels_selected["ml_prob_max"].notna()
     parcels_selected["pred_source"] = _PRED_SOURCE_THRESHOLD
-    parcels_selected.loc[~parcels_selected["s2_available"] & has_ml, "pred_source"] = (
-        _PRED_SOURCE_ML
-    )
+    threshold_is_onbedekt = parcels_selected["thresh_prob"].gt(threshold_onbedekt)
+    ml_is_confident_onbedekt = parcels_selected["ml_prob_max"].gt(ml_threshold_onbedekt)
+    parcels_selected.loc[
+        ~threshold_is_onbedekt & ml_is_confident_onbedekt,
+        "pred_source",
+    ] = _PRED_SOURCE_ML
 
     parcels_selected["pred1_prob"] = np.nan
     threshold_mask = parcels_selected["pred_source"] == _PRED_SOURCE_THRESHOLD
@@ -1080,10 +1082,10 @@ def _calc_cover_and_predict(
 
     First runs the standard :func:`_calc_cover` to produce ``pred1_prob``
     (S2-dominated threshold-based result), then applies the pre-trained *classifier*
-    to the S1 features of this period to produce ``s1_ml_prob``.
+    to the S1 features of this period to produce ``ml_prob``.
 
     Output columns added on top of :func:`_calc_cover`:
-        s1_ml_prob -- probability of ONBEDEKT according to the S1 ML model
+        ml_prob -- probability of ONBEDEKT according to the S1 ML model
     """
     needs_result_refresh = force or not output_path.exists()
     needs_geo_refresh = output_geo_path is not None and (
@@ -1127,7 +1129,7 @@ def _calc_cover_and_predict(
                 column for column in s1_col_map.values() if column in raw_df.columns
             ]
             s1_has_data_series = raw_df[s1_raw_cols].fillna(0).ne(0).any(axis=1)
-            s1_ml_prob_series = pd.Series(float("nan"), index=raw_df.index, dtype=float)
+            ml_prob_series = pd.Series(float("nan"), index=raw_df.index, dtype=float)
             if feature_names and s1_has_data_series.any():
                 proba = classifier.predict_proba(
                     model_input_df.loc[s1_has_data_series].fillna(0).to_numpy()
@@ -1135,14 +1137,14 @@ def _calc_cover_and_predict(
                 classes = classifier.classes_.tolist()
                 onbedekt_idx = classes.index(1) if 1 in classes else None
                 if onbedekt_idx is not None:
-                    s1_ml_prob_series.loc[s1_has_data_series] = proba[:, onbedekt_idx]
+                    ml_prob_series.loc[s1_has_data_series] = proba[:, onbedekt_idx]
 
             # Add ML column to the rule-based output and re-save
             result_df = pdh.read_file(output_path)
             ml_df = pd.DataFrame(
                 {
                     id_column: raw_df[id_column],
-                    "s1_ml_prob": s1_ml_prob_series.to_numpy(),
+                    "ml_prob": ml_prob_series.to_numpy(),
                 }
             )
             result_df = result_df.merge(ml_df, on=id_column, how="left")
@@ -1364,15 +1366,28 @@ def report(
     ):
         is_ml = parcels_selected_df["pred_source"] == _PRED_SOURCE_ML
         n_natural_ml = int((is_ml & ~parcels_selected_df["s2_available"]).sum())
+        n_promoted_ml = int((is_ml & parcels_selected_df["s2_available"]).sum())
         stats_list.append(
             {
-                "category": "ML natural fallback (geen S2)",
+                "category": "ML natural fallback (no S2)",
                 "count": n_natural_ml,
                 "percentage": (n_natural_ml / total_parcels) * 100,
                 "total_parcels": total_parcels,
             }
         )
-        logger.info(f"ML source breakdown: natural fallback={n_natural_ml}")
+        stats_list.append(
+            {
+                "category": "ML promoted (has S2, but below threshold)",
+                "count": n_promoted_ml,
+                "percentage": (n_promoted_ml / total_parcels) * 100,
+                "total_parcels": total_parcels,
+            }
+        )
+        logger.info(
+            "ML source breakdown: natural fallback=%s, promoted=%s",
+            n_natural_ml,
+            n_promoted_ml,
+        )
 
     if (
         ground_truth_path is not None
@@ -1577,20 +1592,20 @@ def report(
         html_parts.append(f"<pre>{classif_report_str}</pre>")
 
     # Include S1 ML model test-set evaluation if available
-    s1_ml_test_eval_path = report_dir / "s1_ml_test_eval.txt"
-    if s1_ml_test_eval_path.exists():
-        html_parts.append("<h2>S1 ML Model - Test Set Evaluation (S2-labelled)</h2>")
+    ml_test_eval_path = report_dir / "ml_test_eval.txt"
+    if ml_test_eval_path.exists():
+        html_parts.append("<h2>ML Model - Test Set Evaluation (S2-labelled)</h2>")
         html_parts.append("<p>Test set ML accuracies.</p>")
-        html_parts.append(f"<pre>{s1_ml_test_eval_path.read_text()}</pre>")
+        html_parts.append(f"<pre>{ml_test_eval_path.read_text()}</pre>")
 
     # Include S1 ML model evaluation on ground truth parcels if available
-    s1_ml_eval_path = report_dir / "s1_ml_groundtruth_eval.txt"
-    if s1_ml_eval_path.exists():
+    ml_eval_path = report_dir / "ml_groundtruth_eval.txt"
+    if ml_eval_path.exists():
         html_parts.append(
-            "<h2>S1 ML Model - Ground truth Set Evaluation (S2-labelled)</h2>"
+            "<h2>ML Model - Ground truth Set Evaluation (S2-labelled)</h2>"
         )
         html_parts.append("<p>Ground truth ML accuracies.</p>")
-        html_parts.append(f"<pre>{s1_ml_eval_path.read_text()}</pre>")
+        html_parts.append(f"<pre>{ml_eval_path.read_text()}</pre>")
 
     html_parts.append("<h2>Ground truth</h2>")
     columns_to_save = [
