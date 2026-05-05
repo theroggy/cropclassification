@@ -238,7 +238,26 @@ def test_calc_index_s1_error(
 
 
 @pytest.mark.parametrize(
-    "index, pixel_type", [("ndvi", "BYTE"), ("ndvi", "FLOAT16"), ("bsi", "FLOAT16")]
+    "index, pixel_type",
+    [
+        ("ndvi", "BYTE"),
+        pytest.param(
+            "ndvi",
+            "FLOAT16",
+            marks=pytest.mark.skipif(
+                rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio <> 1.4.4",
+            ),
+        ),
+        pytest.param(
+            "bsi",
+            "FLOAT16",
+            marks=pytest.mark.skipif(
+                rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio <> 1.4.4",
+            ),
+        ),
+    ],
 )
 def test_calc_index_s2(tmp_path, index, pixel_type):
     # Prepare test data
