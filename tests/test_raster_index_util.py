@@ -126,11 +126,38 @@ def test_calc_index_invalid(tmp_path):
     "index, pixel_type, process_options, expected_bands",
     [
         ("dprvi", "BYTE", {}, ["dprvi"]),
-        ("dprvi", "FLOAT16", None, ["dprvi"]),
+        pytest.param(
+            "dprvi",
+            "FLOAT16",
+            None,
+            ["dprvi"],
+            marks=pytest.mark.skipif(
+                rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio <> 1.4.4",
+            ),
+        ),
         ("dprvi", "FLOAT32", {}, ["dprvi"]),
         ("rvi", "BYTE", {}, ["rvi"]),
-        ("vvdvh", "FLOAT16", {}, ["vvdvh"]),
-        ("sarrgb", "FLOAT16", {}, ["vv", "vh", "vvdvh"]),
+        pytest.param(
+            "vvdvh",
+            "FLOAT16",
+            {},
+            ["vvdvh"],
+            marks=pytest.mark.skipif(
+                rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio <> 1.4.4",
+            ),
+        ),
+        pytest.param(
+            "sarrgb",
+            "FLOAT16",
+            {},
+            ["vv", "vh", "vvdvh"],
+            marks=pytest.mark.skipif(
+                rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio <> 1.4.4",
+            ),
+        ),
         ("sarrgb", "FLOAT32", {"log10": True}, ["vvdb", "vhdb", "vvdvhdb"]),
         ("sarrgb", "BYTE", {"log10": True}, ["vvdb", "vhdb", "vvdvhdb"]),
         (
@@ -269,7 +296,8 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
             "float32",
             np.nan,
             marks=pytest.mark.skipif(
-                rasterio.__version__ >= "1.5", reason="Requires rasterio < 1.5"
+                rasterio.__version__ >= "1.5" or rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio < 1.5",
             ),
         ),
         pytest.param(
@@ -281,7 +309,8 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
             "float32",
             np.nan,
             marks=pytest.mark.skipif(
-                rasterio.__version__ >= "1.5", reason="Requires rasterio < 1.5"
+                rasterio.__version__ >= "1.5" or rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio < 1.5",
             ),
         ),
         ("dprvi", "BYTE", gdal.GDT_UInt16, 32676, ["VH", "VV"], "uint8", 255),
@@ -319,7 +348,8 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
             "float32",
             np.nan,
             marks=pytest.mark.skipif(
-                rasterio.__version__ >= "1.5", reason="Requires rasterio < 1.5"
+                rasterio.__version__ >= "1.5" or rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio < 1.5",
             ),
         ),
         pytest.param(
@@ -331,7 +361,8 @@ def test_calc_index_s2(tmp_path, index, pixel_type):
             "float32",
             np.nan,
             marks=pytest.mark.skipif(
-                rasterio.__version__ >= "1.5", reason="Requires rasterio < 1.5"
+                rasterio.__version__ >= "1.5" or rasterio.__version__ == "1.4.4",
+                reason="Requires rasterio < 1.5",
             ),
         ),
     ],

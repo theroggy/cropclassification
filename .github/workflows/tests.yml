@@ -40,11 +40,11 @@ jobs:
           - env: latest
             os: macos-latest
             dev: false
-            python: "3.13"
+            python: "3.12"
           - env: latest
             os: windows-latest
             dev: false
-            python: "3.12"
+            python: "3.13"
             
     steps:
       - uses: actions/checkout@v6
