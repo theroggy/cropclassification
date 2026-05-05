@@ -36,7 +36,7 @@ jobs:
           - env: minimal
             os: ubuntu-latest
             dev: false
-            python: "3.12"
+            python: "3.10"
           - env: latest
             os: macos-latest
             dev: false
