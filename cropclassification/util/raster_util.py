@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 import rasterio
+import rasterio.shutil as rio_shutil
 from osgeo import gdal
 
 # Suppress errors
@@ -21,6 +22,18 @@ def add_overviews(
             calculate overviews for. Defaults to 512.
         resampling (str, optional): resampling method. Defaults to 'average'.
     """
+    # Internal overviews are stored in the same file; for files approaching the
+    # standard TIFF 4 GB limit, convert to BigTIFF first.
+    _BIGTIFF_THRESHOLD = 2 * 1024**3  # 2 GB
+    if path.stat().st_size > _BIGTIFF_THRESHOLD:
+        tmp_path = path.with_suffix(".tmp.tif")
+        try:
+            rio_shutil.copy(str(path), str(tmp_path), driver="GTiff", bigtiff="YES")
+            tmp_path.replace(path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
+
     with rasterio.open(path, "r+") as dst:
         factors = []
         for power in range(1, 999):

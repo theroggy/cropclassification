@@ -50,6 +50,9 @@ def calc_periodic_mosaic_task(config_paths: list[Path], default_basedir: Path) -
             start_date=start_date,
             end_date=end_date,
             output_base_dir=conf.paths.getpath("images_periodic_dir"),
+            delete_existing_openeo_jobs=conf.calc_periodic_mosaic_params.getboolean(
+                "delete_existing_openeo_jobs"
+            ),
             imageprofiles_to_get=imageprofiles_to_get,
             imageprofiles=imageprofiles,
             force=False,

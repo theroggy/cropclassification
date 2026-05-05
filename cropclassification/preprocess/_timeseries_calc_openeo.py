@@ -70,6 +70,9 @@ def calculate_periodic_timeseries(
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
         on_missing_image=on_missing_image,
+        delete_existing_openeo_jobs=conf.calc_periodic_mosaic_params.getboolean(
+            "delete_existing_openeo_jobs"
+        ),
         force=False,  # dont redownload on force
     )
 

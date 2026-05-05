@@ -166,6 +166,9 @@ def get_images(
             process_options=image_to_get.get("process_options", {}),
         ).start_job()
 
+    # wait a bit for the jobs to be registered on the server
+    time.sleep(5)
+
     # Get the results
     image_paths, job_errors = get_job_results(conn, raise_errors=raise_errors)
 
@@ -250,22 +253,41 @@ def _create_mosaic_job(
         # Load cube of relevant images
         # You can look which layers are available here:
         # https://openeo.cloud/data-collections/
+
+        # When using cloud_filter_band_dilated, the pixel-level SCL dilation mask
+        # handles cloud filtering, so the scene-level max_cloud_cover pre-filter is
+        # disabled. Keeping it would exclude entire scenes for heavily cloudy weeks,
+        # leaving an empty cube that causes the job to fail.
+        load_max_cloud_cover = (
+            None if cloud_filter_band_dilated is not None else max_cloud_cover
+        )
         cube = conn.load_collection(
             collection,
             spatial_extent=spatial_extent,
             temporal_extent=period,
             bands=bands_to_load,
-            max_cloud_cover=max_cloud_cover,
+            max_cloud_cover=load_max_cloud_cover,
         )
 
         # Use mask_scl_dilation for "aggressive" cloud mask based on SCL
-        # NOTE: deprecation warning, use to_scl_dilation_mask
         if cloud_filter_band_dilated is not None:
-            cube = cube.process(
-                "mask_scl_dilation",
-                data=cube,
-                scl_band_name=cloud_filter_band,
+            scl_cube = conn.load_collection(
+                collection,
+                spatial_extent=spatial_extent,
+                temporal_extent=period,
+                max_cloud_cover=None,  # use the pixel-level dilation mask
+                bands=["SCL"],
             )
+            mask = scl_cube.process(
+                "to_scl_dilation_mask",
+                data=scl_cube,
+                scl_band_name="SCL",
+                # erosion_kernel_size=0, # eilandjes in wolken verwijderen (default)
+                # kernel1_size=17, # 170m van cloud randen (default)
+                # kernel2_size=201, # 2km dilation van echte cloud pixels (default)
+            )
+            cube = cube.mask(mask)
+
         elif cloud_filter_band is not None:
             # Select the scl band from the data cube
             scl_band = cube.band(cloud_filter_band)
@@ -302,13 +324,17 @@ def _create_mosaic_job(
                 f"No recognized band summary found for collection {collection}"
             )
 
+        # force int16 if needed
         for band_info in summaries[band_key]:
             if band_info["name"] == bands[0]:
-                if data_type in band_info and "int16" in band_info[data_type]:
-                    # Set the range of the values so the image will be saved as int16.
-                    logger.info("Input band is int16, so force output to int16")
+                if data_type in band_info:
+                    if "int16" in band_info[data_type]:
+                        logger.info("Input band is int16, so force output to int16")
+                        cube = cube.linear_scale_range(0, 10000, 0, 10000)
+                # No data type specified, fallback to s2 only
+                elif collection == "TERRASCOPE_S2_TOC_V2":
+                    logger.info("Unknown data type, force output to int16")
                     cube = cube.linear_scale_range(0, 10000, 0, 10000)
-
                 break
 
         # The NDVI collection needs to be recalculated
