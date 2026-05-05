@@ -16,7 +16,7 @@ dependencies:
   - pandas
   - psutil
   - pyproj
-  - rasterio
+  - rasterio <1.5
   - rasterstats
   - requests
   - rioxarray
