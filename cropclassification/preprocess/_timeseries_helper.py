@@ -32,7 +32,7 @@ def prepare_input(
     Args:
         input_parcel_path (Path): input file
         output_imagedata_parcel_input_path (Path): prepared output file
-        output_parcel_nogeo_path (Path | None): output file with a copy of the non-geo data
+        output_parcel_nogeo_path (Path | None): output file with a copy of non-geo data
         erase_layer_path (Path | None): erase layer path
         classes_refe_path: (Path | None): classes reference path
         force: force creation, even if output file(s) exist already
