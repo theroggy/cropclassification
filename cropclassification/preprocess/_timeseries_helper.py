@@ -22,7 +22,9 @@ IMAGETYPE_S2_L2A = "S2_L2A"
 def prepare_input(
     input_parcel_path: Path,
     output_imagedata_parcel_input_path: Path,
-    output_parcel_nogeo_path: Optional[Path] = None,
+    output_parcel_nogeo_path: Path | None = None,
+    erase_layer_path: Path | None = None,
+    classes_refe_path: Path | None = None,
     force: bool = False,
 ) -> bool:
     """Prepare a file so it is ready for timeseries extraction of sentinel images.
@@ -30,9 +32,9 @@ def prepare_input(
     Args:
         input_parcel_path (Path): input file
         output_imagedata_parcel_input_path (Path): prepared output file
-        output_parcel_nogeo_path (Path): output file with a copy of the non-geo data
-        erase_layer_path (Optional[Path]): erase layer path
-        classes_refe_path: (Optional[Path]): classes reference path
+        output_parcel_nogeo_path (Path | None): output file with a copy of the non-geo data
+        erase_layer_path (Path | None): erase layer path
+        classes_refe_path: (Path | None): classes reference path
         force: force creation, even if output file(s) exist already
     """
     # Check if parameters are OK and init some extra params
