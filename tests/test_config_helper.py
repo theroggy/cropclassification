@@ -1,6 +1,5 @@
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional
 
 import pytest
 
@@ -19,7 +18,7 @@ from tests.test_helper import IMAGEPROFILES, SampleData
         ("s1-coh-weekly", None),
     ],
 )
-def test_get_image_profiles(sensor: str, exp_max_cloud_cover: Optional[float]):
+def test_get_image_profiles(sensor: str, exp_max_cloud_cover: float | None):
     config_path = SampleData.config_dir / "image_profiles.ini"
     image_profiles = conf._get_image_profiles(config_path)
 

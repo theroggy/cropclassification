@@ -6,8 +6,43 @@ import pytest
 from pandas.api.types import is_numeric_dtype
 
 from cropclassification import taskrunner
+from cropclassification.helpers import pandas_helper as pdh
 from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HAS_QGIS
 from tests import test_helper
+
+
+@pytest.mark.parametrize(
+    "markertype, exp_nb_periodic_parcels", [("ONBEDEKT_NA_ZOMER", 4)]
+)
+def test_cover(tmp_path, markertype, exp_nb_periodic_parcels):
+    """Test running the cover task with all COVER marker types."""
+    if not HAS_QGIS:
+        pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
+
+    markers_dir = tmp_path / test_helper.SampleData.markers_dir.name
+    shutil.copytree(test_helper.SampleData.markers_dir, markers_dir)
+
+    # Create configparser and read task file!
+    tasks_dir = markers_dir / "_tasks"
+    ignore_dir = tasks_dir / "ignore"
+    task_ini = "task_test_calc_cover.ini"
+
+    shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
+
+    taskrunner.run_tasks(
+        tasksdir=tasks_dir, config_overrules=[f"marker.markertype={markertype}"]
+    )
+
+    run_dir = (
+        markers_dir / f"2024_{markertype}/Run_{datetime.now().strftime('%Y-%m-%d')}_001"
+    )
+    assert run_dir.exists()
+
+    # Check the result
+    output_path = run_dir / f"{markertype}_{datetime.now().strftime('%Y-%m-%d')}.sqlite"
+    assert output_path.exists()
+    df = pdh.read_file(output_path)
+    assert len(df) == exp_nb_periodic_parcels
 
 
 @pytest.mark.parametrize(
@@ -21,9 +56,13 @@ from tests import test_helper
     ],
 )
 @pytest.mark.parametrize("exclude_erase_layer", [True, False])
-def test_task_calc_marker(
+def test_cropclass(
     tmp_path, balancing_strategy, cross_pred_models, exclude_erase_layer
 ):
+    """Test running the calc_cropclass task for marker CROPGROUP.
+
+    The different balancing strategies are tested as well.
+    """
     if not HAS_QGIS:
         pytest.skip("QGIS is needed for timeseries calculation, but is not available.")
 
@@ -33,7 +72,7 @@ def test_task_calc_marker(
     # Create configparser and read task file!
     tasks_dir = markers_dir / "_tasks"
     ignore_dir = tasks_dir / "ignore"
-    task_ini = "task_test_calc_marker.ini"
+    task_ini = "task_test_calc_cropclass.ini"
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 

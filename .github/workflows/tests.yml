@@ -28,7 +28,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         dev: [false]
-        python: ["3.9", "3.10", "3.11", "3.12"]
+        python: ["3.10", "3.11", "3.12"]
         env: ["latest"]
         # Use openblas instead of mkl saves 600 MB. Linux OK, 50% slower on Windows and OSX!
         extra: ["nomkl"]
@@ -36,21 +36,21 @@ jobs:
           - env: minimal
             os: ubuntu-latest
             dev: false
-            python: "3.9"
+            python: "3.10"
           - env: latest
             os: macos-latest
             dev: false
-            python: "3.11"
+            python: "3.12"
           - env: latest
             os: windows-latest
             dev: false
-            python: "3.11"
+            python: "3.12"
             
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Conda environment with Micromamba
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@v3
         with:
           micromamba-version: '1.5.1-0'
           environment-file: ci/envs/${{ matrix.env }}.yml
@@ -62,6 +62,6 @@ jobs:
         run: |
           pytest --color=yes --cov=cropclassification --cov-append --cov-report term-missing --cov-report xml tests/
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # required

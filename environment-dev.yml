@@ -2,40 +2,45 @@ name: cropclass-dev
 channels:
   - conda-forge
 dependencies:
-  - python=3.10
+  - python =3.12
   - pip
   # required
   - dask-core
+  - exactextract
   - geofileops
-  - geopandas-base>=0.11
+  - geopandas-base >=0.11
   - h5py
   - numexpr
-  - numpy<2
+  - numpy #<2
   - openeo
   - pandas
   - psutil
   - pyproj
   - rasterio
   - rasterstats
+  - requests
   - rioxarray
   - scikit-learn
+  - xlsxwriter
+  - typing_extensions
   # Optional
   - qgis
   # testing
   - pytest
   - pytest-cov
   # linting
-  - mypy
-  - pandas-stubs
+  - mypy ==1.17.1
+  - pandas-stubs <=2.3  # Pin version to the pandas version being installed now.
   - pre-commit
-  - ruff==0.4.4
+  - ruff ==0.12.8
   - types-python-dateutil
   - types-requests
   - types-tqdm
+  - typing_extensions
   - scipy
   - pip:
-    - exactextract
+    - pystac_client
     # Loading the classification model gives an error with 2.12?
-    - tensorflow <2.12
+    - tensorflow
     # linting
     - scipy-stubs

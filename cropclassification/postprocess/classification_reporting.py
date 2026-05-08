@@ -1,9 +1,10 @@
 """Module with some helper functions to report on the classification results."""
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from string import Template
-from typing import Optional
+from typing import Any
 
 import geofileops as gfo
 import numpy as np
@@ -26,11 +27,11 @@ logger = logging.getLogger(__name__)
 def write_full_report(
     parcel_predictions_geopath: Path,
     output_report_txt: Path,
-    parcel_ground_truth_path: Optional[Path] = None,
-    parcel_train_path: Optional[Path] = None,
-    parcel_classification_data_path: Optional[Path] = None,
+    parcel_ground_truth_path: Path | None = None,
+    parcel_train_path: Path | None = None,
+    parcel_classification_data_path: Path | None = None,
     force: bool = False,
-):
+) -> None:
     """Writes a report about the accuracy of the predictions to a file.
 
     Args:
@@ -135,7 +136,7 @@ def write_full_report(
     }
 
     # Build and write report...
-    with open(output_report_txt, "w") as outputfile:
+    with output_report_txt.open("w") as outputfile:
         outputfile.write("**************************************************\n")
         outputfile.write("**************** PARAMETERS USED *****************\n")
         outputfile.write("**************************************************\n\n")
@@ -208,18 +209,18 @@ def write_full_report(
         # Get the number of 'unimportant' ignore parcels and report them here
         df_predict_unimportant = df_predict[
             df_predict[conf.columns["prediction_conclusion_cons"]]
-            == "IGNORE_UNIMPORTANT"
+            == "IGNORE:UNIMPORTANT"
         ]
         # Now they can be removed for the rest of the reportings...
         df_predict = df_predict[
             df_predict[conf.columns["prediction_conclusion_cons"]]
-            != "IGNORE_UNIMPORTANT"
+            != "IGNORE:UNIMPORTANT"
         ]
 
         message = (
             f"Prediction conclusions cons general overview, for {len(df_predict.index)}"
             f" predicted cases. The {len(df_predict_unimportant.index)} "
-            "IGNORE_UNIMPORTANT parcels are excluded from the reporting!"
+            "IGNORE:UNIMPORTANT parcels are excluded from the reporting!"
         )
         outputfile.write(f"\n{message}\n")
         html_data["GENERAL_PREDICTION_CONCLUSION_CONS_OVERVIEW_TEXT"] = message
@@ -246,7 +247,7 @@ def write_full_report(
         outputfile.write("\n*************************************************\n")
         outputfile.write("*                   ACCURACIES                   *\n")
         outputfile.write("**************************************************\n")
-        overall_accuracies_df = _calc_accuracies(df_predict)
+        df_overall_accuracies = _calc_accuracies(df_predict)
 
         # Output the resulting overall accuracies
         message = "Overall accuracies for different sub-groups of the data"
@@ -254,9 +255,9 @@ def write_full_report(
         html_data["OVERALL_ACCURACIES_TEXT"] = message
 
         with pd.option_context(*pandas_option_context_list):  # type: ignore[arg-type]
-            outputfile.write(f"\n{overall_accuracies_df}\n")
-            logger.info(f"{overall_accuracies_df}\n")
-            html_data["OVERALL_ACCURACIES_TABLE"] = overall_accuracies_df.to_html()
+            outputfile.write(f"\n{df_overall_accuracies}\n")
+            logger.info(f"{df_overall_accuracies}\n")
+            html_data["OVERALL_ACCURACIES_TABLE"] = df_overall_accuracies.to_html()
 
         # Write the recall, F1 score,... per class
         # message = skmetrics.classification_report(
@@ -343,6 +344,8 @@ def write_full_report(
         # Calculate an extended confusion matrix with the standard prediction column
         # and write it to output...
         df_confmatrix_ext = _get_confusion_matrix_ext(df_predict, "pred1")
+        sdf_confmatrix_ext = _add_tooltips(df_confmatrix_ext)
+
         outputfile.write(
             "\nExtended confusion matrix of the predictions: Rows: true/input classes, "
             "columns: predicted classes\n"
@@ -351,14 +354,15 @@ def write_full_report(
             "display.max_rows", None, "display.max_columns", None, "display.width", 2000
         ):
             outputfile.write(f"{df_confmatrix_ext}\n")
-            html_data["CONFUSION_MATRICES_TABLE"] = df_confmatrix_ext.to_html()
             html_data["CONFUSION_MATRICES_DATA"] = df_confmatrix_ext.to_json()
+            html_data["CONFUSION_MATRICES_TABLE"] = sdf_confmatrix_ext.to_html()
 
         # Calculate an extended confusion matrix with the full alpha prediction column
         # and write it to output...
         df_confmatrix_ext = _get_confusion_matrix_ext(
             df_predict, conf.columns["prediction_full_alpha"]
         )
+        sdf_confmatrix_ext = _add_tooltips(df_confmatrix_ext)
         outputfile.write(
             "\nExtended confusion matrix of the consolidated predictions: "
             "Rows: true/input classes, columns: predicted classes\n"
@@ -367,11 +371,11 @@ def write_full_report(
             "display.max_rows", None, "display.max_columns", None, "display.width", 2000
         ):
             outputfile.write(f"{df_confmatrix_ext}\n\n")
-            html_data["CONFUSION_MATRICES_CONSOLIDATED_TABLE"] = (
-                df_confmatrix_ext.to_html()
-            )
             html_data["CONFUSION_MATRICES_CONSOLIDATED_DATA"] = (
                 df_confmatrix_ext.to_json()
+            )
+            html_data["CONFUSION_MATRICES_CONSOLIDATED_TABLE"] = (
+                sdf_confmatrix_ext.to_html()
             )
 
         # If the pixcount is available, write the OA per pixcount
@@ -511,7 +515,7 @@ def write_full_report(
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error for cons: {alpha_numerator}/{alpha_denominator} = "
-                    f"{(alpha_numerator/alpha_denominator):.04f}"
+                    f"{(alpha_numerator / alpha_denominator):.04f}"
                 )
             else:
                 message = (
@@ -537,7 +541,7 @@ def write_full_report(
             if beta_denominator > 0:
                 message += (
                     f"{beta_numerator}/{beta_denominator} = "
-                    f"{(beta_numerator/beta_denominator):.04f}"
+                    f"{(beta_numerator / beta_denominator):.04f}"
                 )
             else:
                 message += f"{beta_numerator}/{beta_denominator} = ?"
@@ -568,7 +572,7 @@ def write_full_report(
             if alpha_denominator > 0:
                 message = (
                     f"Alpha error full: {alpha_numerator}/{alpha_denominator} = "
-                    f"{(alpha_numerator/alpha_denominator):.04f}"
+                    f"{(alpha_numerator / alpha_denominator):.04f}"
                 )
             else:
                 message = f"Alpha error full: {alpha_numerator}/{alpha_denominator} = ?"
@@ -600,7 +604,7 @@ def write_full_report(
             if beta_denominator > 0:
                 message += (
                     f"{beta_numerator}/{beta_denominator} = "
-                    f"{(beta_numerator/beta_denominator):.04f}"
+                    f"{(beta_numerator / beta_denominator):.04f}"
                 )
             else:
                 message += f"{beta_numerator}/{beta_denominator} = ?"
@@ -638,7 +642,7 @@ def write_full_report(
             if theta_denominator > 0:
                 message += (
                     f"{theta_numerator}/{theta_denominator} = "
-                    f"{(theta_numerator/theta_denominator):.04f}"
+                    f"{(theta_numerator / theta_denominator):.04f}"
                 )
             else:
                 message += f"{theta_numerator}/{theta_denominator} = ?"
@@ -675,7 +679,7 @@ def write_full_report(
                 html_data["PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TEXT"] = message
 
                 # For pixcount report, use error conclusions without min_nb_pixels
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_min_pix",
                     apply_doubt_pct_proba=True,
@@ -695,6 +699,7 @@ def write_full_report(
                     error_codes_denominator=alpha_denominator_conclusions,
                     include_cumulative_columns=True,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -707,7 +712,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_ALPHA_PER_PIXCOUNT_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # BETA errors
@@ -729,6 +734,7 @@ def write_full_report(
                     error_codes_denominator=beta_denominator_conclusions,
                     include_cumulative_columns=True,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -741,7 +747,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_PIXCOUNT_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # THETA errors
@@ -764,6 +770,7 @@ def write_full_report(
                     error_codes_denominator=theta_denominator_conclusions,
                     include_cumulative_columns=True,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -776,7 +783,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_THETA_PER_PIXCOUNT_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
             # If cropclass is available, write the number of ALFA errors per cropclass
@@ -791,7 +798,7 @@ def write_full_report(
                 html_data["PREDICTION_QUALITY_ALPHA_PER_CLASS_TEXT"] = message
 
                 # For class report, use error conclusions without marker specific stuff
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_marker_specific",
                     apply_doubt_pct_proba=True,
@@ -811,6 +818,7 @@ def write_full_report(
                     error_codes_denominator=alpha_denominator_conclusions,
                     include_cumulative_columns=False,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -823,7 +831,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_ALPHA_PER_CLASS_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # BETA errors
@@ -845,6 +853,7 @@ def write_full_report(
                     error_codes_denominator=beta_denominator_conclusions,
                     include_cumulative_columns=False,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -857,7 +866,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_CLASS_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # THETA errors
@@ -879,6 +888,7 @@ def write_full_report(
                     error_codes_denominator=theta_denominator_conclusions,
                     include_cumulative_columns=False,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -891,7 +901,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_THETA_PER_CLASS_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
             # If crop is available, write the number of ALFA errors per cropclass
@@ -906,7 +916,7 @@ def write_full_report(
                 html_data["PREDICTION_QUALITY_ALPHA_PER_CROP_TEXT"] = message
 
                 # For crop report, use error conclusions without marker specific stuff
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_marker_specific",
                     apply_doubt_pct_proba=True,
@@ -926,6 +936,7 @@ def write_full_report(
                     error_codes_denominator=alpha_denominator_conclusions,
                     include_cumulative_columns=False,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -938,7 +949,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_ALPHA_PER_CROP_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # BETA errors
@@ -960,6 +971,7 @@ def write_full_report(
                     error_codes_denominator=beta_denominator_conclusions,
                     include_cumulative_columns=False,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -972,7 +984,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_CROP_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # THETA errors
@@ -994,6 +1006,7 @@ def write_full_report(
                     error_codes_denominator=theta_denominator_conclusions,
                     include_cumulative_columns=False,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -1006,7 +1019,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_THETA_PER_CROP_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
             # If probability is available, write the number of ALFA errors per
@@ -1022,7 +1035,7 @@ def write_full_report(
 
                 # For pixcount report, use error conclusions without doubt reasons
                 # that use the pct probability + round the probabilities
-                class_postpr.add_doubt_column(
+                class_postpr.add_cons_columns(
                     pred_df=df_parcel_gt,
                     new_pred_column="pred_cons_no_pct_prob",
                     apply_doubt_pct_proba=False,
@@ -1044,6 +1057,7 @@ def write_full_report(
                     ascending=True,
                     include_cumulative_columns=True,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -1056,7 +1070,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_ALPHA_PER_PROBABILITY_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # BETA errors
@@ -1079,6 +1093,7 @@ def write_full_report(
                     ascending=True,
                     include_cumulative_columns=True,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -1091,7 +1106,7 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_BETA_PER_PROBABILITY_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
                 # THETA errors
@@ -1117,6 +1132,7 @@ def write_full_report(
                     ascending=False,
                     include_cumulative_columns=True,
                 )
+                sdf_per_column = _add_tooltips(df_per_column)
                 # df_per_column.dropna(inplace=True)
                 with pd.option_context(
                     "display.max_rows",
@@ -1129,20 +1145,22 @@ def write_full_report(
                     outputfile.write(f"\n{df_per_column}\n")
                     logger.info(f"{df_per_column}\n")
                     html_data["PREDICTION_QUALITY_THETA_PER_PROBABILITY_TABLE"] = (
-                        df_per_column.to_html()
+                        sdf_per_column.to_html()
                     )
 
-    with open(output_report_html, "w") as outputfile:
+    with output_report_html.open("w") as outputfile:
         script_dir = Path(__file__).resolve().parent
         html_template_path = script_dir / "html_rapport_template.html"
-        html_template_file = open(html_template_path).read()
+        html_template_file = html_template_path.read_text()
         src = Template(html_template_file)
         # replace strings and write to file
         output = src.substitute(html_data)
         outputfile.write(output)
 
 
-def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
+def _get_confusion_matrix_ext(
+    df_predict: pd.DataFrame, prediction_column_to_use: str
+) -> pd.DataFrame:
     """Returns a dataset with an extended confusion matrix."""
     classes = sorted(
         np.unique(
@@ -1213,8 +1231,11 @@ def _get_confusion_matrix_ext(df_predict, prediction_column_to_use: str):
 
 
 def _add_prediction_conclusion(
-    in_df, new_columnname, prediction_column_to_use, detailed: bool
-):
+    in_df: pd.DataFrame,
+    new_columnname: str,
+    prediction_column_to_use: str,
+    detailed: bool,
+) -> None:
     """Calculate the "conclusions" for the predictions.
 
     REMARK: calculating it like this, using native pandas operations, is 300 times
@@ -1240,7 +1261,7 @@ def _add_prediction_conclusion(
                 )
             ),
             new_columnname,
-        ] = "IGNORE_UNIMPORTANT:INPUTCLASSNAME=" + in_df[conf.columns["class"]]
+        ] = "IGNORE:UNIMPORTANT_INPUTCLASSNAME=" + in_df[conf.columns["class"]]
 
         # Parcels that were ignored for trainig and/or prediction, get an ignore
         # conclusion
@@ -1270,7 +1291,7 @@ def _add_prediction_conclusion(
                 )
             ),
             new_columnname,
-        ] = "IGNORE_UNIMPORTANT"
+        ] = "IGNORE:UNIMPORTANT"
         # Parcels that were ignored for trainig and/or prediction, get an ignore
         # conclusion
         in_df.loc[
@@ -1284,12 +1305,6 @@ def _add_prediction_conclusion(
             & (in_df[prediction_column_to_use].str.startswith("DOUBT")),
             new_columnname,
         ] = "DOUBT"
-        # If conclusion still UNDEFINED, check if doubt
-        in_df.loc[
-            (in_df[new_columnname] == "UNDEFINED")
-            & (in_df[prediction_column_to_use].str.startswith("RISKY_DOUBT")),
-            new_columnname,
-        ] = "RISKY_DOUBT"
         in_df.loc[
             (in_df[new_columnname] == "UNDEFINED")
             & (in_df[prediction_column_to_use] == "NODATA"),
@@ -1308,7 +1323,7 @@ def _add_prediction_conclusion(
     )
 
 
-def _add_gt_conclusions(in_df, prediction_column_to_use):
+def _add_gt_conclusions(in_df: pd.DataFrame, prediction_column_to_use: str) -> None:
     """Add some columns with groundtruth conclusions."""
     # Add the new column with a fixed value first
     gt_vs_declared_column = f"gt_vs_input_{prediction_column_to_use}"
@@ -1431,18 +1446,6 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
         gt_vs_prediction_column,
     ] = "PRED-DOUBT:REASON=" + in_df[prediction_column_to_use]
 
-    # If conclusion still UNDEFINED, check if RISKY_DOUBT
-    in_df.loc[
-        (in_df[gt_vs_prediction_column] == "UNDEFINED")
-        & (in_df[prediction_column_to_use].str.startswith("RISKY_DOUBT")),
-        gt_vs_prediction_column,
-    ] = "PRED-RISKY_DOUBT:REASON=" + in_df[prediction_column_to_use]
-    in_df.loc[
-        (in_df[gt_vs_prediction_column] == "UNDEFINED")
-        & (in_df[prediction_column_to_use] == "NODATA"),
-        gt_vs_prediction_column,
-    ] = "PRED-RISKY_DOUBT:REASON=" + in_df[prediction_column_to_use]
-
     # If groundtruth class in ignored for trainig and/or prediction: an ignore
     # conclusion
     in_df.loc[
@@ -1492,14 +1495,14 @@ def _add_gt_conclusions(in_df, prediction_column_to_use):
 
 def _get_errors_per_column(
     groupbycolumn: str,
-    df_predquality,
+    df_predquality: pd.DataFrame,
     pred_quality_column: str,
     pred_quality_full_doubt_column: str,
     error_codes_numerator: list[str],
     error_codes_denominator: list[str],
     include_cumulative_columns: bool,
     ascending: bool = True,
-):
+) -> pd.DataFrame:
     """Calculates a detailed overview about the number of errors per group specified."""
     # First filter on the parcels we need to calculate the pct alpha errors
     df_predquality_filtered = df_predquality[
@@ -1568,7 +1571,7 @@ def _get_errors_per_column(
     values = (
         df_predquality_full_doubt_filtered.groupby(groupbycolumn)
         .size()
-        .to_frame("count_all_full_doubt")
+        .to_frame("count_all_full_doubt")  # type: ignore[assignment]
     )
     df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
@@ -1577,13 +1580,13 @@ def _get_errors_per_column(
         values = (
             df_errors_per_column["count_error"]
             .cumsum(axis=0)
-            .to_frame("count_error_cumul")
+            .to_frame("count_error_cumul")  # type: ignore[assignment]
         )
         df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
     values = (
         100 * df_errors_per_column["count_error"] / df_errors_per_column["count_all"]
-    ).to_frame("pct_error_all")
+    ).to_frame("pct_error_all")  # type: ignore[assignment]
     df_errors_per_column = pd.concat([df_errors_per_column, values], axis=1)
 
     if include_cumulative_columns:
@@ -1606,7 +1609,7 @@ def _get_errors_per_column(
 
 def _write_OA_per_pixcount(
     df_parcel_predictions: pd.DataFrame, output_report_txt: Path, force: bool = False
-):
+) -> None:
     """Write a report of the overall accuracy that parcels per pixcount get."""
     # If force == False Check and the output file exists already, stop.
     if not force and output_report_txt.exists():
@@ -1615,7 +1618,7 @@ def _write_OA_per_pixcount(
 
     # Write output...
     nb_predictions_total = len(df_parcel_predictions.index)
-    with open(output_report_txt, "w") as outputfile:
+    with output_report_txt.open("w") as outputfile:
         for i in range(40):
             df_result_cur_pixcount = df_parcel_predictions[
                 df_parcel_predictions[conf.columns["pixcount_s1s2"]] == i
@@ -1633,15 +1636,15 @@ def _write_OA_per_pixcount(
             message = (
                 f"OA for pixcount {i:2}: {overall_accuracy:3.2f} %, with "
                 f"{nb_predictions_pixcount} elements "
-                f"({100*(nb_predictions_pixcount/nb_predictions_total):.4f} % "
+                f"({100 * (nb_predictions_pixcount / nb_predictions_total):.4f} % "
                 f"of {nb_predictions_total})"
             )
             logger.info(message)
             outputfile.write(f"{message}\n")
 
 
-def _calc_accuracies(df_predict):
-    result_df = pd.DataFrame(
+def _calc_accuracies(df_predict: pd.DataFrame) -> pd.DataFrame:
+    df_result = pd.DataFrame(
         _calc_accuracy(
             df_predict,
             score_name="accuracy",
@@ -1658,7 +1661,7 @@ def _calc_accuracies(df_predict):
             score_kwargs={"average": "macro"},
         )
     ).set_index(keys=["parcels", "prediction_type"])
-    result_df = result_df.join(df)
+    df_result = df_result.join(df)
 
     df = pd.DataFrame(
         _calc_accuracy(
@@ -1668,7 +1671,7 @@ def _calc_accuracies(df_predict):
             score_kwargs={"average": "macro"},
         )
     ).set_index(keys=["parcels", "prediction_type"])
-    result_df = result_df.join(df)
+    df_result = df_result.join(df)
 
     df = pd.DataFrame(
         _calc_accuracy(
@@ -1678,7 +1681,7 @@ def _calc_accuracies(df_predict):
             score_kwargs={"average": "macro"},
         )
     ).set_index(keys=["parcels", "prediction_type"])
-    result_df = result_df.join(df)
+    df_result = df_result.join(df)
 
     df = pd.DataFrame(
         _calc_accuracy(
@@ -1688,12 +1691,14 @@ def _calc_accuracies(df_predict):
             score_kwargs={"average": "weighted"},
         )
     ).set_index(keys=["parcels", "prediction_type"])
-    result_df = result_df.join(df)
+    df_result = df_result.join(df)
 
-    return result_df
+    return df_result
 
 
-def _calc_accuracy(df_predict, score_name: str, score_fn, score_kwargs):
+def _calc_accuracy(
+    df_predict: pd.DataFrame, score_name: str, score_fn: Callable, score_kwargs: dict
+) -> list[dict]:
     # Calculate accuracies for all parcels
     result = []
     try:
@@ -1813,3 +1818,17 @@ def _calc_accuracy(df_predict, score_name: str, score_fn, score_kwargs):
         }
     )
     return result
+
+
+def _add_tooltips(df: pd.DataFrame) -> Any:  # noqa: ANN401
+    df_tooltip = pd.DataFrame(
+        df.apply(
+            lambda row: [
+                f"x: {row.name}, y: {col}, value: {row[col]}" for col in df.columns
+            ],
+            axis=1,
+        ).tolist(),
+        index=df.index,
+        columns=df.columns,
+    )
+    return df.style.set_tooltips(df_tooltip)

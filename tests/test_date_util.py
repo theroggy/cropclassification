@@ -6,7 +6,7 @@ from cropclassification.util import date_util
 
 
 @pytest.mark.parametrize(
-    "input, before, expected",
+    "input_date, before, expected",
     [
         ("2024-01-01", True, datetime(2024, 1, 1)),
         ("2024-01-05", True, datetime(2024, 1, 1)),
@@ -18,14 +18,14 @@ from cropclassification.util import date_util
         (datetime(2024, 1, 5), False, datetime(2024, 1, 8)),
     ],
 )
-def test_get_monday(input, before, expected):
-    result = date_util.get_monday(input, before=before)
+def test_get_monday(input_date, before, expected):
+    result = date_util.get_monday(input_date, before=before)
     assert result == expected
     assert result.strftime("%w") == "1"
 
 
 @pytest.mark.parametrize(
-    "input, before, expected",
+    "input_date, before, expected",
     [
         ("2024-01-01", True, datetime(2024, 1, 1)),
         ("2024-01-05", True, datetime(2024, 1, 1)),
@@ -40,7 +40,7 @@ def test_get_monday(input, before, expected):
         ("2022-12-20", False, datetime(2023, 1, 2)),
     ],
 )
-def test_get_monday_biweekly(input, before, expected):
-    result = date_util.get_monday_biweekly(input, before=before)
+def test_get_monday_biweekly(input_date, before, expected):
+    result = date_util.get_monday_biweekly(input_date, before=before)
     assert result == expected
     assert result.strftime("%w") == "1"

@@ -2,10 +2,10 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import geofileops as gfo
 import geopandas as gpd
+import shapely
 
 from cropclassification.util import io_util
 
@@ -16,7 +16,7 @@ def reproject_synced(
     path: Path,
     columns: list[str],
     target_epsg: int,
-    dst_dir: Optional[Path] = None,
+    dst_dir: Path | None = None,
 ) -> Path:
     """Reproject the input file.
 
@@ -57,7 +57,7 @@ def reproject_synced(
             logger.info(
                 f"Read ready, found {len(vector_gdf.index)} features, "
                 f"crs: {vector_gdf.crs}, took "
-                f"{(datetime.now()-start_time).total_seconds()} s"
+                f"{(datetime.now() - start_time).total_seconds()} s"
             )
             for column in vector_gdf.columns:
                 if column not in columns and column not in [
@@ -119,8 +119,8 @@ def _load_features_file(
     features_path: Path,
     columns_to_retain: list[str],
     target_epsg: int,
-    bbox=None,
-    polygon=None,
+    bbox: tuple[float, float, float, float] | None = None,
+    polygon: shapely.Polygon | None = None,
 ) -> gpd.GeoDataFrame:
     """Load the features and reproject to the target crs.
 
@@ -140,7 +140,7 @@ def _load_features_file(
     features_gdf = gfo.read_file(features_prepr_path, bbox=bbox)
     logger.info(
         f"Read ready, found {len(features_gdf.index)} features, crs: "
-        f"{features_gdf.crs}, took {(datetime.now()-start_time).total_seconds()} s"
+        f"{features_gdf.crs}, took {(datetime.now() - start_time).total_seconds()} s"
     )
 
     # Order features on x_ref to (probably) have more clustering of features in
@@ -189,7 +189,7 @@ def _load_features_file(
 
     # Ready, so return result...
     logger.debug(
-        f"Loaded {len(features_gdf)} to calculate on in {datetime.now()-start_time}"
+        f"Loaded {len(features_gdf)} to calculate on in {datetime.now() - start_time}"
     )
     assert isinstance(features_gdf, gpd.GeoDataFrame)
     return features_gdf

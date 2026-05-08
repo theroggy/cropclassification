@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
 
@@ -19,9 +18,9 @@ def create_train_test_sample(
     output_parcel_test_path: Path,
     balancing_strategy: str,
     test_size: float,
-    training_query: Optional[str] = None,
+    training_query: str | None = None,
     force: bool = False,
-):
+) -> None:
     """Create a seperate train and test sample from the general input file."""
     # If force False and the output files exist already, stop.
     if (

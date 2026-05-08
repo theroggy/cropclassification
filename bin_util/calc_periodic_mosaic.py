@@ -12,8 +12,8 @@ def main():
     # Init some variables
     roi_crs = 31370
     # BEFL
-    start_date = datetime(2024, 7, 1)
-    end_date = datetime(2024, 9, 30)
+    start_date = datetime(2022, 7, 15)
+    end_date = datetime(2022, 12, 30)
     roi_bounds = [20_000, 150_000, 260_000, 245_000]
     images_periodic_dir = Path("//dg3.be/alp/Datagis/satellite_periodic/BEFL")
 
@@ -26,15 +26,15 @@ def main():
     """
 
     imageprofiles_to_get = [
-        # "s2-agri-weekly",
+        "s2-agri-weekly",
         # "s2-ndvi-weekly",
-        # "s1-grd-sigma0-asc-weekly",
-        # "s1-grd-sigma0-desc-weekly",
+        "s1-grd-sigma0-asc-weekly",
+        "s1-grd-sigma0-desc-weekly",
         # "s1-coh-weekly",
         # "s1-grd-sigma0-vvdvh-asc-weekly",
         # "s1-grd-sigma0-vvdvh-desc-weekly",
         # "s1-sarrgbdb-asc-weekly",
-        "s1-sarrgbdb-desc-weekly",
+        # "s1-sarrgbdb-desc-weekly",
         # "s1-rvi-asc-weekly", "s1-rvi-desc-weekly",
         # "s1-dprvi-asc-weekly", "s1-dprvi-desc-weekly",
     ]

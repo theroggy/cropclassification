@@ -1,17 +1,12 @@
 """Multicrop marker."""
 
 import logging
-from pathlib import Path
-
-import pandas as pd
-
-import cropclassification.helpers.config_helper as conf
-import cropclassification.helpers.pandas_helper as pdh
 
 # Get a logger...
 logger = logging.getLogger(__name__)
 
 
+'''
 def detect_multicrop(input_parcel_path: Path, input_parcel_timeseries_data_path: Path):
     """Detect multicrop parcels.
 
@@ -81,3 +76,4 @@ def detect_multicrop(input_parcel_path: Path, input_parcel_timeseries_data_path:
     output_path = Path(str(input_parcel_timeseries_data_path) + "_largestStdDev.csv")
     logger.info(f"Write output file: {output_path}")
     pdh.to_file(df_result, output_path)
+'''
