@@ -93,10 +93,8 @@ def _get_markertype_filter(markertype: str) -> str:
     if markertype in ("COVER_EEB_VOORJAAR", "ONBEDEKT_LENTE"):
         return """
                 (
-                    ("ALL_BEST" like '%EEB%'
-                 AND "GWSCOD_V" = '83' AND "GWSCOD_H" IN ('201', '202'))
-                 OR ("ALL_BEST" like '%TBG%')
-                 OR ("ALL_BEST" like '%BMG%')
+                    "ALL_BEST" like '%TBG%'
+                 OR "ALL_BEST" like '%BMG%'
                 )
             """
 
