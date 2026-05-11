@@ -85,7 +85,7 @@ def test_cropclass(
         config_overrules.extend(
             [
                 "calc_marker_params.erase_layer_filename=trees_19_162_BEFL-2022-2023-ofw.gpkg",
-                "calc_marker_params.classes_refe_filename=BEFL_2023_mon_refe_2023-07-24_eraselayer.tsv",
+                "calc_marker_params.classes_refe_filename=BEFL_2025_mon_refe_2025-11-03_eraselayer.tsv",
             ]
         )
     taskrunner.run_tasks(
