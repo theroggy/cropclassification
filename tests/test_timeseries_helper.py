@@ -29,7 +29,7 @@ def test_exclude_erase_layer(tmp_path, ignore_erase_layer_column_exists, exp_err
     ]
     if ignore_erase_layer_column_exists:
         overrules.append(
-            "calc_marker_params.classes_refe_filename=BEFL_2023_mon_refe_2023-07-24_eraselayer.tsv"
+            "calc_marker_params.classes_refe_filename=BEFL_2025_mon_refe_2025-11-03_eraselayer.tsv"
         )
     conf.read_config(
         config_paths=config_paths,
