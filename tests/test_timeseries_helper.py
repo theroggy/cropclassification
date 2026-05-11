@@ -12,13 +12,13 @@ from tests.test_helper import SampleData
     "ignore_erase_layer_column_exists, exp_error", [(True, False), (False, True)]
 )
 def test_exclude_erase_layer(tmp_path, ignore_erase_layer_column_exists, exp_error):
-    marker_basedir = tmp_path / SampleData.marker_basedir.name
-    shutil.copytree(SampleData.marker_basedir, marker_basedir)
+    markers_dir = tmp_path / SampleData.markers_dir.name
+    shutil.copytree(SampleData.markers_dir, markers_dir)
 
     # Create configparser and read task file!
-    tasks_dir = marker_basedir / "_tasks"
+    tasks_dir = markers_dir / "_tasks"
     ignore_dir = tasks_dir / "ignore"
-    task_ini = "task_test_calc_marker.ini"
+    task_ini = "task_test_calc_cropclass.ini"
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
@@ -33,7 +33,7 @@ def test_exclude_erase_layer(tmp_path, ignore_erase_layer_column_exists, exp_err
         )
     conf.read_config(
         config_paths=config_paths,
-        default_basedir=marker_basedir,
+        default_basedir=markers_dir,
         overrules=overrules,
     )
 
