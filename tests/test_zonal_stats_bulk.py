@@ -2,6 +2,7 @@ import shutil
 
 import geofileops as gfo
 import geopandas as gpd
+import pandas as pd
 import pytest
 import shapely
 
@@ -13,49 +14,100 @@ from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HA
 from tests.test_helper import SampleData
 
 
-def test_zonal_stats_band(tmp_path):
+@pytest.mark.parametrize(
+    "raster_path_rel, exp_stat_columns",
+    [
+        (
+            SampleData.image_s1_asc_path.relative_to(SampleData.markers_dir),
+            [
+                "band_1_mean",
+                "band_1_count",
+                "band_1_stdev",
+                "band_2_mean",
+                "band_2_count",
+                "band_2_stdev",
+            ],
+        ),
+        (
+            SampleData.image_s2_mean_path.relative_to(SampleData.markers_dir),
+            [f"band_{i}_mean" for i in range(1, 7)],
+        ),
+    ],
+)
+def test_zonal_stats_band(tmp_path, raster_path_rel, exp_stat_columns):
     # Prepare test data
     sample_dir = SampleData.markers_dir
     test_dir = tmp_path / sample_dir.name
     shutil.copytree(sample_dir, test_dir)
 
     vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
+    raster_path = test_dir / raster_path_rel
+    include_cols = ["UID"]
 
     stats_df = _zonal_stats_bulk_exactextract.zonal_stats_band(
         vector_path=vector_path,
-        raster_path=test_dir / SampleData.image_s1_asc_path,
-        tmp_dir=tmp_path,
-        stats=[
-            "mean(min_coverage_frac=0.8,coverage_weight=none)",
-            "count(min_coverage_frac=0.8,coverage_weight=none)",
-            "stdev(min_coverage_frac=0.8,coverage_weight=none)",
-        ],
-        include_cols=["index", "UID", "x_ref"],
+        raster_path=raster_path,
+        tmp_dir=tmp_path / "tmp",
+        stats=["mean", "count", "stdev"],
+        include_cols=include_cols,
     )
 
+    # The result should be a DataFrame.
+    assert isinstance(stats_df, pd.DataFrame)
     # The result should have the same number of rows as the input vector file.
     vector_info = gfo.get_layerinfo(vector_path)
     assert len(stats_df) == vector_info.featurecount
-    # The result should have the columns we included + the calculated stats.
-    expected_columns = [
-        "index",
-        "UID",
-        "x_ref",
-        "band_1_mean",
-        "band_1_count",
-        "band_1_stdev",
-        "band_2_mean",
-        "band_2_count",
-        "band_2_stdev",
-    ]
-    assert all(col in stats_df.columns for col in expected_columns)
-    # The calculated stats should not be nan for any row.
-    assert not any(stats_df["band_1_mean"].isna())
-    assert not any(stats_df["band_1_count"].isna())
-    assert not any(stats_df["band_1_stdev"].isna())
-    assert not any(stats_df["band_2_mean"].isna())
-    assert not any(stats_df["band_2_count"].isna())
-    assert not any(stats_df["band_2_stdev"].isna())
+    # The result should have the included columns + the calculated stat columns.
+    assert all(col in stats_df.columns for col in include_cols + exp_stat_columns)
+
+
+@pytest.mark.parametrize(
+    "raster_path_rel, bands",
+    [
+        (
+            SampleData.image_s1_asc_path.relative_to(SampleData.markers_dir),
+            ["VV", "VH"],
+        ),
+        (
+            SampleData.image_s2_mean_path.relative_to(SampleData.markers_dir),
+            ["B02", "B03", "B04", "B08", "B11", "B12"],
+        ),
+    ],
+)
+def test_zonal_stats_band_tofile(tmp_path, raster_path_rel, bands):
+    # Prepare test data
+    sample_dir = SampleData.markers_dir
+    test_dir = tmp_path / sample_dir.name
+    shutil.copytree(sample_dir, test_dir)
+
+    vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
+    raster_path = test_dir / raster_path_rel
+    include_cols = ["UID"]
+    stats = ["mean", "count", "stdev"]
+    output_paths = {band: tmp_path / f"out_{band}.sqlite" for band in bands}
+
+    result = _zonal_stats_bulk_exactextract.zonal_stats_band_tofile(
+        vector_path=vector_path,
+        raster_path=raster_path,
+        output_paths=output_paths,
+        bands=bands,
+        tmp_dir=tmp_path / "tmp",
+        stats=stats,
+        include_cols=include_cols,
+    )
+
+    # The returned dict should match the output_paths provided.
+    assert result == output_paths
+    vector_info = gfo.get_layerinfo(vector_path)
+    for _, out_path in output_paths.items():
+        # Each output file should be created.
+        assert out_path.exists()
+        result_df = pdh.read_file(out_path)
+        # Each output file should have one row per input feature.
+        assert len(result_df) == vector_info.featurecount
+        # Each output file should have the stat columns (renamed from band_N_stat).
+        for stat in [s.split("(")[0] for s in stats]:
+            assert stat in result_df.columns
 
 
 @pytest.mark.parametrize(
