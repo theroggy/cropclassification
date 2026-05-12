@@ -13,6 +13,51 @@ from cropclassification.util.zonal_stats_bulk._zonal_stats_bulk_pyqgis import HA
 from tests.test_helper import SampleData
 
 
+def test_zonal_stats_band(tmp_path):
+    # Prepare test data
+    sample_dir = SampleData.markers_dir
+    test_dir = tmp_path / sample_dir.name
+    shutil.copytree(sample_dir, test_dir)
+
+    vector_path = test_dir / SampleData.input_dir.name / "Prc_BEFL_2023_2023-07-24.gpkg"
+
+    stats_df = _zonal_stats_bulk_exactextract.zonal_stats_band(
+        vector_path=vector_path,
+        raster_path=test_dir / SampleData.image_s1_asc_path,
+        tmp_dir=tmp_path,
+        stats=[
+            "mean(min_coverage_frac=0.8,coverage_weight=none)",
+            "count(min_coverage_frac=0.8,coverage_weight=none)",
+            "stdev(min_coverage_frac=0.8,coverage_weight=none)",
+        ],
+        include_cols=["index", "UID", "x_ref"],
+    )
+
+    # The result should have the same number of rows as the input vector file.
+    vector_info = gfo.get_layerinfo(vector_path)
+    assert len(stats_df) == vector_info.featurecount
+    # The result should have the columns we included + the calculated stats.
+    expected_columns = [
+        "index",
+        "UID",
+        "x_ref",
+        "band_1_mean",
+        "band_1_count",
+        "band_1_stdev",
+        "band_2_mean",
+        "band_2_count",
+        "band_2_stdev",
+    ]
+    assert all(col in stats_df.columns for col in expected_columns)
+    # The calculated stats should not be nan for any row.
+    assert not any(stats_df["band_1_mean"].isna())
+    assert not any(stats_df["band_1_count"].isna())
+    assert not any(stats_df["band_1_stdev"].isna())
+    assert not any(stats_df["band_2_mean"].isna())
+    assert not any(stats_df["band_2_count"].isna())
+    assert not any(stats_df["band_2_stdev"].isna())
+
+
 @pytest.mark.parametrize(
     "engine, stats",
     [
