@@ -295,7 +295,7 @@ def zonal_stats_band_tofile(
             logger.info(
                 f"Write data for {len(band_stats_df.index)} parcels found to {output_paths[band]}"  # noqa: E501
             )
-            if not output_paths[band].exists():
+            if not output_paths[band].exists() or force:
                 # Write the info table to the output file
                 pdh.to_file(df=band_stats_df, path=output_paths[band], index=False)
 
