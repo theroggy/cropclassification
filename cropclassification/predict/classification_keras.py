@@ -56,8 +56,8 @@ def train(
         f"{output_classifier_basepath.stem}_datacolumns.txt"
     )
 
-    if output_ext.lower() != ".hdf5":
-        message = f"Keras only supports saving in extension .hdf5, not in {output_ext}"
+    if output_ext.lower() != ".keras":
+        message = f"Keras only supports saving in extension .keras, not in {output_ext}"
         logger.error(message)
         raise Exception(message)
 
@@ -71,21 +71,18 @@ def train(
     # Replace the string values with the ints
     column_class = conf.columns["class"]
 
-    # TODO: doesn't seem to be the safest way to implement this: what if the
-    # classes are integers instead of strings???
-    train_df[column_class].replace(classes_dict, inplace=True)
-    test_df[column_class].replace(classes_dict, inplace=True)
+    train_df[column_class] = train_df[column_class].map(classes_dict)
+    test_df[column_class] = test_df[column_class].map(classes_dict)
 
-    # The test dataset also should only include classes we are training on...
-    # I don't exactly why (don't know why the notnull/isnull must be there), but this
-    # seems the only way it works?
-    if test_df.dtypes[column_class] == "object":
-        test_removed_df = test_df[test_df[column_class].str.isnumeric().notnull()]
+    # The test dataset should only include classes we trained on
+    # Some classes (like IGNORE:NOT_ENOUGH_SAMPLES) should be dropped
+    unknown_mask = test_df[column_class].isna()
+    if unknown_mask.any():
         logger.info(
-            "Removed following classes from test_classes_df: "
-            f"{test_removed_df[column_class].unique()}"
+            "Removed following unknown classes from test_df: "
+            f"{test_df.loc[unknown_mask, column_class].unique()}"
         )
-        test_df = test_df[test_df[column_class].str.isnumeric().isnull()]
+        test_df = test_df[~unknown_mask]
 
     # Split the input dataframe in one with the train classes and one with the train
     # data

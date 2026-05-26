@@ -145,7 +145,8 @@ def create_train_test_sample(
         )
 
     # Depending on the balancing_strategy, use different way to get a training sample
-    train_df = pd.DataFrame().reindex_like(train_base_df)
+    train_df = pd.DataFrame()
+
     if balancing_strategy == "BALANCING_STRATEGY_NONE":
         # Just use 25% of all non-test data as train data -> 25% of 80% of data -> 20%
         # of all data will be training date
@@ -381,7 +382,6 @@ def create_train_test_sample(
         #     results significantly less good.
 
         # For the larger classes, leave the samples larger but cap
-        train_df = pd.DataFrame()
         upper_count_limit1 = 100000
         upper_train_limit1 = 30000
         logger.info(
