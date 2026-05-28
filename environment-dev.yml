@@ -42,5 +42,6 @@ dependencies:
     - pystac_client
     # Loading the classification model gives an error with 2.12?
     - tensorflow
+    - keras >=3
     # linting
     - scipy-stubs
