@@ -98,7 +98,7 @@ def format_model_filename2(
     """
     res = (
         f"{model_base_filename}_{acc_combined:.5f}_{acc_train:.5f}_{acc_val:.5f}_"
-        f"{epoch}.hdf5"
+        f"{epoch}.keras"
     )
     return res
 
@@ -161,9 +161,9 @@ def get_models(model_dir: Path, model_base_filename: str | None = None) -> pd.Da
     """
     # glob search string
     if model_base_filename is not None:
-        model_weight_paths = list(model_dir.glob(f"{model_base_filename}_*.hdf5"))
+        model_weight_paths = list(model_dir.glob(f"{model_base_filename}_*.keras"))
     else:
-        model_weight_paths = list(model_dir.glob("*.hdf5"))
+        model_weight_paths = list(model_dir.glob("*.keras"))
 
     # Loop through all models and extract necessary info...
     model_info_list = []

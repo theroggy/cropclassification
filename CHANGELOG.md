@@ -25,6 +25,7 @@
 - Rename some main modules to make naming more logical with non-cropclassification
   markers being added (#162)
 - Update minimal python version to >= 3.10 (#203)
+- Update minimal keras version to >= 3 (#218)
 
 ### Improvements
 
@@ -58,6 +59,8 @@
 - Fix `calc_periodic_mosaic_task` to read `roi_bounds` parameter as list of floats from
   config (#130)
 - Fix encoding error when reading sqlite files (#196)
+- Fix bug where ML test set is created with null records -- didn't seem to impact training (#218)
+- Fix bug where training failed due to records that couldn't be mapped to a category (#218)
 
 ## 0.2.0 (2024-06-17)
 
