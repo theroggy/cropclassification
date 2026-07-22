@@ -27,6 +27,7 @@ def calculate_periodic_timeseries(
     timeseries_periodic_dir: Path,
     nb_parallel: int,
     on_missing_image: str,
+    images_available_delay: int | None = None,
     force: bool = False,
 ) -> None:
     """Calculate timeseries data for the input parcels.
@@ -50,12 +51,13 @@ def calculate_periodic_timeseries(
             - ignore: ignore that the image, don't try to download it
             - calculate_raise: calculate the image and raise an error if it fails
             - calculate_ignore: calculate the image and ignore the error if it fails
+        images_available_delay (Optional[int]): delay in days for images to be available
         force (bool = False): whether to force recalculation of existing data.
             (will not redownload images)
     """
     info = gfo.get_layerinfo(input_parcel_path)
     if info.crs is not None and not info.crs.equals(roi_crs):
-        raise ValueError(f"parcel crs ({info.crs}) <> roi crs ({roi_crs})")
+        raise ValueError(f"parcel crs ({info.crs}) <> roi_crs ({roi_crs})")
     if not shapely.box(*info.total_bounds).within(shapely.box(*roi_bounds)):
         raise ValueError(
             f"parcel bounds ({info.total_bounds}) not within roi_bounds ({roi_bounds})"
@@ -70,6 +72,7 @@ def calculate_periodic_timeseries(
         imageprofiles_to_get=imageprofiles_to_get,
         imageprofiles=imageprofiles,
         on_missing_image=on_missing_image,
+        images_available_delay=images_available_delay,
         force=False,  # dont redownload on force
     )
 
