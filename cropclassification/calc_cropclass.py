@@ -114,6 +114,7 @@ def run_cropclass(
     input_model_to_use_relativepath = conf.calc_marker_params.getpath(
         "input_model_to_use_relativepath"
     )
+    erase_layer_filename = conf.calc_marker_params.getpath("erase_layer_filename")
 
     # Prepare input paths
     if input_model_to_use_relativepath is not None:
@@ -138,6 +139,11 @@ def run_cropclass(
     refe_dir = conf.paths.getpath("refe_dir")
     classes_refe_path = refe_dir / classes_refe_filename
 
+    if erase_layer_filename is not None:
+        erase_layer_path = input_dir / erase_layer_filename
+    else:
+        erase_layer_path = None
+
     # Check if the necessary input files exist...
     for path in [classes_refe_path, input_parcel_path]:
         if path is not None and not path.exists():
@@ -157,8 +163,9 @@ def run_cropclass(
     # -------------------------------------------------------------
 
     # Prepare the input data for optimal image data extraction:
-    #    1) apply a negative buffer on the parcel to evade mixels
-    #    2) remove features that became null because of buffer
+    #    1) exlude erase_layer from agricultural parcels
+    #    2) apply a negative buffer on the parcel to evade mixels
+    #    3) remove features that became null because of buffer
     input_preprocessed_dir = conf.paths.getpath("input_preprocessed_dir")
     buffer = conf.timeseries.getfloat("buffer")
     input_parcel_nogeo_path = (
@@ -174,6 +181,8 @@ def run_cropclass(
         input_parcel_path=input_parcel_path,
         output_imagedata_parcel_input_path=imagedata_input_parcel_path,
         output_parcel_nogeo_path=input_parcel_nogeo_path,
+        erase_layer_path=erase_layer_path,
+        classes_refe_path=classes_refe_path,
     )
 
     # STEP 2: Get the timeseries data needed for the classification
