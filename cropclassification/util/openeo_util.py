@@ -289,8 +289,13 @@ def _create_mosaic_job(
         summaries = collection_info["summaries"]
         if "eo:bands" in summaries:
             band_key = "eo:bands"
+            data_type = "type"
         elif "raster:bands" in summaries:
             band_key = "raster:bands"
+            data_type = "type"
+        elif "bands" in summaries:
+            band_key = "bands"
+            data_type = "data_type"
         else:
             raise ValueError(
                 f"No recognized band summary found for collection {collection}"
@@ -298,7 +303,7 @@ def _create_mosaic_job(
 
         for band_info in summaries[band_key]:
             if band_info["name"] == bands[0]:
-                if "type" in band_info and band_info["type"] == "int16":
+                if data_type in band_info and "int16" in band_info[data_type]:
                     # Set the range of the values so the image will be saved as int16.
                     logger.info("Input band is int16, so force output to int16")
                     cube = cube.linear_scale_range(0, 10000, 0, 10000)
@@ -529,13 +534,16 @@ def best_available_pixel(
     def day_of_month_calc(
         input_cube: openeo.rest.datacube.DataCube,
     ) -> openeo.rest.datacube.DataCube:
-        day = lambda x: 15 + x.process(  # noqa: E731
-            "date_difference",
-            date1=x.process(
-                "date_replace_component", date=label, value=15, component="day"
-            ),
-            date2=label,
-            unit="day",
+        day = lambda x: (
+            15
+            + x.process(  # noqa: E731
+                "date_difference",
+                date1=x.process(
+                    "date_replace_component", date=label, value=15, component="day"
+                ),
+                date2=label,
+                unit="day",
+            )
         )
         return input_cube.array_apply(day)
 
