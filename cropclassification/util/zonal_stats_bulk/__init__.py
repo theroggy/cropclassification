@@ -1,5 +1,6 @@
 """Calculate zonal statistics for a vector file with many raster files."""
 
+import logging
 from pathlib import Path
 
 from . import (
@@ -9,16 +10,18 @@ from . import (
 )
 from ._raster_helper import *  # noqa: F403
 
+logger = logging.getLogger(__name__)
+
 
 def zonal_stats(
     vector_path: Path,
     id_column: str,
     rasters_bands: list[tuple[Path, list[str]]],
     output_dir: Path,
+    engine: str,
     stats: list[str] | str | None = None,
     cloud_filter_band: str | None = None,
     calc_bands_parallel: bool = True,
-    engine: str = "rasterstats",
     nb_parallel: int = -1,
     force: bool = False,
 ) -> None:
@@ -31,21 +34,19 @@ def zonal_stats(
         rasters_bands (List[Tuple[Path, List[str]]]): List of tuples with the path to
             the raster files and the bands to calculate the zonal statistics on.
         output_dir (Path): directory to write the results to.
+        engine (str): the engine to use for the calculation. Options are
+            "exactextract", "rasterstats" and "pyqgis".
         stats (List[str]): statistics to calculate. Default to ["count", "median"].
             Available statistics and special options are dependent on the `engine`
             specified:
-
                 - "rasterstats": `rasterstats documentation <https://pythonhosted.org/rasterstats/manual.html#statistics>`_
                 - "pyqgis": "count", "sum", "mean", "median", "std", "min", "max",
                         "range", "minority", "majority" and "variance".
                 - "exactextract": `exactextract documentation <https://isciences.github.io/exactextract/operations.html>`_
-
         cloud_filter_band (str, optional): the band to use as a cloud filter. Only
             supported for engine "rasterstats". Defaults to None.
         calc_bands_parallel (bool, optional): True to calculate the bands in parallel.
             Only supported for engine "rasterstats". Defaults to True.
-        engine (str, optional): the engine to use for the calculation. Options are
-            "exactextract", "rasterstats" and "pyqgis". Defaults to "rasterstats".
         nb_parallel (int, optional): the number of parallel processes to use.
             Defaults to -1: use all available processors.
         force (bool, optional): False to skip calculating existing output files. True to
