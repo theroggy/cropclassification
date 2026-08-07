@@ -55,7 +55,10 @@ def test_cover(tmp_path, markertype, exp_nb_periodic_parcels):
         ("BALANCING_STRATEGY_EQUAL", 0),
     ],
 )
-def test_cropclass(tmp_path, balancing_strategy, cross_pred_models):
+@pytest.mark.parametrize("exclude_erase_layer", [True, False])
+def test_cropclass(
+    tmp_path, balancing_strategy, cross_pred_models, exclude_erase_layer
+):
     """Test running the calc_cropclass task for marker CROPGROUP.
 
     The different balancing strategies are tested as well.
@@ -73,13 +76,21 @@ def test_cropclass(tmp_path, balancing_strategy, cross_pred_models):
 
     shutil.copy(src=ignore_dir / task_ini, dst=tasks_dir / task_ini)
 
+    config_overrules = [
+        f"marker.balancing_strategy={balancing_strategy}",
+        f"classifier.cross_pred_models={cross_pred_models}",
+        "preprocess.min_parcels_in_class=1",
+    ]
+    if exclude_erase_layer:
+        config_overrules.extend(
+            [
+                "calc_marker_params.erase_layer_filename=trees_19_162_BEFL-2022-2023-ofw.gpkg",
+                "calc_marker_params.classes_refe_filename=BEFL_2025_mon_refe_2025-11-03_eraselayer.tsv",
+            ]
+        )
     taskrunner.run_tasks(
         tasksdir=tasks_dir,
-        config_overrules=[
-            f"marker.balancing_strategy={balancing_strategy}",
-            f"classifier.cross_pred_models={cross_pred_models}",
-            "preprocess.min_parcels_in_class=1",
-        ],
+        config_overrules=config_overrules,
     )
 
     today_str = datetime.now().strftime("%Y-%m-%d")
